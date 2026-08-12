@@ -38,11 +38,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: phamlab-website/package-lock.json
 
-      - name: Install dependencies
+      - name: Install phamlab-website dependencies
         working-directory: phamlab-website
+        run: npm ci
+
+      # The symlinked _generated/api.js does `import ... from "convex/server"`,
+      # a bare specifier Node resolves from the *real* file's location — so
+      # phamlab needs its own node_modules/convex present too, not just
+      # phamlab-website's.
+      - name: Install phamlab dependencies
+        working-directory: phamlab
         run: npm ci
 
       - name: Recreate _generated symlink
