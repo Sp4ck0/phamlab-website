@@ -6,7 +6,7 @@ export function WhoPill({ who, groups, date }: { who: Who; groups: Group[]; date
     const byId = Object.fromEntries(groups.map((g) => [g.id, g]));
     const names = who.map((id) => byId[id]?.name || id).join(" & ");
     return (
-      <span className="who-pill" style={{ background: "rgba(23,50,47,.08)", color: "var(--ink-soft)" }}>
+      <span className="who-pill" style={{ background: "var(--chip-bg)", color: "var(--text-secondary)" }}>
         {names}
       </span>
     );
@@ -15,7 +15,7 @@ export function WhoPill({ who, groups, date }: { who: Who; groups: Group[]; date
   if (!g) {
     const label = presentGroups(groups, date).map((x) => x.name).join(", ") || "Everyone";
     return (
-      <span className="who-pill" style={{ background: "rgba(23,50,47,.08)", color: "var(--ink-soft)" }}>
+      <span className="who-pill" style={{ background: "var(--chip-bg)", color: "var(--text-secondary)" }}>
         {label}
       </span>
     );

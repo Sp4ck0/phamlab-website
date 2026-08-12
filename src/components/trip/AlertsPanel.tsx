@@ -34,13 +34,13 @@ export function AlertsPanel({ gaps, conflicts, groups, activeGroup }: {
               const { label, color } = gapLabel(g.who, groups, g.date);
               const style = color
                 ? { background: `${color}1a`, color }
-                : { background: "rgba(23,50,47,.08)", color: "var(--ink-soft)" };
+                : { background: "var(--chip-bg)", color: "var(--text-secondary)" };
               return (
                 <li key={i}>
                   <span className="who" style={style}>
                     {label}
                   </span>
-                  <b>{g.kind}</b> — {g.text} <span style={{ color: "var(--ink-faint)" }}>· {g.dateLabel}</span>
+                  <b>{g.kind}</b> — {g.text} <span style={{ color: "var(--text-muted)" }}>· {g.dateLabel}</span>
                 </li>
               );
             })}

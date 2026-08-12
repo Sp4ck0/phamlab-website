@@ -18,11 +18,23 @@ export interface Conflict {
 
 export type Status = "booked" | "needed";
 
+export interface FlightLeg {
+  route: string;
+  time: string;
+  meta?: string;
+}
+
 export interface Flight {
   who: Who;
   route: string;
   detail?: string;
   status: Status;
+  // Rich multi-leg presentation — when `legs` is present the flight
+  // renders as a flight-box; otherwise it falls back to a simple card.
+  title?: string;
+  price?: string;
+  legs?: FlightLeg[];
+  layovers?: string[];
 }
 
 export interface Hotel {
@@ -33,6 +45,15 @@ export interface Hotel {
 }
 
 export type Tag = "" | "move" | "transit" | "event" | undefined;
+
+// An activity is either a plain string (legacy — no tag/time shown) or a
+// richer object with an optional tag pill and time prefix.
+export type Act = string | { tag?: string; time?: string; text: string };
+
+export interface TourDetails {
+  summary: string;
+  body: string;
+}
 
 export interface Day {
   date: string;
@@ -45,7 +66,21 @@ export interface Day {
   note?: string;
   flights: Flight[];
   hotels: "same" | Hotel[];
-  acts: string[];
+  acts: Act[];
+  highlight?: string;
+  callout?: string;
+  tourDetails?: TourDetails;
+}
+
+export interface ActionItem {
+  id: string;
+  title: string;
+  detail: string;
+}
+
+export interface HighlightStat {
+  value: string;
+  label: string;
 }
 
 export interface Trip {
@@ -61,6 +96,8 @@ export interface Trip {
   groups: Group[];
   conflicts: Conflict[];
   days: Day[];
+  actionItems?: ActionItem[];
+  highlightStat?: HighlightStat;
 }
 
 export interface TripSummary {
@@ -81,4 +118,11 @@ export interface ResolvedHotel extends Hotel {
 export interface ResolvedDay extends Omit<Day, "hotels"> {
   hotels: ResolvedHotel[];
   _d: Date;
+}
+
+// A leg-color assignment computed for a day (see assignLegColors).
+export interface LegColor {
+  color: string;
+  tint: string;
+  label: string;
 }

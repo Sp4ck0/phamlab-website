@@ -49,11 +49,12 @@ export function UnlockPage() {
             style={{
               flex: 1,
               padding: "10px 14px",
-              border: "1px solid var(--rule)",
-              borderRadius: 4,
-              font: "500 14px Archivo",
+              border: "1px solid var(--border)",
+              borderRadius: 10,
+              fontSize: 14,
+              fontFamily: "inherit",
               background: "var(--card)",
-              color: "var(--ink)",
+              color: "var(--text-primary)",
             }}
           />
           <button className="btn" type="submit">
@@ -61,12 +62,12 @@ export function UnlockPage() {
           </button>
         </form>
         {error && (
-          <p className="sdek" style={{ color: "var(--coral)", marginTop: 14 }}>
+          <p className="sdek" style={{ color: "var(--danger)", marginTop: 14 }}>
             {error}
           </p>
         )}
         <p className="sdek" style={{ marginTop: 28 }}>
-          Have an account instead? <Link to="/login" style={{ color: "var(--sea)" }}>Log in</Link>
+          Have an account instead? <Link to="/login" style={{ color: "var(--accent-1)" }}>Log in</Link>
         </p>
       </div>
     </PageShell>

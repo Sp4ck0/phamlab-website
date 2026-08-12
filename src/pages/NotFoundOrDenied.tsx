@@ -9,7 +9,7 @@ export function NotFoundOrDenied() {
       <h2 className="shead">Not found</h2>
       <p className="sdek">
         Either this trip doesn't exist, or you don't have access to it yet.{" "}
-        <Link to="/unlock" style={{ color: "var(--sea)" }}>
+        <Link to="/unlock" style={{ color: "var(--accent-1)" }}>
           Enter a code or log in
         </Link>{" "}
         to unlock it.

@@ -1,6 +1,12 @@
 // Ported 1:1 from the original static site's trip.js — the pure logic
 // functions, decoupled from DOM rendering.
-import type { Day, Group, Hotel, ResolvedDay, Status, Trip, Who } from "./types";
+import type { Act, Day, Flight, FlightLeg, Group, Hotel, LegColor, ResolvedDay, Status, Trip, Who } from "./types";
+
+// Normalizes a legacy plain-string activity and a rich {tag,time,text}
+// activity to the same shape for rendering.
+export function actParts(a: Act): { tag?: string; time?: string; text: string } {
+  return typeof a === "string" ? { text: a } : a;
+}
 
 export const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 export const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -52,12 +58,12 @@ export function visible(who: Who, activeGroup: string, groups: Group[], date?: s
 export function whoLabel(who: Who, groups: Group[], date: string): { label: string; color: string } {
   const byId = Object.fromEntries(groups.map((g) => [g.id, g]));
   if (Array.isArray(who)) {
-    return { label: who.map((id) => byId[id]?.name || id).join(" & "), color: "var(--ink-soft)" };
+    return { label: who.map((id) => byId[id]?.name || id).join(" & "), color: "var(--text-secondary)" };
   }
   const g = byId[who];
   if (g) return { label: g.name, color: g.color };
   const label = presentGroups(groups, date).map((x) => x.name).join(", ") || "Everyone";
-  return { label, color: "var(--ink-soft)" };
+  return { label, color: "var(--text-secondary)" };
 }
 
 const uid = (dayIndex: number, kind: "f" | "h", i: number) => `${dayIndex}.${kind}.${i}`;
@@ -122,6 +128,117 @@ export function mergeHotelsByName(hotels: ResolvedDay["hotels"], ticks: Record<s
     }
   });
   return groups;
+}
+
+// Different people can each be booked on the *identical* flight (same
+// route + detail) — merge those into one card/box instead of repeating it
+// once per person, same principle as mergeHotelsByName above, now applied
+// to flights too.
+export interface FlightGroup {
+  route: string;
+  detail?: string;
+  title?: string;
+  price?: string;
+  legs?: FlightLeg[];
+  layovers?: string[];
+  who: string[];
+  ids: string[];
+  statuses: Status[];
+}
+export function mergeFlightsByRoute(
+  allFlights: Flight[],
+  dayIndex: number,
+  ticks: Record<string, Status>,
+  filter?: (f: Flight) => boolean
+): FlightGroup[] {
+  const groups: FlightGroup[] = [];
+  const byKey = new Map<string, FlightGroup>();
+  allFlights.forEach((f, i) => {
+    if (filter && !filter(f)) return;
+    const id = flightId(dayIndex, i);
+    const ids = Array.isArray(f.who) ? f.who : [f.who];
+    const status = statusOf(ticks, id, f.status);
+    const key = `${f.route}|${f.detail || ""}`;
+    if (byKey.has(key)) {
+      const g = byKey.get(key)!;
+      g.who.push(...ids);
+      g.ids.push(id);
+      g.statuses.push(status);
+    } else {
+      const g: FlightGroup = {
+        route: f.route,
+        detail: f.detail,
+        title: f.title,
+        price: f.price,
+        legs: f.legs,
+        layovers: f.layovers,
+        who: [...ids],
+        ids: [id],
+        statuses: [status],
+      };
+      groups.push(g);
+      byKey.set(key, g);
+    }
+  });
+  return groups;
+}
+
+const ROTATING_ACCENTS = [
+  { color: "var(--accent-1)", tint: "var(--accent-1-tint)" },
+  { color: "var(--accent-2)", tint: "var(--accent-2-tint)" },
+  { color: "var(--accent-3)", tint: "var(--accent-3-tint)" },
+  { color: "var(--accent-4)", tint: "var(--accent-4-tint)" },
+  { color: "var(--accent-5)", tint: "var(--accent-5-tint)" },
+];
+const EVENT_ACCENT = { color: "var(--accent-event)", tint: "var(--accent-event-tint)" };
+const TRANSIT_ACCENT = { color: "var(--accent-transit)", tint: "var(--accent-transit-tint)" };
+
+/**
+ * Assigns each day a leg color + badge label, computed from data already
+ * on the trip — no color field to hand-maintain per day:
+ *   - tag === 'event'                 -> reserved event/milestone accent
+ *   - 2+ *distinct* routes that day   -> reserved multi-leg transit accent
+ *                                        (several people sharing the same
+ *                                        single route doesn't count)
+ *   - otherwise                       -> colored by city, cycling through 5
+ *                                         rotating accents in order of each
+ *                                         city's first appearance in the trip
+ */
+export function assignLegColors(days: Pick<Day, "city" | "to" | "tag" | "event" | "flights">[]): LegColor[] {
+  const cityIndex = new Map<string, number>();
+  let next = 0;
+  return days.map((d) => {
+    const label = d.event ? d.event : d.to ? `${d.city} → ${d.to}` : d.city;
+    if (d.tag === "event") return { ...EVENT_ACCENT, label };
+    const uniqueRoutes = new Set((d.flights || []).map((f) => f.route));
+    const isTransit = uniqueRoutes.size >= 2;
+    if (isTransit) return { ...TRANSIT_ACCENT, label };
+    if (!cityIndex.has(d.city)) {
+      cityIndex.set(d.city, next % ROTATING_ACCENTS.length);
+      next++;
+    }
+    return { ...ROTATING_ACCENTS[cityIndex.get(d.city)!], label };
+  });
+}
+
+export interface RouteStop {
+  label: string;
+  color: string;
+}
+
+// Unique consecutive city waypoints for the hero's route stepper.
+export function deriveRoute(days: Pick<Day, "city" | "to">[], legColors: LegColor[]): RouteStop[] {
+  const stops: RouteStop[] = [];
+  days.forEach((d, i) => {
+    const color = legColors[i]?.color || ROTATING_ACCENTS[0].color;
+    const last = stops[stops.length - 1];
+    if (!last || last.label !== d.city) stops.push({ label: d.city, color });
+    if (d.to) {
+      const last2 = stops[stops.length - 1];
+      if (!last2 || last2.label !== d.to) stops.push({ label: d.to, color });
+    }
+  });
+  return stops;
 }
 
 export function fmtShort(iso: string) {

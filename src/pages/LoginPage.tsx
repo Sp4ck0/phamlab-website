@@ -44,11 +44,12 @@ export function LoginPage() {
             placeholder="Email"
             style={{
               padding: "10px 14px",
-              border: "1px solid var(--rule)",
-              borderRadius: 4,
-              font: "500 14px Archivo",
+              border: "1px solid var(--border)",
+              borderRadius: 10,
+              fontSize: 14,
+              fontFamily: "inherit",
               background: "var(--card)",
-              color: "var(--ink)",
+              color: "var(--text-primary)",
             }}
           />
           <input
@@ -59,11 +60,12 @@ export function LoginPage() {
             placeholder="Password"
             style={{
               padding: "10px 14px",
-              border: "1px solid var(--rule)",
-              borderRadius: 4,
-              font: "500 14px Archivo",
+              border: "1px solid var(--border)",
+              borderRadius: 10,
+              fontSize: 14,
+              fontFamily: "inherit",
               background: "var(--card)",
-              color: "var(--ink)",
+              color: "var(--text-primary)",
             }}
           />
           <button className="btn" type="submit" disabled={submitting}>
@@ -71,7 +73,7 @@ export function LoginPage() {
           </button>
         </form>
         {error && (
-          <p className="sdek" style={{ color: "var(--coral)", marginTop: 14 }}>
+          <p className="sdek" style={{ color: "var(--danger)", marginTop: 14 }}>
             {error}
           </p>
         )}
@@ -95,7 +97,7 @@ export function LoginPage() {
           )}
         </p>
         <p className="sdek" style={{ marginTop: 10 }}>
-          Have a trip code instead? <Link to="/unlock" style={{ color: "var(--sea)" }}>Enter it here</Link>
+          Have a trip code instead? <Link to="/unlock" style={{ color: "var(--accent-1)" }}>Enter it here</Link>
         </p>
       </div>
     </PageShell>

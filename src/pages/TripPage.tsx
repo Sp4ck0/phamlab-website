@@ -4,36 +4,62 @@ import { PageShell } from "../components/layout/PageShell";
 import { TripHeader } from "../components/trip/TripHeader";
 import { AlertsPanel } from "../components/trip/AlertsPanel";
 import { Controls } from "../components/trip/Controls";
-import { TripTimeline } from "../components/trip/TripTimeline";
-import { GridTable } from "../components/trip/GridTable";
+import { OverviewList } from "../components/trip/OverviewList";
+import { DetailedView } from "../components/trip/DetailedView";
 import { Roster } from "../components/trip/Roster";
+import { ActionItems } from "../components/trip/ActionItems";
+import type { TripView } from "../components/trip/ViewToggle";
 import { useTrip } from "../hooks/useTrip";
 import { useResolvedDays } from "../hooks/useResolvedDays";
 import { useTicks } from "../hooks/useTicks";
 import { useTripGaps } from "../hooks/useTripGaps";
+import { useTheme } from "../hooks/useTheme";
+import { useActionItems } from "../hooks/useActionItems";
+import { assignLegColors } from "../lib/tripLogic";
 import { NotFoundOrDenied } from "./NotFoundOrDenied";
 
 export function TripPage() {
   const { slug } = useParams<{ slug: string }>();
   const { trip, isLoading } = useTrip(slug);
-  const [searchParams] = useSearchParams();
-  const view = searchParams.get("view") === "grid" ? "grid" : "timeline";
+  const [searchParams, setSearchParams] = useSearchParams();
+  const view: TripView = searchParams.get("view") === "detailed" ? "detailed" : "overview";
 
   const [activeGroup, setActiveGroup] = useState("all");
   const [onlyGaps, setOnlyGaps] = useState(false);
+  const [pendingScrollTo, setPendingScrollTo] = useState<string | null>(null);
 
+  const { isDark, toggle: toggleTheme } = useTheme();
   const resolvedDays = useResolvedDays(trip);
+  const legColors = assignLegColors(resolvedDays);
   const { ticks, toggle } = useTicks(slug || "");
   const gaps = useTripGaps(resolvedDays, trip?.groups || [], activeGroup, ticks);
+  const { done, toggle: toggleActionItem } = useActionItems(slug || "");
 
-  // Preserve the original CSS's body[data-view] hooks (horizontal-scroll
-  // toggle in grid view, sticky-header offsets) without touching styles.css.
+  function setView(v: TripView) {
+    setSearchParams(
+      (prev) => {
+        const p = new URLSearchParams(prev);
+        p.set("view", v);
+        return p;
+      },
+      { replace: true }
+    );
+  }
+
+  function jumpToDay(dayId: string) {
+    setView("detailed");
+    setPendingScrollTo(dayId);
+  }
+
+  // Scroll to the requested day only after the Detailed view has actually
+  // rendered (switching view is a re-render, not a synchronous DOM change).
   useEffect(() => {
-    document.body.dataset.view = view;
-    return () => {
-      delete document.body.dataset.view;
-    };
-  }, [view]);
+    if (view === "detailed" && pendingScrollTo) {
+      const el = document.getElementById(pendingScrollTo);
+      el?.scrollIntoView({ behavior: "smooth", block: "start" });
+      setPendingScrollTo(null);
+    }
+  }, [view, pendingScrollTo]);
 
   // Reset the group filter when navigating between trips.
   useEffect(() => {
@@ -43,7 +69,7 @@ export function TripPage() {
   if (isLoading) {
     return (
       <PageShell>
-        <div style={{ padding: "80px 0", color: "var(--ink-faint)" }}>Loading…</div>
+        <div style={{ padding: "80px 0", color: "var(--text-muted)" }}>Loading…</div>
       </PageShell>
     );
   }
@@ -63,9 +89,12 @@ export function TripPage() {
         title={trip.title}
         titleEmphasis={trip.titleEmphasis}
         dateRangeLabel={trip.dateRangeLabel}
-        citiesLabel={trip.citiesLabel}
-        groups={trip.groups}
         days={trip.days}
+        highlightStat={trip.highlightStat}
+        isDark={isDark}
+        onToggleTheme={toggleTheme}
+        view={view}
+        onViewChange={setView}
       />
 
       <AlertsPanel gaps={gaps} conflicts={trip.conflicts} groups={trip.groups} activeGroup={activeGroup} />
@@ -76,28 +105,33 @@ export function TripPage() {
         onActiveGroupChange={setActiveGroup}
         onlyGaps={onlyGaps}
         onOnlyGapsChange={setOnlyGaps}
+        showOnlyGaps={view === "detailed"}
       />
 
-      {view === "grid" ? (
-        <GridTable days={resolvedDays} groups={trip.groups} activeGroup={activeGroup} ticks={ticks} />
+      {view === "overview" ? (
+        <OverviewList days={resolvedDays} legColors={legColors} onJump={jumpToDay} />
       ) : (
-        <TripTimeline
+        <DetailedView
           days={resolvedDays}
+          legColors={legColors}
           groups={trip.groups}
           activeGroup={activeGroup}
           ticks={ticks}
           onlyGaps={onlyGaps}
           onToggle={toggle}
+          onJump={jumpToDay}
         />
       )}
 
       <Roster groups={trip.groups} resolvedDays={resolvedDays} ticks={ticks} sdek={trip.sdek} />
 
+      {trip.actionItems && trip.actionItems.length > 0 && (
+        <ActionItems items={trip.actionItems} done={done} onToggle={toggleActionItem} />
+      )}
+
       <footer>
-        <b>Editing this trip:</b> trip content is stored in Convex — ask to have a change made rather than editing
-        code.
-        <br />
-        Quick ticks in the browser are stored in localStorage, per device.
+        Trip content is stored in Convex — ask to have a change made rather than editing code. Quick ticks are
+        stored in localStorage, per device.
       </footer>
     </PageShell>
   );
