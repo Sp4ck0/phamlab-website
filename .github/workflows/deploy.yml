@@ -1,0 +1,74 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout phamlab-website
+        uses: actions/checkout@v4
+        with:
+          path: phamlab-website
+
+      # phamlab is private — read-only, Contents-scoped fine-grained PAT
+      # stored as a repo secret. Checked out as a true sibling directory so
+      # the frontend's relative symlink (src/_generated -> ../../phamlab/convex/_generated)
+      # resolves exactly like it does in local dev.
+      - name: Checkout phamlab (backend)
+        uses: actions/checkout@v4
+        with:
+          repository: Sp4ck0/phamlab
+          token: ${{ secrets.PHAMLAB_BACKEND_TOKEN }}
+          path: phamlab
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: phamlab-website/package-lock.json
+
+      - name: Install dependencies
+        working-directory: phamlab-website
+        run: npm ci
+
+      - name: Recreate _generated symlink
+        working-directory: phamlab-website
+        run: |
+          rm -rf src/_generated
+          ln -s ../../phamlab/convex/_generated src/_generated
+
+      - name: Build
+        working-directory: phamlab-website
+        env:
+          VITE_CONVEX_URL: ${{ secrets.VITE_CONVEX_URL }}
+        run: npm run build
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: phamlab-website/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
