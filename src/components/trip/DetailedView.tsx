@@ -6,14 +6,13 @@ interface Props {
   days: ResolvedDay[];
   legColors: LegColor[];
   groups: Group[];
-  activeGroup: string;
   ticks: Record<string, Status>;
   onlyGaps: boolean;
   onToggle: (ids: string[], status: Status) => void;
   onJump: (dayId: string) => void;
 }
 
-export function DetailedView({ days, legColors, groups, activeGroup, ticks, onlyGaps, onToggle, onJump }: Props) {
+export function DetailedView({ days, legColors, groups, ticks, onlyGaps, onToggle, onJump }: Props) {
   return (
     <>
       <DayNav days={days} onJump={onJump} />
@@ -26,7 +25,6 @@ export function DetailedView({ days, legColors, groups, activeGroup, ticks, only
             dayNumber={i + 1}
             legColor={legColors[i]}
             groups={groups}
-            activeGroup={activeGroup}
             ticks={ticks}
             onlyGaps={onlyGaps}
             onToggle={onToggle}

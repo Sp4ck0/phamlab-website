@@ -3,7 +3,6 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { PageShell } from "../components/layout/PageShell";
 import { TripHeader } from "../components/trip/TripHeader";
 import { AlertsPanel } from "../components/trip/AlertsPanel";
-import { GapsPanel } from "../components/trip/GapsPanel";
 import { Controls } from "../components/trip/Controls";
 import { OverviewList } from "../components/trip/OverviewList";
 import { DetailedView } from "../components/trip/DetailedView";
@@ -27,7 +26,6 @@ export function TripPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const view: TripView = searchParams.get("view") === "detailed" ? "detailed" : "overview";
 
-  const [activeGroup, setActiveGroup] = useState("all");
   const [onlyGaps, setOnlyGaps] = useState(false);
   const [pendingScrollTo, setPendingScrollTo] = useState<string | null>(null);
 
@@ -35,7 +33,7 @@ export function TripPage() {
   const resolvedDays = useResolvedDays(trip);
   const legColors = assignLegColors(resolvedDays);
   const { ticks, toggle } = useTicks(slug || "");
-  const gaps = useTripGaps(resolvedDays, trip?.groups || [], activeGroup, ticks);
+  const gaps = useTripGaps(resolvedDays, ticks);
   const { done, toggle: toggleActionItem } = useActionItems(slug || "");
 
   function setView(v: TripView) {
@@ -63,11 +61,6 @@ export function TripPage() {
       setPendingScrollTo(null);
     }
   }, [view, pendingScrollTo]);
-
-  // Reset the group filter when navigating between trips.
-  useEffect(() => {
-    setActiveGroup("all");
-  }, [slug]);
 
   if (isLoading) {
     return (
@@ -100,16 +93,9 @@ export function TripPage() {
         onViewChange={setView}
       />
 
-      <AlertsPanel conflicts={trip.conflicts} groups={trip.groups} activeGroup={activeGroup} />
+      <AlertsPanel conflicts={trip.conflicts} />
 
-      <Controls
-        groups={trip.groups}
-        activeGroup={activeGroup}
-        onActiveGroupChange={setActiveGroup}
-        onlyGaps={onlyGaps}
-        onOnlyGapsChange={setOnlyGaps}
-        showOnlyGaps={view === "detailed"}
-      />
+      <Controls onlyGaps={onlyGaps} onOnlyGapsChange={setOnlyGaps} showOnlyGaps={view === "detailed"} />
 
       {view === "overview" ? (
         <OverviewList days={resolvedDays} legColors={legColors} onJump={jumpToDay} />
@@ -118,7 +104,6 @@ export function TripPage() {
           days={resolvedDays}
           legColors={legColors}
           groups={trip.groups}
-          activeGroup={activeGroup}
           ticks={ticks}
           onlyGaps={onlyGaps}
           onToggle={toggle}
@@ -130,11 +115,15 @@ export function TripPage() {
 
       <TripMap points={derivePoints(resolvedDays, trip.mapPoints)} />
 
-      <GapsPanel gaps={gaps} groups={trip.groups} />
-
-      {trip.actionItems && trip.actionItems.length > 0 && (
-        <ActionItems items={trip.actionItems} done={done} onToggle={toggleActionItem} />
-      )}
+      <ActionItems
+        gaps={gaps}
+        groups={trip.groups}
+        ticks={ticks}
+        onToggleGap={toggle}
+        items={trip.actionItems || []}
+        done={done}
+        onToggleItem={toggleActionItem}
+      />
 
       <footer>
         Trip content is stored in Convex — ask to have a change made rather than editing code. Quick ticks are

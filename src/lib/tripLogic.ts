@@ -37,19 +37,13 @@ export function presentGroups(groups: Group[], date: string): Group[] {
 }
 
 // `date` is optional — pass it whenever a day is in scope so 'all' items
-// correctly filter by presence. Without it (e.g. filtering trip-level
-// conflicts, which aren't tied to a specific day), 'all' always matches,
-// matching the original trip.js behavior of `visible(who)` with no day arg.
+// correctly filter by presence. Without it (e.g. a group's overall
+// booking tally, which spans every day) 'all' always matches.
 export function belongsTo(who: Who, gid: string, groups: Group[], date?: string): boolean {
   if (Array.isArray(who)) return who.includes(gid);
   if (who === gid) return true;
   if (who === "all") return date ? presence(groups.find((g) => g.id === gid), date) : true;
   return false;
-}
-
-export function visible(who: Who, activeGroup: string, groups: Group[], date?: string): boolean {
-  if (activeGroup === "all") return true;
-  return belongsTo(who, activeGroup, groups, date);
 }
 
 // Compact { label, color } for a card/cell where `who` might be a single
@@ -256,6 +250,9 @@ export interface Gap {
   date: string;
   dateLabel: string;
   text: string;
+  // Tick id(s) this gap resolves when marked booked — absent for "Plan"
+  // gaps, which aren't a simple booked/needed toggle.
+  ids?: string[];
 }
 
 /**
@@ -263,19 +260,19 @@ export interface Gap {
  * plus a "Plan" gap for days with no acts/flights that aren't pure travel
  * days.
  */
-export function computeGaps(resolvedDays: ResolvedDay[], groups: Group[], activeGroup: string, ticks: Record<string, Status>): Gap[] {
+export function computeGaps(resolvedDays: ResolvedDay[], ticks: Record<string, Status>): Gap[] {
   const gaps: Gap[] = [];
   resolvedDays.forEach((d, di) => {
     d.hotels.forEach((h) => {
       if (h.carried) return;
-      if (statusOf(ticks, h.src, h.status) === "needed" && visible(h.who, activeGroup, groups, d.date)) {
-        gaps.push({ who: h.who, kind: "Hotel", date: d.date, dateLabel: fmtDow(d._d), text: `${d.city}${d.to ? " → " + d.to : ""}` });
+      if (statusOf(ticks, h.src, h.status) === "needed") {
+        gaps.push({ who: h.who, kind: "Hotel", date: d.date, dateLabel: fmtDow(d._d), text: `${d.city}${d.to ? " → " + d.to : ""}`, ids: [h.src] });
       }
     });
     d.flights.forEach((f, i) => {
       const id = flightId(di, i);
-      if (statusOf(ticks, id, f.status) === "needed" && visible(f.who, activeGroup, groups, d.date)) {
-        gaps.push({ who: f.who, kind: "Flight", date: d.date, dateLabel: fmtDow(d._d), text: f.route });
+      if (statusOf(ticks, id, f.status) === "needed") {
+        gaps.push({ who: f.who, kind: "Flight", date: d.date, dateLabel: fmtDow(d._d), text: f.route, ids: [id] });
       }
     });
     const blank = !(d.acts && d.acts.length) && !(d.flights && d.flights.length) && d.tag !== "transit";

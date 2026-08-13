@@ -1,5 +1,5 @@
-import type { Group, LegColor, ResolvedDay, Status, Who } from "../../lib/types";
-import { DOW, MON, actParts, mergeFlightsByRoute, mergeHotelsByName, statusOf, visible } from "../../lib/tripLogic";
+import type { Group, LegColor, ResolvedDay, Status } from "../../lib/types";
+import { DOW, MON, actParts, mergeFlightsByRoute, mergeHotelsByName, statusOf } from "../../lib/tripLogic";
 import { WhoPill } from "./WhoPill";
 import { StatusToggle } from "./StatusToggle";
 import { FlightBox } from "./FlightBox";
@@ -11,17 +11,14 @@ interface Props {
   dayNumber: number;
   legColor: LegColor;
   groups: Group[];
-  activeGroup: string;
   ticks: Record<string, Status>;
   onlyGaps: boolean;
   onToggle: (ids: string[], status: Status) => void;
 }
 
-export function DayCard({ day: d, dayIndex: di, dayNumber, legColor, groups, activeGroup, ticks, onlyGaps, onToggle }: Props) {
-  const hotels = d.hotels.filter((h) => visible(h.who, activeGroup, groups, d.date));
-  const visibleFlight = (f: { who: Who }) => visible(f.who, activeGroup, groups, d.date);
-
-  const flightGroups = mergeFlightsByRoute(d.flights, di, ticks, visibleFlight);
+export function DayCard({ day: d, dayIndex: di, dayNumber, legColor, groups, ticks, onlyGaps, onToggle }: Props) {
+  const hotels = d.hotels;
+  const flightGroups = mergeFlightsByRoute(d.flights, di, ticks);
   const hotelGroups = mergeHotelsByName(hotels, ticks);
   const noPlan = !(d.acts && d.acts.length) && !(d.flights && d.flights.length) && d.tag !== "transit";
 
