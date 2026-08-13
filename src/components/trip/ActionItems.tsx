@@ -58,12 +58,25 @@ export function ActionItems({ gaps, groups, ticks, onToggleGap, items, done, onT
 
   const itemRows = items.map((item) => {
     const isDone = !!done[item.id];
+    const badge = item.who ? gapLabel(item.who, groups, item.date || "") : null;
+    const badgeStyle = badge?.color
+      ? { background: `${badge.color}1a`, color: badge.color }
+      : { background: "var(--chip-bg)", color: "var(--text-secondary)" };
     return {
       date: item.date,
       node: (
         <div className={`action-item ${isDone ? "done" : ""}`} key={item.id}>
           <input type="checkbox" id={`ai-${item.id}`} checked={isDone} onChange={() => onToggleItem(item.id)} />
           <label htmlFor={`ai-${item.id}`}>
+            {badge && (
+              <span
+                className="who"
+                onClick={(e) => e.preventDefault()}
+                style={{ ...badgeStyle, display: "inline-block", padding: "3px 7px", borderRadius: 6, fontSize: 10, fontWeight: 700, marginRight: 7 }}
+              >
+                {badge.label}
+              </span>
+            )}
             <span className="at">{item.title} —</span> <span className="ad">{item.detail}</span>
           </label>
         </div>

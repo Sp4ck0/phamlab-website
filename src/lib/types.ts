@@ -77,6 +77,7 @@ export interface ActionItem {
   title: string;
   detail: string;
   date?: string;
+  who?: Who;
 }
 
 export interface HighlightStat {

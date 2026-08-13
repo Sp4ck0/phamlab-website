@@ -103,6 +103,9 @@ export function TripPage() {
           onlyGaps={onlyGaps}
           onToggle={toggle}
           onJump={jumpToDay}
+          actionItems={trip.actionItems || []}
+          actionItemsDone={done}
+          onToggleActionItem={toggleActionItem}
         />
       )}
 

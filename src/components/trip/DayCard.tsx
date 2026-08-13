@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { Group, LegColor, ResolvedDay, Status } from "../../lib/types";
-import { DOW, MON, actParts, mergeFlightsByRoute, mergeHotelsByName, statusOf } from "../../lib/tripLogic";
+import type { ActionItem, Group, LegColor, ResolvedDay, Status } from "../../lib/types";
+import { DOW, MON, actParts, gapLabel, mergeFlightsByRoute, mergeHotelsByName, statusOf } from "../../lib/tripLogic";
 import { WhoPill } from "./WhoPill";
 import { StatusToggle } from "./StatusToggle";
 import { FlightBox } from "./FlightBox";
@@ -15,9 +15,24 @@ interface Props {
   ticks: Record<string, Status>;
   onlyGaps: boolean;
   onToggle: (ids: string[], status: Status) => void;
+  dayActionItems: ActionItem[];
+  actionItemsDone: Record<string, boolean>;
+  onToggleActionItem: (id: string) => void;
 }
 
-export function DayCard({ day: d, dayIndex: di, dayNumber, legColor, groups, ticks, onlyGaps, onToggle }: Props) {
+export function DayCard({
+  day: d,
+  dayIndex: di,
+  dayNumber,
+  legColor,
+  groups,
+  ticks,
+  onlyGaps,
+  onToggle,
+  dayActionItems,
+  actionItemsDone,
+  onToggleActionItem,
+}: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const hotels = d.hotels;
   const flightGroups = mergeFlightsByRoute(d.flights, di, ticks);
@@ -143,6 +158,40 @@ export function DayCard({ day: d, dayIndex: di, dayNumber, legColor, groups, tic
           {d.callout && (
             <div className="note">
               <span dangerouslySetInnerHTML={{ __html: d.callout }} />
+            </div>
+          )}
+
+          {dayActionItems.length > 0 && (
+            <div className="action-items" style={{ marginTop: 14 }}>
+              {dayActionItems.map((item) => {
+                const isDone = !!actionItemsDone[item.id];
+                const badge = item.who ? gapLabel(item.who, groups, item.date || d.date) : null;
+                const badgeStyle = badge?.color
+                  ? { background: `${badge.color}1a`, color: badge.color }
+                  : { background: "var(--chip-bg)", color: "var(--text-secondary)" };
+                return (
+                  <div className={`action-item ${isDone ? "done" : ""}`} key={item.id}>
+                    <input
+                      type="checkbox"
+                      id={`day-ai-${item.id}`}
+                      checked={isDone}
+                      onChange={() => onToggleActionItem(item.id)}
+                    />
+                    <label htmlFor={`day-ai-${item.id}`}>
+                      {badge && (
+                        <span
+                          className="who"
+                          onClick={(e) => e.preventDefault()}
+                          style={{ ...badgeStyle, display: "inline-block", padding: "3px 7px", borderRadius: 6, fontSize: 10, fontWeight: 700, marginRight: 7 }}
+                        >
+                          {badge.label}
+                        </span>
+                      )}
+                      <span className="at">{item.title} —</span> <span className="ad">{item.detail}</span>
+                    </label>
+                  </div>
+                );
+              })}
             </div>
           )}
         </>
