@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { PageShell } from "../components/layout/PageShell";
 import { TripHeader } from "../components/trip/TripHeader";
 import { AlertsPanel } from "../components/trip/AlertsPanel";
+import { GapsPanel } from "../components/trip/GapsPanel";
 import { Controls } from "../components/trip/Controls";
 import { OverviewList } from "../components/trip/OverviewList";
 import { DetailedView } from "../components/trip/DetailedView";
@@ -97,7 +98,7 @@ export function TripPage() {
         onViewChange={setView}
       />
 
-      <AlertsPanel gaps={gaps} conflicts={trip.conflicts} groups={trip.groups} activeGroup={activeGroup} />
+      <AlertsPanel conflicts={trip.conflicts} groups={trip.groups} activeGroup={activeGroup} />
 
       <Controls
         groups={trip.groups}
@@ -124,6 +125,8 @@ export function TripPage() {
       )}
 
       <Roster groups={trip.groups} resolvedDays={resolvedDays} ticks={ticks} sdek={trip.sdek} />
+
+      <GapsPanel gaps={gaps} groups={trip.groups} />
 
       {trip.actionItems && trip.actionItems.length > 0 && (
         <ActionItems items={trip.actionItems} done={done} onToggle={toggleActionItem} />

@@ -1,10 +1,26 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { useConvexAuth } from "convex/react";
+import { useAuthActions } from "@convex-dev/auth/react";
 import { useAccessibleTrips } from "../../hooks/useAccessibleTrips";
+import { useAccessCode } from "../../hooks/useAccessCode";
 import { navCountdown, navMonthLabel } from "../../lib/tripLogic";
+
+const MANAGEMENT_CODE = "bubble";
 
 export function SideNav() {
   const { trips } = useAccessibleTrips();
   const { slug: activeSlug } = useParams();
+  const location = useLocation();
+  const { code, clear } = useAccessCode();
+  const { isAuthenticated } = useConvexAuth();
+  const { signOut } = useAuthActions();
+  const navigate = useNavigate();
+
+  async function handleLogout() {
+    clear();
+    if (isAuthenticated) await signOut();
+    navigate("/unlock");
+  }
 
   return (
     <nav className="sidenav">
@@ -39,6 +55,28 @@ export function SideNav() {
           )}
         </div>
       </div>
+
+      {code?.trim().toLowerCase() === MANAGEMENT_CODE && (
+        <div className="navgroup">
+          <div className="navsection">Admin</div>
+          <div className="navlist">
+            <Link className="navitem" data-active={location.pathname === "/manage" ? "true" : undefined} to="/manage">
+              <span className="navicon">🛠️</span>
+              <span className="navtext">
+                <span className="navname">Manage access</span>
+              </span>
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {(code || isAuthenticated) && (
+        <div className="navfooter">
+          <button className="btn" onClick={handleLogout}>
+            Log out
+          </button>
+        </div>
+      )}
     </nav>
   );
 }

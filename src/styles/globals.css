@@ -120,6 +120,8 @@ a{color:inherit}
 .navmeta{font-size:11px;color:var(--text-muted);display:flex;gap:7px;align-items:center;white-space:nowrap}
 .navcount{font-size:10.5px;font-weight:700;letter-spacing:.02em;color:var(--accent-2)}
 .navitem[data-active="true"] .navcount{color:var(--danger)}
+.navfooter{margin-top:auto;padding-top:14px;border-top:1px solid var(--gridline)}
+.navfooter .btn{width:100%;justify-content:center;display:flex}
 
 /* ── hero header ───────────────────────────── */
 .hero{padding:36px 0 24px;position:relative}
@@ -130,7 +132,7 @@ a{color:inherit}
 h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 .subdate{font-size:15px;color:var(--text-secondary);margin:0 0 22px}
 .theme-toggle{
-  position:absolute;top:0;right:0;
+  position:absolute;top:14px;right:0;
   border:1px solid var(--border);background:var(--card);color:var(--text-secondary);
   font-size:12px;font-weight:600;padding:7px 12px;border-radius:999px;cursor:pointer;
 }

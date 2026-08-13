@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { TripPage } from "./pages/TripPage";
 import { UnlockPage } from "./pages/UnlockPage";
 import { LoginPage } from "./pages/LoginPage";
+import { ManagePage } from "./pages/ManagePage";
 import { useAccessibleTrips } from "./hooks/useAccessibleTrips";
 
 function Home() {
@@ -18,6 +19,7 @@ export default function App() {
       <Route path="/unlock" element={<UnlockPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/trip/:slug" element={<TripPage />} />
+      <Route path="/manage" element={<ManagePage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
