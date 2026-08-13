@@ -36,16 +36,6 @@ export function presentGroups(groups: Group[], date: string): Group[] {
   return groups.filter((g) => presence(g, date));
 }
 
-// `date` is optional — pass it whenever a day is in scope so 'all' items
-// correctly filter by presence. Without it (e.g. a group's overall
-// booking tally, which spans every day) 'all' always matches.
-export function belongsTo(who: Who, gid: string, groups: Group[], date?: string): boolean {
-  if (Array.isArray(who)) return who.includes(gid);
-  if (who === gid) return true;
-  if (who === "all") return date ? presence(groups.find((g) => g.id === gid), date) : true;
-  return false;
-}
-
 // Compact { label, color } for a card/cell where `who` might be a single
 // group id, 'all' (resolved to whoever is present that day), or an array
 // of ids (a shared booking).
