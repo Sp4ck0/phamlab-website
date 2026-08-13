@@ -36,7 +36,7 @@ export function DetailedView({
             key={d.date}
             day={d}
             dayIndex={i}
-            dayNumber={i + 1}
+            dayNumber={i}
             legColor={legColors[i]}
             groups={groups}
             ticks={ticks}

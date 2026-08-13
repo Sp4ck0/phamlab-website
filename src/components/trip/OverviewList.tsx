@@ -22,7 +22,7 @@ export function OverviewList({ days, legColors, onJump }: Props) {
           >
             <div className="ov-date">
               <div className="ov-day-label">
-                Day {i + 1} · {DOW[d._d.getDay()]}
+                Day {i} · {DOW[d._d.getDay()]}
               </div>
               <div className="ov-date-main">
                 {MON[d._d.getMonth()]} {d._d.getDate()}
