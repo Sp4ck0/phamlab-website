@@ -42,7 +42,11 @@ export function ActionItems({ gaps, groups, ticks, onToggleGap, items, done, onT
             <span aria-hidden style={{ width: 17, flex: "none", textAlign: "center", color: "var(--text-muted)" }}>·</span>
           )}
           <label htmlFor={g.ids ? checkboxId : undefined}>
-            <span className="who" style={{ ...style, display: "inline-block", padding: "3px 7px", borderRadius: 6, fontSize: 10, fontWeight: 700, marginRight: 7 }}>
+            <span
+              className="who"
+              onClick={(e) => e.preventDefault()}
+              style={{ ...style, display: "inline-block", padding: "3px 7px", borderRadius: 6, fontSize: 10, fontWeight: 700, marginRight: 7 }}
+            >
               {label}
             </span>
             <span className="at">{g.kind}</span> <span className="ad">— {g.text} · {g.dateLabel}</span>
