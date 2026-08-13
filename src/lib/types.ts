@@ -42,6 +42,7 @@ export interface Hotel {
   name: string;
   address?: string;
   status: Status;
+  detail?: string;
 }
 
 export type Tag = "" | "move" | "transit" | "event" | undefined;

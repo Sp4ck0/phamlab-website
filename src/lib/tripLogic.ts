@@ -88,6 +88,7 @@ export function flightId(dayIndex: number, flightIndex: number) {
 export interface HotelGroup {
   name: string;
   address?: string;
+  detail?: string;
   who: string[];
   srcs: string[];
   statuses: Status[];
@@ -106,7 +107,15 @@ export function mergeHotelsByName(hotels: ResolvedDay["hotels"], ticks: Record<s
       g.statuses.push(status);
       g.carriedAll = g.carriedAll && !!h.carried;
     } else {
-      const g: HotelGroup = { name: h.name, address: h.address, who: [...ids], srcs: [h.src], statuses: [status], carriedAll: !!h.carried };
+      const g: HotelGroup = {
+        name: h.name,
+        address: h.address,
+        detail: h.detail,
+        who: [...ids],
+        srcs: [h.src],
+        statuses: [status],
+        carriedAll: !!h.carried,
+      };
       groups.push(g);
       if (h.name) byName.set(h.name, g);
     }

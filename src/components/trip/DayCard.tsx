@@ -127,6 +127,7 @@ export function DayCard({
                         </a>
                       </div>
                     )}
+                    {g.detail && <div className="cmeta">{g.detail}</div>}
                   </div>
                 );
               })}
