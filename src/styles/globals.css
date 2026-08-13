@@ -154,6 +154,7 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 @media(max-width:640px){.stats{grid-template-columns:repeat(2,1fr)}}
 
 /* ── view toggle ───────────────────────────── */
+.view-row{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
 .view-toggle{display:inline-flex;padding:4px;background:var(--chip-bg);border-radius:999px;gap:2px}
 .view-toggle button{
   border:none;background:transparent;color:var(--text-secondary);
@@ -162,8 +163,7 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 }
 .view-toggle button.active{background:var(--card);color:var(--text-primary);box-shadow:0 1px 2px var(--border)}
 
-/* ── who-filter chips ("Only gaps" etc, reuses old .chip/.btn names) ── */
-.controls{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:22px 0}
+/* ── who-filter chips (reuses old .chip/.btn names) ── */
 .lbl{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-right:2px}
 .chip{
   font-size:13px;font-weight:600;padding:7px 14px;border:1px solid var(--border);
@@ -173,7 +173,6 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 .chip:hover{border-color:var(--text-muted);color:var(--text-primary)}
 .chip[aria-pressed="true"]{background:var(--text-primary);border-color:var(--text-primary);color:var(--page)}
 .chip .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
-.spacer{flex:1}
 .btn{
   font-size:12px;font-weight:700;letter-spacing:.02em;
   padding:8px 14px;border:1px solid var(--border);background:var(--card);color:var(--text-secondary);
@@ -345,7 +344,7 @@ details.tour-box[open] summary::after{content:"Hide"}
 /* ── roster ───────────────────────────── */
 .shead{font-size:20px;font-weight:700;margin:40px 0 4px;letter-spacing:-.01em}
 .sdek{font-size:13.5px;color:var(--text-secondary);margin-bottom:14px;max-width:64ch}
-.roster-list{display:flex;flex-wrap:wrap;gap:10px 22px}
+.roster-list{display:flex;flex-wrap:wrap;gap:10px 22px;margin-bottom:22px}
 .roster-person{display:inline-flex;align-items:center;gap:7px;font-size:14px;font-weight:600;color:var(--text-primary)}
 .roster-person .dot{width:8px;height:8px;border-radius:50%;flex:none}
 
@@ -394,5 +393,5 @@ footer code{background:var(--chip-bg);padding:2px 6px;border-radius:4px;color:va
   .action-items,.overview-list,.alert,.trip-map-wrap{border-radius:12px}
 }
 @media print{
-  .sidenav,.controls,.status,.navtoggle,.navbackdrop,.mobile-topbar{display:none}
+  .sidenav,.status,.navtoggle,.navbackdrop,.mobile-topbar{display:none}
 }

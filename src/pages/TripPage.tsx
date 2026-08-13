@@ -3,10 +3,8 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { PageShell } from "../components/layout/PageShell";
 import { TripHeader } from "../components/trip/TripHeader";
 import { AlertsPanel } from "../components/trip/AlertsPanel";
-import { Controls } from "../components/trip/Controls";
 import { OverviewList } from "../components/trip/OverviewList";
 import { DetailedView } from "../components/trip/DetailedView";
-import { Roster } from "../components/trip/Roster";
 import { ActionItems } from "../components/trip/ActionItems";
 import { TripMap } from "../components/trip/TripMap";
 import type { TripView } from "../components/trip/ViewToggle";
@@ -85,15 +83,14 @@ export function TripPage() {
         dateRangeLabel={trip.dateRangeLabel}
         days={trip.days}
         highlightStat={trip.highlightStat}
+        groups={trip.groups}
         view={view}
         onViewChange={setView}
+        onlyGaps={onlyGaps}
+        onOnlyGapsChange={setOnlyGaps}
       />
 
-      <Roster groups={trip.groups} />
-
       <AlertsPanel conflicts={trip.conflicts} />
-
-      <Controls onlyGaps={onlyGaps} onOnlyGapsChange={setOnlyGaps} showOnlyGaps={view === "detailed"} />
 
       {view === "overview" ? (
         <OverviewList days={resolvedDays} legColors={legColors} onJump={jumpToDay} />

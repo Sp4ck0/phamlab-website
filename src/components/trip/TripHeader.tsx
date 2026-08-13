@@ -1,6 +1,7 @@
-import type { Day, HighlightStat } from "../../lib/types";
+import type { Day, Group, HighlightStat } from "../../lib/types";
 import { assignLegColors, deriveRoute, renderCountdown } from "../../lib/tripLogic";
 import { RouteStepper } from "./RouteStepper";
+import { Roster } from "./Roster";
 import { StatTiles } from "./StatTiles";
 import { ViewToggle, type TripView } from "./ViewToggle";
 
@@ -11,8 +12,11 @@ export function TripHeader({
   dateRangeLabel,
   days,
   highlightStat,
+  groups,
   view,
   onViewChange,
+  onlyGaps,
+  onOnlyGapsChange,
 }: {
   kicker: string;
   title: string;
@@ -20,8 +24,11 @@ export function TripHeader({
   dateRangeLabel: string;
   days: Day[];
   highlightStat?: HighlightStat;
+  groups: Group[];
   view: TripView;
   onViewChange: (v: TripView) => void;
+  onlyGaps: boolean;
+  onOnlyGapsChange: (v: boolean) => void;
 }) {
   const legColors = assignLegColors(days);
   const route = deriveRoute(days, legColors);
@@ -46,8 +53,16 @@ export function TripHeader({
       </p>
 
       <RouteStepper stops={route} />
+      <Roster groups={groups} />
       <StatTiles stats={stats} />
-      <ViewToggle view={view} onChange={onViewChange} />
+      <div className="view-row">
+        <ViewToggle view={view} onChange={onViewChange} />
+        {view === "detailed" && (
+          <button className="btn" aria-pressed={onlyGaps} onClick={() => onOnlyGapsChange(!onlyGaps)}>
+            {onlyGaps ? "Show all days" : "Only gaps"}
+          </button>
+        )}
+      </div>
     </header>
   );
 }
