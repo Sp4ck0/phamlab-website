@@ -83,6 +83,16 @@ export interface HighlightStat {
   label: string;
 }
 
+export type MapCategory = "hotel" | "restaurant" | "attraction" | "transport" | "other";
+
+export interface MapPointData {
+  id: string;
+  label: string;
+  address: string;
+  category: MapCategory;
+  note?: string;
+}
+
 export interface Trip {
   _id: string;
   slug: string;
@@ -98,6 +108,7 @@ export interface Trip {
   days: Day[];
   actionItems?: ActionItem[];
   highlightStat?: HighlightStat;
+  mapPoints?: MapPointData[];
 }
 
 export interface TripSummary {

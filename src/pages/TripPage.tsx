@@ -9,6 +9,7 @@ import { OverviewList } from "../components/trip/OverviewList";
 import { DetailedView } from "../components/trip/DetailedView";
 import { Roster } from "../components/trip/Roster";
 import { ActionItems } from "../components/trip/ActionItems";
+import { TripMap } from "../components/trip/TripMap";
 import type { TripView } from "../components/trip/ViewToggle";
 import { useTrip } from "../hooks/useTrip";
 import { useResolvedDays } from "../hooks/useResolvedDays";
@@ -17,6 +18,7 @@ import { useTripGaps } from "../hooks/useTripGaps";
 import { useTheme } from "../hooks/useTheme";
 import { useActionItems } from "../hooks/useActionItems";
 import { assignLegColors } from "../lib/tripLogic";
+import { derivePoints } from "../lib/mapPoints";
 import { NotFoundOrDenied } from "./NotFoundOrDenied";
 
 export function TripPage() {
@@ -125,6 +127,8 @@ export function TripPage() {
       )}
 
       <Roster groups={trip.groups} resolvedDays={resolvedDays} ticks={ticks} sdek={trip.sdek} />
+
+      <TripMap points={derivePoints(resolvedDays, trip.mapPoints)} />
 
       <GapsPanel gaps={gaps} groups={trip.groups} />
 

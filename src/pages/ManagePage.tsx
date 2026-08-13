@@ -190,11 +190,11 @@ function CodeRowEditor({ code, row, trips }: { code: string; row: CodeRow; trips
 
   return (
     <div className="card" style={{ opacity: busy ? 0.6 : 1 }}>
-      <div className="ctop" style={{ marginBottom: 12 }}>
+      <div className="ctop" style={{ marginBottom: 12, flexWrap: "wrap", rowGap: 8 }}>
         <span className="cmain" style={{ fontSize: 16 }}>
           {row.code}
         </span>
-        <span style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+        <span style={{ marginLeft: "auto", display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button className="btn" aria-pressed={row.active} onClick={toggleActive} disabled={busy}>
             {row.active ? "Active" : "Inactive"}
           </button>
