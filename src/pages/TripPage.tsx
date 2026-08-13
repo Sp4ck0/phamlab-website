@@ -93,6 +93,8 @@ export function TripPage() {
         onViewChange={setView}
       />
 
+      <Roster groups={trip.groups} />
+
       <AlertsPanel conflicts={trip.conflicts} />
 
       <Controls onlyGaps={onlyGaps} onOnlyGapsChange={setOnlyGaps} showOnlyGaps={view === "detailed"} />
@@ -110,8 +112,6 @@ export function TripPage() {
           onJump={jumpToDay}
         />
       )}
-
-      <Roster groups={trip.groups} sdek={trip.sdek} />
 
       <TripMap points={derivePoints(resolvedDays, trip.mapPoints)} />
 

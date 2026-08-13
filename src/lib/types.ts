@@ -83,7 +83,7 @@ export interface HighlightStat {
   label: string;
 }
 
-export type MapCategory = "hotel" | "restaurant" | "attraction" | "transport" | "other";
+export type MapCategory = "hotel" | "restaurant" | "attraction" | "transport" | "city" | "other";
 
 export interface MapPointData {
   id: string;
