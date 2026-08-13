@@ -111,7 +111,7 @@ export function TripPage() {
         />
       )}
 
-      <Roster groups={trip.groups} resolvedDays={resolvedDays} ticks={ticks} sdek={trip.sdek} />
+      <Roster groups={trip.groups} sdek={trip.sdek} />
 
       <TripMap points={derivePoints(resolvedDays, trip.mapPoints)} />
 
