@@ -14,7 +14,6 @@ import { useTrip } from "../hooks/useTrip";
 import { useResolvedDays } from "../hooks/useResolvedDays";
 import { useTicks } from "../hooks/useTicks";
 import { useTripGaps } from "../hooks/useTripGaps";
-import { useTheme } from "../hooks/useTheme";
 import { useActionItems } from "../hooks/useActionItems";
 import { assignLegColors } from "../lib/tripLogic";
 import { derivePoints } from "../lib/mapPoints";
@@ -29,7 +28,6 @@ export function TripPage() {
   const [onlyGaps, setOnlyGaps] = useState(false);
   const [pendingScrollTo, setPendingScrollTo] = useState<string | null>(null);
 
-  const { isDark, toggle: toggleTheme } = useTheme();
   const resolvedDays = useResolvedDays(trip);
   const legColors = assignLegColors(resolvedDays);
   const { ticks, toggle } = useTicks(slug || "");
@@ -87,8 +85,6 @@ export function TripPage() {
         dateRangeLabel={trip.dateRangeLabel}
         days={trip.days}
         highlightStat={trip.highlightStat}
-        isDark={isDark}
-        onToggleTheme={toggleTheme}
         view={view}
         onViewChange={setView}
       />

@@ -4,6 +4,7 @@ import { useConvexAuth } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useAccessibleTrips } from "../../hooks/useAccessibleTrips";
 import { useAccessCode } from "../../hooks/useAccessCode";
+import { useTheme } from "../../hooks/useTheme";
 import { navCountdown, navMonthLabel } from "../../lib/tripLogic";
 
 const MANAGEMENT_CODE = "bubble";
@@ -16,6 +17,7 @@ export function SideNav() {
   const { isAuthenticated } = useConvexAuth();
   const { signOut } = useAuthActions();
   const navigate = useNavigate();
+  const { isDark, toggle: toggleTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
 
   // Close the mobile drawer whenever the route changes (link tap, back/forward).
@@ -121,13 +123,16 @@ export function SideNav() {
           </div>
         )}
 
-        {(code || isAuthenticated) && (
-          <div className="navfooter">
+        <div className="navfooter">
+          <button className="btn" onClick={toggleTheme}>
+            {isDark ? "Light mode" : "Dark mode"}
+          </button>
+          {(code || isAuthenticated) && (
             <button className="btn" onClick={handleLogout}>
               Log out
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </nav>
     </>
   );

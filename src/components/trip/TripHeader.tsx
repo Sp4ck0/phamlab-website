@@ -2,7 +2,6 @@ import type { Day, HighlightStat } from "../../lib/types";
 import { assignLegColors, deriveRoute, renderCountdown } from "../../lib/tripLogic";
 import { RouteStepper } from "./RouteStepper";
 import { StatTiles } from "./StatTiles";
-import { ThemeToggle } from "../layout/ThemeToggle";
 import { ViewToggle, type TripView } from "./ViewToggle";
 
 export function TripHeader({
@@ -12,8 +11,6 @@ export function TripHeader({
   dateRangeLabel,
   days,
   highlightStat,
-  isDark,
-  onToggleTheme,
   view,
   onViewChange,
 }: {
@@ -23,8 +20,6 @@ export function TripHeader({
   dateRangeLabel: string;
   days: Day[];
   highlightStat?: HighlightStat;
-  isDark: boolean;
-  onToggleTheme: () => void;
   view: TripView;
   onViewChange: (v: TripView) => void;
 }) {
@@ -42,7 +37,6 @@ export function TripHeader({
 
   return (
     <header className="hero" style={{ position: "relative" }}>
-      <ThemeToggle isDark={isDark} onToggle={onToggleTheme} />
       <p className="eyebrow">{kicker}</p>
       <h1>
         {title} {titleEmphasis}
