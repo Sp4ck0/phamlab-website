@@ -227,6 +227,13 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
   border-left:5px solid var(--leg-color,var(--accent-1));scroll-margin-top:66px;
 }
 .day-head{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px 14px;margin-bottom:4px}
+.day-head-btn{
+  width:100%;background:none;border:0;padding:0;font:inherit;color:inherit;
+  text-align:left;cursor:pointer;align-items:center;
+}
+.day-head-right{display:inline-flex;align-items:center;gap:10px}
+.day-chevron{transition:transform .16s ease;color:var(--text-muted);flex:none}
+.day-chevron[data-collapsed="true"]{transform:rotate(-90deg)}
 .day-title-group{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .day-num{font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--text-muted);text-transform:uppercase}
 .day-date{font-size:19px;font-weight:700;letter-spacing:-.01em}
