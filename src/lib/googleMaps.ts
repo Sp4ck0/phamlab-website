@@ -11,12 +11,16 @@ export function loadGoogleMaps(): Promise<typeof google> {
   if (loadPromise) return loadPromise;
 
   loadPromise = new Promise((resolve, reject) => {
-    if (window.google?.maps) {
+    if (window.google?.maps?.Geocoder) {
       resolve(window.google);
       return;
     }
+    // Deliberately omit loading=async: with it, onload fires once the base
+    // loader is ready but before the `libraries=geocoding` chunk finishes,
+    // so google.maps.Geocoder isn't guaranteed to exist yet. The classic
+    // synchronous mode blocks onload until every requested library is loaded.
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=geocoding&loading=async`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=geocoding`;
     script.async = true;
     script.onload = () => resolve(window.google);
     script.onerror = () => reject(new Error("Failed to load Google Maps"));
