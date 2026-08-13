@@ -47,7 +47,10 @@ export function derivePoints(days: ResolvedDay[], mapPoints: Trip["mapPoints"]):
     points.push(p);
   });
 
-  const seenCities = new Set<string>();
+  // Seattle is everyone's home departure/arrival city, not a trip
+  // destination — excluding it keeps the map focused on where the trip
+  // actually goes instead of zooming out to include home.
+  const seenCities = new Set<string>(["Seattle"]);
   days.forEach((d) => {
     [
       { city: d.city, country: d.country },

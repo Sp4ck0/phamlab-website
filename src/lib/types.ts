@@ -76,6 +76,7 @@ export interface ActionItem {
   id: string;
   title: string;
   detail: string;
+  date?: string;
 }
 
 export interface HighlightStat {
