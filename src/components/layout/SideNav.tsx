@@ -30,6 +30,16 @@ export function SideNav() {
     };
   }, [isOpen]);
 
+  // Escape closes the drawer, matching standard dialog/drawer behavior.
+  useEffect(() => {
+    if (!isOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setIsOpen(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen]);
+
   async function handleLogout() {
     clear();
     if (isAuthenticated) await signOut();
@@ -38,15 +48,27 @@ export function SideNav() {
 
   return (
     <>
-      <button
-        className="navtoggle"
-        aria-label={isOpen ? "Close menu" : "Open menu"}
-        aria-expanded={isOpen}
-        onClick={() => setIsOpen((v) => !v)}
-      >
-        {isOpen ? "✕" : "☰"}
-      </button>
-      {isOpen && <div className="navbackdrop" onClick={() => setIsOpen(false)} />}
+      <div className="mobile-topbar">
+        <button
+          className="navtoggle"
+          aria-label={isOpen ? "Close menu" : "Open menu"}
+          aria-expanded={isOpen}
+          onClick={() => setIsOpen((v) => !v)}
+        >
+          {isOpen ? (
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M4 4l12 12M16 4L4 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M3 5.5h14M3 10h14M3 14.5h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          )}
+        </button>
+        <span className="navmark">🧳</span>
+        <span className="navtitle">Itinerary</span>
+      </div>
+      <div className="navbackdrop" data-open={isOpen ? "true" : undefined} onClick={() => setIsOpen(false)} />
 
       <nav className="sidenav" data-open={isOpen ? "true" : undefined}>
         <div className="navhead">
