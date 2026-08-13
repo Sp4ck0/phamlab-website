@@ -123,6 +123,9 @@ a{color:inherit}
 .navfooter{margin-top:auto;padding-top:14px;border-top:1px solid var(--gridline)}
 .navfooter .btn{width:100%;justify-content:center;display:flex}
 
+.navtoggle{display:none}
+.navbackdrop{display:none}
+
 /* ── hero header ───────────────────────────── */
 .hero{padding:36px 0 24px;position:relative}
 .eyebrow{
@@ -363,20 +366,21 @@ footer code{background:var(--chip-bg);padding:2px 6px;border-radius:4px;color:va
 .map-legend-item .dot{width:9px;height:9px;border-radius:50%;flex:none}
 
 @media(max-width:780px){
-  body{padding-left:0}
-  .sidenav{
-    position:sticky;top:0;left:auto;bottom:auto;width:auto;height:auto;
-    flex-direction:row;align-items:center;gap:16px;padding:12px 20px;
-    overflow-x:auto;overflow-y:hidden;border-right:0;border-bottom:1px solid var(--border);
+  body{padding-left:0;padding-top:56px}
+  .navtoggle{
+    display:grid;place-items:center;position:fixed;top:0;left:0;z-index:50;
+    width:56px;height:56px;border:0;background:var(--card);border-bottom:1px solid var(--border);
+    border-right:1px solid var(--border);font-size:19px;color:var(--text-primary);cursor:pointer;
   }
-  .navhead{flex-shrink:0}
-  .navgroup{flex-direction:row;align-items:center;gap:10px}
-  .navsection{display:none}
-  .navlist{flex-direction:row;gap:4px}
-  .navitem{padding:8px 10px}
-  .navmeta{display:none}
-  .navfooter{margin-top:0;padding-top:0;border-top:0}
-  .daynav-shell{top:0}
+  .navbackdrop{
+    display:block;position:fixed;inset:0;z-index:35;background:rgba(0,0,0,.45);
+  }
+  .sidenav{
+    z-index:40;transform:translateX(-100%);transition:transform .2s ease;
+    box-shadow:0 0 0 rgba(0,0,0,0);
+  }
+  .sidenav[data-open="true"]{transform:translateX(0);box-shadow:8px 0 24px rgba(0,0,0,.25)}
+  .daynav-shell{top:56px}
 }
 @media(max-width:640px){
   .wrap{padding:0 16px 60px}
@@ -390,5 +394,5 @@ footer code{background:var(--chip-bg);padding:2px 6px;border-radius:4px;color:va
   .action-items,.overview-list,.alert,.trip-map-wrap{border-radius:12px}
 }
 @media print{
-  .sidenav,.controls,.status,.theme-toggle{display:none}
+  .sidenav,.controls,.status,.theme-toggle,.navtoggle,.navbackdrop{display:none}
 }
