@@ -82,16 +82,21 @@ export function DayCard({
 
       {!collapsed && (
         <>
-          {flightGroups.map((g, gi) =>
-            g.legs && g.legs.length ? (
+          {flightGroups
+            .filter((g) => g.legs && g.legs.length)
+            .map((g, gi) => (
               <FlightBox key={`fb${gi}`} group={g} onToggle={onToggle} />
-            ) : (
-              <div className="cards" key={`fc${gi}`} style={{ marginBottom: 14 }}>
-                {(() => {
+            ))}
+
+          {(flightGroups.some((g) => !(g.legs && g.legs.length)) || hotelGroups.length > 0) && (
+            <div className="cards" style={{ marginBottom: 14 }}>
+              {flightGroups
+                .filter((g) => !(g.legs && g.legs.length))
+                .map((g, gi) => {
                   const status: Status = g.statuses.includes("needed") ? "needed" : "booked";
                   const uniqueWho = [...new Set(g.who)];
                   return (
-                    <div className={`card ${status === "needed" ? "miss" : ""}`}>
+                    <div className={`card ${status === "needed" ? "miss" : ""}`} key={`fc${gi}`}>
                       <StatusToggle ids={g.ids} status={status} onToggle={onToggle} />
                       <div className="ctop">
                         <span className="ctype">Flight</span>
@@ -101,13 +106,7 @@ export function DayCard({
                       <div className="cmeta">{g.detail || ""}</div>
                     </div>
                   );
-                })()}
-              </div>
-            )
-          )}
-
-          {hotelGroups.length > 0 && (
-            <div className="cards" style={{ marginBottom: 14 }}>
+                })}
               {hotelGroups.map((g, gi) => {
                 const s: Status = g.statuses.includes("needed") ? "needed" : "booked";
                 const nm = g.name || "Hotel not chosen";
