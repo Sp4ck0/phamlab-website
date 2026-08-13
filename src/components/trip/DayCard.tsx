@@ -110,7 +110,7 @@ export function DayCard({ day: d, dayIndex: di, dayNumber, legColor, groups, tic
                 {tag && <span className="act-tag">{tag}</span>}
                 <span className="activity-text">
                   {time && <span className="activity-time">{time}</span>}
-                  {text}
+                  <span dangerouslySetInnerHTML={{ __html: text }} />
                 </span>
               </li>
             );
