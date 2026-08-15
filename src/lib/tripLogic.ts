@@ -65,7 +65,7 @@ export const statusOf = (ticks: Record<string, Status>, id: string, raw: Status)
  */
 export function resolveDays(trip: Pick<Trip, "days">): ResolvedDay[] {
   let carried: ResolvedDay["hotels"] = [];
-  return trip.days.map((d: Day, di: number) => {
+  const days = trip.days.map((d: Day, di: number) => {
     let hotels: ResolvedDay["hotels"];
     if (d.hotels === "same") {
       hotels = carried.map((h) => ({ ...h, carried: true }));
@@ -75,6 +75,23 @@ export function resolveDays(trip: Pick<Trip, "days">): ResolvedDay[] {
     }
     return { ...d, hotels, flights: d.flights || [], _d: new Date(d.date + "T00:00:00") };
   });
+
+  // Tag each hotel entry as check-in / check-out by comparing its name
+  // against the adjacent days' hotel names — independent of `carried`,
+  // since a hotel now gets an explicit (non-"same") entry on both its
+  // check-in day and its check-out day.
+  const namesByDay = days.map((d) => new Set(d.hotels.map((h) => h.name)));
+  days.forEach((d, di) => {
+    const prevNames = di > 0 ? namesByDay[di - 1] : new Set<string>();
+    const nextNames = di < days.length - 1 ? namesByDay[di + 1] : new Set<string>();
+    d.hotels = d.hotels.map((h) => ({
+      ...h,
+      checkIn: !prevNames.has(h.name),
+      checkOut: !nextNames.has(h.name),
+    }));
+  });
+
+  return days;
 }
 
 export function flightId(dayIndex: number, flightIndex: number) {
@@ -94,6 +111,8 @@ export interface HotelGroup {
   srcs: string[];
   statuses: Status[];
   carriedAll: boolean;
+  checkIn: boolean;
+  checkOut: boolean;
 }
 export function mergeHotelsByName(hotels: ResolvedDay["hotels"], ticks: Record<string, Status>): HotelGroup[] {
   const groups: HotelGroup[] = [];
@@ -116,6 +135,8 @@ export function mergeHotelsByName(hotels: ResolvedDay["hotels"], ticks: Record<s
         srcs: [h.src],
         statuses: [status],
         carriedAll: !!h.carried,
+        checkIn: !!h.checkIn,
+        checkOut: !!h.checkOut,
       };
       groups.push(g);
       if (h.name) byName.set(h.name, g);

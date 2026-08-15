@@ -129,6 +129,11 @@ export interface TripSummary {
 export interface ResolvedHotel extends Hotel {
   src: string;
   carried?: boolean;
+  // Whether this day is the first/last day this hotel name appears on
+  // (adjacent-day check, independent of `carried`) — drives the
+  // "Hotel · check-in" / "Hotel · staying" / "Hotel · check-out" tag.
+  checkIn?: boolean;
+  checkOut?: boolean;
 }
 export interface ResolvedDay extends Omit<Day, "hotels"> {
   hotels: ResolvedHotel[];

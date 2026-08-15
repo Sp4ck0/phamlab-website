@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { ActionItem, Group, LegColor, ResolvedDay, Status } from "../../lib/types";
 import { DOW, MON, actParts, gapLabel, mergeFlightsByRoute, mergeHotelsByName, statusOf } from "../../lib/tripLogic";
+import type { HotelGroup } from "../../lib/tripLogic";
 import { WhoPill } from "./WhoPill";
 import { StatusToggle } from "./StatusToggle";
 import { FlightBox } from "./FlightBox";
@@ -37,6 +38,11 @@ export function DayCard({
   const hotels = d.hotels;
   const flightGroups = mergeFlightsByRoute(d.flights, di, ticks);
   const hotelGroups = mergeHotelsByName(hotels, ticks);
+  // On a transition day, the hotel being checked out of renders before the
+  // flight/transport tile, and the hotel being checked into (or one just
+  // being stayed in) renders after — matches the day's actual chronology.
+  const checkoutHotels = hotelGroups.filter((g) => g.checkOut && !g.checkIn);
+  const otherHotels = hotelGroups.filter((g) => !(g.checkOut && !g.checkIn));
   const noPlan = !(d.acts && d.acts.length) && !(d.flights && d.flights.length) && d.tag !== "transit";
 
   const hasGap =
@@ -46,6 +52,38 @@ export function DayCard({
   const hidden = onlyGaps && !hasGap;
 
   if (hidden) return null;
+
+  const renderHotelCard = (g: HotelGroup, key: string | number) => {
+    const s: Status = g.statuses.includes("needed") ? "needed" : "booked";
+    const nm = g.name || "Hotel not chosen";
+    const uniqueWho = [...new Set(g.who)];
+    const ctype =
+      g.checkIn && g.checkOut
+        ? "Hotel"
+        : g.checkIn
+          ? "Hotel · check-in"
+          : g.checkOut
+            ? "Hotel · check-out"
+            : "Hotel · staying";
+    return (
+      <div className={`card ${s === "needed" ? "miss" : ""}`} style={g.carriedAll ? { opacity: 0.72 } : undefined} key={key}>
+        <StatusToggle ids={g.srcs} status={s} onToggle={onToggle} />
+        <div className="ctop">
+          <span className="ctype">{ctype}</span>
+          <WhoPill who={uniqueWho.length === 1 ? uniqueWho[0] : uniqueWho} groups={groups} date={d.date} />
+        </div>
+        <div className={`cmain ${s === "needed" ? "todo" : ""}`}>{nm}</div>
+        {g.address && (
+          <div className="cmeta">
+            <a href={`https://maps.google.com/?q=${encodeURIComponent(g.address)}`} target="_blank" rel="noopener">
+              {g.address}
+            </a>
+          </div>
+        )}
+        {g.detail && <div className="cmeta">{g.detail}</div>}
+      </div>
+    );
+  };
 
   return (
     <section
@@ -82,13 +120,19 @@ export function DayCard({
 
       {!collapsed && (
         <>
+          {checkoutHotels.length > 0 && (
+            <div className="cards" style={{ marginBottom: 14 }}>
+              {checkoutHotels.map((g, gi) => renderHotelCard(g, `co${gi}`))}
+            </div>
+          )}
+
           {flightGroups
             .filter((g) => g.legs && g.legs.length)
             .map((g, gi) => (
               <FlightBox key={`fb${gi}`} group={g} onToggle={onToggle} />
             ))}
 
-          {(flightGroups.some((g) => !(g.legs && g.legs.length)) || hotelGroups.length > 0) && (
+          {(flightGroups.some((g) => !(g.legs && g.legs.length)) || otherHotels.length > 0) && (
             <div className="cards" style={{ marginBottom: 14 }}>
               {flightGroups
                 .filter((g) => !(g.legs && g.legs.length))
@@ -107,29 +151,7 @@ export function DayCard({
                     </div>
                   );
                 })}
-              {hotelGroups.map((g, gi) => {
-                const s: Status = g.statuses.includes("needed") ? "needed" : "booked";
-                const nm = g.name || "Hotel not chosen";
-                const uniqueWho = [...new Set(g.who)];
-                return (
-                  <div className={`card ${s === "needed" ? "miss" : ""}`} style={g.carriedAll ? { opacity: 0.72 } : undefined} key={gi}>
-                    <StatusToggle ids={g.srcs} status={s} onToggle={onToggle} />
-                    <div className="ctop">
-                      <span className="ctype">{g.carriedAll ? "Hotel · staying" : "Hotel"}</span>
-                      <WhoPill who={uniqueWho.length === 1 ? uniqueWho[0] : uniqueWho} groups={groups} date={d.date} />
-                    </div>
-                    <div className={`cmain ${s === "needed" ? "todo" : ""}`}>{nm}</div>
-                    {g.address && (
-                      <div className="cmeta">
-                        <a href={`https://maps.google.com/?q=${encodeURIComponent(g.address)}`} target="_blank" rel="noopener">
-                          {g.address}
-                        </a>
-                      </div>
-                    )}
-                    {g.detail && <div className="cmeta">{g.detail}</div>}
-                  </div>
-                );
-              })}
+              {otherHotels.map((g, gi) => renderHotelCard(g, gi))}
             </div>
           )}
 
