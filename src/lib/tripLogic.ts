@@ -15,6 +15,8 @@ export const COUNTRY: Record<string, string> = {
   US: "United States", TH: "Thailand", SG: "Singapore", VN: "Vietnam", JP: "Japan",
   KR: "South Korea", CN: "China", TW: "Taiwan", HK: "Hong Kong", ES: "Spain", IT: "Italy", DE: "Germany",
   MY: "Malaysia", KH: "Cambodia",
+  TR: "Turkey", BE: "Belgium", FR: "France", PT: "Portugal", HR: "Croatia", BA: "Bosnia and Herzegovina",
+  GR: "Greece", HU: "Hungary", SK: "Slovakia", AT: "Austria", CZ: "Czechia",
 };
 
 // ISO 3166 alpha-2 -> regional-indicator flag emoji
