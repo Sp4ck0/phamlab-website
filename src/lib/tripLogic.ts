@@ -335,7 +335,7 @@ export function navMonthLabel(start?: string, end?: string): string {
   const e = new Date((end || start) + "T00:00:00");
   const sm = MON[s.getMonth()];
   const em = MON[e.getMonth()];
-  return sm === em ? `${sm} ${e.getFullYear()}` : `${sm}–${em} ${e.getFullYear()}`;
+  return sm === em ? `${e.getFullYear()} ${sm}` : `${e.getFullYear()} ${sm}–${em}`;
 }
 
 export function navCountdown(start?: string, end?: string): string {
