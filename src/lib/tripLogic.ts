@@ -14,6 +14,7 @@ export const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 export const COUNTRY: Record<string, string> = {
   US: "United States", TH: "Thailand", SG: "Singapore", VN: "Vietnam", JP: "Japan",
   KR: "South Korea", CN: "China", TW: "Taiwan", HK: "Hong Kong", ES: "Spain", IT: "Italy", DE: "Germany",
+  MY: "Malaysia", KH: "Cambodia",
 };
 
 // ISO 3166 alpha-2 -> regional-indicator flag emoji
