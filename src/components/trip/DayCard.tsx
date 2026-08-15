@@ -39,10 +39,14 @@ export function DayCard({
   const flightGroups = mergeFlightsByRoute(d.flights, di, ticks);
   const hotelGroups = mergeHotelsByName(hotels, ticks);
   // On a transition day, the hotel being checked out of renders before the
-  // flight/transport tile, and the hotel being checked into (or one just
-  // being stayed in) renders after — matches the day's actual chronology.
-  const checkoutHotels = hotelGroups.filter((g) => g.checkOut && !g.checkIn);
-  const otherHotels = hotelGroups.filter((g) => !(g.checkOut && !g.checkIn));
+  // flight tile, and the hotel being checked into (or one just being stayed
+  // in) renders after — matches the day's actual chronology. Only split
+  // into separate rows when there's an actual flight to insert between them
+  // (e.g. a drive/transfer day with no Flight entry keeps both hotels on
+  // one row).
+  const hasFlights = flightGroups.length > 0;
+  const checkoutHotels = hasFlights ? hotelGroups.filter((g) => g.checkOut && !g.checkIn) : [];
+  const otherHotels = hasFlights ? hotelGroups.filter((g) => !(g.checkOut && !g.checkIn)) : hotelGroups;
   const noPlan = !(d.acts && d.acts.length) && !(d.flights && d.flights.length) && d.tag !== "transit";
 
   const hasGap =
@@ -120,20 +124,15 @@ export function DayCard({
 
       {!collapsed && (
         <>
-          {checkoutHotels.length > 0 && (
-            <div className="cards" style={{ marginBottom: 14 }}>
-              {checkoutHotels.map((g, gi) => renderHotelCard(g, `co${gi}`))}
-            </div>
-          )}
-
           {flightGroups
             .filter((g) => g.legs && g.legs.length)
             .map((g, gi) => (
               <FlightBox key={`fb${gi}`} group={g} onToggle={onToggle} />
             ))}
 
-          {(flightGroups.some((g) => !(g.legs && g.legs.length)) || otherHotels.length > 0) && (
+          {(checkoutHotels.length > 0 || flightGroups.some((g) => !(g.legs && g.legs.length)) || otherHotels.length > 0) && (
             <div className="cards" style={{ marginBottom: 14 }}>
+              {checkoutHotels.map((g, gi) => renderHotelCard(g, `co${gi}`))}
               {flightGroups
                 .filter((g) => !(g.legs && g.legs.length))
                 .map((g, gi) => {
