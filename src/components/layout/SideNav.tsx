@@ -92,7 +92,12 @@ export function SideNav() {
                   <span className="navname">{t.title}</span>
                   <span className="navmeta">
                     <span>{navMonthLabel(t.start, t.end)}</span>
-                    <span>{t.countries.map((c) => flagEmoji(c)?.emoji).join("")}</span>
+                    <span>
+                      {t.countries
+                        .filter((c) => c !== "US")
+                        .map((c) => flagEmoji(c)?.emoji)
+                        .join("")}
+                    </span>
                     <span className="navcount">{navCountdown(t.start, t.end)}</span>
                   </span>
                 </span>
