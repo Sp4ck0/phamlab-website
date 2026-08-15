@@ -121,6 +121,7 @@ export interface TripSummary {
   navIcon: string;
   start?: string;
   end?: string;
+  countries: string[];
 }
 
 // A day after `hotels:'same'` carry-forward has been resolved and every

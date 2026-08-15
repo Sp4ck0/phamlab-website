@@ -5,7 +5,7 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { useAccessibleTrips } from "../../hooks/useAccessibleTrips";
 import { useAccessCode } from "../../hooks/useAccessCode";
 import { useTheme } from "../../hooks/useTheme";
-import { navCountdown, navMonthLabel } from "../../lib/tripLogic";
+import { flagEmoji, navCountdown, navMonthLabel } from "../../lib/tripLogic";
 
 const MANAGEMENT_CODE = "bubble";
 
@@ -89,7 +89,9 @@ export function SideNav() {
               >
                 <span className="navicon">{t.navIcon}</span>
                 <span className="navtext">
-                  <span className="navname">{t.title}</span>
+                  <span className="navname">
+                    {t.title} {t.countries.map((c) => flagEmoji(c)?.emoji).join("")}
+                  </span>
                   <span className="navmeta">
                     <span>{navMonthLabel(t.start, t.end)}</span>
                     <span className="navcount">{navCountdown(t.start, t.end)}</span>
