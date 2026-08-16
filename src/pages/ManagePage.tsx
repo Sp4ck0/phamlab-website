@@ -202,9 +202,22 @@ function CodeRowEditor({ code, row, trips }: { code: string; row: CodeRow; trips
 
   return (
     <div className="card" style={{ opacity: busy ? 0.6 : 1 }}>
-      <div className="ctop" style={{ marginBottom: 8, flexWrap: "wrap", rowGap: 8 }}>
-        <span className="cmain" style={{ fontSize: 16 }}>
+      <div className="ctop" style={{ marginBottom: 10, flexWrap: "wrap", rowGap: 8 }}>
+        <span className="cmain" style={{ fontSize: 16, minWidth: 0, wordBreak: "break-word" }}>
           {row.label || row.code}
+        </span>
+        <span className="cmeta" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontFamily: "monospace", letterSpacing: 1 }}>
+            {revealed ? row.code : `${row.code.charAt(0)}${"•".repeat(8)}`}
+          </span>
+          <button
+            className="btn"
+            onClick={() => setRevealed((r) => !r)}
+            disabled={busy}
+            style={{ padding: "2px 10px", fontSize: 12 }}
+          >
+            {revealed ? "Hide" : "Reveal"}
+          </button>
         </span>
         <span style={{ marginLeft: "auto", display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button className="btn" aria-pressed={row.active} onClick={toggleActive} disabled={busy}>
@@ -214,19 +227,6 @@ function CodeRowEditor({ code, row, trips }: { code: string; row: CodeRow; trips
             Delete
           </button>
         </span>
-      </div>
-      <div className="cmeta" style={{ marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ fontFamily: "monospace", letterSpacing: 1 }}>
-          {revealed ? row.code : `${row.code.charAt(0)}${"•".repeat(8)}`}
-        </span>
-        <button
-          className="btn"
-          onClick={() => setRevealed((r) => !r)}
-          disabled={busy}
-          style={{ padding: "2px 10px", fontSize: 12 }}
-        >
-          {revealed ? "Hide" : "Reveal"}
-        </button>
       </div>
       <TripCheckboxes trips={trips} selected={row.tripIds} onChange={updateTrips} />
     </div>
