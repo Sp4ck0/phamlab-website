@@ -166,6 +166,7 @@ function CodeRowEditor({ code, row, trips }: { code: string; row: CodeRow; trips
   const upsert = useMutation(api.management.upsertAccessCode);
   const del = useMutation(api.management.deleteAccessCode);
   const [busy, setBusy] = useState(false);
+  const [revealed, setRevealed] = useState(false);
 
   async function updateTrips(tripIds: string[]) {
     setBusy(true);
@@ -197,10 +198,13 @@ function CodeRowEditor({ code, row, trips }: { code: string; row: CodeRow; trips
   return (
     <div className="card" style={{ opacity: busy ? 0.6 : 1 }}>
       <div className="ctop" style={{ marginBottom: 12, flexWrap: "wrap", rowGap: 8 }}>
-        <span className="cmain" style={{ fontSize: 16 }}>
-          {row.code}
+        <span className="cmain" style={{ fontSize: 16, fontFamily: revealed ? "inherit" : "monospace" }}>
+          {revealed ? row.code : "•".repeat(row.code.length)}
         </span>
         <span style={{ marginLeft: "auto", display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button className="btn" onClick={() => setRevealed((r) => !r)} disabled={busy}>
+            {revealed ? "Hide" : "Reveal"}
+          </button>
           <button className="btn" aria-pressed={row.active} onClick={toggleActive} disabled={busy}>
             {row.active ? "Active" : "Inactive"}
           </button>
