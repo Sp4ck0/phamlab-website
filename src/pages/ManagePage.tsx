@@ -5,8 +5,6 @@ import { api } from "@convex/api";
 import { PageShell } from "../components/layout/PageShell";
 import { useAccessCode } from "../hooks/useAccessCode";
 
-const MANAGEMENT_CODE = "bubble";
-
 interface TripRow {
   _id: string;
   slug: string;
@@ -23,7 +21,15 @@ interface CodeRow {
 
 export function ManagePage() {
   const { code } = useAccessCode();
-  const isAuthorized = code?.trim().toLowerCase() === MANAGEMENT_CODE;
+  const isAuthorized = useQuery(api.management.checkManagementAccess, code ? { code } : "skip");
+
+  if (isAuthorized === undefined) {
+    return (
+      <PageShell>
+        <div style={{ padding: "80px 0", color: "var(--text-muted)" }}>Loading…</div>
+      </PageShell>
+    );
+  }
 
   if (!isAuthorized) {
     return (
