@@ -12,7 +12,11 @@
   "dependencies": {
     "@auth/core": "^0.41.3",
     "@convex-dev/auth": "^0.0.95",
+    "@dnd-kit/dom": "^0.5.0",
+    "@dnd-kit/helpers": "^0.5.0",
+    "@dnd-kit/react": "^0.5.0",
     "convex": "^1.43.0",
+    "motion": "^12.23.12",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.2"
