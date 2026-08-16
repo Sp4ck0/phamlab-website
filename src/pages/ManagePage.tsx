@@ -121,13 +121,17 @@ function NewCodeForm({ code, trips, existingCodes }: { code: string; trips: Trip
       setError("Enter a code.");
       return;
     }
+    if (!label.trim()) {
+      setError("Enter a label.");
+      return;
+    }
     if (existingCodes.includes(normalized)) {
       setError(`Code "${normalized}" already exists.`);
       return;
     }
     setSubmitting(true);
     try {
-      await upsert({ code, targetCode: newCode, tripIds: tripIds as any, label: label || undefined, active: true });
+      await upsert({ code, targetCode: newCode, tripIds: tripIds as any, label: label.trim(), active: true });
       setNewCode("");
       setLabel("");
       setTripIds([]);
@@ -142,15 +146,16 @@ function NewCodeForm({ code, trips, existingCodes }: { code: string; trips: Trip
     <form onSubmit={submit} className="card" style={{ display: "grid", gap: 12, maxWidth: 560 }}>
       <div className="ctype">New access code</div>
       <input
-        value={newCode}
-        onChange={(e) => setNewCode(e.target.value)}
-        placeholder="e.g. sunshine"
+        value={label}
+        onChange={(e) => setLabel(e.target.value)}
+        placeholder="Label — e.g. Tony's cousins"
+        required
         style={inputStyle}
       />
       <input
-        value={label}
-        onChange={(e) => setLabel(e.target.value)}
-        placeholder="Label (optional) — e.g. Tony's cousins"
+        value={newCode}
+        onChange={(e) => setNewCode(e.target.value)}
+        placeholder="Code — e.g. sunshine"
         style={inputStyle}
       />
       <TripCheckboxes trips={trips} selected={tripIds} onChange={setTripIds} />
@@ -198,8 +203,8 @@ function CodeRowEditor({ code, row, trips }: { code: string; row: CodeRow; trips
   return (
     <div className="card" style={{ opacity: busy ? 0.6 : 1 }}>
       <div className="ctop" style={{ marginBottom: 12, flexWrap: "wrap", rowGap: 8 }}>
-        <span className="cmain" style={{ fontSize: 16, fontFamily: revealed ? "inherit" : "monospace" }}>
-          {revealed ? row.code : "•".repeat(row.code.length)}
+        <span className="cmain" style={{ fontSize: 16 }}>
+          {row.label || row.code}
         </span>
         <span style={{ marginLeft: "auto", display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button className="btn" onClick={() => setRevealed((r) => !r)} disabled={busy}>
@@ -213,7 +218,9 @@ function CodeRowEditor({ code, row, trips }: { code: string; row: CodeRow; trips
           </button>
         </span>
       </div>
-      {row.label && <div className="cmeta" style={{ marginBottom: 10 }}>{row.label}</div>}
+      <div className="cmeta" style={{ marginBottom: 10, fontFamily: revealed ? "inherit" : "monospace" }}>
+        {revealed ? row.code : "•".repeat(row.code.length)}
+      </div>
       <TripCheckboxes trips={trips} selected={row.tripIds} onChange={updateTrips} />
     </div>
   );
