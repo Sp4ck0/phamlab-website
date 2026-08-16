@@ -1,19 +1,19 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { useConvexAuth } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
+import { api } from "@convex/api";
 import { useAccessibleTrips } from "../../hooks/useAccessibleTrips";
 import { useAccessCode } from "../../hooks/useAccessCode";
 import { useTheme } from "../../hooks/useTheme";
 import { flagEmoji, navCountdown, navMonthLabel } from "../../lib/tripLogic";
-
-const MANAGEMENT_CODE = "bubble";
 
 export function SideNav() {
   const { trips } = useAccessibleTrips();
   const { slug: activeSlug } = useParams();
   const location = useLocation();
   const { code, clear } = useAccessCode();
+  const isManagementCode = useQuery(api.management.checkManagementAccess, code ? { code } : "skip");
   const { isAuthenticated } = useConvexAuth();
   const { signOut } = useAuthActions();
   const navigate = useNavigate();
@@ -128,7 +128,7 @@ export function SideNav() {
           </div>
         )}
 
-        {code?.trim().toLowerCase() === MANAGEMENT_CODE && (
+        {isManagementCode && (
           <div className="navgroup">
             <div className="navsection">Admin</div>
             <div className="navlist">
