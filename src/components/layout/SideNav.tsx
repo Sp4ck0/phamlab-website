@@ -68,14 +68,14 @@ export function SideNav() {
           )}
         </button>
         <span className="navmark">🧳</span>
-        <span className="navtitle">Itinerary</span>
+        <span className="navtitle">Pham Lab</span>
       </div>
       <div className="navbackdrop" data-open={isOpen ? "true" : undefined} onClick={() => setIsOpen(false)} />
 
       <nav className="sidenav" data-open={isOpen ? "true" : undefined}>
         <div className="navhead">
           <span className="navmark">🧳</span>
-          <span className="navtitle">Itinerary</span>
+          <span className="navtitle">Pham Lab</span>
         </div>
         <div className="navgroup">
           <div className="navsection">Trips</div>
