@@ -14,7 +14,7 @@ interface TripRow {
 interface CodeRow {
   _id: string;
   code: string;
-  name?: string;
+  name: string;
   active: boolean;
   tripIds: string[];
 }
@@ -204,7 +204,7 @@ function CodeRowEditor({ code, row, trips }: { code: string; row: CodeRow; trips
     <div className="card" style={{ opacity: busy ? 0.6 : 1 }}>
       <div className="ctop" style={{ marginBottom: 10, flexWrap: "wrap", rowGap: 8 }}>
         <span className="cmain" style={{ fontSize: 16, minWidth: 0, wordBreak: "break-word" }}>
-          {row.name || row.code}
+          {row.name}
         </span>
         <span className="cmeta" style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ fontFamily: "monospace", letterSpacing: 1 }}>
