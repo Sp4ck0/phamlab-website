@@ -111,6 +111,23 @@ export function SideNav() {
           </div>
         </div>
 
+        {code && (
+          <div className="navgroup">
+            <div className="navlist">
+              <Link
+                className="navitem"
+                data-active={location.pathname === "/kanban" ? "true" : undefined}
+                to="/kanban"
+              >
+                <span className="navicon">🗂️</span>
+                <span className="navtext">
+                  <span className="navname">Kanban</span>
+                </span>
+              </Link>
+            </div>
+          </div>
+        )}
+
         {isManagementCode && (
           <div className="navgroup">
             <div className="navsection">Admin</div>
