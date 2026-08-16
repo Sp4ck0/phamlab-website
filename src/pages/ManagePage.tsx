@@ -14,7 +14,7 @@ interface TripRow {
 interface CodeRow {
   _id: string;
   code: string;
-  label?: string;
+  name?: string;
   active: boolean;
   tripIds: string[];
 }
@@ -108,7 +108,7 @@ function TripCheckboxes({ trips, selected, onChange }: { trips: TripRow[]; selec
 function NewCodeForm({ code, trips, existingCodes }: { code: string; trips: TripRow[]; existingCodes: string[] }) {
   const upsert = useMutation(api.management.upsertAccessCode);
   const [newCode, setNewCode] = useState("");
-  const [label, setLabel] = useState("");
+  const [name, setName] = useState("");
   const [tripIds, setTripIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -121,8 +121,8 @@ function NewCodeForm({ code, trips, existingCodes }: { code: string; trips: Trip
       setError("Enter a code.");
       return;
     }
-    if (!label.trim()) {
-      setError("Enter a label.");
+    if (!name.trim()) {
+      setError("Enter a name.");
       return;
     }
     if (existingCodes.includes(normalized)) {
@@ -131,9 +131,9 @@ function NewCodeForm({ code, trips, existingCodes }: { code: string; trips: Trip
     }
     setSubmitting(true);
     try {
-      await upsert({ code, targetCode: newCode, tripIds: tripIds as any, label: label.trim(), active: true });
+      await upsert({ code, targetCode: newCode, tripIds: tripIds as any, name: name.trim(), active: true });
       setNewCode("");
-      setLabel("");
+      setName("");
       setTripIds([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't create that code.");
@@ -146,9 +146,9 @@ function NewCodeForm({ code, trips, existingCodes }: { code: string; trips: Trip
     <form onSubmit={submit} className="card" style={{ display: "grid", gap: 12, maxWidth: 560 }}>
       <div className="ctype">New access code</div>
       <input
-        value={label}
-        onChange={(e) => setLabel(e.target.value)}
-        placeholder="Label — e.g. Tony's cousins"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Name — e.g. Tony's cousins"
         required
         style={inputStyle}
       />
@@ -176,7 +176,7 @@ function CodeRowEditor({ code, row, trips }: { code: string; row: CodeRow; trips
   async function updateTrips(tripIds: string[]) {
     setBusy(true);
     try {
-      await upsert({ code, id: row._id as any, targetCode: row.code, tripIds: tripIds as any, label: row.label, active: row.active });
+      await upsert({ code, id: row._id as any, targetCode: row.code, tripIds: tripIds as any, name: row.name, active: row.active });
     } finally {
       setBusy(false);
     }
@@ -185,7 +185,7 @@ function CodeRowEditor({ code, row, trips }: { code: string; row: CodeRow; trips
   async function toggleActive() {
     setBusy(true);
     try {
-      await upsert({ code, id: row._id as any, targetCode: row.code, tripIds: row.tripIds as any, label: row.label, active: !row.active });
+      await upsert({ code, id: row._id as any, targetCode: row.code, tripIds: row.tripIds as any, name: row.name, active: !row.active });
     } finally {
       setBusy(false);
     }
@@ -204,7 +204,7 @@ function CodeRowEditor({ code, row, trips }: { code: string; row: CodeRow; trips
     <div className="card" style={{ opacity: busy ? 0.6 : 1 }}>
       <div className="ctop" style={{ marginBottom: 10, flexWrap: "wrap", rowGap: 8 }}>
         <span className="cmain" style={{ fontSize: 16, minWidth: 0, wordBreak: "break-word" }}>
-          {row.label || row.code}
+          {row.name || row.code}
         </span>
         <span className="cmeta" style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ fontFamily: "monospace", letterSpacing: 1 }}>
