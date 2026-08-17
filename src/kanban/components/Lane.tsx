@@ -67,7 +67,7 @@ export function Lane({ lane, board, onOpen, onQuickAdd }: Props) {
               autoFocus
               rows={2}
               value={title}
-              placeholder="What do you want to say?"
+              placeholder="Title"
               onChange={(e) => setTitle(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Escape') reset();
