@@ -74,7 +74,7 @@ export const KINDS: { id: Kind; label: string; hint: string }[] = [
  */
 export const WEIGHTS: { id: Weight; label: string; hint: string; bars: number }[] = [
   { id: 'minor', label: 'Small', hint: 'Worth saying once. I’m not carrying it around.', bars: 1 },
-  { id: 'medium', label: 'Worth time', hint: 'I’d like us to actually sit down with this.', bars: 2 },
+  { id: 'medium', label: 'Medium', hint: 'I’d like us to actually sit down with this.', bars: 2 },
   { id: 'major', label: 'Heavy', hint: 'This one sits with me. I need it taken seriously.', bars: 3 },
 ];
 
