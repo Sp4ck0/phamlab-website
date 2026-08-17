@@ -5,11 +5,10 @@ import type { Id } from "@convex/dataModel";
 import { useAccessCode } from "../hooks/useAccessCode";
 import type { Board, Card, LaneId, PersonId } from "./types";
 
-export function useKanbanBoard() {
+export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined) {
   const { code } = useAccessCode();
-  const result = useQuery(api.kanban.getBoard, code ? { code } : "skip");
+  const result = useQuery(api.kanban.getBoard, code && boardId ? { code, boardId } : "skip");
 
-  const startBoardMut = useMutation(api.kanban.startBoard);
   const addCardMut = useMutation(api.kanban.addCard);
   const updateCardMut = useMutation(api.kanban.updateCard);
   const removeCardMut = useMutation(api.kanban.removeCard);
@@ -27,49 +26,45 @@ export function useKanbanBoard() {
     }
     return {
       version: 1,
+      name: result.board.name,
       people: result.board.people,
       lanes: result.board.lanes,
       cards,
     };
   }, [result]);
 
-  const isLoading = code !== undefined && result === undefined;
+  const isLoading = !!(code && boardId) && result === undefined;
   const authorized = result?.authorized ?? false;
 
-  function start(nameA: string, nameB: string) {
-    if (!code) return;
-    void startBoardMut({ code, nameA, nameB });
-  }
-
   function setLanes(update: (lanes: Board["lanes"]) => Board["lanes"]) {
-    if (!code || !board) return;
-    void setLanesMut({ code, lanes: update(board.lanes) as Board["lanes"] });
+    if (!code || !boardId || !board) return;
+    void setLanesMut({ code, boardId, lanes: update(board.lanes) as Board["lanes"] });
   }
 
   function addCard(lane: LaneId, title: string, from: PersonId) {
-    if (!code) return;
-    void addCardMut({ code, lane, title, from });
+    if (!code || !boardId) return;
+    void addCardMut({ code, boardId, lane, title, from });
   }
 
   function updateCard(id: string, patch: Partial<Card>) {
-    if (!code) return;
-    void updateCardMut({ code, cardId: id as Id<"kanban_cards">, ...patch });
+    if (!code || !boardId) return;
+    void updateCardMut({ code, boardId, cardId: id as Id<"kanban_cards">, ...patch });
   }
 
   function removeCard(id: string) {
-    if (!code) return;
-    void removeCardMut({ code, cardId: id as Id<"kanban_cards"> });
+    if (!code || !boardId) return;
+    void removeCardMut({ code, boardId, cardId: id as Id<"kanban_cards"> });
   }
 
   function renamePerson(who: PersonId, name: string) {
-    if (!code) return;
-    void renamePersonMut({ code, who, name });
+    if (!code || !boardId) return;
+    void renamePersonMut({ code, boardId, who, name });
   }
 
   function reset() {
-    if (!code) return;
-    void resetBoardMut({ code });
+    if (!code || !boardId) return;
+    void resetBoardMut({ code, boardId });
   }
 
-  return { board, isLoading, authorized, start, setLanes, addCard, updateCard, removeCard, renamePerson, reset };
+  return { board, isLoading, authorized, setLanes, addCard, updateCard, removeCard, renamePerson, reset };
 }
