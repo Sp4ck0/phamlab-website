@@ -1,7 +1,7 @@
 export type PersonId = 'a' | 'b';
 
-/** The three flavours of feedback. Colour and tone follow from this. */
-export type Kind = 'appreciation' | 'request' | 'friction';
+/** The two flavours of feedback. Colour and tone follow from this. */
+export type Kind = 'appreciation' | 'feedback';
 
 /**
  * How much this weighs on the person who raised it — deliberately their call,
@@ -63,8 +63,7 @@ export const LANES: { id: LaneId; name: string; blurb: string }[] = [
 
 export const KINDS: { id: Kind; label: string; hint: string }[] = [
   { id: 'appreciation', label: 'Appreciation', hint: 'Something they did that landed well' },
-  { id: 'request', label: 'Request', hint: 'Something you’d like more or less of' },
-  { id: 'friction', label: 'Friction', hint: 'Something that hurt or keeps recurring' },
+  { id: 'feedback', label: 'Feedback', hint: 'Something you’d like to raise, ask for, or work through' },
 ];
 
 /**
@@ -79,3 +78,11 @@ export const WEIGHTS: { id: Weight; label: string; bars: number }[] = [
 ];
 
 export const PEOPLE: PersonId[] = ['a', 'b'];
+
+/** Fields collected by the lane's inline "+ write one" quick-add form. */
+export interface QuickAddDraft {
+  title: string;
+  note: string;
+  kind: Kind;
+  weight: Weight;
+}
