@@ -18,14 +18,24 @@ interface Props {
 
 export function CardDrawer({ card, board, lane, me, onClose, onChange, onMove, onDelete }: Props) {
   const [entry, setEntry] = useState('');
-  const [entryBy, setEntryBy] = useState<PersonId>(me);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Local buffers for fields the user types into directly (title, note,
+  // action item text). These are edited live and pushed to the server on
+  // every keystroke, but the *displayed* value comes from here, not from
+  // `card` — otherwise a mutation echoing back mid-typing can snap the
+  // controlled input back to a stale value and swallow whatever's typed
+  // since. Reset only when the open card actually changes.
+  const [title, setTitle] = useState(card?.title ?? '');
+  const [note, setNote] = useState(card?.note ?? '');
+  const [actionDrafts, setActionDrafts] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setEntry('');
     setConfirmDelete(false);
-    setEntryBy(me);
-  }, [card?.id, me]);
+    setTitle(card?.title ?? '');
+    setNote(card?.note ?? '');
+    setActionDrafts({});
+  }, [card?.id]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -51,15 +61,22 @@ export function CardDrawer({ card, board, lane, me, onClose, onChange, onMove, o
     });
   };
 
+  const setActionText = (actionId: string, text: string) => {
+    setActionDrafts((prev) => ({ ...prev, [actionId]: text }));
+    patchAction(actionId, { text });
+  };
+
   const addLog = () => {
     if (!card || !entry.trim()) return;
     onChange(card.id, {
-      log: [
-        ...card.log,
-        { id: uid(), at: new Date().toISOString(), by: entryBy, text: entry.trim() },
-      ],
+      log: [...card.log, { id: uid(), at: new Date().toISOString(), by: me, text: entry.trim() }],
     });
     setEntry('');
+  };
+
+  const removeLog = (logId: string) => {
+    if (!card) return;
+    onChange(card.id, { log: card.log.filter((l) => l.id !== logId) });
   };
 
   return (
@@ -105,9 +122,12 @@ export function CardDrawer({ card, board, lane, me, onClose, onChange, onMove, o
               <textarea
                 className="drawer__title"
                 rows={2}
-                value={card.title}
+                value={title}
                 placeholder="Say it plainly"
-                onChange={(e) => onChange(card.id, { title: e.target.value })}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  onChange(card.id, { title: e.target.value });
+                }}
               />
 
               <div className="who__block">
@@ -176,9 +196,12 @@ export function CardDrawer({ card, board, lane, me, onClose, onChange, onMove, o
                 <span className="label">The longer version</span>
                 <textarea
                   rows={4}
-                  value={card.note}
+                  value={note}
                   placeholder="What happened, and how it landed…"
-                  onChange={(e) => onChange(card.id, { note: e.target.value })}
+                  onChange={(e) => {
+                    setNote(e.target.value);
+                    onChange(card.id, { note: e.target.value });
+                  }}
                 />
               </label>
 
@@ -196,8 +219,8 @@ export function CardDrawer({ card, board, lane, me, onClose, onChange, onMove, o
                         ✓
                       </button>
                       <input
-                        value={a.text}
-                        onChange={(e) => patchAction(a.id, { text: e.target.value })}
+                        value={actionDrafts[a.id] ?? a.text}
+                        onChange={(e) => setActionText(a.id, e.target.value)}
                       />
                       <div className="owner">
                         {PEOPLE.map((p) => (
@@ -270,29 +293,22 @@ export function CardDrawer({ card, board, lane, me, onClose, onChange, onMove, o
                   {card.log.map((l) => (
                     <li key={l.id}>
                       <i className="dot" data-who={l.by} aria-hidden="true" />
-                      <div>
+                      <div className="log__body">
                         <p>{l.text}</p>
                         <span className="log__meta">
                           {name(l.by)} · {new Date(l.at).toLocaleDateString()}
                         </span>
                       </div>
+                      {l.by === me && (
+                        <button className="ghost" aria-label="Delete note" onClick={() => removeLog(l.id)}>
+                          ✕
+                        </button>
+                      )}
                     </li>
                   ))}
                   {card.log.length === 0 && <li className="log__empty">No notes yet.</li>}
                 </ol>
                 <div className="log__new">
-                  <div className="seg seg--people seg--tight">
-                    {PEOPLE.map((p) => (
-                      <button
-                        key={p}
-                        data-who={p}
-                        data-on={entryBy === p || undefined}
-                        onClick={() => setEntryBy(p)}
-                      >
-                        {name(p)}
-                      </button>
-                    ))}
-                  </div>
                   <input
                     value={entry}
                     placeholder="Add a note…"

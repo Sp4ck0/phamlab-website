@@ -55,9 +55,13 @@ export function Lane({ lane, board, onOpen, onQuickAdd }: Props) {
       </header>
 
       <div className="lane__body" ref={ref}>
-        {visible.map((id, index) => (
-          <CardTile key={id} card={board.cards[id]} index={index} lane={lane} board={board} onOpen={onOpen} />
-        ))}
+        {visible.map((id, index) => {
+          // A dangling id (references a card that's gone) shouldn't take the
+          // whole board down — just skip that tile.
+          const card = board.cards[id];
+          if (!card) return null;
+          return <CardTile key={id} card={card} index={index} lane={lane} board={board} onOpen={onOpen} />;
+        })}
 
         {visible.length === 0 && !adding && <p className="lane__empty">Nothing here yet.</p>}
 

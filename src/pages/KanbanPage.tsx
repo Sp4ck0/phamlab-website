@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { DragDropProvider, KeyboardSensor, PointerSensor } from "@dnd-kit/react";
 import { PointerActivationConstraints } from "@dnd-kit/dom";
@@ -11,8 +11,20 @@ import { Lane } from "../kanban/components/Lane";
 import { CardDrawer } from "../kanban/components/CardDrawer";
 import { laneOf, useDue } from "../kanban/lib";
 import { LANES } from "../kanban/types";
-import type { LaneId } from "../kanban/types";
+import type { Board, LaneId } from "../kanban/types";
 import "../kanban/kanban.css";
+
+// Every card id present in `lanes`, across all lanes combined — used to
+// make sure a drag never silently drops or duplicates a card.
+function allCardIds(lanes: Board["lanes"]) {
+  return Object.values(lanes).flat().slice().sort();
+}
+
+function sameCardIds(a: Board["lanes"], b: Board["lanes"]) {
+  const idsA = allCardIds(a);
+  const idsB = allCardIds(b);
+  return idsA.length === idsB.length && idsA.every((id, i) => id === idsB[i]);
+}
 
 export function KanbanPage() {
   const { boardId } = useParams<{ boardId: string }>();
@@ -23,6 +35,16 @@ export function KanbanPage() {
 
   const [openId, setOpenId] = useState<string | null>(null);
   const due = useDue(board);
+  // While dragging, reordering happens against this local copy only — the
+  // server mutation fires once on drop, not on every dragover frame. Once
+  // the server's board.lanes catches up to what we predicted, drop the
+  // local override so future drags start from a fresh server snapshot.
+  const [dragLanes, setDragLanes] = useState<Board["lanes"] | null>(null);
+  useEffect(() => {
+    if (dragLanes && board && JSON.stringify(dragLanes) === JSON.stringify(board.lanes)) {
+      setDragLanes(null);
+    }
+  }, [board, dragLanes]);
 
   if (!code) {
     return (
@@ -66,7 +88,9 @@ export function KanbanPage() {
     );
   }
 
-  const openCard = openId ? (board.cards[openId] ?? null) : null;
+  const lanes = dragLanes ?? board.lanes;
+  const displayBoard = dragLanes ? { ...board, lanes } : board;
+  const openCard = openId ? (displayBoard.cards[openId] ?? null) : null;
   const me = board.viewerPersonId ?? "a";
 
   const moveToLane = (id: string, to: LaneId) => {
@@ -93,10 +117,23 @@ export function KanbanPage() {
             }),
             KeyboardSensor,
           ]}
-          onDragOver={(event) => setLanes((lanes) => move(lanes, event))}
+          onDragOver={(event) => setDragLanes(move(lanes, event))}
           onDragEnd={(event) => {
-            if (event.canceled) return;
-            setLanes((lanes) => move(lanes, event));
+            if (event.canceled) {
+              setDragLanes(null);
+              return;
+            }
+            const next = move(lanes, event);
+            // A drag that ends up outside any droppable (or hits some other
+            // edge case in dnd-kit's collision detection) can hand back a
+            // lanes object that's silently missing or duplicating a card.
+            // Never let that reach the server — just drop the drag.
+            if (sameCardIds(board.lanes, next)) {
+              setDragLanes(next);
+              setLanes(() => next);
+            } else {
+              setDragLanes(null);
+            }
           }}
         >
           <div className="shell">
@@ -123,15 +160,15 @@ export function KanbanPage() {
 
             <main className="board">
               {LANES.map((l) => (
-                <Lane key={l.id} lane={l.id} board={board} onOpen={setOpenId} onQuickAdd={addCard} />
+                <Lane key={l.id} lane={l.id} board={displayBoard} onOpen={setOpenId} onQuickAdd={addCard} />
               ))}
             </main>
 
             <CardDrawer
               card={openCard}
-              board={board}
+              board={displayBoard}
               me={me}
-              lane={openCard ? laneOf(board, openCard.id) : null}
+              lane={openCard ? laneOf(displayBoard, openCard.id) : null}
               onClose={() => setOpenId(null)}
               onChange={updateCard}
               onMove={moveToLane}
