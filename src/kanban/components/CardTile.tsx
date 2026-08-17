@@ -65,7 +65,7 @@ export function CardTile({ card, index, lane, board, onOpen }: Props) {
 
       <header className="card__head">
         <span className="card__kind">{card.kind}</span>
-        <span className="weight" title={`${weight.label} — ${weight.hint}`} aria-label={weight.label}>
+        <span className="weight" title={weight.label} aria-label={weight.label}>
           {[1, 2, 3].map((n) => (
             <i key={n} data-on={n <= weight.bars || undefined} />
           ))}

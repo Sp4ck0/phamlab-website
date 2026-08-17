@@ -625,13 +625,6 @@ button {
   background: var(--ink);
 }
 
-.hint {
-  margin: 7px 0 0;
-  font-size: 12px;
-  font-style: italic;
-  color: var(--ink-soft);
-}
-
 .who {
   display: flex;
   gap: 26px;
