@@ -6,14 +6,16 @@ import { api } from "@convex/api";
 import { useAccessibleTrips } from "../../hooks/useAccessibleTrips";
 import { useAccessCode } from "../../hooks/useAccessCode";
 import { useTheme } from "../../hooks/useTheme";
+import { useKanbanBoards } from "../../kanban/useKanbanBoards";
 import { flagEmoji, navCountdown, navMonthLabel } from "../../lib/tripLogic";
 
 export function SideNav() {
   const { trips } = useAccessibleTrips();
-  const { slug: activeSlug } = useParams();
+  const { slug: activeSlug, boardId: activeBoardId } = useParams();
   const location = useLocation();
   const { code, clear } = useAccessCode();
   const isManagementCode = useQuery(api.management.checkManagementAccess, code ? { code } : "skip");
+  const { boards } = useKanbanBoards();
   const { isAuthenticated } = useConvexAuth();
   const { signOut } = useAuthActions();
   const navigate = useNavigate();
@@ -111,19 +113,23 @@ export function SideNav() {
           </div>
         </div>
 
-        {code && (
+        {code && boards.length > 0 && (
           <div className="navgroup">
+            <div className="navsection">Boards</div>
             <div className="navlist">
-              <Link
-                className="navitem"
-                data-active={location.pathname === "/kanban" ? "true" : undefined}
-                to="/kanban"
-              >
-                <span className="navicon">🗂️</span>
-                <span className="navtext">
-                  <span className="navname">Kanban</span>
-                </span>
-              </Link>
+              {boards.map((b) => (
+                <Link
+                  key={b._id}
+                  className="navitem"
+                  data-active={b._id === activeBoardId ? "true" : undefined}
+                  to={`/kanban/${b._id}`}
+                >
+                  <span className="navicon">🗂️</span>
+                  <span className="navtext">
+                    <span className="navname">{b.name}</span>
+                  </span>
+                </Link>
+              ))}
             </div>
           </div>
         )}

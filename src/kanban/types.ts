@@ -44,6 +44,7 @@ export interface Person {
 
 export interface Board {
   version: 1;
+  name: string;
   people: Record<PersonId, Person>;
   cards: Record<string, Card>;
   /** Ordered card ids per lane. This is the shape @dnd-kit/helpers `move` wants. */

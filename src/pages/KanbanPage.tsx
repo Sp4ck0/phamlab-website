@@ -1,26 +1,27 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { DragDropProvider, KeyboardSensor, PointerSensor } from "@dnd-kit/react";
 import { PointerActivationConstraints } from "@dnd-kit/dom";
 import { move } from "@dnd-kit/helpers";
+import type { Id } from "@convex/dataModel";
 import { PageShell } from "../components/layout/PageShell";
 import { useAccessCode } from "../hooks/useAccessCode";
 import { useTheme } from "../hooks/useTheme";
 import { useKanbanBoard } from "../kanban/useKanbanBoard";
 import { Lane } from "../kanban/components/Lane";
 import { CardDrawer } from "../kanban/components/CardDrawer";
-import { Setup } from "../kanban/components/Setup";
 import { laneOf, useDue } from "../kanban/lib";
 import { LANES, PEOPLE } from "../kanban/types";
 import type { LaneId, PersonId } from "../kanban/types";
 import "../kanban/kanban.css";
 
 export function KanbanPage() {
+  const { boardId } = useParams<{ boardId: string }>();
   const { code } = useAccessCode();
   const { isDark } = useTheme();
   const kanbanTheme = isDark ? "evening" : "day";
-  const { board, isLoading, authorized, start, setLanes, addCard, updateCard, removeCard, renamePerson, reset } =
-    useKanbanBoard();
+  const { board, isLoading, authorized, setLanes, addCard, updateCard, removeCard, renamePerson, reset } =
+    useKanbanBoard(boardId as Id<"kanban_boards"> | undefined);
 
   const [openId, setOpenId] = useState<string | null>(null);
   const [filter, setFilter] = useState<PersonId | null>(null);
@@ -57,28 +58,18 @@ export function KanbanPage() {
     );
   }
 
-  if (!authorized) {
+  if (!authorized || !board) {
     return (
       <PageShell>
         <div style={{ padding: "80px 0" }}>
           <h2 className="shead">Not found</h2>
           <p className="sdek">
-            That access code doesn't unlock a kanban board.{" "}
-            <Link to="/unlock" style={{ color: "var(--accent-1)" }}>
-              Try a different code
+            That access code doesn't unlock this board.{" "}
+            <Link to="/kanban" style={{ color: "var(--accent-1)" }}>
+              Back to boards
             </Link>
             .
           </p>
-        </div>
-      </PageShell>
-    );
-  }
-
-  if (!board) {
-    return (
-      <PageShell>
-        <div className="kanban-app" data-theme={kanbanTheme}>
-          <Setup onStart={start} />
         </div>
       </PageShell>
     );
@@ -121,9 +112,7 @@ export function KanbanPage() {
 
             <header className="top">
               <div className="top__brand">
-                <h1>
-                  Between<em>Us</em>
-                </h1>
+                <h1>{board.name}</h1>
                 {editingNames ? (
                   <div className="top__names">
                     {PEOPLE.map((p) => (
