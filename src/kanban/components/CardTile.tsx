@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { useSortable } from '@dnd-kit/react/sortable';
-import type { Board, Card, LaneId } from '../types';
-import { WEIGHTS } from '../types';
+import type { Board, Card, LaneId, PersonId } from '../types';
+import { PEOPLE, WEIGHTS } from '../types';
 import { progress } from '../lib';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -36,6 +36,11 @@ export function CardTile({ card, index, lane, board, onOpen }: Props) {
   const today = new Date().toISOString().slice(0, 10);
   const due = card.followUp ? card.followUp <= today : false;
   const from = board.people[card.from].name;
+  // Who's actually on the hook right now — owners of action items still open,
+  // not who originally raised the card (that's the spine color instead).
+  const nextStepOwners = PEOPLE.filter((p) =>
+    card.actions.some((a) => !a.done && a.owner === p)
+  );
 
   return (
     <article
@@ -71,6 +76,7 @@ export function CardTile({ card, index, lane, board, onOpen }: Props) {
           ))}
         </span>
         <span className="card__spacer" />
+        <span className="card__created">{prettyDate(card.createdAt.slice(0, 10))}</span>
         {card.followUp && (
           <span className="card__due" data-due={due || undefined}>
             {due ? '● ' : ''}
@@ -85,16 +91,15 @@ export function CardTile({ card, index, lane, board, onOpen }: Props) {
 
       <footer className="card__foot">
         <span className="card__from">
-          <i className="dot" data-who={card.from} aria-hidden="true" />
-          {from}
-          {card.assignee && (
-            <>
-              <span className="card__arrow" aria-hidden="true">
-                →
+          {nextStepOwners.length > 0 ? (
+            nextStepOwners.map((p: PersonId) => (
+              <span key={p} className="card__owner">
+                <i className="dot" data-who={p} aria-hidden="true" />
+                {board.people[p].name}
               </span>
-              <i className="dot" data-who={card.assignee} aria-hidden="true" />
-              {board.people[card.assignee].name}
-            </>
+            ))
+          ) : (
+            <span className="card__owner card__owner--empty">No next steps yet</span>
           )}
         </span>
 

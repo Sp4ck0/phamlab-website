@@ -1,21 +1,24 @@
 import { useState } from 'react';
 import { CollisionPriority } from '@dnd-kit/abstract';
 import { useDroppable } from '@dnd-kit/react';
-import type { Board, LaneId } from '../types';
-import { LANES } from '../types';
+import type { Board, Kind, LaneId, QuickAddDraft, Weight } from '../types';
+import { KINDS, LANES, WEIGHTS } from '../types';
 import { CardTile } from './CardTile';
 
 interface Props {
   lane: LaneId;
   board: Board;
   onOpen: (id: string) => void;
-  onQuickAdd: (lane: LaneId, title: string) => void;
+  onQuickAdd: (lane: LaneId, draft: QuickAddDraft) => void;
 }
 
 export function Lane({ lane, board, onOpen, onQuickAdd }: Props) {
   const meta = LANES.find((l) => l.id === lane)!;
   const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState('');
+  const [title, setTitle] = useState('');
+  const [note, setNote] = useState('');
+  const [kind, setKind] = useState<Kind>('feedback');
+  const [weight, setWeight] = useState<Weight>('medium');
 
   const { ref, isDropTarget } = useDroppable({
     id: lane,
@@ -26,11 +29,19 @@ export function Lane({ lane, board, onOpen, onQuickAdd }: Props) {
 
   const visible = board.lanes[lane];
 
-  const submit = () => {
-    const title = draft.trim();
-    if (title) onQuickAdd(lane, title);
-    setDraft('');
+  const reset = () => {
+    setTitle('');
+    setNote('');
+    setKind('feedback');
+    setWeight('medium');
     setAdding(false);
+  };
+
+  const submit = () => {
+    const trimmed = title.trim();
+    if (!trimmed) return;
+    onQuickAdd(lane, { title: trimmed, note: note.trim(), kind, weight });
+    reset();
   };
 
   return (
@@ -55,22 +66,53 @@ export function Lane({ lane, board, onOpen, onQuickAdd }: Props) {
             <textarea
               autoFocus
               rows={2}
-              value={draft}
+              value={title}
               placeholder="What do you want to say?"
-              onChange={(e) => setDraft(e.target.value)}
-              onBlur={submit}
+              onChange={(e) => setTitle(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  submit();
-                }
-                if (e.key === 'Escape') {
-                  setDraft('');
-                  setAdding(false);
-                }
+                if (e.key === 'Escape') reset();
               }}
             />
-            <span className="quickadd__hint">Enter to add · Esc to cancel</span>
+            <textarea
+              rows={2}
+              value={note}
+              placeholder="Say more, if you want to (optional)"
+              onChange={(e) => setNote(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') reset();
+              }}
+            />
+
+            <div className="quickadd__row">
+              <div className="seg seg--tight" role="group" aria-label="Kind of feedback">
+                {KINDS.map((k) => (
+                  <button key={k.id} title={k.hint} data-on={kind === k.id || undefined} onClick={() => setKind(k.id)}>
+                    {k.label}
+                  </button>
+                ))}
+              </div>
+              <div className="seg seg--weight seg--tight" role="group" aria-label="Weight">
+                {WEIGHTS.map((w) => (
+                  <button key={w.id} data-on={weight === w.id || undefined} onClick={() => setWeight(w.id)}>
+                    <span className="weight" aria-hidden="true">
+                      {[1, 2, 3].map((n) => (
+                        <i key={n} data-on={n <= w.bars || undefined} />
+                      ))}
+                    </span>
+                    {w.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="quickadd__actions">
+              <button className="ghost" onClick={reset}>
+                Cancel
+              </button>
+              <button className="btn" onClick={submit} disabled={!title.trim()}>
+                Add
+              </button>
+            </div>
           </div>
         ) : (
           <button className="lane__add" onClick={() => setAdding(true)}>

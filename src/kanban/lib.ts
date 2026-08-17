@@ -20,8 +20,7 @@ export const WEIGHT_RANK: Record<Weight, number> = { minor: 0, medium: 1, major:
 
 export const KIND_TONE: Record<Kind, string> = {
   appreciation: "var(--gold)",
-  request: "var(--ink-soft)",
-  friction: "var(--rust)",
+  feedback: "var(--ink-soft)",
 };
 
 const today = () => new Date().toISOString().slice(0, 10);

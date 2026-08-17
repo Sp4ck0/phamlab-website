@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/api";
 import type { Id } from "@convex/dataModel";
 import { useAccessCode } from "../hooks/useAccessCode";
-import type { Board, Card, LaneId, PersonId } from "./types";
+import type { Board, Card, LaneId, QuickAddDraft } from "./types";
 
 export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined) {
   const { code } = useAccessCode();
@@ -40,9 +40,9 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined) {
     void setLanesMut({ code, boardId, lanes: update(board.lanes) as Board["lanes"] });
   }
 
-  function addCard(lane: LaneId, title: string, from: PersonId) {
+  function addCard(lane: LaneId, draft: QuickAddDraft) {
     if (!code || !boardId) return;
-    void addCardMut({ code, boardId, lane, title, from });
+    void addCardMut({ code, boardId, lane, ...draft });
   }
 
   function updateCard(id: string, patch: Partial<Card>) {

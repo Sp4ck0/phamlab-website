@@ -323,6 +323,11 @@ button {
   color: var(--ink);
 }
 
+.quickadd {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 .quickadd textarea {
   width: 100%;
   background: var(--card);
@@ -336,11 +341,15 @@ button {
   outline: none;
   border-color: var(--ink);
 }
-.quickadd__hint {
-  display: block;
-  font-size: 10.5px;
-  color: var(--ink-soft);
-  margin-top: 5px;
+.quickadd__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.quickadd__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 /* ── Card ────────────────────────────────────────────────────── */
@@ -420,9 +429,6 @@ button {
 .card[data-kind='appreciation'] .card__kind {
   color: var(--gold);
 }
-.card[data-kind='friction'] .card__kind {
-  color: var(--rust);
-}
 
 /* Weight meter — three rising bars, filled to how heavy this one is. */
 .weight {
@@ -456,6 +462,12 @@ button {
 
 .card__spacer {
   flex: 1;
+}
+
+.card__created {
+  font-size: 10.5px;
+  color: var(--ink-soft);
+  white-space: nowrap;
 }
 
 .card__due {
@@ -503,12 +515,19 @@ button {
 .card__from {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 10px;
+  flex-wrap: wrap;
   min-width: 0;
 }
-.card__arrow {
-  opacity: 0.55;
-  margin: 0 1px;
+.card__owner {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.card__owner--empty {
+  color: var(--ink-soft);
+  font-style: italic;
+  opacity: 0.75;
 }
 
 .card__actions {
@@ -564,10 +583,7 @@ button {
 .drawer[data-kind='appreciation']::before {
   background: var(--gold);
 }
-.drawer[data-kind='friction']::before {
-  background: var(--rust);
-}
-.drawer[data-kind='request']::before {
+.drawer[data-kind='feedback']::before {
   background: var(--ink-b);
 }
 

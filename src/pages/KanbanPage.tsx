@@ -80,7 +80,7 @@ export function KanbanPage() {
   };
 
   return (
-    <PageShell>
+    <PageShell fullWidth>
       <div className="kanban-app">
         <DragDropProvider
           sensors={[
@@ -123,7 +123,7 @@ export function KanbanPage() {
 
             <main className="board">
               {LANES.map((l) => (
-                <Lane key={l.id} lane={l.id} board={board} onOpen={setOpenId} onQuickAdd={(lane, title) => addCard(lane, title, me)} />
+                <Lane key={l.id} lane={l.id} board={board} onOpen={setOpenId} onQuickAdd={addCard} />
               ))}
             </main>
 

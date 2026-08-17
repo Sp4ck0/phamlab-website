@@ -87,6 +87,7 @@ body{
 }
 a{color:inherit}
 .wrap{max-width:880px;margin:0 auto;padding:0 20px 80px}
+.wrap--full{max-width:none;padding:0 24px 40px}
 
 /* ── side nav (trip switcher) ──────────────────────────── */
 .sidenav{
