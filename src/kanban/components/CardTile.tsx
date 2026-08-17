@@ -101,6 +101,13 @@ export function CardTile({ card, index, lane, board, onOpen }: Props) {
           ) : (
             <span className="card__owner card__owner--empty">No next steps yet</span>
           )}
+          {card.assignee && (
+            <span className="card__owner">
+              <span className="card__owner-tag">Owned by</span>
+              <i className="dot" data-who={card.assignee} aria-hidden="true" />
+              {board.people[card.assignee].name}
+            </span>
+          )}
         </span>
 
         {total > 0 && (

@@ -419,15 +419,39 @@ button {
   margin-bottom: 6px;
 }
 
+/* Severity color — how urgent this card is at a glance. Feedback climbs
+   yellow -> orange -> red as it gets heavier; appreciation climbs through
+   three shades of green. Reuses the site's own accent tokens rather than
+   inventing a bespoke palette, so it stays in sync with the rest of the
+   app's light/dark themes. */
+.card[data-kind='feedback'][data-weight='minor'] {
+  --sev: var(--accent-transit);
+}
+.card[data-kind='feedback'][data-weight='medium'] {
+  --sev: var(--accent-2);
+}
+.card[data-kind='feedback'][data-weight='major'] {
+  --sev: var(--danger);
+}
+.card[data-kind='appreciation'][data-weight='minor'] {
+  --sev: color-mix(in srgb, var(--accent-3) 55%, var(--page));
+}
+.card[data-kind='appreciation'][data-weight='medium'] {
+  --sev: var(--accent-3);
+}
+.card[data-kind='appreciation'][data-weight='major'] {
+  --sev: var(--good);
+}
+
 .card__kind {
   font-size: 9.5px;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   font-weight: 700;
-  color: var(--ink-soft);
-}
-.card[data-kind='appreciation'] .card__kind {
-  color: var(--gold);
+  color: var(--sev);
+  background: color-mix(in srgb, var(--sev) 16%, transparent);
+  padding: 2px 7px;
+  border-radius: 6px;
 }
 
 /* Weight meter — three rising bars, filled to how heavy this one is. */
@@ -455,6 +479,9 @@ button {
 }
 .weight i[data-on] {
   background: var(--ink-soft);
+}
+.card .weight i[data-on] {
+  background: var(--sev);
 }
 .card[data-weight='major'] .weight i[data-on] {
   background: var(--ink);
@@ -528,6 +555,12 @@ button {
   color: var(--ink-soft);
   font-style: italic;
   opacity: 0.75;
+}
+.card__owner-tag {
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
 }
 
 .card__actions {
@@ -786,10 +819,17 @@ button {
 .log li .dot {
   margin-top: 6px;
 }
+.log__body {
+  flex: 1;
+  min-width: 0;
+}
 .log li p {
   margin: 0;
   font-size: 13.5px;
   line-height: 1.45;
+}
+.log li > .ghost {
+  flex: none;
 }
 .log__meta {
   font-size: 10.5px;
