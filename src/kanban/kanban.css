@@ -1,43 +1,27 @@
 /* ═══════════════════════════════════════════════════════════════
-   BETWEEN US — letterpress on warm paper.
-   Two inks, one for each person, running through the whole board.
+   Kanban board — same card-based look as the rest of the site.
+   Two accent colors, one for each person, running through the board.
    ═══════════════════════════════════════════════════════════════ */
 
 /* Scoped to .kanban-app so these generic class names (.card, .btn, .label…)
    never leak into or collide with the rest of the site's styles. :scope
-   here refers to .kanban-app itself, not the document root. */
+   here refers to .kanban-app itself, not the document root. Colors are
+   aliases onto the site's own tokens (src/styles/globals.css) so the board
+   follows the global light/dark toggle instead of keeping its own theme. */
 @scope (.kanban-app) {
 
-:scope[data-theme='day'] {
-  --paper: #f0e8d8;
-  --paper-2: #eae0cd;
-  --card: #fbf7ee;
-  --ink: #241f1a;
-  --ink-soft: #786c5d;
-  --rule: rgba(36, 31, 26, 0.13);
-  --rule-firm: rgba(36, 31, 26, 0.26);
-  --ink-a: #b0472a;
-  --ink-b: #2b6a60;
-  --gold: #a8802a;
-  --rust: #a33b2b;
-  --shadow: rgba(60, 45, 30, 0.16);
-  --grain: 0.055;
-}
-
-:scope[data-theme='evening'] {
-  --paper: #17130f;
-  --paper-2: #1d1813;
-  --card: #251f18;
-  --ink: #f0e6d4;
-  --ink-soft: #9d9078;
-  --rule: rgba(240, 230, 212, 0.14);
-  --rule-firm: rgba(240, 230, 212, 0.3);
-  --ink-a: #e2805a;
-  --ink-b: #71c1b0;
-  --gold: #d7ac4f;
-  --rust: #d96b50;
-  --shadow: rgba(0, 0, 0, 0.5);
-  --grain: 0.08;
+:scope {
+  --paper: var(--page);
+  --paper-2: var(--chip-bg);
+  --ink: var(--text-primary);
+  --ink-soft: var(--text-muted);
+  --rule: var(--gridline);
+  --rule-firm: var(--border);
+  --ink-a: var(--accent-1);
+  --ink-b: var(--accent-3);
+  --gold: var(--accent-2);
+  --rust: var(--danger);
+  --shadow: var(--border);
 }
 
 * {
@@ -54,13 +38,12 @@
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family: 'Karla', ui-sans-serif, system-ui, sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   font-size: 15px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
-  border-radius: 8px;
+  border-radius: 16px;
   overflow: hidden;
-  transition: background 0.4s ease, color 0.4s ease;
 }
 
 input,
@@ -105,19 +88,20 @@ button {
 }
 
 .btn {
-  background: var(--ink);
-  color: var(--paper);
-  border: none;
-  border-radius: 2px;
+  background: var(--card);
+  color: var(--ink-soft);
+  border: 1px solid var(--rule-firm);
+  border-radius: 999px;
   padding: 8px 16px;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 12px;
   letter-spacing: 0.02em;
   cursor: pointer;
-  transition: transform 0.15s ease, opacity 0.15s ease;
+  transition: color 0.15s ease, border-color 0.15s ease;
 }
 .btn:hover:not(:disabled) {
-  transform: translateY(-1px);
+  color: var(--ink);
+  border-color: var(--ink-soft);
 }
 .btn:disabled {
   opacity: 0.35;
@@ -129,6 +113,7 @@ button {
 }
 .btn--danger {
   background: var(--rust);
+  border-color: var(--rust);
   color: #fff;
 }
 
@@ -151,159 +136,42 @@ button {
   line-height: 1;
 }
 
-/* Segmented control — letterpress tabs, ruled underneath */
+/* Segmented control — pill tabs, matching the site's .view-toggle */
 .seg {
   display: inline-flex;
   gap: 2px;
-  border-bottom: 1px solid var(--rule);
+  padding: 3px;
+  background: var(--paper-2);
+  border-radius: 999px;
 }
 .seg button {
   background: none;
   border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  padding: 6px 11px;
+  border-radius: 999px;
+  padding: 6px 12px;
   font-size: 12px;
-  letter-spacing: 0.04em;
+  font-weight: 700;
   color: var(--ink-soft);
   cursor: pointer;
-  text-transform: lowercase;
-  font-variant: small-caps;
-  transition: color 0.15s ease, border-color 0.15s ease;
+  transition: color 0.15s ease, background 0.15s ease;
 }
 .seg button:hover {
   color: var(--ink);
 }
 .seg button[data-on] {
   color: var(--ink);
-  border-bottom-color: var(--ink);
-  font-weight: 700;
+  background: var(--card);
+  box-shadow: 0 1px 2px var(--shadow);
 }
 .seg--people button[data-on][data-who='a'] {
   color: var(--ink-a);
-  border-bottom-color: var(--ink-a);
 }
 .seg--people button[data-on][data-who='b'] {
   color: var(--ink-b);
-  border-bottom-color: var(--ink-b);
 }
 .seg--tight button {
-  padding: 5px 9px;
+  padding: 5px 10px;
   font-size: 11px;
-}
-
-/* Paper grain, sat over the board only (not the whole viewport). */
-.grain {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 60;
-  opacity: var(--grain);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
-/* ── Setup ───────────────────────────────────────────────────── */
-
-.setup {
-  min-height: 100%;
-  display: grid;
-  place-items: center;
-  padding: 32px 20px;
-  background:
-    radial-gradient(120% 90% at 20% 0%, color-mix(in srgb, var(--ink-a) 9%, transparent), transparent 60%),
-    radial-gradient(110% 80% at 90% 100%, color-mix(in srgb, var(--ink-b) 10%, transparent), transparent 62%),
-    var(--paper);
-}
-
-.setup__card {
-  max-width: 560px;
-  animation: rise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-}
-
-.setup__eyebrow {
-  font-size: 11px;
-  letter-spacing: 0.32em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-  margin: 0 0 18px;
-}
-
-.setup__title,
-.top__brand h1 {
-  font-family: 'Fraunces', Georgia, serif;
-  font-variation-settings: 'SOFT' 40, 'WONK' 1, 'opsz' 100;
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  margin: 0;
-}
-
-.setup__title {
-  font-size: clamp(52px, 11vw, 92px);
-  line-height: 0.88;
-}
-.setup__title em {
-  display: block;
-  font-style: italic;
-  font-weight: 300;
-  color: var(--ink-a);
-  padding-left: 0.6em;
-}
-
-.setup__lede {
-  font-size: 17px;
-  line-height: 1.6;
-  color: var(--ink-soft);
-  max-width: 42ch;
-  margin: 26px 0 34px;
-}
-
-.setup__form {
-  display: flex;
-  align-items: flex-end;
-  gap: 14px;
-  flex-wrap: wrap;
-  padding-top: 26px;
-  border-top: 1px solid var(--rule);
-}
-.setup__form label {
-  flex: 1 1 150px;
-}
-.setup__form input {
-  width: 100%;
-  background: none;
-  border: none;
-  border-bottom: 1.5px solid var(--rule-firm);
-  padding: 6px 2px;
-  font-size: 20px;
-  font-family: 'Fraunces', serif;
-  font-variation-settings: 'SOFT' 40, 'opsz' 40;
-}
-.setup__form input:focus {
-  outline: none;
-  border-bottom-color: var(--ink);
-}
-.setup__form label:nth-of-type(1) input:focus {
-  border-bottom-color: var(--ink-a);
-}
-.setup__amp {
-  font-family: 'Fraunces', serif;
-  font-style: italic;
-  font-size: 26px;
-  color: var(--ink-soft);
-  padding-bottom: 4px;
-}
-
-.setup__foot {
-  margin-top: 30px;
-  font-size: 12px;
-  color: var(--ink-soft);
 }
 
 /* ── Shell + header ──────────────────────────────────────────── */
@@ -334,53 +202,17 @@ button {
   font-size: 26px;
   line-height: 1;
 }
-.top__brand h1 em {
-  font-style: italic;
-  font-weight: 300;
-  color: var(--ink-a);
-}
 
 .top__pair {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  background: none;
-  border: none;
-  cursor: pointer;
   font-size: 13px;
   color: var(--ink-soft);
-  padding: 4px 6px;
-  border-radius: 2px;
-}
-.top__pair:hover {
-  background: var(--rule);
-  color: var(--ink);
 }
 .top__pair .amp {
-  font-family: 'Fraunces', serif;
   font-style: italic;
   opacity: 0.7;
-}
-
-.top__names {
-  display: flex;
-  gap: 8px;
-}
-.top__names input {
-  width: 110px;
-  background: none;
-  border: none;
-  border-bottom: 1.5px solid var(--rule-firm);
-  padding: 2px 4px;
-  font-size: 13px;
-}
-.top__names input[data-who='a']:focus {
-  border-bottom-color: var(--ink-a);
-  outline: none;
-}
-.top__names input[data-who='b']:focus {
-  border-bottom-color: var(--ink-b);
-  outline: none;
 }
 
 .top__tools {
@@ -390,34 +222,15 @@ button {
   flex-wrap: wrap;
 }
 
-.tool {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-.tool__label {
-  font-size: 9.5px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-  font-weight: 700;
-  white-space: nowrap;
-}
-
 .nudge {
-  background: color-mix(in srgb, var(--gold) 22%, transparent);
-  border: 1px solid color-mix(in srgb, var(--gold) 50%, transparent);
-  color: var(--ink);
-  border-radius: 2px;
-  padding: 5px 11px;
+  background: var(--accent-2-tint);
+  border: 1px solid var(--accent-2);
+  color: var(--text-primary);
+  border-radius: 999px;
+  padding: 6px 14px;
   font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
-  animation: breathe 3.5s ease-in-out infinite;
-}
-@keyframes breathe {
-  50% {
-    background: color-mix(in srgb, var(--gold) 34%, transparent);
-  }
 }
 
 /* ── Board + lanes ───────────────────────────────────────────── */
@@ -438,7 +251,7 @@ button {
   min-width: 288px;
   display: flex;
   flex-direction: column;
-  background: var(--paper);
+  background: var(--card);
   transition: background 0.25s ease;
 }
 .lane[data-over] {
@@ -455,12 +268,10 @@ button {
 }
 
 .lane__name {
-  font-family: 'Fraunces', serif;
-  font-variation-settings: 'SOFT' 40, 'WONK' 1, 'opsz' 20;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -.01em;
   margin: 0;
-  letter-spacing: -0.01em;
 }
 
 .lane__blurb {
@@ -472,8 +283,8 @@ button {
 }
 
 .lane__count {
-  font-family: 'Fraunces', serif;
   font-size: 13px;
+  font-weight: 700;
   color: var(--ink-soft);
   padding-top: 2px;
 }
@@ -500,7 +311,7 @@ button {
 .lane__add {
   background: none;
   border: 1px dashed var(--rule-firm);
-  border-radius: 3px;
+  border-radius: 10px;
   color: var(--ink-soft);
   padding: 9px;
   font-size: 12px;
@@ -516,7 +327,7 @@ button {
   width: 100%;
   background: var(--card);
   border: 1px solid var(--rule-firm);
-  border-radius: 3px;
+  border-radius: 10px;
   padding: 10px;
   resize: vertical;
   font-size: 13.5px;
@@ -538,7 +349,7 @@ button {
   position: relative;
   background: var(--card);
   border: 1px solid var(--rule);
-  border-radius: 3px;
+  border-radius: 12px;
   padding: 12px 13px 11px 16px;
   cursor: grab;
   box-shadow: 0 1px 2px var(--shadow);
@@ -564,7 +375,7 @@ button {
   top: 0;
   bottom: 0;
   width: 3px;
-  border-radius: 3px 0 0 3px;
+  border-radius: 12px 0 0 12px;
   background: var(--ink-soft);
 }
 .card[data-from='a'] .card__spine {
@@ -658,11 +469,9 @@ button {
 }
 
 .card__title {
-  font-family: 'Fraunces', serif;
-  font-variation-settings: 'SOFT' 40, 'opsz' 20;
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 1.3;
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.35;
   margin: 0;
   letter-spacing: -0.005em;
   overflow-wrap: anywhere;
@@ -794,12 +603,10 @@ button {
   background: none;
   border: none;
   resize: vertical;
-  font-family: 'Fraunces', serif;
-  font-variation-settings: 'SOFT' 40, 'WONK' 1, 'opsz' 60;
-  font-size: 27px;
-  font-weight: 500;
-  line-height: 1.22;
-  letter-spacing: -0.02em;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
   padding: 0;
 }
 .drawer__title:focus {
@@ -818,13 +625,6 @@ button {
   background: var(--ink);
 }
 
-.hint {
-  margin: 7px 0 0;
-  font-size: 12px;
-  font-style: italic;
-  color: var(--ink-soft);
-}
-
 .who {
   display: flex;
   gap: 26px;
@@ -840,7 +640,7 @@ button {
   width: 100%;
   background: var(--card);
   border: 1px solid var(--rule);
-  border-radius: 3px;
+  border-radius: 8px;
   padding: 9px 11px;
   font-size: 13.5px;
   resize: vertical;
@@ -943,7 +743,7 @@ button {
   width: 100%;
   background: none;
   border: 1px dashed var(--rule-firm);
-  border-radius: 3px;
+  border-radius: 8px;
   padding: 8px 10px;
   font-size: 13px;
 }
@@ -996,7 +796,7 @@ button {
   flex: 1 1 160px;
   background: var(--card);
   border: 1px solid var(--rule);
-  border-radius: 3px;
+  border-radius: 8px;
   padding: 8px 10px;
   font-size: 13px;
 }

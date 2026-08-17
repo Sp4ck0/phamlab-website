@@ -124,7 +124,7 @@ export function SideNav() {
                   data-active={b._id === activeBoardId ? "true" : undefined}
                   to={`/kanban/${b._id}`}
                 >
-                  <span className="navicon">🗂️</span>
+                  <span className="navicon">📝</span>
                   <span className="navtext">
                     <span className="navname">{b.name}</span>
                   </span>

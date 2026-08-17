@@ -13,8 +13,6 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined) {
   const updateCardMut = useMutation(api.kanban.updateCard);
   const removeCardMut = useMutation(api.kanban.removeCard);
   const setLanesMut = useMutation(api.kanban.setLanes);
-  const renamePersonMut = useMutation(api.kanban.renamePerson);
-  const resetBoardMut = useMutation(api.kanban.resetBoard);
 
   const board: Board | null = useMemo(() => {
     if (!result?.authorized || !result.board) return null;
@@ -28,6 +26,7 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined) {
       version: 1,
       name: result.board.name,
       people: result.board.people,
+      viewerPersonId: result.viewerPersonId,
       lanes: result.board.lanes,
       cards,
     };
@@ -56,15 +55,5 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined) {
     void removeCardMut({ code, boardId, cardId: id as Id<"kanban_cards"> });
   }
 
-  function renamePerson(who: PersonId, name: string) {
-    if (!code || !boardId) return;
-    void renamePersonMut({ code, boardId, who, name });
-  }
-
-  function reset() {
-    if (!code || !boardId) return;
-    void resetBoardMut({ code, boardId });
-  }
-
-  return { board, isLoading, authorized, setLanes, addCard, updateCard, removeCard, renamePerson, reset };
+  return { board, isLoading, authorized, setLanes, addCard, updateCard, removeCard };
 }

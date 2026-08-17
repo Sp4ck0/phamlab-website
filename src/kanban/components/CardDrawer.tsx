@@ -116,7 +116,6 @@ export function CardDrawer({ card, board, lane, me, onClose, onChange, onMove, o
                   {WEIGHTS.map((w) => (
                     <button
                       key={w.id}
-                      title={w.hint}
                       data-on={card.weight === w.id || undefined}
                       onClick={() => onChange(card.id, { weight: w.id })}
                     >
@@ -129,7 +128,6 @@ export function CardDrawer({ card, board, lane, me, onClose, onChange, onMove, o
                     </button>
                   ))}
                 </div>
-                <p className="hint">{WEIGHTS.find((w) => w.id === card.weight)?.hint}</p>
               </div>
 
               <div className="who">
