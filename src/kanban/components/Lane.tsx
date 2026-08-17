@@ -1,20 +1,18 @@
 import { useState } from 'react';
 import { CollisionPriority } from '@dnd-kit/abstract';
 import { useDroppable } from '@dnd-kit/react';
-import type { Board, LaneId, PersonId } from '../types';
+import type { Board, LaneId } from '../types';
 import { LANES } from '../types';
 import { CardTile } from './CardTile';
 
 interface Props {
   lane: LaneId;
   board: Board;
-  /** null when no filter is active. */
-  filter: PersonId | null;
   onOpen: (id: string) => void;
   onQuickAdd: (lane: LaneId, title: string) => void;
 }
 
-export function Lane({ lane, board, filter, onOpen, onQuickAdd }: Props) {
+export function Lane({ lane, board, onOpen, onQuickAdd }: Props) {
   const meta = LANES.find((l) => l.id === lane)!;
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState('');
@@ -26,13 +24,7 @@ export function Lane({ lane, board, filter, onOpen, onQuickAdd }: Props) {
     collisionPriority: CollisionPriority.Low,
   });
 
-  const ids = board.lanes[lane];
-  const visible = filter
-    ? ids.filter((id) => {
-        const c = board.cards[id];
-        return c.from === filter || c.assignee === filter;
-      })
-    : ids;
+  const visible = board.lanes[lane];
 
   const submit = () => {
     const title = draft.trim();
@@ -52,26 +44,11 @@ export function Lane({ lane, board, filter, onOpen, onQuickAdd }: Props) {
       </header>
 
       <div className="lane__body" ref={ref}>
-        {ids.map((id, index) => {
-          // Index must stay the true index for dnd-kit, even while filtered out of view.
-          if (!visible.includes(id)) return null;
-          return (
-            <CardTile
-              key={id}
-              card={board.cards[id]}
-              index={index}
-              lane={lane}
-              board={board}
-              onOpen={onOpen}
-            />
-          );
-        })}
+        {visible.map((id, index) => (
+          <CardTile key={id} card={board.cards[id]} index={index} lane={lane} board={board} onOpen={onOpen} />
+        ))}
 
-        {visible.length === 0 && !adding && (
-          <p className="lane__empty">
-            {filter ? 'Nothing here for them.' : 'Nothing here yet.'}
-          </p>
-        )}
+        {visible.length === 0 && !adding && <p className="lane__empty">Nothing here yet.</p>}
 
         {adding ? (
           <div className="quickadd">

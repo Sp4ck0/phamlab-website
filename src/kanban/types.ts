@@ -46,6 +46,8 @@ export interface Board {
   version: 1;
   name: string;
   people: Record<PersonId, Person>;
+  /** Which person slot the current access code maps to, if any. */
+  viewerPersonId: PersonId | null;
   cards: Record<string, Card>;
   /** Ordered card ids per lane. This is the shape @dnd-kit/helpers `move` wants. */
   lanes: Record<LaneId, string[]>;
