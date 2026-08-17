@@ -11,12 +11,17 @@ interface TripRow {
   title: string;
   navIcon: string;
 }
+interface BoardRow {
+  _id: string;
+  name: string;
+}
 interface CodeRow {
   _id: string;
   code: string;
   name: string;
   active: boolean;
   tripIds: string[];
+  boardIds: string[];
 }
 
 export function ManagePage() {
@@ -55,9 +60,10 @@ export function ManagePage() {
 
 function ManagementConsole({ code }: { code: string }) {
   const trips = useQuery(api.management.listTrips, { code }) as TripRow[] | undefined;
+  const boards = useQuery(api.management.listBoards, { code }) as BoardRow[] | undefined;
   const codes = useQuery(api.management.listAccessCodes, { code }) as CodeRow[] | undefined;
 
-  if (trips === undefined || codes === undefined) {
+  if (trips === undefined || boards === undefined || codes === undefined) {
     return <div style={{ padding: "80px 0", color: "var(--text-muted)" }}>Loading…</div>;
   }
 
@@ -66,9 +72,9 @@ function ManagementConsole({ code }: { code: string }) {
       <h2 className="shead" style={{ marginTop: 0 }}>
         Manage access
       </h2>
-      <p className="sdek">Create access codes and control which trips each one unlocks.</p>
+      <p className="sdek">Create access codes and control which trips and boards each one unlocks.</p>
 
-      <NewCodeForm code={code} trips={trips} existingCodes={codes.map((c) => c.code)} />
+      <NewCodeForm code={code} trips={trips} boards={boards} existingCodes={codes.map((c) => c.code)} />
 
       <h2 className="section-title" style={{ marginTop: 40 }}>
         Existing codes
@@ -76,7 +82,7 @@ function ManagementConsole({ code }: { code: string }) {
       <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
         {codes.length === 0 && <p className="sdek">No access codes yet.</p>}
         {codes.map((c) => (
-          <CodeRowEditor key={c._id} code={code} row={c} trips={trips} />
+          <CodeRowEditor key={c._id} code={code} row={c} trips={trips} boards={boards} />
         ))}
       </div>
     </div>
@@ -105,11 +111,79 @@ function TripCheckboxes({ trips, selected, onChange }: { trips: TripRow[]; selec
   );
 }
 
-function NewCodeForm({ code, trips, existingCodes }: { code: string; trips: TripRow[]; existingCodes: string[] }) {
+function BoardCheckboxes({ boards, selected, onChange }: { boards: BoardRow[]; selected: string[]; onChange: (boardIds: string[]) => void }) {
+  function toggle(boardId: string) {
+    onChange(selected.includes(boardId) ? selected.filter((id) => id !== boardId) : [...selected, boardId]);
+  }
+  if (boards.length === 0) {
+    return <p className="sdek" style={{ margin: 0 }}>No boards yet.</p>;
+  }
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+      {boards.map((b) => (
+        <button
+          key={b._id}
+          type="button"
+          className="chip"
+          aria-pressed={selected.includes(b._id)}
+          onClick={() => toggle(b._id)}
+        >
+          {b.name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function AccessSections({
+  trips,
+  boards,
+  tripIds,
+  boardIds,
+  onTripsChange,
+  onBoardsChange,
+}: {
+  trips: TripRow[];
+  boards: BoardRow[];
+  tripIds: string[];
+  boardIds: string[];
+  onTripsChange: (tripIds: string[]) => void;
+  onBoardsChange: (boardIds: string[]) => void;
+}) {
+  return (
+    <div style={{ display: "grid", gap: 14 }}>
+      <div>
+        <div className="ctype" style={{ marginBottom: 6 }}>
+          Trips
+        </div>
+        <TripCheckboxes trips={trips} selected={tripIds} onChange={onTripsChange} />
+      </div>
+      <div>
+        <div className="ctype" style={{ marginBottom: 6 }}>
+          Boards
+        </div>
+        <BoardCheckboxes boards={boards} selected={boardIds} onChange={onBoardsChange} />
+      </div>
+    </div>
+  );
+}
+
+function NewCodeForm({
+  code,
+  trips,
+  boards,
+  existingCodes,
+}: {
+  code: string;
+  trips: TripRow[];
+  boards: BoardRow[];
+  existingCodes: string[];
+}) {
   const upsert = useMutation(api.management.upsertAccessCode);
   const [newCode, setNewCode] = useState("");
   const [name, setName] = useState("");
   const [tripIds, setTripIds] = useState<string[]>([]);
+  const [boardIds, setBoardIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -131,10 +205,18 @@ function NewCodeForm({ code, trips, existingCodes }: { code: string; trips: Trip
     }
     setSubmitting(true);
     try {
-      await upsert({ code, targetCode: newCode, tripIds: tripIds as any, name: name.trim(), active: true });
+      await upsert({
+        code,
+        targetCode: newCode,
+        tripIds: tripIds as any,
+        boardIds: boardIds as any,
+        name: name.trim(),
+        active: true,
+      });
       setNewCode("");
       setName("");
       setTripIds([]);
+      setBoardIds([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't create that code.");
     } finally {
@@ -158,7 +240,14 @@ function NewCodeForm({ code, trips, existingCodes }: { code: string; trips: Trip
         placeholder="Code — e.g. sunshine"
         style={inputStyle}
       />
-      <TripCheckboxes trips={trips} selected={tripIds} onChange={setTripIds} />
+      <AccessSections
+        trips={trips}
+        boards={boards}
+        tripIds={tripIds}
+        boardIds={boardIds}
+        onTripsChange={setTripIds}
+        onBoardsChange={setBoardIds}
+      />
       {error && <p style={{ color: "var(--danger)", fontSize: 13, margin: 0 }}>{error}</p>}
       <button className="btn" type="submit" disabled={submitting} style={{ justifySelf: "start" }}>
         {submitting ? "Creating…" : "Create code"}
@@ -167,16 +256,34 @@ function NewCodeForm({ code, trips, existingCodes }: { code: string; trips: Trip
   );
 }
 
-function CodeRowEditor({ code, row, trips }: { code: string; row: CodeRow; trips: TripRow[] }) {
+function CodeRowEditor({
+  code,
+  row,
+  trips,
+  boards,
+}: {
+  code: string;
+  row: CodeRow;
+  trips: TripRow[];
+  boards: BoardRow[];
+}) {
   const upsert = useMutation(api.management.upsertAccessCode);
   const del = useMutation(api.management.deleteAccessCode);
   const [busy, setBusy] = useState(false);
   const [revealed, setRevealed] = useState(false);
 
-  async function updateTrips(tripIds: string[]) {
+  async function updateAccess(tripIds: string[], boardIds: string[]) {
     setBusy(true);
     try {
-      await upsert({ code, id: row._id as any, targetCode: row.code, tripIds: tripIds as any, name: row.name, active: row.active });
+      await upsert({
+        code,
+        id: row._id as any,
+        targetCode: row.code,
+        tripIds: tripIds as any,
+        boardIds: boardIds as any,
+        name: row.name,
+        active: row.active,
+      });
     } finally {
       setBusy(false);
     }
@@ -185,7 +292,15 @@ function CodeRowEditor({ code, row, trips }: { code: string; row: CodeRow; trips
   async function toggleActive() {
     setBusy(true);
     try {
-      await upsert({ code, id: row._id as any, targetCode: row.code, tripIds: row.tripIds as any, name: row.name, active: !row.active });
+      await upsert({
+        code,
+        id: row._id as any,
+        targetCode: row.code,
+        tripIds: row.tripIds as any,
+        boardIds: row.boardIds as any,
+        name: row.name,
+        active: !row.active,
+      });
     } finally {
       setBusy(false);
     }
@@ -228,7 +343,14 @@ function CodeRowEditor({ code, row, trips }: { code: string; row: CodeRow; trips
           </button>
         </span>
       </div>
-      <TripCheckboxes trips={trips} selected={row.tripIds} onChange={updateTrips} />
+      <AccessSections
+        trips={trips}
+        boards={boards}
+        tripIds={row.tripIds}
+        boardIds={row.boardIds}
+        onTripsChange={(tripIds) => updateAccess(tripIds, row.boardIds)}
+        onBoardsChange={(boardIds) => updateAccess(row.tripIds, boardIds)}
+      />
     </div>
   );
 }
