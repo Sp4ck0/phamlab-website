@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "@convex/api";
 import { useAccessCode } from "../hooks/useAccessCode";
 import { PageShell } from "../components/layout/PageShell";
@@ -9,29 +9,26 @@ export function UnlockPage() {
   const navigate = useNavigate();
   const { set } = useAccessCode();
   const [input, setInput] = useState("");
-  const [pendingCode, setPendingCode] = useState<string | undefined>(undefined);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Only fires once the user submits — verifies the code actually
-  // resolves at least one trip before treating it as "unlocked".
-  const result = useQuery(api.trips.listAccessibleTrips, pendingCode ? { code: pendingCode } : "skip");
+  // A mutation (not a reactive query) so submitting a code notifies Slack
+  // exactly once per attempt, instead of re-running on every render.
+  const attemptAccessCode = useMutation(api.trips.attemptAccessCode);
 
-  useEffect(() => {
-    if (!pendingCode || result === undefined) return;
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    const code = input.trim();
+    const result = await attemptAccessCode({ code });
+    setSubmitting(false);
     if (result.length > 0) {
-      set(pendingCode);
+      set(code);
       navigate(`/trip/${result[0].slug}`);
     } else {
       setError("That code didn't unlock anything — double check it and try again.");
-      setPendingCode(undefined);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingCode, result]);
-
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setPendingCode(input.trim());
   }
 
   return (
@@ -57,8 +54,8 @@ export function UnlockPage() {
               color: "var(--text-primary)",
             }}
           />
-          <button className="btn" type="submit">
-            Unlock
+          <button className="btn" type="submit" disabled={submitting}>
+            {submitting ? "Checking…" : "Unlock"}
           </button>
         </form>
         {error && (
