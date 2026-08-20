@@ -6,6 +6,31 @@ Convex backend at `../phamlab` via a symlinked `src/_generated` (see
 in this repo — pages/components should stay data-driven, not hardcode any
 trip's real content.
 
+## Gated features
+
+Every access-gated page (Trips, Boards, `/manage`, Dating Simulator) follows
+the same shape — reuse it rather than inventing a new gating mechanism:
+
+1. **Backend**: the permission lives as a field on `access_grants`
+   (`tripIds`, `boardIds`, `isAdmin`, `datingAccess`) — a boolean for an
+   all-or-nothing page, an id array for a page with multiple selectable
+   sub-resources.
+2. **Backend**: a `checkXAccess`-style query (e.g. `management.checkManagementAccess`,
+   `dating.checkDatingAccess`) re-validates the access code against the
+   database on every call — never trust a client-supplied "I'm authorized"
+   flag. Any action that hits a paid/external API re-checks access itself,
+   rather than assuming the UI already gated it.
+3. **Backend**: self-serve toggles for the flag go through `management.ts`'s
+   `upsertAccessCode`, so `/manage` stays the single place admins grant
+   access — no one-off mutation per feature, unless the flag must stay
+   backend-only (like `isAdmin`).
+4. **Frontend**: the page component gates itself (loading → not-authorized →
+   content) — there's no route-level auth wrapper. See `ManagePage.tsx` /
+   `DatingSimulatorPage.tsx`.
+5. **Frontend**: `SideNav.tsx` conditionally renders a `navgroup` for the
+   feature based on the same `checkXAccess` query, so the link only shows up
+   for codes that actually have access.
+
 ## Before pushing to git
 
 The app is designed so this repo never needs to contain real trip data —

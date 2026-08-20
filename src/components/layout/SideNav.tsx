@@ -15,6 +15,7 @@ export function SideNav() {
   const location = useLocation();
   const { code, clear } = useAccessCode();
   const isManagementCode = useQuery(api.management.checkManagementAccess, code ? { code } : "skip");
+  const isDatingCode = useQuery(api.dating.checkDatingAccess, code ? { code } : "skip");
   const { boards } = useKanbanBoards();
   const { isAuthenticated } = useConvexAuth();
   const { signOut } = useAuthActions();
@@ -130,6 +131,24 @@ export function SideNav() {
                   </span>
                 </Link>
               ))}
+            </div>
+          </div>
+        )}
+
+        {isDatingCode && (
+          <div className="navgroup">
+            <div className="navsection">Practice</div>
+            <div className="navlist">
+              <Link
+                className="navitem"
+                data-active={location.pathname === "/dating-simulator" ? "true" : undefined}
+                to="/dating-simulator"
+              >
+                <span className="navicon">💬</span>
+                <span className="navtext">
+                  <span className="navname">Dating Simulator</span>
+                </span>
+              </Link>
             </div>
           </div>
         )}

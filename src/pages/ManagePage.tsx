@@ -22,6 +22,7 @@ interface CodeRow {
   active: boolean;
   tripIds: string[];
   boardIds: string[];
+  datingAccess: boolean;
 }
 
 export function ManagePage() {
@@ -140,15 +141,19 @@ function AccessSections({
   boards,
   tripIds,
   boardIds,
+  datingAccess,
   onTripsChange,
   onBoardsChange,
+  onDatingAccessChange,
 }: {
   trips: TripRow[];
   boards: BoardRow[];
   tripIds: string[];
   boardIds: string[];
+  datingAccess: boolean;
   onTripsChange: (tripIds: string[]) => void;
   onBoardsChange: (boardIds: string[]) => void;
+  onDatingAccessChange: (datingAccess: boolean) => void;
 }) {
   return (
     <div style={{ display: "grid", gap: 14 }}>
@@ -163,6 +168,19 @@ function AccessSections({
           Boards
         </div>
         <BoardCheckboxes boards={boards} selected={boardIds} onChange={onBoardsChange} />
+      </div>
+      <div>
+        <div className="ctype" style={{ marginBottom: 6 }}>
+          Dating Simulator
+        </div>
+        <button
+          type="button"
+          className="chip"
+          aria-pressed={datingAccess}
+          onClick={() => onDatingAccessChange(!datingAccess)}
+        >
+          {datingAccess ? "Enabled" : "Disabled"}
+        </button>
       </div>
     </div>
   );
@@ -184,6 +202,7 @@ function NewCodeForm({
   const [name, setName] = useState("");
   const [tripIds, setTripIds] = useState<string[]>([]);
   const [boardIds, setBoardIds] = useState<string[]>([]);
+  const [datingAccess, setDatingAccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -210,6 +229,7 @@ function NewCodeForm({
         targetCode: newCode,
         tripIds: tripIds as any,
         boardIds: boardIds as any,
+        datingAccess,
         name: name.trim(),
         active: true,
       });
@@ -217,6 +237,7 @@ function NewCodeForm({
       setName("");
       setTripIds([]);
       setBoardIds([]);
+      setDatingAccess(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't create that code.");
     } finally {
@@ -245,8 +266,10 @@ function NewCodeForm({
         boards={boards}
         tripIds={tripIds}
         boardIds={boardIds}
+        datingAccess={datingAccess}
         onTripsChange={setTripIds}
         onBoardsChange={setBoardIds}
+        onDatingAccessChange={setDatingAccess}
       />
       {error && <p style={{ color: "var(--danger)", fontSize: 13, margin: 0 }}>{error}</p>}
       <button className="btn" type="submit" disabled={submitting} style={{ justifySelf: "start" }}>
@@ -272,7 +295,7 @@ function CodeRowEditor({
   const [busy, setBusy] = useState(false);
   const [revealed, setRevealed] = useState(false);
 
-  async function updateAccess(tripIds: string[], boardIds: string[]) {
+  async function updateAccess(tripIds: string[], boardIds: string[], datingAccess: boolean) {
     setBusy(true);
     try {
       await upsert({
@@ -281,6 +304,7 @@ function CodeRowEditor({
         targetCode: row.code,
         tripIds: tripIds as any,
         boardIds: boardIds as any,
+        datingAccess,
         name: row.name,
         active: row.active,
       });
@@ -298,6 +322,7 @@ function CodeRowEditor({
         targetCode: row.code,
         tripIds: row.tripIds as any,
         boardIds: row.boardIds as any,
+        datingAccess: row.datingAccess,
         name: row.name,
         active: !row.active,
       });
@@ -348,8 +373,10 @@ function CodeRowEditor({
         boards={boards}
         tripIds={row.tripIds}
         boardIds={row.boardIds}
-        onTripsChange={(tripIds) => updateAccess(tripIds, row.boardIds)}
-        onBoardsChange={(boardIds) => updateAccess(row.tripIds, boardIds)}
+        datingAccess={row.datingAccess}
+        onTripsChange={(tripIds) => updateAccess(tripIds, row.boardIds, row.datingAccess)}
+        onBoardsChange={(boardIds) => updateAccess(row.tripIds, boardIds, row.datingAccess)}
+        onDatingAccessChange={(datingAccess) => updateAccess(row.tripIds, row.boardIds, datingAccess)}
       />
     </div>
   );
