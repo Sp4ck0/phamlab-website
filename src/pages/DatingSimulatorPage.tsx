@@ -135,7 +135,7 @@ function PersonaSelect({
         Dating Simulator
       </h2>
       <p className="sdek">
-        Pick a partner, she talks first. Practice being warm, clear, curious. Hit End → Report anytime for instant
+        Pick a partner, they talk first. Practice being warm, clear, curious. Hit End → Report anytime for instant
         feedback on Warmth / Listening / Play / Clarity / Curiosity / Closing.
       </p>
       {error && <p style={{ color: "var(--danger)", fontSize: 13 }}>{error}</p>}
@@ -240,7 +240,7 @@ function ChatScreen({
       const { reply } = await chat({ code, personaId: persona.id, history: next });
       onMessagesChange([...next, { role: "assistant", content: reply }]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "She didn't reply — try again.");
+      setError(err instanceof Error ? err.message : "They didn't reply — try again.");
     } finally {
       setSending(false);
       requestAnimationFrame(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight }));
