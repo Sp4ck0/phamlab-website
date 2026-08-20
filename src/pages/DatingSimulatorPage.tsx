@@ -135,7 +135,7 @@ function PersonaSelect({
         Dating Simulator
       </h2>
       <p className="sdek">
-        Pick a partner, she talks first. Practice being warm, clear, curious. Hit End → Report anytime for instant
+        Pick a partner, they talk first. Practice being warm, clear, curious. Hit End → Report anytime for instant
         feedback on Warmth / Listening / Play / Clarity / Curiosity / Closing.
       </p>
       {error && <p style={{ color: "var(--danger)", fontSize: 13 }}>{error}</p>}
@@ -198,7 +198,7 @@ function ChatScreen({
   const chunksRef = useRef<Blob[]>([]);
 
   // Speak any assistant message that arrived since we last spoke — covers
-  // both her opening line and every subsequent reply, without replaying on
+  // both the opening line and every subsequent reply, without replaying on
   // unrelated re-renders. Web Audio API (decode + BufferSource) instead of
   // <audio src=blob:> — the latter can silently stall at readyState
   // HAVE_NOTHING for some responses; decodeAudioData is far more reliable.
@@ -240,7 +240,7 @@ function ChatScreen({
       const { reply } = await chat({ code, personaId: persona.id, history: next });
       onMessagesChange([...next, { role: "assistant", content: reply }]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "She didn't reply — try again.");
+      setError(err instanceof Error ? err.message : "They didn't reply — try again.");
     } finally {
       setSending(false);
       requestAnimationFrame(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight }));
@@ -341,7 +341,7 @@ function ChatScreen({
           className="btn"
           aria-pressed={voiceOn}
           onClick={() => setVoiceOn((v) => !v)}
-          title={voiceOn ? "Turn her voice off" : "Turn her voice on"}
+          title={voiceOn ? "Turn voice off" : "Turn voice on"}
           style={{ borderRadius: "50%", width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center" }}
         >
           {voiceOn ? <IconVolume2 /> : <IconVolumeX />}
