@@ -228,6 +228,25 @@ function ChatScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, voiceOn]);
 
+  async function sendMessage(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed || sending) return;
+    setError(null);
+    const next = [...messages, { role: "user" as const, content: trimmed }];
+    onMessagesChange(next);
+    setDraft("");
+    setSending(true);
+    try {
+      const { reply } = await chat({ code, personaId: persona.id, history: next });
+      onMessagesChange([...next, { role: "assistant", content: reply }]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "She didn't reply — try again.");
+    } finally {
+      setSending(false);
+      requestAnimationFrame(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight }));
+    }
+  }
+
   async function toggleRecording() {
     if (recording) {
       mediaRecorderRef.current?.stop();
@@ -250,7 +269,7 @@ function ChatScreen({
         try {
           const buf = await blob.arrayBuffer();
           const { text } = await transcribe({ code, audio: buf });
-          if (text) setDraft((d) => (d ? `${d} ${text}` : text));
+          if (text) await sendMessage(text);
         } catch (err) {
           setError(err instanceof Error ? err.message : "Couldn't transcribe that.");
         } finally {
@@ -267,22 +286,7 @@ function ChatScreen({
 
   async function send(e: FormEvent) {
     e.preventDefault();
-    const text = draft.trim();
-    if (!text || sending) return;
-    setError(null);
-    const next = [...messages, { role: "user" as const, content: text }];
-    onMessagesChange(next);
-    setDraft("");
-    setSending(true);
-    try {
-      const { reply } = await chat({ code, personaId: persona.id, history: next });
-      onMessagesChange([...next, { role: "assistant", content: reply }]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "She didn't reply — try again.");
-    } finally {
-      setSending(false);
-      requestAnimationFrame(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight }));
-    }
+    await sendMessage(draft);
   }
 
   async function endAndGrade() {
@@ -310,7 +314,7 @@ function ChatScreen({
             onClick={() => setVoiceOn((v) => !v)}
             title={voiceOn ? "Turn her voice off" : "Turn her voice on"}
           >
-            {voiceOn ? "🔊" : "🔇"}
+            {voiceOn ? <IconVolume2 /> : <IconVolumeX />}
           </button>
           <button className="btn" onClick={onRestart} disabled={grading}>
             Start over
@@ -350,7 +354,7 @@ function ChatScreen({
           title={recording ? "Stop recording" : "Speak your message"}
           style={recording ? { color: "var(--danger)", borderColor: "var(--danger)" } : undefined}
         >
-          {recording ? "⏹" : transcribing ? "…" : "🎤"}
+          {recording ? <IconStop /> : transcribing ? "…" : <IconMic />}
         </button>
         <input
           value={draft}
@@ -426,6 +430,74 @@ function ReportView({ persona, report, onRestart }: { persona: PersonaRow; repor
         Start over
       </button>
     </div>
+  );
+}
+
+function IconVolume2({ size = 18 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M11 5 6 9H2v6h4l5 4V5Z" />
+      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+    </svg>
+  );
+}
+
+function IconVolumeX({ size = 18 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M11 5 6 9H2v6h4l5 4V5Z" />
+      <line x1="22" y1="9" x2="16" y2="15" />
+      <line x1="16" y1="9" x2="22" y2="15" />
+    </svg>
+  );
+}
+
+function IconMic({ size = 18 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+      <line x1="12" y1="19" x2="12" y2="22" />
+    </svg>
+  );
+}
+
+function IconStop({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" />
+    </svg>
   );
 }
 
