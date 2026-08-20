@@ -1,4 +1,4 @@
-import { useRef, useState, type CSSProperties, type FormEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useAction, useQuery } from "convex/react";
 import { api } from "@convex/api";
@@ -181,11 +181,89 @@ function ChatScreen({
 }) {
   const chat = useAction(api.datingActions.chat);
   const generateReport = useAction(api.datingActions.generateReport);
+  const speak = useAction(api.datingActions.speak);
+  const transcribe = useAction(api.datingActions.transcribe);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [grading, setGrading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [voiceOn, setVoiceOn] = useState(true);
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  const spokenCountRef = useRef(0);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+
+  // Speak any assistant message that arrived since we last spoke — covers
+  // both her opening line and every subsequent reply, without replaying on
+  // unrelated re-renders. Web Audio API (decode + BufferSource) instead of
+  // <audio src=blob:> — the latter can silently stall at readyState
+  // HAVE_NOTHING for some responses; decodeAudioData is far more reliable.
+  useEffect(() => {
+    if (!voiceOn) return;
+    const idx = messages.length - 1;
+    if (idx < spokenCountRef.current) return;
+    const last = messages[idx];
+    if (!last || last.role !== "assistant") return;
+    spokenCountRef.current = idx + 1;
+    (async () => {
+      try {
+        const bytes = await speak({ code, personaId: persona.id, text: last.content });
+        const ctx = audioCtxRef.current ?? (audioCtxRef.current = new AudioContext());
+        if (ctx.state === "suspended") await ctx.resume();
+        const decoded = await ctx.decodeAudioData((bytes as ArrayBuffer).slice(0));
+        currentSourceRef.current?.stop();
+        const source = ctx.createBufferSource();
+        source.buffer = decoded;
+        source.connect(ctx.destination);
+        currentSourceRef.current = source;
+        source.start();
+      } catch {
+        // Voice is an enhancement, not critical — fail silently.
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, voiceOn]);
+
+  async function toggleRecording() {
+    if (recording) {
+      mediaRecorderRef.current?.stop();
+      setRecording(false);
+      return;
+    }
+    setError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "";
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      chunksRef.current = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
+        setTranscribing(true);
+        try {
+          const buf = await blob.arrayBuffer();
+          const { text } = await transcribe({ code, audio: buf });
+          if (text) setDraft((d) => (d ? `${d} ${text}` : text));
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Couldn't transcribe that.");
+        } finally {
+          setTranscribing(false);
+        }
+      };
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setRecording(true);
+    } catch {
+      setError("Microphone access denied or unavailable.");
+    }
+  }
 
   async function send(e: FormEvent) {
     e.preventDefault();
@@ -226,6 +304,14 @@ function ChatScreen({
           {persona.name}, {persona.age}
         </h2>
         <div style={{ display: "flex", gap: 8 }}>
+          <button
+            className="btn"
+            aria-pressed={voiceOn}
+            onClick={() => setVoiceOn((v) => !v)}
+            title={voiceOn ? "Turn her voice off" : "Turn her voice on"}
+          >
+            {voiceOn ? "🔊" : "🔇"}
+          </button>
           <button className="btn" onClick={onRestart} disabled={grading}>
             Start over
           </button>
@@ -255,6 +341,17 @@ function ChatScreen({
       {error && <p style={{ color: "var(--danger)", fontSize: 13, margin: 0 }}>{error}</p>}
 
       <form onSubmit={send} style={{ display: "flex", gap: 8 }}>
+        <button
+          type="button"
+          className="btn"
+          aria-pressed={recording}
+          onClick={toggleRecording}
+          disabled={sending || grading || transcribing}
+          title={recording ? "Stop recording" : "Speak your message"}
+          style={recording ? { color: "var(--danger)", borderColor: "var(--danger)" } : undefined}
+        >
+          {recording ? "⏹" : transcribing ? "…" : "🎤"}
+        </button>
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
