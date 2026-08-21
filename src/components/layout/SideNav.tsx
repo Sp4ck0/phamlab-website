@@ -80,39 +80,36 @@ export function SideNav() {
           <span className="navmark">🧳</span>
           <span className="navtitle">Pham Lab</span>
         </div>
-        <div className="navgroup">
-          <div className="navsection">Trips</div>
-          <div className="navlist">
-            {(trips || []).map((t) => (
-              <Link
-                key={t.slug}
-                className="navitem"
-                data-active={t.slug === activeSlug ? "true" : undefined}
-                to={`/trip/${t.slug}`}
-              >
-                <span className="navicon">{t.navIcon}</span>
-                <span className="navtext">
-                  <span className="navname">{t.title}</span>
-                  <span className="navmeta">
-                    <span>{navMonthLabel(t.start, t.end)}</span>
-                    <span>
-                      {t.countries
-                        .filter((c) => c !== "US")
-                        .map((c) => flagEmoji(c)?.emoji)
-                        .join("")}
+        {trips && trips.length > 0 && (
+          <div className="navgroup">
+            <div className="navsection">Trips</div>
+            <div className="navlist">
+              {trips.map((t) => (
+                <Link
+                  key={t.slug}
+                  className="navitem"
+                  data-active={t.slug === activeSlug ? "true" : undefined}
+                  to={`/trip/${t.slug}`}
+                >
+                  <span className="navicon">{t.navIcon}</span>
+                  <span className="navtext">
+                    <span className="navname">{t.title}</span>
+                    <span className="navmeta">
+                      <span>{navMonthLabel(t.start, t.end)}</span>
+                      <span>
+                        {t.countries
+                          .filter((c) => c !== "US")
+                          .map((c) => flagEmoji(c)?.emoji)
+                          .join("")}
+                      </span>
+                      <span className="navcount">{navCountdown(t.start, t.end)}</span>
                     </span>
-                    <span className="navcount">{navCountdown(t.start, t.end)}</span>
                   </span>
-                </span>
-              </Link>
-            ))}
-            {trips && trips.length === 0 && (
-              <div className="navsection" style={{ padding: "8px 10px", textTransform: "none", letterSpacing: 0 }}>
-                No trips unlocked yet
-              </div>
-            )}
+                </Link>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {code && boards.length > 0 && (
           <div className="navgroup">
