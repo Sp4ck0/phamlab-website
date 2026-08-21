@@ -302,7 +302,7 @@ function ChatScreen({
   }
 
   return (
-    <div style={{ padding: "40px 0 0", display: "grid", gap: 12, maxWidth: 640, position: "relative" }}>
+    <div style={{ padding: "40px 0 0", display: "grid", gap: 12, maxWidth: 640 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <h2 className="shead" style={{ margin: 0 }}>
           {persona.name}, {persona.age}
@@ -315,37 +315,6 @@ function ChatScreen({
             {grading ? "Grading…" : "End → Report"}
           </button>
         </div>
-      </div>
-
-      <div style={{ position: "fixed", right: 24, bottom: 24, display: "flex", flexDirection: "column", gap: 10, zIndex: 10 }}>
-        <button
-          type="button"
-          className="btn"
-          aria-pressed={recording}
-          onClick={toggleRecording}
-          disabled={sending || grading || transcribing}
-          title={recording ? "Stop recording" : "Speak your message"}
-          style={{
-            borderRadius: "50%",
-            width: 44,
-            height: 44,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            ...(recording ? { color: "var(--danger)", borderColor: "var(--danger)" } : {}),
-          }}
-        >
-          {recording ? <IconStop /> : transcribing ? "…" : <IconMic />}
-        </button>
-        <button
-          className="btn"
-          aria-pressed={voiceOn}
-          onClick={() => setVoiceOn((v) => !v)}
-          title={voiceOn ? "Turn voice off" : "Turn voice on"}
-          style={{ borderRadius: "50%", width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center" }}
-        >
-          {voiceOn ? <IconVolume2 /> : <IconVolumeX />}
-        </button>
       </div>
 
       <div
@@ -375,6 +344,32 @@ function ChatScreen({
           style={inputStyle}
           disabled={sending || grading}
         />
+        <button
+          type="button"
+          className="btn"
+          aria-pressed={voiceOn}
+          onClick={() => setVoiceOn((v) => !v)}
+          title={voiceOn ? "Turn voice off" : "Turn voice on"}
+          style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+        >
+          {voiceOn ? <IconVolume2 /> : <IconVolumeX />}
+        </button>
+        <button
+          type="button"
+          className="btn"
+          aria-pressed={recording}
+          onClick={toggleRecording}
+          disabled={sending || grading || transcribing}
+          title={recording ? "Stop recording" : "Speak your message"}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            ...(recording ? { color: "var(--danger)", borderColor: "var(--danger)" } : {}),
+          }}
+        >
+          {recording ? <IconStop /> : transcribing ? "…" : <IconMic />}
+        </button>
         <button className="btn" type="submit" disabled={sending || grading || !draft.trim()}>
           Send
         </button>
