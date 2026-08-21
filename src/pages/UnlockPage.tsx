@@ -23,11 +23,17 @@ export function UnlockPage() {
     const code = input.trim();
     const result = await attemptAccessCode({ code });
     setSubmitting(false);
-    if (result.length > 0) {
-      set(code);
-      navigate(`/trip/${result[0].slug}`);
-    } else {
+    if (!result.valid) {
       setError("That code didn't unlock anything — double check it and try again.");
+      return;
+    }
+    set(code);
+    if (result.trips.length > 0) {
+      navigate(`/trip/${result.trips[0].slug}`);
+    } else if (result.hasDatingAccess) {
+      navigate("/dating-simulator");
+    } else if (result.hasBoards) {
+      navigate("/kanban");
     }
   }
 
