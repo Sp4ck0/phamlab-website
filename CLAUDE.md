@@ -26,7 +26,12 @@ the same shape — reuse it rather than inventing a new gating mechanism:
    backend-only (like `isAdmin`).
 4. **Frontend**: the page component gates itself (loading → not-authorized →
    content) — there's no route-level auth wrapper. See `ManagePage.tsx` /
-   `DatingSimulatorPage.tsx`.
+   `DatingSimulatorPage.tsx`. Because the `checkXAccess` query is called as
+   `useQuery(api.x.checkXAccess, code ? { code } : "skip")`, it returns
+   `undefined` forever when there's no code (skipped, not loading) — the
+   loading check must be `code && isAuthorized === undefined`, not just
+   `isAuthorized === undefined`, or a visitor with no code saved gets stuck
+   on "Loading…" indefinitely instead of seeing "Not authorized".
 5. **Frontend**: `SideNav.tsx` conditionally renders a `navgroup` for the
    feature based on the same `checkXAccess` query, so the link only shows up
    for codes that actually have access.

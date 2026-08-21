@@ -29,7 +29,11 @@ export function ManagePage() {
   const { code } = useAccessCode();
   const isAuthorized = useQuery(api.management.checkManagementAccess, code ? { code } : "skip");
 
-  if (isAuthorized === undefined) {
+  // Without a code the query is skipped and useQuery returns undefined
+  // forever — that must fall through to "Not authorized" below, not the
+  // loading state, or a visitor with no code saved gets stuck on
+  // "Loading…" indefinitely.
+  if (code && isAuthorized === undefined) {
     return (
       <PageShell>
         <div style={{ padding: "80px 0", color: "var(--text-muted)" }}>Loading…</div>
