@@ -17,7 +17,7 @@ interface ChatMessage {
   content: string;
 }
 
-interface Report {
+interface CoachingReport {
   scores: {
     warmth: number;
     listening: number;
@@ -31,7 +31,44 @@ interface Report {
   tryNext: string[];
 }
 
-const SCORE_LABELS: { key: keyof Report["scores"]; label: string }[] = [
+interface RubricReport {
+  overallRead: string;
+  overallConfidence: "High" | "Moderate" | "Low" | "Insufficient";
+  insights: { priority: string; insight: string; score: string; confidence: string; why: string }[];
+  dynamics: {
+    reciprocity: string;
+    selfDisclosure: string;
+    emotionalResponsiveness: string;
+    humor: string;
+    disagreement: string;
+  };
+  compatibility: { domain: string; dateEvidence: string; fit: string }[];
+  riskFlags: { flag: string; evidence: string; interpretation: string; confidence: string }[];
+  positiveSignals: { signal: string; evidence: string; confidence: string }[];
+  suggestedQuestions: { question: string; why: string }[];
+  limits: string;
+}
+
+interface FlagsReport {
+  overallSnapshot: string;
+  greenSignals: { signal: string; evidence: string }[];
+  redFlags: FlagItem[];
+  yellowFlags: FlagItem[];
+  doNotOverread: string[];
+  clarifyingQuestions: string[];
+  nextStepGuidance: string;
+}
+
+interface FlagItem {
+  flag: string;
+  evidence: string;
+  interpretation: string;
+  severity: number;
+  confidence: number;
+  alternativeExplanations: string[];
+}
+
+const SCORE_LABELS: { key: keyof CoachingReport["scores"]; label: string }[] = [
   { key: "warmth", label: "Warmth" },
   { key: "listening", label: "Listening" },
   { key: "play", label: "Play" },
@@ -81,7 +118,7 @@ export function DatingSimulatorPage() {
 function DatingSimulator({ code }: { code: string }) {
   const [persona, setPersona] = useState<PersonaRow | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [report, setReport] = useState<Report | null>(null);
+  const [report, setReport] = useState<CoachingReport | null>(null);
 
   function reset() {
     setPersona(null);
@@ -94,7 +131,7 @@ function DatingSimulator({ code }: { code: string }) {
   }
 
   if (report) {
-    return <ReportView persona={persona} report={report} onRestart={reset} />;
+    return <ReportView code={code} persona={persona} transcript={messages} coachingReport={report} onRestart={reset} />;
   }
 
   return (
@@ -180,7 +217,7 @@ function ChatScreen({
   persona: PersonaRow;
   messages: ChatMessage[];
   onMessagesChange: (messages: ChatMessage[]) => void;
-  onReport: (report: Report) => void;
+  onReport: (report: CoachingReport) => void;
   onRestart: () => void;
 }) {
   const chat = useAction(api.datingActions.chat);
@@ -298,7 +335,7 @@ function ChatScreen({
     setError(null);
     try {
       const result = await generateReport({ code, personaId: persona.id, transcript: messages });
-      onReport(result as Report);
+      onReport(result as CoachingReport);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't generate the report.");
       setGrading(false);
@@ -382,12 +419,90 @@ function ChatScreen({
   );
 }
 
-function ReportView({ persona, report, onRestart }: { persona: PersonaRow; report: Report; onRestart: () => void }) {
+type ReportTab = "coaching" | "rubric" | "flags";
+
+function ReportView({
+  code,
+  persona,
+  transcript,
+  coachingReport,
+  onRestart,
+}: {
+  code: string;
+  persona: PersonaRow;
+  transcript: ChatMessage[];
+  coachingReport: CoachingReport;
+  onRestart: () => void;
+}) {
+  const generateRubricReport = useAction(api.datingActions.generateRubricReport);
+  const generateFlagsReport = useAction(api.datingActions.generateFlagsReport);
+  const [tab, setTab] = useState<ReportTab>("coaching");
+  const [rubricReport, setRubricReport] = useState<RubricReport | null>(null);
+  const [flagsReport, setFlagsReport] = useState<FlagsReport | null>(null);
+  const [loadingTab, setLoadingTab] = useState<ReportTab | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function selectTab(next: ReportTab) {
+    setTab(next);
+    setError(null);
+    if (next === "rubric" && !rubricReport) {
+      setLoadingTab("rubric");
+      try {
+        const result = await generateRubricReport({ code, personaId: persona.id, transcript });
+        setRubricReport(result as RubricReport);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Couldn't generate the rubric report.");
+      } finally {
+        setLoadingTab(null);
+      }
+    }
+    if (next === "flags" && !flagsReport) {
+      setLoadingTab("flags");
+      try {
+        const result = await generateFlagsReport({ code, personaId: persona.id, transcript });
+        setFlagsReport(result as FlagsReport);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Couldn't generate the flags report.");
+      } finally {
+        setLoadingTab(null);
+      }
+    }
+  }
+
   return (
-    <div style={{ padding: "40px 0 0", maxWidth: 560 }}>
+    <div style={{ padding: "40px 0 0", maxWidth: 640 }}>
       <h2 className="shead" style={{ marginTop: 0 }}>
         Date report — {persona.name}
       </h2>
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+        <button className="btn" aria-pressed={tab === "coaching"} onClick={() => selectTab("coaching")}>
+          Your coaching
+        </button>
+        <button className="btn" aria-pressed={tab === "rubric"} onClick={() => selectTab("rubric")}>
+          {loadingTab === "rubric" ? "Loading…" : "Partner rubric"}
+        </button>
+        <button className="btn" aria-pressed={tab === "flags"} onClick={() => selectTab("flags")}>
+          {loadingTab === "flags" ? "Loading…" : "Partner flags"}
+        </button>
+      </div>
+
+      {error && <p style={{ color: "var(--danger)", fontSize: 13, marginBottom: 16 }}>{error}</p>}
+
+      {tab === "coaching" && <CoachingReportView report={coachingReport} />}
+      {tab === "rubric" && (rubricReport ? <RubricReportView report={rubricReport} /> : loadingTab === "rubric" ? <p className="sdek">Analyzing…</p> : null)}
+      {tab === "flags" && (flagsReport ? <FlagsReportView report={flagsReport} /> : loadingTab === "flags" ? <p className="sdek">Analyzing…</p> : null)}
+
+      <button className="btn" onClick={onRestart} style={{ marginTop: 20 }}>
+        Start over
+      </button>
+    </div>
+  );
+}
+
+function CoachingReportView({ report }: { report: CoachingReport }) {
+  return (
+    <div>
       <div className="card" style={{ display: "grid", gap: 10, marginBottom: 16 }}>
         {SCORE_LABELS.map(({ key, label }) => (
           <div key={key} style={{ display: "grid", gap: 4 }}>
@@ -436,10 +551,259 @@ function ReportView({ persona, report, onRestart }: { persona: PersonaRow; repor
           </ul>
         </div>
       </div>
+    </div>
+  );
+}
 
-      <button className="btn" onClick={onRestart} style={{ marginTop: 20 }}>
-        Start over
-      </button>
+function RubricReportView({ report }: { report: RubricReport }) {
+  return (
+    <div style={{ display: "grid", gap: 16 }}>
+      <div>
+        <p className="sdek" style={{ margin: 0 }}>
+          {report.overallRead}
+        </p>
+        <p className="sdek" style={{ margin: "4px 0 0", fontStyle: "italic" }}>
+          Overall evidence confidence: {report.overallConfidence}
+        </p>
+      </div>
+
+      <div>
+        <div className="ctype" style={{ marginBottom: 6 }}>
+          Prioritized insights
+        </div>
+        <div style={{ display: "grid", gap: 8 }}>
+          {report.insights.map((ins, i) => (
+            <div key={i} className="card" style={{ padding: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
+                <span className="ctype">{ins.priority}</span>
+                <span>
+                  {ins.score === "Unknown" ? "Unknown" : `${ins.score}/5`} · {ins.confidence} confidence
+                </span>
+              </div>
+              <p className="sdek" style={{ margin: 0 }}>
+                {ins.insight}
+              </p>
+              <p className="sdek" style={{ margin: "4px 0 0", opacity: 0.8 }}>
+                {ins.why}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <div className="ctype" style={{ marginBottom: 6 }}>
+          Conversation dynamics
+        </div>
+        <div className="card" style={{ display: "grid", gap: 8, padding: 12 }}>
+          <div>
+            <strong style={{ fontSize: 13 }}>Reciprocity: </strong>
+            <span className="sdek">{report.dynamics.reciprocity}</span>
+          </div>
+          <div>
+            <strong style={{ fontSize: 13 }}>Self-disclosure: </strong>
+            <span className="sdek">{report.dynamics.selfDisclosure}</span>
+          </div>
+          <div>
+            <strong style={{ fontSize: 13 }}>Emotional responsiveness: </strong>
+            <span className="sdek">{report.dynamics.emotionalResponsiveness}</span>
+          </div>
+          <div>
+            <strong style={{ fontSize: 13 }}>Humor: </strong>
+            <span className="sdek">{report.dynamics.humor}</span>
+          </div>
+          <div>
+            <strong style={{ fontSize: 13 }}>Disagreement: </strong>
+            <span className="sdek">{report.dynamics.disagreement}</span>
+          </div>
+        </div>
+      </div>
+
+      {report.compatibility.length > 0 && (
+        <div>
+          <div className="ctype" style={{ marginBottom: 6 }}>
+            Compatibility dashboard
+          </div>
+          <div style={{ display: "grid", gap: 8 }}>
+            {report.compatibility.map((c, i) => (
+              <div key={i} className="card" style={{ padding: 12 }}>
+                <div className="ctype" style={{ marginBottom: 4 }}>
+                  {c.domain}
+                </div>
+                <p className="sdek" style={{ margin: 0 }}>
+                  {c.dateEvidence}
+                </p>
+                <p className="sdek" style={{ margin: "4px 0 0", opacity: 0.8 }}>
+                  Fit: {c.fit}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div>
+        <div className="ctype" style={{ marginBottom: 6 }}>
+          Risk and caution flags
+        </div>
+        {report.riskFlags.length === 0 ? (
+          <p className="sdek" style={{ margin: 0 }}>No risk flags observed in this conversation.</p>
+        ) : (
+          <div style={{ display: "grid", gap: 8 }}>
+            {report.riskFlags.map((f, i) => (
+              <div key={i} className="card" style={{ padding: 12, borderColor: "var(--danger)" }}>
+                <div className="ctype" style={{ marginBottom: 4 }}>
+                  {f.flag} · {f.confidence} confidence
+                </div>
+                <p className="sdek" style={{ margin: 0 }}>
+                  {f.evidence}
+                </p>
+                <p className="sdek" style={{ margin: "4px 0 0", opacity: 0.8 }}>
+                  {f.interpretation}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <div className="ctype" style={{ marginBottom: 6 }}>
+          Positive signals
+        </div>
+        <div style={{ display: "grid", gap: 8 }}>
+          {report.positiveSignals.map((s, i) => (
+            <div key={i} className="card" style={{ padding: 12 }}>
+              <div className="ctype" style={{ marginBottom: 4 }}>
+                {s.signal} · {s.confidence} confidence
+              </div>
+              <p className="sdek" style={{ margin: 0 }}>
+                {s.evidence}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <div className="ctype" style={{ marginBottom: 6 }}>
+          Suggested questions
+        </div>
+        <ul style={{ margin: 0, paddingLeft: 20 }}>
+          {report.suggestedQuestions.map((q, i) => (
+            <li key={i} className="sdek" style={{ marginBottom: 6 }}>
+              <strong>{q.question}</strong> — {q.why}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <p className="sdek" style={{ opacity: 0.8 }}>
+        <strong>What this conversation cannot tell you: </strong>
+        {report.limits}
+      </p>
+    </div>
+  );
+}
+
+function FlagsReportView({ report }: { report: FlagsReport }) {
+  return (
+    <div style={{ display: "grid", gap: 16 }}>
+      <p className="sdek" style={{ margin: 0 }}>
+        {report.overallSnapshot}
+      </p>
+
+      <div>
+        <div className="ctype" style={{ marginBottom: 6 }}>
+          Green signals
+        </div>
+        <div style={{ display: "grid", gap: 8 }}>
+          {report.greenSignals.map((s, i) => (
+            <div key={i} className="card" style={{ padding: 12 }}>
+              <div className="ctype" style={{ marginBottom: 4 }}>
+                {s.signal}
+              </div>
+              <p className="sdek" style={{ margin: 0 }}>
+                {s.evidence}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <FlagList title="Red flags" flags={report.redFlags} emptyText="No red flags observed in this conversation." />
+      <FlagList title="Yellow flags" flags={report.yellowFlags} emptyText="No yellow flags observed in this conversation." />
+
+      {report.doNotOverread.length > 0 && (
+        <div>
+          <div className="ctype" style={{ marginBottom: 6 }}>
+            What not to overread
+          </div>
+          <ul style={{ margin: 0, paddingLeft: 20 }}>
+            {report.doNotOverread.map((s, i) => (
+              <li key={i} className="sdek">
+                {s}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {report.clarifyingQuestions.length > 0 && (
+        <div>
+          <div className="ctype" style={{ marginBottom: 6 }}>
+            Questions to clarify
+          </div>
+          <ul style={{ margin: 0, paddingLeft: 20 }}>
+            {report.clarifyingQuestions.map((s, i) => (
+              <li key={i} className="sdek">
+                {s}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <p className="sdek" style={{ opacity: 0.8 }}>
+        {report.nextStepGuidance}
+      </p>
+    </div>
+  );
+}
+
+function FlagList({ title, flags, emptyText }: { title: string; flags: FlagItem[]; emptyText: string }) {
+  return (
+    <div>
+      <div className="ctype" style={{ marginBottom: 6 }}>
+        {title}
+      </div>
+      {flags.length === 0 ? (
+        <p className="sdek" style={{ margin: 0 }}>{emptyText}</p>
+      ) : (
+        <div style={{ display: "grid", gap: 8 }}>
+          {flags.map((f, i) => (
+            <div key={i} className="card" style={{ padding: 12, borderColor: "var(--danger)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
+                <span className="ctype">{f.flag}</span>
+                <span>
+                  Severity {f.severity}/100 · Confidence {Math.round(f.confidence * 100)}%
+                </span>
+              </div>
+              <p className="sdek" style={{ margin: 0 }}>
+                {f.evidence}
+              </p>
+              <p className="sdek" style={{ margin: "4px 0 0", opacity: 0.8 }}>
+                {f.interpretation}
+              </p>
+              {f.alternativeExplanations.length > 0 && (
+                <p className="sdek" style={{ margin: "4px 0 0", opacity: 0.7, fontStyle: "italic" }}>
+                  Alternative explanations: {f.alternativeExplanations.join("; ")}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
