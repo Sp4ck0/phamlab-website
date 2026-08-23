@@ -42,7 +42,7 @@ interface RubricReport {
     humor: string;
     disagreement: string;
   };
-  compatibility: { domain: string; dateEvidence: string; fit: string }[];
+  compatibility: { domain: string; userEvidence: string; fit: string }[];
   riskFlags: { flag: string; evidence: string; interpretation: string; confidence: string }[];
   positiveSignals: { signal: string; evidence: string; confidence: string }[];
   suggestedQuestions: { question: string; why: string }[];
@@ -631,7 +631,7 @@ function RubricReportView({ report }: { report: RubricReport }) {
                   {c.domain}
                 </div>
                 <p className="sdek" style={{ margin: 0 }}>
-                  {c.dateEvidence}
+                  {c.userEvidence}
                 </p>
                 <p className="sdek" style={{ margin: "4px 0 0", opacity: 0.8 }}>
                   Fit: {c.fit}
