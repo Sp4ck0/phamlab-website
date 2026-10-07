@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
 
 // Compact delivery measurements for one spoken turn. Opaque here: the
 // backend's transcribe action produces them and its summarizeDelivery action
@@ -116,69 +116,212 @@ function DeliveryTimeline({ tokens }: { tokens: TimelineToken[] }) {
   );
 }
 
-// Plays a slice of a turn's recording. Decodes with Web Audio rather than an
-// <audio> element: MediaRecorder's WebM files have no seek index, so jumping
-// to the middle of one is unreliable.
-function useClipPlayer(recordings: (Blob | undefined)[]) {
+// Each recording is decoded once, in the browser, for both its waveform and
+// playback. Keyed by the Blob itself so re-renders never decode twice.
+const decodedAudio = new WeakMap<Blob, AudioBuffer>();
+const pendingDecodes = new WeakMap<Blob, Promise<AudioBuffer>>();
+
+function decode(blob: Blob): Promise<AudioBuffer> {
+  let pending = pendingDecodes.get(blob);
+  if (!pending) {
+    pending = blob
+      .arrayBuffer()
+      .then((bytes) => new OfflineAudioContext(1, 1, 44100).decodeAudioData(bytes))
+      .then((buffer) => {
+        decodedAudio.set(blob, buffer);
+        return buffer;
+      });
+    pendingDecodes.set(blob, pending);
+  }
+  return pending;
+}
+
+function useDecodedRecordings(blobs: (Blob | undefined)[]): (blob: Blob | undefined) => AudioBuffer | undefined {
+  const [, rerender] = useReducer((n: number) => n + 1, 0);
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  useEffect(() => {
+    for (const blob of blobs) {
+      if (blob && !decodedAudio.has(blob)) {
+        decode(blob).then(
+          () => mounted.current && rerender(),
+          () => {} // undecodable: the example simply has no waveform or Play
+        );
+      }
+    }
+  });
+  return (blob) => (blob ? decodedAudio.get(blob) : undefined);
+}
+
+// Plays part of a decoded recording and reports the playhead. Web Audio
+// rather than <audio>: MediaRecorder's WebM files have no seek index, so
+// jumping to the middle of one is unreliable.
+function useClipPlayer() {
   const ctxRef = useRef<AudioContext | null>(null);
-  const decoded = useRef(new Map<number, Promise<AudioBuffer>>());
   const sourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const frameRef = useRef(0);
+  const positionRef = useRef(0);
   const latestRequest = useRef(0);
-  const [playing, setPlaying] = useState<number | null>(null);
+  const [playing, setPlaying] = useState<{ id: number; at: number } | null>(null);
 
   useEffect(
     () => () => {
+      cancelAnimationFrame(frameRef.current);
       sourceRef.current?.stop();
       void ctxRef.current?.close();
     },
     []
   );
 
-  function stop() {
+  /** Stops playback and returns where the playhead was, in seconds. */
+  function stop(): number {
+    latestRequest.current++;
+    cancelAnimationFrame(frameRef.current);
     const source = sourceRef.current;
     sourceRef.current = null;
     source?.stop();
     setPlaying(null);
+    return positionRef.current;
   }
 
-  async function play(id: number, turn: number, startMs: number, endMs: number) {
+  async function play(id: number, buffer: AudioBuffer, from: number, to: number, onEnded: () => void) {
     stop();
-    const blob = recordings[turn];
-    if (!blob) return;
-    const request = ++latestRequest.current;
-    setPlaying(id);
-    try {
-      const ctx = ctxRef.current ?? (ctxRef.current = new AudioContext());
-      if (ctx.state === "suspended") await ctx.resume();
-      let buffer = decoded.current.get(turn);
-      if (!buffer) {
-        buffer = blob.arrayBuffer().then((bytes) => ctx.decodeAudioData(bytes));
-        decoded.current.set(turn, buffer);
-      }
-      const audio = await buffer;
-      // Another Play click while this one was decoding wins.
-      if (request !== latestRequest.current) return;
-      const from = Math.max(0, startMs / 1000 - PLAYBACK_PADDING_S);
-      const to = Math.min(audio.duration, endMs / 1000 + PLAYBACK_PADDING_S);
-      const source = ctx.createBufferSource();
-      source.buffer = audio;
-      source.connect(ctx.destination);
-      source.onended = () => {
-        if (sourceRef.current === source) stop();
-      };
-      sourceRef.current = source;
-      source.start(0, from, Math.max(0, to - from));
-    } catch {
-      setPlaying(null);
-    }
+    const request = latestRequest.current;
+    const ctx = ctxRef.current ?? (ctxRef.current = new AudioContext());
+    if (ctx.state === "suspended") await ctx.resume();
+    if (request !== latestRequest.current) return; // another Play/Pause won meanwhile
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.onended = () => {
+      if (sourceRef.current !== source) return;
+      stop();
+      onEnded();
+    };
+    sourceRef.current = source;
+    const startedAt = ctx.currentTime;
+    source.start(0, from, Math.max(0, to - from));
+    const tick = () => {
+      positionRef.current = Math.min(to, from + ctx.currentTime - startedAt);
+      setPlaying({ id, at: positionRef.current });
+      frameRef.current = requestAnimationFrame(tick);
+    };
+    tick();
   }
 
   return { playing, play, stop };
 }
 
+const WAVEFORM_BARS = 120;
+
+// Peak amplitude per bar, normalized to the clip's loudest bar so quiet
+// recordings are still readable (relative shape, not absolute volume).
+function clipPeaks(buffer: AudioBuffer, from: number, to: number): number[] {
+  const data = buffer.getChannelData(0);
+  const start = Math.floor(from * buffer.sampleRate);
+  const end = Math.min(data.length, Math.ceil(to * buffer.sampleRate));
+  const step = Math.max(1, (end - start) / WAVEFORM_BARS);
+  const peaks = Array.from({ length: WAVEFORM_BARS }, (_, bar) => {
+    let peak = 0;
+    for (let i = Math.floor(start + bar * step); i < Math.min(end, start + (bar + 1) * step); i++) peak = Math.max(peak, Math.abs(data[i]));
+    return peak;
+  });
+  const loudest = Math.max(...peaks) || 1;
+  return peaks.map((p) => p / loudest);
+}
+
+function Waveform({
+  buffer,
+  from,
+  to,
+  at,
+  onScrub,
+  onScrubEnd,
+}: {
+  buffer: AudioBuffer;
+  from: number;
+  to: number;
+  at: number;
+  onScrub: (seconds: number) => void;
+  onScrubEnd: () => void;
+}) {
+  // useId() can contain characters that break url(#…) references.
+  const clipId = `waveform${useId().replace(/[^\w-]/g, "")}`;
+  // Bars are drawn once; playback only moves the clip over the played copy.
+  const bars = useMemo(
+    () =>
+      clipPeaks(buffer, from, to).map((p, i) => {
+        const h = Math.max(1, p * 34);
+        return <rect key={i} x={i + 0.15} y={18 - h / 2} width={0.7} height={h} />;
+      }),
+    [buffer, from, to]
+  );
+  const played = Math.min(1, Math.max(0, (at - from) / Math.max(0.001, to - from)));
+  return (
+    <div style={{ display: "grid", gap: 2 }}>
+      <div style={{ position: "relative", height: 36 }}>
+        <svg viewBox={`0 0 ${WAVEFORM_BARS} 36`} preserveAspectRatio="none" width="100%" height="36" aria-hidden="true">
+          <clipPath id={clipId}>
+            <rect x={0} y={0} width={played * WAVEFORM_BARS} height={36} />
+          </clipPath>
+          <g fill="var(--text-muted)" opacity={0.45}>
+            {bars}
+          </g>
+          <g fill="var(--accent-1)" clipPath={`url(#${clipId})`}>
+            {bars}
+          </g>
+          <line
+            x1={played * WAVEFORM_BARS}
+            x2={played * WAVEFORM_BARS}
+            y1={0}
+            y2={36}
+            stroke="var(--text-primary)"
+            strokeWidth={1.5}
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+        {/* A transparent native slider on top: click/drag/arrow keys to scrub. */}
+        <input
+          type="range"
+          min={from}
+          max={to}
+          step={0.01}
+          value={at}
+          aria-label="Scrub through this example"
+          aria-valuetext={`${(at - from).toFixed(1)} of ${(to - from).toFixed(1)} seconds`}
+          onChange={(e) => onScrub(Number(e.target.value))}
+          onPointerUp={onScrubEnd}
+          onKeyUp={onScrubEnd}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", margin: 0, opacity: 0, cursor: "pointer" }}
+        />
+      </div>
+      <div style={{ fontSize: 11, color: "var(--text-muted)", textAlign: "right" }}>
+        {(at - from).toFixed(1)}s / {(to - from).toFixed(1)}s
+      </div>
+    </div>
+  );
+}
+
 export function DeliveryReportView({ report, recordings }: { report: DeliveryReport; recordings: (Blob | undefined)[] }) {
   const { spokenTurns, typedTurns, spokenSeconds } = report.basis;
-  const { playing, play, stop } = useClipPlayer(recordings);
+  const decoded = useDecodedRecordings(report.examples.map((e) => recordings[e.turn]));
+  const { playing, play, stop } = useClipPlayer();
+  // Paused/scrubbed playhead per example, in seconds into its recording.
+  const [cursors, setCursors] = useState<Record<number, number>>({});
+  const resumeAfterScrub = useRef<number | null>(null);
+  const clip = (e: DeliveryReport["examples"][number]) => {
+    const buffer = decoded(recordings[e.turn]);
+    if (!buffer) return null;
+    const from = Math.max(0, e.startMs / 1000 - PLAYBACK_PADDING_S);
+    return { buffer, from, to: Math.min(buffer.duration, e.endMs / 1000 + PLAYBACK_PADDING_S) };
+  };
+  const startPlayback = (i: number, c: NonNullable<ReturnType<typeof clip>>, at: number) =>
+    play(i, c.buffer, at >= c.to - 0.05 ? c.from : at, c.to, () => setCursors((all) => ({ ...all, [i]: c.from })));
   const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
   const canPlay = report.examples.some((e) => recordings[e.turn]);
   return (
@@ -246,40 +389,71 @@ export function DeliveryReportView({ report, recordings }: { report: DeliveryRep
             Flagged examples
           </summary>
           <div style={{ display: "grid", gap: 14, marginTop: 10 }}>
-            {report.examples.map((e, i) => (
-              <div
-                key={i}
-                style={{ display: "grid", gridTemplateColumns: canPlay ? "64px 1fr" : "1fr", gap: 12, alignItems: "start" }}
-              >
-                {canPlay && (
-                  <div>
-                    {recordings[e.turn] && (
-                      <button
-                        type="button"
-                        className="btn"
-                        style={{ width: "100%", padding: "4px 0" }}
-                        onClick={() => (playing === i ? stop() : play(i, e.turn, e.startMs, e.endMs))}
-                      >
-                        {playing === i ? "Stop" : "Play"}
-                      </button>
-                    )}
-                  </div>
-                )}
-                <div style={{ display: "grid", gap: 6, minWidth: 0 }}>
-                  <span className="ctype">{e.title}</span>
-                  {e.timeline.length > 0 ? (
-                    <DeliveryTimeline tokens={e.timeline} />
-                  ) : (
-                    <p className="sdek" style={{ margin: 0, color: "var(--text-primary)" }}>
-                      “{e.text}”
-                    </p>
+            {report.examples.map((e, i) => {
+              const c = clip(e);
+              const isPlaying = playing?.id === i;
+              const at = isPlaying ? playing.at : (cursors[i] ?? c?.from ?? 0);
+              return (
+                <div
+                  key={i}
+                  style={{ display: "grid", gridTemplateColumns: canPlay ? "64px 1fr" : "1fr", gap: 12, alignItems: "start" }}
+                >
+                  {canPlay && (
+                    <div>
+                      {recordings[e.turn] && (
+                        <button
+                          type="button"
+                          className="btn"
+                          disabled={!c}
+                          style={{ width: "100%", padding: "4px 0" }}
+                          onClick={() => {
+                            if (!c) return;
+                            if (isPlaying) setCursors((all) => ({ ...all, [i]: stop() }));
+                            else void startPlayback(i, c, at);
+                          }}
+                        >
+                          {isPlaying ? "Pause" : "Play"}
+                        </button>
+                      )}
+                    </div>
                   )}
-                  <p className="sdek" style={{ margin: 0, opacity: 0.8 }}>
-                    {e.why}
-                  </p>
+                  <div style={{ display: "grid", gap: 6, minWidth: 0 }}>
+                    <span className="ctype">{e.title}</span>
+                    {e.timeline.length > 0 ? (
+                      <DeliveryTimeline tokens={e.timeline} />
+                    ) : (
+                      <p className="sdek" style={{ margin: 0, color: "var(--text-primary)" }}>
+                        “{e.text}”
+                      </p>
+                    )}
+                    {c && (
+                      <Waveform
+                        buffer={c.buffer}
+                        from={c.from}
+                        to={c.to}
+                        at={at}
+                        onScrub={(seconds) => {
+                          // Dragging while playing pauses; letting go resumes from there.
+                          if (isPlaying) {
+                            stop();
+                            resumeAfterScrub.current = i;
+                          }
+                          setCursors((all) => ({ ...all, [i]: seconds }));
+                        }}
+                        onScrubEnd={() => {
+                          if (resumeAfterScrub.current !== i) return;
+                          resumeAfterScrub.current = null;
+                          void startPlayback(i, c, cursors[i] ?? c.from);
+                        }}
+                      />
+                    )}
+                    <p className="sdek" style={{ margin: 0, opacity: 0.8 }}>
+                      {e.why}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <p className="sdek" style={{ margin: "12px 0 0", fontSize: 12 }}>
             Each word shows how long it was audible. Pauses of half a second or more are marked: gray is a natural break,
