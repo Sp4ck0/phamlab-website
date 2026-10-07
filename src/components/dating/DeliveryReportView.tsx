@@ -32,12 +32,13 @@ export interface DeliveryReport {
     text: string;
     why: string;
     section: "pace" | "presence" | "intonation" | "wording"; // the card it illustrates
+    // Shown once: under the takeaway, in its section card, or under More examples.
+    placement: "summary" | "section" | "more";
     turn: number;
     startMs: number;
     endMs: number;
     timeline: TimelineToken[];
   }[];
-  highlights: number[]; // examples shown with the takeaway, as its evidence
   metrics: { label: string; value: string; sources: DeliverySource[] }[];
 }
 
@@ -334,16 +335,16 @@ export function DeliveryReportView({ report, recordings }: { report: DeliveryRep
     play(i, c.buffer, at >= c.to - 0.05 ? c.from : at, c.to, () => setCursors((all) => ({ ...all, [i]: c.from })));
   const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
   const canPlay = report.examples.some((e) => recordings[e.turn]);
-  // One renderer for every place an example appears (top card, its section,
-  // Flagged examples). Player state is keyed by example index, so copies of
-  // the same example play, pause, and scrub together.
-  const renderExample = (i: number, key: string) => {
+  // One renderer for the summary, the section cards, and More examples.
+  const renderAt = (placement: DeliveryReport["examples"][number]["placement"], section?: string) =>
+    report.examples.flatMap((e, i) => (e.placement === placement && (!section || e.section === section) ? [renderExample(i)] : []));
+  const renderExample = (i: number) => {
     const e = report.examples[i];
     const c = clip(e);
     const isPlaying = playing?.id === i;
     const at = isPlaying ? playing.at : (cursors[i] ?? c?.from ?? 0);
     return (
-      <div key={key} style={{ display: "grid", gridTemplateColumns: canPlay ? "64px 1fr" : "1fr", gap: 12, alignItems: "start" }}>
+      <div key={i} style={{ display: "grid", gridTemplateColumns: canPlay ? "64px 1fr" : "1fr", gap: 12, alignItems: "start" }}>
         {canPlay && (
           <div>
             {recordings[e.turn] && (
@@ -414,8 +415,8 @@ export function DeliveryReportView({ report, recordings }: { report: DeliveryRep
           Based on {plural(spokenTurns, "spoken message")} ({spokenSeconds} s of speech)
           {typedTurns > 0 ? `; ${plural(typedTurns, "typed message")} ${typedTurns === 1 ? "wasn't" : "weren't"} analyzed` : ""}.
         </p>
-        {report.highlights.length > 0 && (
-          <div style={{ display: "grid", gap: 14, marginTop: 6 }}>{report.highlights.map((i) => renderExample(i, `top-${i}`))}</div>
+        {report.examples.some((e) => e.placement === "summary") && (
+          <div style={{ display: "grid", gap: 14, marginTop: 6 }}>{renderAt("summary")}</div>
         )}
       </div>
 
@@ -429,10 +430,18 @@ export function DeliveryReportView({ report, recordings }: { report: DeliveryRep
             <p className="sdek" style={{ margin: 0 }}>
               {s.summary}
             </p>
-            {report.examples.some((e) => e.section === s.id) && (
-              <div style={{ display: "grid", gap: 14, marginTop: 12 }}>
-                {report.examples.flatMap((e, i) => (e.section === s.id ? [renderExample(i, `${s.id}-${i}`)] : []))}
-              </div>
+            {report.examples.some((e) => e.placement === "summary" && e.section === s.id) && (
+              <p className="sdek" style={{ margin: "8px 0 0", fontSize: 12 }}>
+                Shown above:{" "}
+                {report.examples
+                  .filter((e) => e.placement === "summary" && e.section === s.id)
+                  .map((e) => e.title.toLowerCase())
+                  .join(", ")}
+                .
+              </p>
+            )}
+            {report.examples.some((e) => e.placement === "section" && e.section === s.id) && (
+              <div style={{ display: "grid", gap: 14, marginTop: 12 }}>{renderAt("section", s.id)}</div>
             )}
           </div>
         ))}
@@ -465,20 +474,19 @@ export function DeliveryReportView({ report, recordings }: { report: DeliveryRep
             </li>
           ))}
         </ul>
+        <p className="sdek" style={{ margin: "8px 0 0" }}>
+          <strong>Reading the examples:</strong> each word shows how long it was audible. Pauses of half a second or more
+          are marked: gray is a natural break, orange a likely hesitation, red a strong one. Dashed words are fillers; bold
+          marks what the example is about.
+        </p>
       </details>
 
-      {report.examples.length > 0 && (
+      {report.examples.some((e) => e.placement === "more") && (
         <details className="card" style={{ padding: 12 }}>
           <summary className="ctype" style={{ cursor: "pointer" }}>
-            Flagged examples
+            More examples
           </summary>
-          <div style={{ display: "grid", gap: 14, marginTop: 10 }}>
-            {report.examples.map((_, i) => renderExample(i, `flagged-${i}`))}
-          </div>
-          <p className="sdek" style={{ margin: "12px 0 0", fontSize: 12 }}>
-            Each word shows how long it was audible. Pauses of half a second or more are marked: gray is a natural break,
-            orange a likely hesitation, red a strong one. Dashed words are fillers; bold marks what the example is about.
-          </p>
+          <div style={{ display: "grid", gap: 14, marginTop: 10 }}>{renderAt("more")}</div>
         </details>
       )}
 
