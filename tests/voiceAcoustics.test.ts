@@ -2,7 +2,7 @@
 // Run with `npm test` (Node's built-in test runner strips the types).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { analyzeSamples, HOP_MS } from "../src/lib/voiceAcoustics.ts";
+import { analyzeSamples, clipPeaks, HOP_MS } from "../src/lib/voiceAcoustics.ts";
 
 const RATE = 8000;
 function tone(seconds: number, hz: (t: number) => number, amplitude = 0.5): Float32Array {
@@ -64,4 +64,16 @@ test("noise and unpitched sound read as unvoiced", () => {
   const noise = Float32Array.from({ length: RATE / 2 }, () => ((seed = (seed * 16807) % 2147483647) / 2147483647 - 0.5) * 0.6);
   const voiced = frames(noise).filter((f) => f.f0 > 0).length;
   assert.ok(voiced < 5, `voiced noise frames: ${voiced}`);
+});
+
+test("waveform peaks cover only the requested slice, normalized to its loudest bar", () => {
+  // 1 s of silence, then 1 s of a quarter-amplitude tone.
+  const samples = new Float32Array(2 * RATE);
+  samples.set(tone(1, () => 200, 0.25), RATE);
+  const whole = clipPeaks(samples, RATE, 0, 2, 20);
+  assert.equal(whole.length, 20);
+  assert.ok(whole.slice(0, 10).every((p) => p === 0));
+  assert.ok(whole.slice(10).every((p) => p > 0.9)); // quiet tone still fills the height
+  assert.ok(clipPeaks(samples, RATE, 1, 2, 10).every((p) => p > 0.9));
+  assert.deepEqual(clipPeaks(samples, RATE, 0, 1, 5), [0, 0, 0, 0, 0]); // silence: no NaN
 });

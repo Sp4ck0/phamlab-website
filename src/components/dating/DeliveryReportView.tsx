@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
+import { clipPeaks } from "../../lib/voiceAcoustics";
 
 // Compact delivery measurements for one spoken turn. Opaque here: the
 // backend's transcribe action produces them and its summarizeDelivery action
@@ -251,22 +252,6 @@ function useClipPlayer() {
 
 const WAVEFORM_BARS = 120;
 
-// Peak amplitude per bar, normalized to the clip's loudest bar so quiet
-// recordings are still readable (relative shape, not absolute volume).
-function clipPeaks(buffer: AudioBuffer, from: number, to: number): number[] {
-  const data = buffer.getChannelData(0);
-  const start = Math.floor(from * buffer.sampleRate);
-  const end = Math.min(data.length, Math.ceil(to * buffer.sampleRate));
-  const step = Math.max(1, (end - start) / WAVEFORM_BARS);
-  const peaks = Array.from({ length: WAVEFORM_BARS }, (_, bar) => {
-    let peak = 0;
-    for (let i = Math.floor(start + bar * step); i < Math.min(end, start + (bar + 1) * step); i++) peak = Math.max(peak, Math.abs(data[i]));
-    return peak;
-  });
-  const loudest = Math.max(...peaks) || 1;
-  return peaks.map((p) => p / loudest);
-}
-
 function Waveform({
   buffer,
   from,
@@ -287,7 +272,7 @@ function Waveform({
   // Bars are drawn once; playback only moves the clip over the played copy.
   const bars = useMemo(
     () =>
-      clipPeaks(buffer, from, to).map((p, i) => {
+      clipPeaks(buffer.getChannelData(0), buffer.sampleRate, from, to, WAVEFORM_BARS).map((p, i) => {
         const h = Math.max(1, p * 34);
         return <rect key={i} x={i + 0.15} y={18 - h / 2} width={0.7} height={h} />;
       }),
