@@ -89,3 +89,21 @@ function yin(x: Float32Array, start: number, window: number, tauMin: number, tau
   }
   return 0;
 }
+
+/**
+ * Peak amplitude per waveform bar for samples `from`–`to` seconds, normalized
+ * to the loudest bar so quiet recordings stay readable (relative shape, not
+ * absolute volume).
+ */
+export function clipPeaks(samples: Float32Array, sampleRate: number, from: number, to: number, bars: number): number[] {
+  const start = Math.floor(from * sampleRate);
+  const end = Math.min(samples.length, Math.ceil(to * sampleRate));
+  const step = Math.max(1, (end - start) / bars);
+  const peaks = Array.from({ length: bars }, (_, bar) => {
+    let peak = 0;
+    for (let i = Math.floor(start + bar * step); i < Math.min(end, start + (bar + 1) * step); i++) peak = Math.max(peak, Math.abs(samples[i]));
+    return peak;
+  });
+  const loudest = Math.max(...peaks) || 1;
+  return peaks.map((p) => p / loudest);
+}
