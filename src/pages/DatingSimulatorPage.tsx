@@ -6,6 +6,7 @@ import { PageShell } from "../components/layout/PageShell";
 import { useAccessCode } from "../hooks/useAccessCode";
 import { useRememberTab } from "../hooks/useRememberTab";
 import { extractAcoustics } from "../lib/voiceAcoustics";
+import { DeliveryReportView, type DeliveryReport, type VoiceTurn } from "../components/dating/DeliveryReportView";
 
 interface PersonaRow {
   id: string;
@@ -17,24 +18,6 @@ interface PersonaRow {
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
-}
-
-// Compact delivery measurements for one spoken turn. Opaque here: the
-// backend's transcribe action produces them and its summarizeDelivery action
-// reads them back (phamlab convex/lib/deliveryTurn.ts owns the shape).
-type VoiceTurnMetrics = Record<string, unknown>;
-
-type DeliveryLabel = "Strong" | "Developing" | "Needs attention" | "Insufficient data" | "Not graded";
-type DeliverySource = "groq" | "timestamps" | "audio" | "text";
-
-interface DeliveryReport {
-  overall: DeliveryLabel;
-  takeaway: string;
-  change: string;
-  basis: { spokenTurns: number; typedTurns: number; spokenSeconds: number };
-  sections: { id: string; title: string; label: DeliveryLabel; summary: string; why: string }[];
-  examples: { title: string; text: string; why: string }[];
-  metrics: { label: string; value: string; sources: DeliverySource[] }[];
 }
 
 interface CoachingReport {
@@ -140,7 +123,7 @@ function DatingSimulator({ code }: { code: string }) {
   const [persona, setPersona] = useState<PersonaRow | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [report, setReport] = useState<CoachingReport | null>(null);
-  const [voiceTurns, setVoiceTurns] = useState<VoiceTurnMetrics[]>([]);
+  const [voiceTurns, setVoiceTurns] = useState<VoiceTurn[]>([]);
 
   function reset() {
     setPersona(null);
@@ -172,7 +155,7 @@ function DatingSimulator({ code }: { code: string }) {
       persona={persona}
       messages={messages}
       onMessagesChange={setMessages}
-      onVoiceTurn={(metrics) => setVoiceTurns((turns) => [...turns, metrics])}
+      onVoiceTurn={(turn) => setVoiceTurns((turns) => [...turns, turn])}
       onReport={setReport}
       onRestart={reset}
     />
@@ -251,7 +234,7 @@ function ChatScreen({
   persona: PersonaRow;
   messages: ChatMessage[];
   onMessagesChange: (messages: ChatMessage[]) => void;
-  onVoiceTurn: (metrics: VoiceTurnMetrics) => void;
+  onVoiceTurn: (turn: VoiceTurn) => void;
   onReport: (report: CoachingReport) => void;
   onRestart: () => void;
 }) {
@@ -304,13 +287,13 @@ function ChatScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, voiceOn]);
 
-  async function sendMessage(text: string, voiceMetrics?: VoiceTurnMetrics | null) {
+  async function sendMessage(text: string, voice?: VoiceTurn) {
     const trimmed = text.trim();
     if (!trimmed || sending) return;
     setError(null);
     const next = [...messages, { role: "user" as const, content: trimmed }];
     onMessagesChange(next);
-    if (voiceMetrics) onVoiceTurn(voiceMetrics);
+    if (voice) onVoiceTurn(voice);
     setDraft("");
     setSending(true);
     try {
@@ -352,7 +335,7 @@ function ChatScreen({
           const acoustics = await extractAcoustics(blob);
           const buf = await blob.arrayBuffer();
           const { text, voiceMetrics } = await transcribe({ code, audio: buf, mimeType: blob.type, acoustics });
-          if (text) await sendMessage(text, voiceMetrics);
+          if (text) await sendMessage(text, voiceMetrics ? { metrics: voiceMetrics, audio: blob } : undefined);
           else setError("Didn't catch any speech — try again.");
         } catch (err) {
           setError(err instanceof Error ? err.message : "Couldn't transcribe that.");
@@ -475,7 +458,7 @@ function ReportView({
   code: string;
   persona: PersonaRow;
   transcript: ChatMessage[];
-  voiceTurns: VoiceTurnMetrics[];
+  voiceTurns: VoiceTurn[];
   coachingReport: CoachingReport;
   onRestart: () => void;
 }) {
@@ -496,7 +479,7 @@ function ReportView({
       setLoadingTab("delivery");
       try {
         const typedTurns = transcript.filter((m) => m.role === "user").length - voiceTurns.length;
-        const result = await summarizeDelivery({ code, turns: voiceTurns, typedTurns });
+        const result = await summarizeDelivery({ code, turns: voiceTurns.map((t) => t.metrics), typedTurns });
         setDeliveryReport(result as DeliveryReport);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Couldn't generate the delivery report.");
@@ -555,7 +538,12 @@ function ReportView({
       {error && <p style={{ color: "var(--danger)", fontSize: 13, marginBottom: 16 }}>{error}</p>}
 
       {tab === "coaching" && <CoachingReportView report={coachingReport} />}
-      {tab === "delivery" && (deliveryReport ? <DeliveryReportView report={deliveryReport} /> : loadingTab === "delivery" ? <p className="sdek">Analyzing…</p> : null)}
+      {tab === "delivery" &&
+        (deliveryReport ? (
+          <DeliveryReportView report={deliveryReport} recordings={voiceTurns.map((t) => t.audio)} />
+        ) : loadingTab === "delivery" ? (
+          <p className="sdek">Analyzing…</p>
+        ) : null)}
       {tab === "rubric" && (rubricReport ? <RubricReportView report={rubricReport} /> : loadingTab === "rubric" ? <p className="sdek">Analyzing…</p> : null)}
       {tab === "flags" && (flagsReport ? <FlagsReportView report={flagsReport} /> : loadingTab === "flags" ? <p className="sdek">Analyzing…</p> : null)}
 
@@ -619,140 +607,6 @@ function CoachingReportView({ report }: { report: CoachingReport }) {
           </ul>
         </div>
       </div>
-    </div>
-  );
-}
-
-const DELIVERY_LABEL_COLORS: Record<DeliveryLabel, [string, string]> = {
-  Strong: ["var(--accent-3)", "var(--accent-3-tint)"],
-  Developing: ["var(--accent-2)", "var(--accent-2-tint)"],
-  "Needs attention": ["var(--danger)", "var(--danger-tint)"],
-  "Insufficient data": ["var(--text-muted)", "var(--chip-bg)"],
-  "Not graded": ["var(--text-muted)", "var(--chip-bg)"],
-};
-
-const METRIC_SOURCES: Record<DeliverySource, string> = {
-  groq: "Groq transcript",
-  timestamps: "Groq word timings",
-  audio: "Audio analysis",
-  text: "Transcript wording",
-};
-
-function DeliveryLabelPill({ label }: { label: DeliveryLabel }) {
-  const [color, background] = DELIVERY_LABEL_COLORS[label];
-  return (
-    <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 999, color, background, whiteSpace: "nowrap" }}>
-      {label}
-    </span>
-  );
-}
-
-function DeliveryReportView({ report }: { report: DeliveryReport }) {
-  const { spokenTurns, typedTurns, spokenSeconds } = report.basis;
-  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
-  return (
-    <div style={{ display: "grid", gap: 16 }}>
-      <div className="card" style={{ display: "grid", gap: 8 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-          <span className="ctype">Confident delivery</span>
-          <DeliveryLabelPill label={report.overall} />
-        </div>
-        <div className="cmain" style={{ margin: 0 }}>
-          {report.takeaway}
-        </div>
-        <p className="sdek" style={{ margin: 0 }}>
-          Based on {plural(spokenTurns, "spoken message")} ({spokenSeconds} s of speech)
-          {typedTurns > 0 ? `; ${plural(typedTurns, "typed message")} ${typedTurns === 1 ? "wasn't" : "weren't"} analyzed` : ""}.
-        </p>
-      </div>
-
-      <div style={{ display: "grid", gap: 8 }}>
-        {report.sections.map((s) => (
-          <div key={s.id} className="card" style={{ padding: 12 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 4 }}>
-              <span className="ctype">{s.title}</span>
-              <DeliveryLabelPill label={s.label} />
-            </div>
-            <p className="sdek" style={{ margin: 0 }}>
-              {s.summary}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      <div>
-        <div className="ctype" style={{ marginBottom: 6 }}>
-          Highest-impact change
-        </div>
-        <p className="sdek" style={{ margin: 0, color: "var(--text-primary)", fontWeight: 600 }}>
-          {report.change}
-        </p>
-      </div>
-
-      <details className="card" style={{ padding: 12 }}>
-        <summary className="ctype" style={{ cursor: "pointer" }}>
-          Why these cues?
-        </summary>
-        <p className="sdek" style={{ margin: "10px 0 8px" }}>
-          Research on how voices are perceived (Guyer et al., 2021, <em>Journal of Nonverbal Behavior</em>) finds that
-          listeners tend to rate speakers as more confident when they pause less, speak louder, and end statements on a
-          falling rather than rising pitch. This report measures those cues in your recordings. It describes how your
-          delivery may come across, not how confident you actually feel, and its thresholds are practice guidelines rather
-          than scientific cutoffs.
-        </p>
-        <ul style={{ margin: 0, paddingLeft: 20 }}>
-          {report.sections.map((s) => (
-            <li key={s.id} className="sdek" style={{ marginBottom: 6 }}>
-              <strong>{s.title}:</strong> {s.why}
-            </li>
-          ))}
-        </ul>
-      </details>
-
-      {report.examples.length > 0 && (
-        <details className="card" style={{ padding: 12 }}>
-          <summary className="ctype" style={{ cursor: "pointer" }}>
-            Flagged examples
-          </summary>
-          <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
-            {report.examples.map((e, i) => (
-              <div key={i}>
-                <div className="ctype" style={{ marginBottom: 2 }}>
-                  {e.title}
-                </div>
-                <p className="sdek" style={{ margin: 0, color: "var(--text-primary)" }}>
-                  “{e.text}”
-                </p>
-                <p className="sdek" style={{ margin: "2px 0 0", opacity: 0.8 }}>
-                  {e.why}
-                </p>
-              </div>
-            ))}
-          </div>
-        </details>
-      )}
-
-      <details className="card" style={{ padding: 12 }}>
-        <summary className="ctype" style={{ cursor: "pointer" }}>
-          Raw metrics
-        </summary>
-        <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
-          {report.metrics.map((m) => (
-            <div key={m.label} style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 13 }}>
-              <div>
-                <div>{m.label}</div>
-                <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{m.sources.map((s) => METRIC_SOURCES[s]).join(" · ")}</div>
-              </div>
-              <div style={{ fontWeight: 600, textAlign: "right", whiteSpace: "nowrap" }}>{m.value}</div>
-            </div>
-          ))}
-        </div>
-        <p className="sdek" style={{ margin: "12px 0 0", fontSize: 12 }}>
-          Groq transcript and word timings come from speech recognition; audio analysis is measured from your recording in
-          your browser (volume and pitch), never compared with other people; transcript wording is pattern-matched in the
-          text. Recordings aren't kept.
-        </p>
-      </details>
     </div>
   );
 }
