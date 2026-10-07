@@ -4,6 +4,8 @@ import { useAction, useQuery } from "convex/react";
 import { api } from "@convex/api";
 import { PageShell } from "../components/layout/PageShell";
 import { useAccessCode } from "../hooks/useAccessCode";
+import { extractAcoustics } from "../lib/voiceAcoustics";
+import { DeliveryReportView, type DeliveryReport, type VoiceTurn } from "../components/dating/DeliveryReportView";
 
 interface PersonaRow {
   id: string;
@@ -119,11 +121,13 @@ function DatingSimulator({ code }: { code: string }) {
   const [persona, setPersona] = useState<PersonaRow | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [report, setReport] = useState<CoachingReport | null>(null);
+  const [voiceTurns, setVoiceTurns] = useState<VoiceTurn[]>([]);
 
   function reset() {
     setPersona(null);
     setMessages([]);
     setReport(null);
+    setVoiceTurns([]);
   }
 
   if (!persona) {
@@ -131,7 +135,16 @@ function DatingSimulator({ code }: { code: string }) {
   }
 
   if (report) {
-    return <ReportView code={code} persona={persona} transcript={messages} coachingReport={report} onRestart={reset} />;
+    return (
+      <ReportView
+        code={code}
+        persona={persona}
+        transcript={messages}
+        voiceTurns={voiceTurns}
+        coachingReport={report}
+        onRestart={reset}
+      />
+    );
   }
 
   return (
@@ -140,6 +153,7 @@ function DatingSimulator({ code }: { code: string }) {
       persona={persona}
       messages={messages}
       onMessagesChange={setMessages}
+      onVoiceTurn={(turn) => setVoiceTurns((turns) => [...turns, turn])}
       onReport={setReport}
       onRestart={reset}
     />
@@ -210,6 +224,7 @@ function ChatScreen({
   persona,
   messages,
   onMessagesChange,
+  onVoiceTurn,
   onReport,
   onRestart,
 }: {
@@ -217,6 +232,7 @@ function ChatScreen({
   persona: PersonaRow;
   messages: ChatMessage[];
   onMessagesChange: (messages: ChatMessage[]) => void;
+  onVoiceTurn: (turn: VoiceTurn) => void;
   onReport: (report: CoachingReport) => void;
   onRestart: () => void;
 }) {
@@ -269,12 +285,13 @@ function ChatScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, voiceOn]);
 
-  async function sendMessage(text: string) {
+  async function sendMessage(text: string, voice?: VoiceTurn) {
     const trimmed = text.trim();
     if (!trimmed || sending) return;
     setError(null);
     const next = [...messages, { role: "user" as const, content: trimmed }];
     onMessagesChange(next);
+    if (voice) onVoiceTurn(voice);
     setDraft("");
     setSending(true);
     try {
@@ -296,7 +313,9 @@ function ChatScreen({
     }
     setError(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Auto gain control would boost a trailing-off last word and hide the
+      // volume fades the Delivery report measures.
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { autoGainControl: false } });
       const mimeType = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "";
       const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       chunksRef.current = [];
@@ -308,9 +327,14 @@ function ChatScreen({
         const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
         setTranscribing(true);
         try {
+          // Pitch/volume frames for the end-of-date Delivery report; undefined
+          // if this browser can't decode its own recording (speech rate and
+          // wording are still measured).
+          const acoustics = await extractAcoustics(blob);
           const buf = await blob.arrayBuffer();
-          const { text } = await transcribe({ code, audio: buf });
-          if (text) await sendMessage(text);
+          const { text, voiceMetrics } = await transcribe({ code, audio: buf, mimeType: blob.type, acoustics });
+          if (text) await sendMessage(text, voiceMetrics ? { metrics: voiceMetrics, audio: blob } : undefined);
+          else setError("Didn't catch any speech — try again.");
         } catch (err) {
           setError(err instanceof Error ? err.message : "Couldn't transcribe that.");
         } finally {
@@ -419,32 +443,48 @@ function ChatScreen({
   );
 }
 
-type ReportTab = "coaching" | "rubric" | "flags";
+type ReportTab = "coaching" | "delivery" | "rubric" | "flags";
 
 function ReportView({
   code,
   persona,
   transcript,
+  voiceTurns,
   coachingReport,
   onRestart,
 }: {
   code: string;
   persona: PersonaRow;
   transcript: ChatMessage[];
+  voiceTurns: VoiceTurn[];
   coachingReport: CoachingReport;
   onRestart: () => void;
 }) {
   const generateRubricReport = useAction(api.datingActions.generateRubricReport);
   const generateFlagsReport = useAction(api.datingActions.generateFlagsReport);
+  const summarizeDelivery = useAction(api.datingActions.summarizeDelivery);
   const [tab, setTab] = useState<ReportTab>("coaching");
   const [rubricReport, setRubricReport] = useState<RubricReport | null>(null);
   const [flagsReport, setFlagsReport] = useState<FlagsReport | null>(null);
+  const [deliveryReport, setDeliveryReport] = useState<DeliveryReport | null>(null);
   const [loadingTab, setLoadingTab] = useState<ReportTab | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function selectTab(next: ReportTab) {
     setTab(next);
     setError(null);
+    if (next === "delivery" && !deliveryReport) {
+      setLoadingTab("delivery");
+      try {
+        const typedTurns = transcript.filter((m) => m.role === "user").length - voiceTurns.length;
+        const result = await summarizeDelivery({ code, turns: voiceTurns.map((t) => t.metrics), typedTurns });
+        setDeliveryReport(result as DeliveryReport);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Couldn't generate the delivery report.");
+      } finally {
+        setLoadingTab(null);
+      }
+    }
     if (next === "rubric" && !rubricReport) {
       setLoadingTab("rubric");
       try {
@@ -479,6 +519,12 @@ function ReportView({
         <button className="btn" aria-pressed={tab === "coaching"} onClick={() => selectTab("coaching")}>
           Your coaching
         </button>
+        {/* Only spoken turns are measured — a typed-only date has no delivery to report. */}
+        {voiceTurns.length > 0 && (
+          <button className="btn" aria-pressed={tab === "delivery"} onClick={() => selectTab("delivery")}>
+            {loadingTab === "delivery" ? "Loading…" : "Delivery"}
+          </button>
+        )}
         <button className="btn" aria-pressed={tab === "rubric"} onClick={() => selectTab("rubric")}>
           {loadingTab === "rubric" ? "Loading…" : "Partner rubric"}
         </button>
@@ -490,6 +536,12 @@ function ReportView({
       {error && <p style={{ color: "var(--danger)", fontSize: 13, marginBottom: 16 }}>{error}</p>}
 
       {tab === "coaching" && <CoachingReportView report={coachingReport} />}
+      {tab === "delivery" &&
+        (deliveryReport ? (
+          <DeliveryReportView report={deliveryReport} recordings={voiceTurns.map((t) => t.audio)} />
+        ) : loadingTab === "delivery" ? (
+          <p className="sdek">Analyzing…</p>
+        ) : null)}
       {tab === "rubric" && (rubricReport ? <RubricReportView report={rubricReport} /> : loadingTab === "rubric" ? <p className="sdek">Analyzing…</p> : null)}
       {tab === "flags" && (flagsReport ? <FlagsReportView report={flagsReport} /> : loadingTab === "flags" ? <p className="sdek">Analyzing…</p> : null)}
 
