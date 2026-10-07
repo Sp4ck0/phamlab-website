@@ -27,7 +27,17 @@ export interface DeliveryReport {
   sections: { id: string; title: string; label: DeliveryLabel; summary: string; why: string }[];
   // `turn` indexes the spoken turns in order; startMs–endMs is the example's
   // position in that turn's recording.
-  examples: { title: string; text: string; why: string; turn: number; startMs: number; endMs: number; timeline: TimelineToken[] }[];
+  examples: {
+    title: string;
+    text: string;
+    why: string;
+    section: "pace" | "presence" | "intonation" | "wording"; // the card it illustrates
+    turn: number;
+    startMs: number;
+    endMs: number;
+    timeline: TimelineToken[];
+  }[];
+  highlights: number[]; // examples shown with the takeaway, as its evidence
   metrics: { label: string; value: string; sources: DeliverySource[] }[];
 }
 
@@ -324,6 +334,72 @@ export function DeliveryReportView({ report, recordings }: { report: DeliveryRep
     play(i, c.buffer, at >= c.to - 0.05 ? c.from : at, c.to, () => setCursors((all) => ({ ...all, [i]: c.from })));
   const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
   const canPlay = report.examples.some((e) => recordings[e.turn]);
+  // One renderer for every place an example appears (top card, its section,
+  // Flagged examples). Player state is keyed by example index, so copies of
+  // the same example play, pause, and scrub together.
+  const renderExample = (i: number, key: string) => {
+    const e = report.examples[i];
+    const c = clip(e);
+    const isPlaying = playing?.id === i;
+    const at = isPlaying ? playing.at : (cursors[i] ?? c?.from ?? 0);
+    return (
+      <div key={key} style={{ display: "grid", gridTemplateColumns: canPlay ? "64px 1fr" : "1fr", gap: 12, alignItems: "start" }}>
+        {canPlay && (
+          <div>
+            {recordings[e.turn] && (
+              <button
+                type="button"
+                className="btn"
+                disabled={!c}
+                style={{ width: "100%", padding: "4px 0" }}
+                onClick={() => {
+                  if (!c) return;
+                  if (isPlaying) setCursors((all) => ({ ...all, [i]: stop() }));
+                  else void startPlayback(i, c, at);
+                }}
+              >
+                {isPlaying ? "Pause" : "Play"}
+              </button>
+            )}
+          </div>
+        )}
+        <div style={{ display: "grid", gap: 6, minWidth: 0 }}>
+          <span className="ctype">{e.title}</span>
+          {e.timeline.length > 0 ? (
+            <DeliveryTimeline tokens={e.timeline} />
+          ) : (
+            <p className="sdek" style={{ margin: 0, color: "var(--text-primary)" }}>
+              “{e.text}”
+            </p>
+          )}
+          {c && (
+            <Waveform
+              buffer={c.buffer}
+              from={c.from}
+              to={c.to}
+              at={at}
+              onScrub={(seconds) => {
+                // Dragging while playing pauses; letting go resumes from there.
+                if (isPlaying) {
+                  stop();
+                  resumeAfterScrub.current = i;
+                }
+                setCursors((all) => ({ ...all, [i]: seconds }));
+              }}
+              onScrubEnd={() => {
+                if (resumeAfterScrub.current !== i) return;
+                resumeAfterScrub.current = null;
+                void startPlayback(i, c, cursors[i] ?? c.from);
+              }}
+            />
+          )}
+          <p className="sdek" style={{ margin: 0, opacity: 0.8 }}>
+            {e.why}
+          </p>
+        </div>
+      </div>
+    );
+  };
   return (
     <div style={{ display: "grid", gap: 16 }}>
       <div className="card" style={{ display: "grid", gap: 8 }}>
@@ -338,6 +414,9 @@ export function DeliveryReportView({ report, recordings }: { report: DeliveryRep
           Based on {plural(spokenTurns, "spoken message")} ({spokenSeconds} s of speech)
           {typedTurns > 0 ? `; ${plural(typedTurns, "typed message")} ${typedTurns === 1 ? "wasn't" : "weren't"} analyzed` : ""}.
         </p>
+        {report.highlights.length > 0 && (
+          <div style={{ display: "grid", gap: 14, marginTop: 6 }}>{report.highlights.map((i) => renderExample(i, `top-${i}`))}</div>
+        )}
       </div>
 
       <div style={{ display: "grid", gap: 8 }}>
@@ -350,6 +429,11 @@ export function DeliveryReportView({ report, recordings }: { report: DeliveryRep
             <p className="sdek" style={{ margin: 0 }}>
               {s.summary}
             </p>
+            {report.examples.some((e) => e.section === s.id) && (
+              <div style={{ display: "grid", gap: 14, marginTop: 12 }}>
+                {report.examples.flatMap((e, i) => (e.section === s.id ? [renderExample(i, `${s.id}-${i}`)] : []))}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -389,71 +473,7 @@ export function DeliveryReportView({ report, recordings }: { report: DeliveryRep
             Flagged examples
           </summary>
           <div style={{ display: "grid", gap: 14, marginTop: 10 }}>
-            {report.examples.map((e, i) => {
-              const c = clip(e);
-              const isPlaying = playing?.id === i;
-              const at = isPlaying ? playing.at : (cursors[i] ?? c?.from ?? 0);
-              return (
-                <div
-                  key={i}
-                  style={{ display: "grid", gridTemplateColumns: canPlay ? "64px 1fr" : "1fr", gap: 12, alignItems: "start" }}
-                >
-                  {canPlay && (
-                    <div>
-                      {recordings[e.turn] && (
-                        <button
-                          type="button"
-                          className="btn"
-                          disabled={!c}
-                          style={{ width: "100%", padding: "4px 0" }}
-                          onClick={() => {
-                            if (!c) return;
-                            if (isPlaying) setCursors((all) => ({ ...all, [i]: stop() }));
-                            else void startPlayback(i, c, at);
-                          }}
-                        >
-                          {isPlaying ? "Pause" : "Play"}
-                        </button>
-                      )}
-                    </div>
-                  )}
-                  <div style={{ display: "grid", gap: 6, minWidth: 0 }}>
-                    <span className="ctype">{e.title}</span>
-                    {e.timeline.length > 0 ? (
-                      <DeliveryTimeline tokens={e.timeline} />
-                    ) : (
-                      <p className="sdek" style={{ margin: 0, color: "var(--text-primary)" }}>
-                        “{e.text}”
-                      </p>
-                    )}
-                    {c && (
-                      <Waveform
-                        buffer={c.buffer}
-                        from={c.from}
-                        to={c.to}
-                        at={at}
-                        onScrub={(seconds) => {
-                          // Dragging while playing pauses; letting go resumes from there.
-                          if (isPlaying) {
-                            stop();
-                            resumeAfterScrub.current = i;
-                          }
-                          setCursors((all) => ({ ...all, [i]: seconds }));
-                        }}
-                        onScrubEnd={() => {
-                          if (resumeAfterScrub.current !== i) return;
-                          resumeAfterScrub.current = null;
-                          void startPlayback(i, c, cursors[i] ?? c.from);
-                        }}
-                      />
-                    )}
-                    <p className="sdek" style={{ margin: 0, opacity: 0.8 }}>
-                      {e.why}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
+            {report.examples.map((_, i) => renderExample(i, `flagged-${i}`))}
           </div>
           <p className="sdek" style={{ margin: "12px 0 0", fontSize: 12 }}>
             Each word shows how long it was audible. Pauses of half a second or more are marked: gray is a natural break,
