@@ -24,7 +24,8 @@ export interface DeliveryReport {
   takeaway: string;
   change: string;
   basis: { spokenTurns: number; typedTurns: number; spokenSeconds: number };
-  sections: { id: string; title: string; label: DeliveryLabel; summary: string; why: string }[];
+  // `cue` is a few words for the summary's cue table ("3 of 10 statements rose").
+  sections: { id: string; title: string; label: DeliveryLabel; summary: string; cue: string; why: string }[];
   // `turn` indexes the spoken turns in order; startMs–endMs is the example's
   // position in that turn's recording.
   examples: {
@@ -69,10 +70,30 @@ const PLAYBACK_PADDING_S = 0.5;
 
 const seconds = (ms: number) => (ms < 50 ? "<0.1s" : `${(ms / 1000).toFixed(1)}s`);
 
-function DeliveryLabelPill({ label }: { label: DeliveryLabel }) {
+// How each cue's label reads in the summary: whether it helped how the
+// delivery may come across (the paper's framing), not a grade.
+const CUE_DIRECTION: Record<DeliveryLabel, string> = {
+  Strong: "▲ assured",
+  Developing: "▼ mixed",
+  "Needs attention": "▼ less assured",
+  "Insufficient data": "· not enough data",
+  "Not graded": "· not graded",
+};
+
+function DeliveryLabelPill({ label, small }: { label: DeliveryLabel; small?: boolean }) {
   const [color, background] = DELIVERY_LABEL_COLORS[label];
   return (
-    <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 999, color, background, whiteSpace: "nowrap" }}>
+    <span
+      style={{
+        fontSize: small ? 10 : 11,
+        fontWeight: 700,
+        padding: small ? "2px 7px" : "3px 9px",
+        borderRadius: 999,
+        color,
+        background,
+        whiteSpace: "nowrap",
+      }}
+    >
       {label}
     </span>
   );
@@ -403,26 +424,67 @@ export function DeliveryReportView({ report, recordings }: { report: DeliveryRep
   };
   return (
     <div style={{ display: "grid", gap: 16 }}>
-      <div className="card" style={{ display: "grid", gap: 8 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-          <span className="ctype">Confident delivery</span>
-          <DeliveryLabelPill label={report.overall} />
+      {/* Summary: a per-cue profile rather than one more card. The research
+          reports each vocal cue's effect on perceived confidence separately and
+          doesn't validate one combined verdict, so the overall label stays a
+          small secondary tag. */}
+      <div
+        style={{
+          display: "grid",
+          gap: 12,
+          padding: "14px 15px",
+          background: "var(--card)",
+          border: "1px solid var(--border)",
+          borderTop: "3px solid var(--accent-1)",
+          borderRadius: 12,
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <span className="ctype" style={{ color: "var(--text-primary)" }}>
+            How your delivery may come across
+          </span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--text-muted)" }}>
+            {plural(spokenTurns, "spoken message")} · {spokenSeconds} s
+            {typedTurns > 0 ? ` · ${typedTurns} typed not analyzed` : ""}
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+              Overall <DeliveryLabelPill label={report.overall} small />
+            </span>
+          </span>
         </div>
-        <div className="cmain" style={{ margin: 0 }}>
-          {report.takeaway}
+
+        <div>
+          {report.sections.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              className="delivery-cue-row"
+              title={`Jump to ${s.title}`}
+              onClick={() => document.getElementById(`delivery-${s.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            >
+              <span style={{ width: 150, fontWeight: 600 }}>{s.title}</span>
+              <span style={{ width: 120, fontWeight: 700, color: DELIVERY_LABEL_COLORS[s.label][0] }}>{CUE_DIRECTION[s.label]}</span>
+              <span style={{ flex: "1 1 150px", color: "var(--text-secondary)" }}>{s.cue}</span>
+            </button>
+          ))}
         </div>
-        <p className="sdek" style={{ margin: 0 }}>
-          Based on {plural(spokenTurns, "spoken message")} ({spokenSeconds} s of speech)
-          {typedTurns > 0 ? `; ${plural(typedTurns, "typed message")} ${typedTurns === 1 ? "wasn't" : "weren't"} analyzed` : ""}.
-        </p>
+
+        <div style={{ display: "grid", gap: 4 }}>
+          <span className="ctype">Biggest lever</span>
+          <div className="cmain" style={{ margin: 0 }}>
+            {report.change}
+          </div>
+          <p className="sdek" style={{ margin: 0 }}>
+            {report.takeaway}
+          </p>
+        </div>
         {report.examples.some((e) => e.placement === "summary") && (
-          <div style={{ display: "grid", gap: 14, marginTop: 6 }}>{renderAt("summary")}</div>
+          <div style={{ display: "grid", gap: 14 }}>{renderAt("summary")}</div>
         )}
       </div>
 
       <div style={{ display: "grid", gap: 8 }}>
         {report.sections.map((s) => (
-          <div key={s.id} className="card" style={{ padding: 12 }}>
+          <div key={s.id} id={`delivery-${s.id}`} className="card" style={{ padding: 12, scrollMarginTop: 72 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 4 }}>
               <span className="ctype">{s.title}</span>
               <DeliveryLabelPill label={s.label} />
@@ -445,15 +507,6 @@ export function DeliveryReportView({ report, recordings }: { report: DeliveryRep
             )}
           </div>
         ))}
-      </div>
-
-      <div>
-        <div className="ctype" style={{ marginBottom: 6 }}>
-          Highest-impact change
-        </div>
-        <p className="sdek" style={{ margin: 0, color: "var(--text-primary)", fontWeight: 600 }}>
-          {report.change}
-        </p>
       </div>
 
       <details className="card" style={{ padding: 12 }}>
