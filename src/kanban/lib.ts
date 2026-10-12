@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { BOARD_COPY } from "./types";
 import type { Board, Card, Kind, LaneId, Weight } from "./types";
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
@@ -8,6 +9,11 @@ export function laneOf(board: Board, cardId: string): LaneId | null {
     if (board.lanes[lane].includes(cardId)) return lane;
   }
   return null;
+}
+
+/** The board type's lane wording, with any per-board overrides from the server applied. */
+export function boardLanes(board: Board) {
+  return BOARD_COPY[board.type].lanes.map((l) => ({ ...l, ...board.laneLabels?.[l.id] }));
 }
 
 export function progress(card: Card) {
@@ -21,6 +27,7 @@ export const WEIGHT_RANK: Record<Weight, number> = { minor: 0, medium: 1, major:
 export const KIND_TONE: Record<Kind, string> = {
   appreciation: "var(--gold)",
   feedback: "var(--ink-soft)",
+  feature: "var(--ink-soft)",
 };
 
 const today = () => new Date().toISOString().slice(0, 10);

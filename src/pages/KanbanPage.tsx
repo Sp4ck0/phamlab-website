@@ -9,8 +9,7 @@ import { useAccessCode } from "../hooks/useAccessCode";
 import { useKanbanBoard } from "../kanban/useKanbanBoard";
 import { Lane } from "../kanban/components/Lane";
 import { CardDrawer } from "../kanban/components/CardDrawer";
-import { laneOf, useDue } from "../kanban/lib";
-import { LANES } from "../kanban/types";
+import { boardLanes, laneOf, useDue } from "../kanban/lib";
 import type { Board, LaneId } from "../kanban/types";
 import "../kanban/kanban.css";
 
@@ -140,13 +139,15 @@ export function KanbanPage() {
             <header className="top">
               <div className="top__brand">
                 <h1>{board.name}</h1>
-                <span className="top__pair">
-                  <i className="dot" data-who="a" />
-                  {board.people.a.name}
-                  <span className="amp">&amp;</span>
-                  <i className="dot" data-who="b" />
-                  {board.people.b.name}
-                </span>
+                {board.type === "pair" && (
+                  <span className="top__pair">
+                    <i className="dot" data-who="a" />
+                    {board.people.a.name}
+                    <span className="amp">&amp;</span>
+                    <i className="dot" data-who="b" />
+                    {board.people.b.name}
+                  </span>
+                )}
               </div>
 
               <div className="top__tools">
@@ -159,7 +160,7 @@ export function KanbanPage() {
             </header>
 
             <main className="board">
-              {LANES.map((l) => (
+              {boardLanes(board).map((l) => (
                 <Lane key={l.id} lane={l.id} board={displayBoard} onOpen={setOpenId} onQuickAdd={addCard} />
               ))}
             </main>

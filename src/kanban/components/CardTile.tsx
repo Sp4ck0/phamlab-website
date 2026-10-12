@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { useSortable } from '@dnd-kit/react/sortable';
 import type { Board, Card, LaneId, PersonId } from '../types';
-import { PEOPLE, WEIGHTS } from '../types';
+import { BOARD_COPY, PEOPLE } from '../types';
 import { progress } from '../lib';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -32,10 +32,12 @@ export function CardTile({ card, index, lane, board, onOpen }: Props) {
   const down = useRef<{ x: number; y: number } | null>(null);
 
   const { total, done } = progress(card);
-  const weight = WEIGHTS.find((w) => w.id === card.weight) ?? WEIGHTS[1];
+  const weights = BOARD_COPY[board.type].weights;
+  const weight = weights.find((w) => w.id === card.weight) ?? weights[1];
+  const isPair = board.type === 'pair';
   const today = new Date().toISOString().slice(0, 10);
   const due = card.followUp ? card.followUp <= today : false;
-  const from = board.people[card.from].name;
+  const from = isPair ? board.people[card.from].name : (card.fromName ?? 'Someone');
   // Who's actually on the hook right now — owners of action items still open,
   // not who originally raised the card (that's the spine color instead).
   const nextStepOwners = PEOPLE.filter((p) =>
@@ -48,7 +50,7 @@ export function CardTile({ card, index, lane, board, onOpen }: Props) {
       className="card"
       data-kind={card.kind}
       data-weight={card.weight}
-      data-from={card.from}
+      data-from={isPair ? card.from : undefined}
       data-dragging={isDragging || undefined}
       onPointerDown={(e) => {
         down.current = { x: e.clientX, y: e.clientY };
@@ -91,7 +93,9 @@ export function CardTile({ card, index, lane, board, onOpen }: Props) {
 
       <footer className="card__foot">
         <span className="card__from">
-          {nextStepOwners.length > 0 ? (
+          {!isPair ? (
+            <span className="card__owner">{from}</span>
+          ) : nextStepOwners.length > 0 ? (
             nextStepOwners.map((p: PersonId) => (
               <span key={p} className="card__owner">
                 <i className="dot" data-who={p} aria-hidden="true" />
@@ -101,7 +105,7 @@ export function CardTile({ card, index, lane, board, onOpen }: Props) {
           ) : (
             <span className="card__owner card__owner--empty">No next steps yet</span>
           )}
-          {card.assignee && (
+          {isPair && card.assignee && (
             <span className="card__owner">
               <span className="card__owner-tag">Owned by</span>
               <i className="dot" data-who={card.assignee} aria-hidden="true" />

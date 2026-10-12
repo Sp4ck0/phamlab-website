@@ -424,13 +424,16 @@ button {
    three shades of green. Reuses the site's own accent tokens rather than
    inventing a bespoke palette, so it stays in sync with the rest of the
    app's light/dark themes. */
-.card[data-kind='feedback'][data-weight='minor'] {
+.card[data-kind='feedback'][data-weight='minor'],
+.card[data-kind='feature'][data-weight='minor'] {
   --sev: var(--accent-transit);
 }
-.card[data-kind='feedback'][data-weight='medium'] {
+.card[data-kind='feedback'][data-weight='medium'],
+.card[data-kind='feature'][data-weight='medium'] {
   --sev: var(--accent-2);
 }
-.card[data-kind='feedback'][data-weight='major'] {
+.card[data-kind='feedback'][data-weight='major'],
+.card[data-kind='feature'][data-weight='major'] {
   --sev: var(--danger);
 }
 .card[data-kind='appreciation'][data-weight='minor'] {
@@ -616,7 +619,8 @@ button {
 .drawer[data-kind='appreciation']::before {
   background: var(--gold);
 }
-.drawer[data-kind='feedback']::before {
+.drawer[data-kind='feedback']::before,
+.drawer[data-kind='feature']::before {
   background: var(--ink-b);
 }
 
