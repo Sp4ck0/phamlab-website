@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { useSortable } from '@dnd-kit/react/sortable';
 import type { Board, Card, LaneId, PersonId } from '../types';
 import { BOARD_COPY, PEOPLE } from '../types';
-import { dayLabel, isMine, progress, replyAuthor, useUnread } from '../lib';
+import { dayLabel, isMine, progress, replyAuthor } from '../lib';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -44,7 +44,7 @@ export function CardTile({ card, index, lane, board, onOpen }: Props) {
     card.actions.some((a) => !a.done && a.owner === p)
   );
   const lastReply = card.log[card.log.length - 1];
-  const unread = useUnread(board, card);
+  const unread = board.unread[card.id] ?? 0;
 
   return (
     <article
@@ -72,6 +72,11 @@ export function CardTile({ card, index, lane, board, onOpen }: Props) {
       aria-label={`${card.title}, raised by ${from}`}
     >
       <span className="card__spine" aria-hidden="true" />
+      {unread > 0 && (
+        <span className="card__badge" title={`${unread} new ${unread === 1 ? 'reply' : 'replies'}`}>
+          {unread}
+        </span>
+      )}
 
       <header className="card__head">
         <span className="card__kind">{card.kind}</span>

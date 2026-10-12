@@ -15,6 +15,7 @@ interface Props {
   onDelete: (id: string) => void;
   onReply: (id: string, text: string) => void;
   onRemoveReply: (id: string, replyId: string) => void;
+  onRead: (id: string) => void;
 }
 
 export function CardDrawer({
@@ -27,6 +28,7 @@ export function CardDrawer({
   onDelete,
   onReply,
   onRemoveReply,
+  onRead,
 }: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   // Local buffers for fields the user types into directly (title, note,
@@ -303,6 +305,7 @@ export function CardDrawer({
                 raisedBy={raisedBy}
                 onReply={onReply}
                 onRemoveReply={onRemoveReply}
+                onRead={onRead}
               />
 
               <footer className="drawer__foot">

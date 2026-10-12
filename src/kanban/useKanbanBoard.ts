@@ -15,6 +15,7 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined) {
   const setLanesMut = useMutation(api.kanban.setLanes);
   const addReplyMut = useMutation(api.kanban.addReply);
   const removeReplyMut = useMutation(api.kanban.removeReply);
+  const markReadMut = useMutation(api.kanban.markCardRead);
 
   const board: Board | null = useMemo(() => {
     if (!result?.authorized || !result.board) return null;
@@ -33,6 +34,7 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined) {
       viewerName: result.viewerName,
       lanes: result.board.lanes,
       laneLabels: result.board.laneLabels,
+      unread: result.unread,
       cards,
     };
   }, [result]);
@@ -70,5 +72,21 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined) {
     void removeReplyMut({ code, boardId, cardId: id as Id<"kanban_cards">, replyId });
   }
 
-  return { board, isLoading, authorized, setLanes, addCard, updateCard, removeCard, addReply, removeReply };
+  function markRead(id: string) {
+    if (!code || !boardId) return;
+    void markReadMut({ code, boardId, cardId: id as Id<"kanban_cards"> });
+  }
+
+  return {
+    board,
+    isLoading,
+    authorized,
+    setLanes,
+    addCard,
+    updateCard,
+    removeCard,
+    addReply,
+    removeReply,
+    markRead,
+  };
 }

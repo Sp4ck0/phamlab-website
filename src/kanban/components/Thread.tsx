@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Board, Card } from '../types';
-import { dayLabel, isMine, markSeen, replyAuthor, viewerSeat } from '../lib';
+import { dayLabel, isMine, replyAuthor, viewerSeat } from '../lib';
 
 interface Props {
   card: Card;
@@ -9,12 +9,14 @@ interface Props {
   raisedBy: string;
   onReply: (cardId: string, text: string) => void;
   onRemoveReply: (cardId: string, replyId: string) => void;
+  /** Marks this card's replies as read for the viewer. */
+  onRead: (cardId: string) => void;
 }
 
 const timeOf = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
 /** The card's conversation: the feedback it hangs off, then replies as a chat. */
-export function Thread({ card, board, raisedBy, onReply, onRemoveReply }: Props) {
+export function Thread({ card, board, raisedBy, onReply, onRemoveReply, onRead }: Props) {
   const [draft, setDraft] = useState('');
   const input = useRef<HTMLTextAreaElement>(null);
   const end = useRef<HTMLLIElement>(null);
@@ -31,17 +33,24 @@ export function Thread({ card, board, raisedBy, onReply, onRemoveReply }: Props)
     el.style.height = `${el.scrollHeight}px`;
   }, [draft]);
 
-  // Anything on screen has been read. When a reply lands while the card is
-  // open (theirs or the one just sent), bring it into view — but not on
-  // open, which would jump past the feedback itself.
+  // Anything on screen has been read — on open, and again whenever their
+  // reply lands while the card is open.
+  const unread = board.unread[card.id] ?? 0;
+  useEffect(() => {
+    if (unread > 0) onRead(card.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onRead is a fresh closure each render
+  }, [card.id, unread]);
+
+  // When a reply lands while the card is open (theirs or the one just
+  // sent), bring it into view — but not on open, which would jump past the
+  // feedback itself.
   const shown = useRef({ id: card.id, count });
   useEffect(() => {
-    markSeen(card);
     if (shown.current.id === card.id && count > shown.current.count) {
       end.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
     shown.current = { id: card.id, count };
-  }, [card, count]);
+  }, [card.id, count]);
 
   const send = () => {
     if (!draft.trim()) return;
