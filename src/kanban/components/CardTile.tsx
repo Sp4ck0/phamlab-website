@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { useSortable } from '@dnd-kit/react/sortable';
 import type { Board, Card, LaneId, PersonId } from '../types';
 import { BOARD_COPY, PEOPLE } from '../types';
-import { progress } from '../lib';
+import { dayLabel, isMine, progress, replyAuthor, useUnread } from '../lib';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -43,6 +43,8 @@ export function CardTile({ card, index, lane, board, onOpen }: Props) {
   const nextStepOwners = PEOPLE.filter((p) =>
     card.actions.some((a) => !a.done && a.owner === p)
   );
+  const lastReply = card.log[card.log.length - 1];
+  const unread = useUnread(board, card);
 
   return (
     <article
@@ -52,6 +54,7 @@ export function CardTile({ card, index, lane, board, onOpen }: Props) {
       data-weight={card.weight}
       data-from={isPair ? card.from : undefined}
       data-dragging={isDragging || undefined}
+      data-unread={unread > 0 || undefined}
       onPointerDown={(e) => {
         down.current = { x: e.clientX, y: e.clientY };
       }}
@@ -90,6 +93,14 @@ export function CardTile({ card, index, lane, board, onOpen }: Props) {
       <h3 className="card__title">{card.title}</h3>
 
       {card.note && <p className="card__note">{card.note}</p>}
+
+      {lastReply && (
+        <p className="card__replies">
+          {unread > 0 ? `${unread} new` : `${card.log.length} ${card.log.length === 1 ? 'reply' : 'replies'}`}
+          {' · '}
+          {isMine(board, lastReply) ? 'You' : replyAuthor(board, lastReply)} replied {dayLabel(lastReply.at)}
+        </p>
+      )}
 
       <footer className="card__foot">
         <span className="card__from">
