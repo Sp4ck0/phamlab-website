@@ -126,6 +126,11 @@ export function SideNav() {
                   <span className="navtext">
                     <span className="navname">{b.name}</span>
                   </span>
+                  {b.unread > 0 && (
+                    <span className="navbadge" title="Cards with new replies">
+                      {b.unread}
+                    </span>
+                  )}
                 </Link>
               ))}
             </div>

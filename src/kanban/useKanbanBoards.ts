@@ -6,6 +6,8 @@ import { useAccessCode } from "../hooks/useAccessCode";
 export interface BoardSummary {
   _id: Id<"kanban_boards">;
   name: string;
+  /** Cards on this board with replies the viewer hasn't read. */
+  unread: number;
 }
 
 export function useKanbanBoards() {

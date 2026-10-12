@@ -232,6 +232,11 @@ button {
   font-weight: 700;
   cursor: pointer;
 }
+/* "They wrote back" — same pill, in the unread-marker colour. */
+.nudge--replies {
+  background: var(--accent-1-tint);
+  border-color: var(--accent-1);
+}
 
 /* ── Board + lanes ───────────────────────────────────────────── */
 
@@ -540,14 +545,28 @@ button {
   color: var(--ink);
   font-weight: 700;
 }
-.card[data-unread] .card__replies::before {
-  content: '';
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  margin-right: 6px;
-  border-radius: 50%;
-  background: var(--ink-a);
+/* The marker itself: a count pinned to the tile's corner plus an outline,
+   so an unread card stands out without reading a word. */
+.card[data-unread] {
+  border-color: var(--accent-1);
+  box-shadow: 0 0 0 1px var(--accent-1), 0 1px 2px var(--shadow);
+}
+.card__badge {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  background: var(--accent-1);
+  border: 2px solid var(--paper-2);
 }
 
 .card__foot {

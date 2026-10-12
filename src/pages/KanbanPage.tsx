@@ -9,7 +9,7 @@ import { useAccessCode } from "../hooks/useAccessCode";
 import { useKanbanBoard } from "../kanban/useKanbanBoard";
 import { Lane } from "../kanban/components/Lane";
 import { CardDrawer } from "../kanban/components/CardDrawer";
-import { boardLanes, laneOf, useDue } from "../kanban/lib";
+import { boardLanes, laneOf, unreadCards, useDue, viewerSeat } from "../kanban/lib";
 import type { Board, LaneId } from "../kanban/types";
 import "../kanban/kanban.css";
 
@@ -28,7 +28,7 @@ function sameCardIds(a: Board["lanes"], b: Board["lanes"]) {
 export function KanbanPage() {
   const { boardId } = useParams<{ boardId: string }>();
   const { code } = useAccessCode();
-  const { board, isLoading, authorized, setLanes, addCard, updateCard, removeCard, addReply, removeReply } =
+  const { board, isLoading, authorized, setLanes, addCard, updateCard, removeCard, addReply, removeReply, markRead } =
     useKanbanBoard(boardId as Id<"kanban_boards"> | undefined);
 
   const [openId, setOpenId] = useState<string | null>(null);
@@ -89,6 +89,7 @@ export function KanbanPage() {
   const lanes = dragLanes ?? board.lanes;
   const displayBoard = dragLanes ? { ...board, lanes } : board;
   const openCard = openId ? (displayBoard.cards[openId] ?? null) : null;
+  const unread = unreadCards(board);
 
   const moveToLane = (id: string, to: LaneId) => {
     setLanes((lanes) => {
@@ -149,6 +150,18 @@ export function KanbanPage() {
               </div>
 
               <div className="top__tools">
+                {unread.length > 0 && (
+                  <button
+                    className="nudge nudge--replies"
+                    onClick={() => setOpenId(unread[0].id)}
+                    title="Longest-waiting one first"
+                  >
+                    {board.type === "pair"
+                      ? `${board.people[viewerSeat(board) === "a" ? "b" : "a"].name} replied`
+                      : "New replies"}{" "}
+                    on {unread.length} {unread.length === 1 ? "card" : "cards"}
+                  </button>
+                )}
                 {due.length > 0 && (
                   <button className="nudge" onClick={() => setOpenId(due[0].id)} title="Oldest one first">
                     {due.length} to check back on
@@ -176,6 +189,7 @@ export function KanbanPage() {
               }}
               onReply={addReply}
               onRemoveReply={removeReply}
+              onRead={markRead}
             />
           </div>
         </DragDropProvider>

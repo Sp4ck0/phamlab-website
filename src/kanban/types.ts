@@ -68,6 +68,8 @@ export interface Board {
   lanes: Record<LaneId, string[]>;
   /** Per-board lane wording set on the server; lanes left out use BOARD_COPY. */
   laneLabels?: Partial<Record<LaneId, { name: string; blurb?: string }>>;
+  /** Per card id: replies from someone else the viewer hasn't read yet. Cards with none are absent. */
+  unread: Record<string, number>;
 }
 
 export const LANES: { id: LaneId; name: string; blurb: string }[] = [

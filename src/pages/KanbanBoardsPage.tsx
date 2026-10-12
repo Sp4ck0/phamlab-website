@@ -65,6 +65,11 @@ export function KanbanBoardsPage() {
                 style={{ justifyContent: "flex-start", textAlign: "left" }}
               >
                 {b.name}
+                {b.unread > 0 && (
+                  <span className="navbadge" style={{ marginLeft: 8 }} title="Cards with new replies">
+                    {b.unread}
+                  </span>
+                )}
               </Link>
             ))}
           </div>

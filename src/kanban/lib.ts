@@ -1,4 +1,4 @@
-import { useMemo, useSyncExternalStore } from "react";
+import { useMemo } from "react";
 import { BOARD_COPY } from "./types";
 import type { Board, Card, Kind, LaneId, PersonId, Weight } from "./types";
 
@@ -46,42 +46,17 @@ export function dayLabel(iso: string) {
   return `${MONTHS[d.getMonth()]} ${d.getDate()}${d.getFullYear() === now.getFullYear() ? "" : ` ’${String(d.getFullYear()).slice(2)}`}`;
 }
 
-// Which replies this browser has already shown, per card: the timestamp of
-// the newest reply seen. Kept in localStorage (not on the server), so it's
-// per device — good enough to flag "they wrote back" on the board.
-const SEEN_PREFIX = "kanban:seen:";
-const seenListeners = new Set<() => void>();
-
-function seenAt(cardId: string) {
-  try {
-    return localStorage.getItem(SEEN_PREFIX + cardId) ?? "";
-  } catch {
-    return "";
-  }
-}
-
-function subscribeSeen(listener: () => void) {
-  seenListeners.add(listener);
-  return () => {
-    seenListeners.delete(listener);
-  };
-}
-
-export function markSeen(card: Card) {
-  const latest = card.log[card.log.length - 1]?.at;
-  if (!latest || latest <= seenAt(card.id)) return;
-  try {
-    localStorage.setItem(SEEN_PREFIX + card.id, latest);
-  } catch {
-    return;
-  }
-  seenListeners.forEach((listener) => listener());
-}
-
-/** How many replies from someone else have arrived since this card was last opened here. */
-export function useUnread(board: Board, card: Card) {
-  const seen = useSyncExternalStore(subscribeSeen, () => seenAt(card.id));
-  return card.log.filter((r) => !isMine(board, r) && r.at > seen).length;
+/**
+ * Cards with replies from someone else that the viewer hasn't opened yet
+ * (tracked per person on the server), longest-waiting first.
+ */
+export function unreadCards(board: Board) {
+  const waitingSince = (card: Card) =>
+    card.log.filter((r) => !isMine(board, r)).slice(-board.unread[card.id])[0]?.at ?? "";
+  return Object.keys(board.unread)
+    .map((id) => board.cards[id])
+    .filter((card): card is Card => !!card)
+    .sort((x, y) => (waitingSince(x) < waitingSince(y) ? -1 : 1));
 }
 
 export function progress(card: Card) {
