@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { BOARD_COPY } from "./types";
-import type { Board, Card, Kind, LaneId, Weight } from "./types";
+import type { Board, Card, Kind, LaneId, PersonId, Weight } from "./types";
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
 
@@ -14,6 +14,74 @@ export function laneOf(board: Board, cardId: string): LaneId | null {
 /** The board type's lane wording, with any per-board overrides from the server applied. */
 export function boardLanes(board: Board) {
   return BOARD_COPY[board.type].lanes.map((l) => ({ ...l, ...board.laneLabels?.[l.id] }));
+}
+
+/** One entry in a card's conversation thread. */
+export type Reply = Card["log"][number];
+
+/** Which a/b seat the current viewer writes as; "a" if their code has no seat. */
+export const viewerSeat = (board: Board): PersonId => board.viewerPersonId ?? "a";
+
+export function replyAuthor(board: Board, reply: Reply) {
+  return board.type === "pair" ? board.people[reply.by].name : (reply.byName ?? "Someone");
+}
+
+export function isMine(board: Board, reply: Reply) {
+  return board.type === "pair" ? reply.by === viewerSeat(board) : reply.byName === board.viewerName;
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "today" / "yesterday" / "Oct 3" (with the year once it isn't this one), in local time. */
+export function dayLabel(iso: string) {
+  const d = new Date(iso);
+  const now = new Date();
+  const days = Math.round(
+    (new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() -
+      new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()) /
+      86400000
+  );
+  if (days === 0) return "today";
+  if (days === 1) return "yesterday";
+  return `${MONTHS[d.getMonth()]} ${d.getDate()}${d.getFullYear() === now.getFullYear() ? "" : ` ’${String(d.getFullYear()).slice(2)}`}`;
+}
+
+// Which replies this browser has already shown, per card: the timestamp of
+// the newest reply seen. Kept in localStorage (not on the server), so it's
+// per device — good enough to flag "they wrote back" on the board.
+const SEEN_PREFIX = "kanban:seen:";
+const seenListeners = new Set<() => void>();
+
+function seenAt(cardId: string) {
+  try {
+    return localStorage.getItem(SEEN_PREFIX + cardId) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function subscribeSeen(listener: () => void) {
+  seenListeners.add(listener);
+  return () => {
+    seenListeners.delete(listener);
+  };
+}
+
+export function markSeen(card: Card) {
+  const latest = card.log[card.log.length - 1]?.at;
+  if (!latest || latest <= seenAt(card.id)) return;
+  try {
+    localStorage.setItem(SEEN_PREFIX + card.id, latest);
+  } catch {
+    return;
+  }
+  seenListeners.forEach((listener) => listener());
+}
+
+/** How many replies from someone else have arrived since this card was last opened here. */
+export function useUnread(board: Board, card: Card) {
+  const seen = useSyncExternalStore(subscribeSeen, () => seenAt(card.id));
+  return card.log.filter((r) => !isMine(board, r) && r.at > seen).length;
 }
 
 export function progress(card: Card) {

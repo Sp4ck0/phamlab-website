@@ -28,9 +28,8 @@ function sameCardIds(a: Board["lanes"], b: Board["lanes"]) {
 export function KanbanPage() {
   const { boardId } = useParams<{ boardId: string }>();
   const { code } = useAccessCode();
-  const { board, isLoading, authorized, setLanes, addCard, updateCard, removeCard } = useKanbanBoard(
-    boardId as Id<"kanban_boards"> | undefined
-  );
+  const { board, isLoading, authorized, setLanes, addCard, updateCard, removeCard, addReply, removeReply } =
+    useKanbanBoard(boardId as Id<"kanban_boards"> | undefined);
 
   const [openId, setOpenId] = useState<string | null>(null);
   const due = useDue(board);
@@ -90,7 +89,6 @@ export function KanbanPage() {
   const lanes = dragLanes ?? board.lanes;
   const displayBoard = dragLanes ? { ...board, lanes } : board;
   const openCard = openId ? (displayBoard.cards[openId] ?? null) : null;
-  const me = board.viewerPersonId ?? "a";
 
   const moveToLane = (id: string, to: LaneId) => {
     setLanes((lanes) => {
@@ -168,7 +166,6 @@ export function KanbanPage() {
             <CardDrawer
               card={openCard}
               board={displayBoard}
-              me={me}
               lane={openCard ? laneOf(displayBoard, openCard.id) : null}
               onClose={() => setOpenId(null)}
               onChange={updateCard}
@@ -177,6 +174,8 @@ export function KanbanPage() {
                 removeCard(id);
                 setOpenId(null);
               }}
+              onReply={addReply}
+              onRemoveReply={removeReply}
             />
           </div>
         </DragDropProvider>

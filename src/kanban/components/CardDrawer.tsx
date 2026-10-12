@@ -3,21 +3,31 @@ import { AnimatePresence, motion } from 'motion/react';
 import type { Board, Card, Kind, LaneId, PersonId } from '../types';
 import { BOARD_COPY, PEOPLE } from '../types';
 import { boardLanes, uid } from '../lib';
+import { Thread } from './Thread';
 
 interface Props {
   card: Card | null;
   board: Board;
   lane: LaneId | null;
-  /** Whoever is at the keyboard — signs new notes by default. */
-  me: PersonId;
   onClose: () => void;
   onChange: (id: string, patch: Partial<Card>) => void;
   onMove: (id: string, to: LaneId) => void;
   onDelete: (id: string) => void;
+  onReply: (id: string, text: string) => void;
+  onRemoveReply: (id: string, replyId: string) => void;
 }
 
-export function CardDrawer({ card, board, lane, me, onClose, onChange, onMove, onDelete }: Props) {
-  const [entry, setEntry] = useState('');
+export function CardDrawer({
+  card,
+  board,
+  lane,
+  onClose,
+  onChange,
+  onMove,
+  onDelete,
+  onReply,
+  onRemoveReply,
+}: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   // Local buffers for fields the user types into directly (title, note,
   // action item text). These are edited live and pushed to the server on
@@ -30,7 +40,6 @@ export function CardDrawer({ card, board, lane, me, onClose, onChange, onMove, o
   const [actionDrafts, setActionDrafts] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    setEntry('');
     setConfirmDelete(false);
     setTitle(card?.title ?? '');
     setNote(card?.note ?? '');
@@ -67,28 +76,6 @@ export function CardDrawer({ card, board, lane, me, onClose, onChange, onMove, o
   const setActionText = (actionId: string, text: string) => {
     setActionDrafts((prev) => ({ ...prev, [actionId]: text }));
     patchAction(actionId, { text });
-  };
-
-  const addLog = () => {
-    if (!card || !entry.trim()) return;
-    onChange(card.id, {
-      log: [
-        ...card.log,
-        {
-          id: uid(),
-          at: new Date().toISOString(),
-          by: me,
-          ...(isPair ? {} : { byName: board.viewerName }),
-          text: entry.trim(),
-        },
-      ],
-    });
-    setEntry('');
-  };
-
-  const removeLog = (logId: string) => {
-    if (!card) return;
-    onChange(card.id, { log: card.log.filter((l) => l.id !== logId) });
   };
 
   return (
@@ -310,39 +297,13 @@ export function CardDrawer({ card, board, lane, me, onClose, onChange, onMove, o
                 </label>
               </div>
 
-              <section className="field">
-                <span className="label">How it’s going</span>
-                <ol className="log">
-                  {card.log.map((l) => (
-                    <li key={l.id}>
-                      {isPair && <i className="dot" data-who={l.by} aria-hidden="true" />}
-                      <div className="log__body">
-                        <p>{l.text}</p>
-                        <span className="log__meta">
-                          {isPair ? name(l.by) : (l.byName ?? 'Someone')} · {new Date(l.at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      {(isPair ? l.by === me : l.byName === board.viewerName) && (
-                        <button className="ghost" aria-label="Delete note" onClick={() => removeLog(l.id)}>
-                          ✕
-                        </button>
-                      )}
-                    </li>
-                  ))}
-                  {card.log.length === 0 && <li className="log__empty">No notes yet.</li>}
-                </ol>
-                <div className="log__new">
-                  <input
-                    value={entry}
-                    placeholder="Add a note…"
-                    onChange={(e) => setEntry(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && addLog()}
-                  />
-                  <button className="btn" onClick={addLog}>
-                    Add
-                  </button>
-                </div>
-              </section>
+              <Thread
+                card={card}
+                board={board}
+                raisedBy={raisedBy}
+                onReply={onReply}
+                onRemoveReply={onRemoveReply}
+              />
 
               <footer className="drawer__foot">
                 <span className="drawer__born">
