@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { CollisionPriority } from '@dnd-kit/abstract';
 import { useDroppable } from '@dnd-kit/react';
 import type { Board, Kind, LaneId, QuickAddDraft, Weight } from '../types';
-import { KINDS, LANES, WEIGHTS } from '../types';
+import { BOARD_COPY } from '../types';
 import { CardTile } from './CardTile';
 
 interface Props {
@@ -13,11 +13,12 @@ interface Props {
 }
 
 export function Lane({ lane, board, onOpen, onQuickAdd }: Props) {
-  const meta = LANES.find((l) => l.id === lane)!;
+  const copy = BOARD_COPY[board.type];
+  const meta = copy.lanes.find((l) => l.id === lane)!;
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState('');
   const [note, setNote] = useState('');
-  const [kind, setKind] = useState<Kind>('feedback');
+  const [kind, setKind] = useState<Kind>(copy.defaultKind);
   const [weight, setWeight] = useState<Weight>('medium');
 
   const { ref, isDropTarget } = useDroppable({
@@ -32,7 +33,7 @@ export function Lane({ lane, board, onOpen, onQuickAdd }: Props) {
   const reset = () => {
     setTitle('');
     setNote('');
-    setKind('feedback');
+    setKind(copy.defaultKind);
     setWeight('medium');
     setAdding(false);
   };
@@ -89,14 +90,14 @@ export function Lane({ lane, board, onOpen, onQuickAdd }: Props) {
 
             <div className="quickadd__row">
               <div className="seg seg--tight" role="group" aria-label="Kind of feedback">
-                {KINDS.map((k) => (
+                {copy.kinds.map((k) => (
                   <button key={k.id} title={k.hint} data-on={kind === k.id || undefined} onClick={() => setKind(k.id)}>
                     {k.label}
                   </button>
                 ))}
               </div>
               <div className="seg seg--weight seg--tight" role="group" aria-label="Weight">
-                {WEIGHTS.map((w) => (
+                {copy.weights.map((w) => (
                   <button key={w.id} data-on={weight === w.id || undefined} onClick={() => setWeight(w.id)}>
                     <span className="weight" aria-hidden="true">
                       {[1, 2, 3].map((n) => (

@@ -25,8 +25,10 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined) {
     return {
       version: 1,
       name: result.board.name,
+      type: result.board.type ?? "pair",
       people: result.board.people,
       viewerPersonId: result.viewerPersonId,
+      viewerName: result.viewerName,
       lanes: result.board.lanes,
       cards,
     };

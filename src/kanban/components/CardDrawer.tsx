@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { Board, Card, Kind, LaneId, PersonId } from '../types';
-import { KINDS, LANES, PEOPLE, WEIGHTS } from '../types';
+import { BOARD_COPY, PEOPLE } from '../types';
 import { uid } from '../lib';
 
 interface Props {
@@ -46,6 +46,9 @@ export function CardDrawer({ card, board, lane, me, onClose, onChange, onMove, o
   }, [onClose]);
 
   const name = (who: PersonId) => board.people[who].name;
+  const copy = BOARD_COPY[board.type];
+  const isPair = board.type === 'pair';
+  const raisedBy = card ? (isPair ? name(card.from) : (card.fromName ?? 'Someone')) : '';
 
   const addAction = (text: string) => {
     if (!card || !text.trim()) return;
@@ -69,7 +72,16 @@ export function CardDrawer({ card, board, lane, me, onClose, onChange, onMove, o
   const addLog = () => {
     if (!card || !entry.trim()) return;
     onChange(card.id, {
-      log: [...card.log, { id: uid(), at: new Date().toISOString(), by: me, text: entry.trim() }],
+      log: [
+        ...card.log,
+        {
+          id: uid(),
+          at: new Date().toISOString(),
+          by: me,
+          ...(isPair ? {} : { byName: board.viewerName }),
+          text: entry.trim(),
+        },
+      ],
     });
     setEntry('');
   };
@@ -103,7 +115,7 @@ export function CardDrawer({ card, board, lane, me, onClose, onChange, onMove, o
             <div className="drawer__inner">
               <header className="drawer__head">
                 <div className="seg" role="group" aria-label="Kind of feedback">
-                  {KINDS.map((k) => (
+                  {copy.kinds.map((k) => (
                     <button
                       key={k.id}
                       title={k.hint}
@@ -131,9 +143,9 @@ export function CardDrawer({ card, board, lane, me, onClose, onChange, onMove, o
               />
 
               <div className="who__block">
-                <span className="label">How much it weighs on {name(card.from)}</span>
+                <span className="label">{copy.weightLabel(raisedBy)}</span>
                 <div className="seg seg--weight" role="group" aria-label="Weight">
-                  {WEIGHTS.map((w) => (
+                  {copy.weights.map((w) => (
                     <button
                       key={w.id}
                       data-on={card.weight === w.id || undefined}
@@ -150,54 +162,63 @@ export function CardDrawer({ card, board, lane, me, onClose, onChange, onMove, o
                 </div>
               </div>
 
-              <div className="who">
-                <label className="who__block">
+              {!isPair && (
+                <div className="who__block">
                   <span className="label">Raised by</span>
-                  <div className="seg seg--people">
-                    {PEOPLE.map((p) => (
-                      <button
-                        key={p}
-                        data-on={card.from === p || undefined}
-                        data-who={p}
-                        onClick={() => onChange(card.id, { from: p })}
-                      >
-                        {name(p)}
-                      </button>
-                    ))}
-                  </div>
-                </label>
+                  {raisedBy}
+                </div>
+              )}
 
-                <label className="who__block">
-                  <span className="label">Owned by</span>
-                  <div className="seg seg--people">
-                    {PEOPLE.map((p) => (
+              {isPair && (
+                <div className="who">
+                  <label className="who__block">
+                    <span className="label">Raised by</span>
+                    <div className="seg seg--people">
+                      {PEOPLE.map((p) => (
+                        <button
+                          key={p}
+                          data-on={card.from === p || undefined}
+                          data-who={p}
+                          onClick={() => onChange(card.id, { from: p })}
+                        >
+                          {name(p)}
+                        </button>
+                      ))}
+                    </div>
+                  </label>
+  
+                  <label className="who__block">
+                    <span className="label">Owned by</span>
+                    <div className="seg seg--people">
+                      {PEOPLE.map((p) => (
+                        <button
+                          key={p}
+                          data-on={card.assignee === p || undefined}
+                          data-who={p}
+                          onClick={() =>
+                            onChange(card.id, { assignee: card.assignee === p ? null : p })
+                          }
+                        >
+                          {name(p)}
+                        </button>
+                      ))}
                       <button
-                        key={p}
-                        data-on={card.assignee === p || undefined}
-                        data-who={p}
-                        onClick={() =>
-                          onChange(card.id, { assignee: card.assignee === p ? null : p })
-                        }
+                        data-on={card.assignee === null || undefined}
+                        onClick={() => onChange(card.id, { assignee: null })}
                       >
-                        {name(p)}
+                        Both
                       </button>
-                    ))}
-                    <button
-                      data-on={card.assignee === null || undefined}
-                      onClick={() => onChange(card.id, { assignee: null })}
-                    >
-                      Both
-                    </button>
-                  </div>
-                </label>
-              </div>
+                    </div>
+                  </label>
+                </div>
+              )}
 
               <label className="field">
                 <span className="label">The longer version</span>
                 <textarea
                   rows={4}
                   value={note}
-                  placeholder="What happened, and how it landed…"
+                  placeholder={copy.notePlaceholder}
                   onChange={(e) => {
                     setNote(e.target.value);
                     onChange(card.id, { note: e.target.value });
@@ -222,20 +243,22 @@ export function CardDrawer({ card, board, lane, me, onClose, onChange, onMove, o
                         value={actionDrafts[a.id] ?? a.text}
                         onChange={(e) => setActionText(a.id, e.target.value)}
                       />
-                      <div className="owner">
-                        {PEOPLE.map((p) => (
-                          <button
-                            key={p}
-                            className="owner__pip"
-                            data-who={p}
-                            data-on={a.owner === p || undefined}
-                            title={`${name(p)} takes this`}
-                            onClick={() => patchAction(a.id, { owner: a.owner === p ? null : p })}
-                          >
-                            {name(p).slice(0, 1).toUpperCase()}
-                          </button>
-                        ))}
-                      </div>
+                      {isPair && (
+                        <div className="owner">
+                          {PEOPLE.map((p) => (
+                            <button
+                              key={p}
+                              className="owner__pip"
+                              data-who={p}
+                              data-on={a.owner === p || undefined}
+                              title={`${name(p)} takes this`}
+                              onClick={() => patchAction(a.id, { owner: a.owner === p ? null : p })}
+                            >
+                              {name(p).slice(0, 1).toUpperCase()}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       <button
                         className="ghost"
                         aria-label="Remove action item"
@@ -252,7 +275,7 @@ export function CardDrawer({ card, board, lane, me, onClose, onChange, onMove, o
                 </ul>
                 <input
                   className="actions__new"
-                  placeholder="+ something one of us will do"
+                  placeholder={copy.actionPlaceholder}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       addAction(e.currentTarget.value);
@@ -278,7 +301,7 @@ export function CardDrawer({ card, board, lane, me, onClose, onChange, onMove, o
                     value={lane ?? ''}
                     onChange={(e) => onMove(card.id, e.target.value as LaneId)}
                   >
-                    {LANES.map((l) => (
+                    {copy.lanes.map((l) => (
                       <option key={l.id} value={l.id}>
                         {l.name}
                       </option>
@@ -292,14 +315,14 @@ export function CardDrawer({ card, board, lane, me, onClose, onChange, onMove, o
                 <ol className="log">
                   {card.log.map((l) => (
                     <li key={l.id}>
-                      <i className="dot" data-who={l.by} aria-hidden="true" />
+                      {isPair && <i className="dot" data-who={l.by} aria-hidden="true" />}
                       <div className="log__body">
                         <p>{l.text}</p>
                         <span className="log__meta">
-                          {name(l.by)} · {new Date(l.at).toLocaleDateString()}
+                          {isPair ? name(l.by) : (l.byName ?? 'Someone')} · {new Date(l.at).toLocaleDateString()}
                         </span>
                       </div>
-                      {l.by === me && (
+                      {(isPair ? l.by === me : l.byName === board.viewerName) && (
                         <button className="ghost" aria-label="Delete note" onClick={() => removeLog(l.id)}>
                           ✕
                         </button>
