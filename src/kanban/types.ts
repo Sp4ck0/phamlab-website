@@ -66,6 +66,8 @@ export interface Board {
   cards: Record<string, Card>;
   /** Ordered card ids per lane. This is the shape @dnd-kit/helpers `move` wants. */
   lanes: Record<LaneId, string[]>;
+  /** Per-board lane wording set on the server; lanes left out use BOARD_COPY. */
+  laneLabels?: Partial<Record<LaneId, { name: string; blurb?: string }>>;
 }
 
 export const LANES: { id: LaneId; name: string; blurb: string }[] = [

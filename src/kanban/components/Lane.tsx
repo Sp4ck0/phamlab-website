@@ -3,6 +3,7 @@ import { CollisionPriority } from '@dnd-kit/abstract';
 import { useDroppable } from '@dnd-kit/react';
 import type { Board, Kind, LaneId, QuickAddDraft, Weight } from '../types';
 import { BOARD_COPY } from '../types';
+import { boardLanes } from '../lib';
 import { CardTile } from './CardTile';
 
 interface Props {
@@ -14,7 +15,7 @@ interface Props {
 
 export function Lane({ lane, board, onOpen, onQuickAdd }: Props) {
   const copy = BOARD_COPY[board.type];
-  const meta = copy.lanes.find((l) => l.id === lane)!;
+  const meta = boardLanes(board).find((l) => l.id === lane)!;
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState('');
   const [note, setNote] = useState('');

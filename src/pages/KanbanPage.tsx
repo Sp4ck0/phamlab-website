@@ -9,8 +9,7 @@ import { useAccessCode } from "../hooks/useAccessCode";
 import { useKanbanBoard } from "../kanban/useKanbanBoard";
 import { Lane } from "../kanban/components/Lane";
 import { CardDrawer } from "../kanban/components/CardDrawer";
-import { laneOf, useDue } from "../kanban/lib";
-import { BOARD_COPY } from "../kanban/types";
+import { boardLanes, laneOf, useDue } from "../kanban/lib";
 import type { Board, LaneId } from "../kanban/types";
 import "../kanban/kanban.css";
 
@@ -161,7 +160,7 @@ export function KanbanPage() {
             </header>
 
             <main className="board">
-              {BOARD_COPY[board.type].lanes.map((l) => (
+              {boardLanes(board).map((l) => (
                 <Lane key={l.id} lane={l.id} board={displayBoard} onOpen={setOpenId} onQuickAdd={addCard} />
               ))}
             </main>

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { Board, Card, Kind, LaneId, PersonId } from '../types';
 import { BOARD_COPY, PEOPLE } from '../types';
-import { uid } from '../lib';
+import { boardLanes, uid } from '../lib';
 
 interface Props {
   card: Card | null;
@@ -301,7 +301,7 @@ export function CardDrawer({ card, board, lane, me, onClose, onChange, onMove, o
                     value={lane ?? ''}
                     onChange={(e) => onMove(card.id, e.target.value as LaneId)}
                   >
-                    {copy.lanes.map((l) => (
+                    {boardLanes(board).map((l) => (
                       <option key={l.id} value={l.id}>
                         {l.name}
                       </option>

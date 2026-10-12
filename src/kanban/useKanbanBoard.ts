@@ -30,6 +30,7 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined) {
       viewerPersonId: result.viewerPersonId,
       viewerName: result.viewerName,
       lanes: result.board.lanes,
+      laneLabels: result.board.laneLabels,
       cards,
     };
   }, [result]);
