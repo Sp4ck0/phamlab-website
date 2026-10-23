@@ -8,8 +8,20 @@ const isRealDate = (v: string) => !!v && Number(v.slice(0, 4)) >= 1000;
 //   - typing/keyboard edits are saved only on Enter or when the field loses
 //     focus (never on a timer — pausing between segments must not save);
 //   - a pick from the calendar popup (a change with no keystroke behind it)
-//     is saved straight away.
-export function DueDateInput({ value, onCommit }: { value: string; onCommit: (next: string) => void }) {
+//     is saved straight away;
+//   - the popup's own "Clear" button (an empty change with no keystroke
+//     behind it) resets the row to its default due date. The popup is the
+//     browser's, so that button can't be restyled or extended — Chrome and
+//     Edge show it; elsewhere, picking the default date again also resets.
+export function DueDateInput({
+  value,
+  onCommit,
+  onReset,
+}: {
+  value: string;
+  onCommit: (next: string) => void;
+  onReset: () => void;
+}) {
   const [draft, setDraft] = useState(value);
   // True from the first keystroke until blur or the next pointer press.
   const keyboardEdit = useRef(false);
@@ -27,6 +39,7 @@ export function DueDateInput({ value, onCommit }: { value: string; onCommit: (ne
       type="date"
       className="due-input"
       aria-label="Due date"
+      title="Pick a date. Use Clear in the calendar to go back to the trip start date."
       value={draft}
       onPointerDown={() => {
         keyboardEdit.current = false;
@@ -43,7 +56,9 @@ export function DueDateInput({ value, onCommit }: { value: string; onCommit: (ne
       onChange={(e) => {
         const next = e.target.value;
         setDraft(next);
-        if (!keyboardEdit.current) commit(next);
+        if (keyboardEdit.current) return;
+        if (next === "") onReset();
+        else commit(next);
       }}
       onBlur={() => {
         keyboardEdit.current = false;

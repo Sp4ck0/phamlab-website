@@ -51,26 +51,16 @@ export function ActionItems({
 }: Props) {
   // The due-date control sits next to the row's <label>, never inside it: a
   // label wraps the checkbox, so a date input inside would toggle the item.
-  const dueControl = (key: string, due: string, isDone: boolean) => {
-    const overridden = key in dueOverrides;
-    return (
-      <div className="due-chip">
-        {!isDone && <span className="due-text">{dueLabel(due, today, isDone)}</span>}
-        <DueDateInput value={due} onCommit={(next) => onSetDue(key, next !== defaultDue ? next : undefined)} />
-        {overridden && (
-          <button
-            type="button"
-            className="due-reset"
-            title="Reset to the trip start date"
-            aria-label="Reset due date to the trip start date"
-            onClick={() => onSetDue(key, undefined)}
-          >
-            ×
-          </button>
-        )}
-      </div>
-    );
-  };
+  const dueControl = (key: string, due: string, isDone: boolean) => (
+    <div className="due-chip">
+      {!isDone && <span className="due-text">{dueLabel(due, today, isDone)}</span>}
+      <DueDateInput
+        value={due}
+        onCommit={(next) => onSetDue(key, next !== defaultDue ? next : undefined)}
+        onReset={() => onSetDue(key, undefined)}
+      />
+    </div>
+  );
 
   const gapRows: Row[] = gaps.map((g, i) => {
     const { label, color } = gapLabel(g.who, groups, g.date);
