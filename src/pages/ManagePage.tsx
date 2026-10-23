@@ -10,6 +10,7 @@ interface TripRow {
   slug: string;
   title: string;
   navIcon: string;
+  start?: string;
 }
 interface BoardRow {
   _id: string;
@@ -81,6 +82,8 @@ function ManagementConsole({ code }: { code: string }) {
 
       <NewCodeForm code={code} trips={trips} boards={boards} existingCodes={codes.map((c) => c.code)} />
 
+      <WhoHasAccess code={code} trips={trips} boards={boards} codes={codes} />
+
       <h2 className="section-title" style={{ marginTop: 40 }}>
         Existing codes
       </h2>
@@ -92,6 +95,13 @@ function ManagementConsole({ code }: { code: string }) {
       </div>
     </div>
   );
+}
+
+// Year first so a long list of trips is easy to place in time; the nav bar
+// already shows the year under each title, so only the manage page needs it.
+function tripLabel(t: TripRow) {
+  const year = t.start?.slice(0, 4);
+  return `${year ? `${year} ` : ""}${t.navIcon} ${t.title}`;
 }
 
 function TripCheckboxes({ trips, selected, onChange }: { trips: TripRow[]; selected: string[]; onChange: (tripIds: string[]) => void }) {
@@ -108,8 +118,7 @@ function TripCheckboxes({ trips, selected, onChange }: { trips: TripRow[]; selec
           aria-pressed={selected.includes(t._id)}
           onClick={() => toggle(t._id)}
         >
-          <span>{t.navIcon}</span>
-          {t.title}
+          {tripLabel(t)}
         </button>
       ))}
     </div>
@@ -280,6 +289,83 @@ function NewCodeForm({
         {submitting ? "Creating…" : "Create code"}
       </button>
     </form>
+  );
+}
+
+// The inverse of the per-code cards below: one row per trip/board, with a chip
+// per code, so "who can see X?" is answered without scanning every code.
+function WhoHasAccess({
+  code,
+  trips,
+  boards,
+  codes,
+}: {
+  code: string;
+  trips: TripRow[];
+  boards: BoardRow[];
+  codes: CodeRow[];
+}) {
+  const upsert = useMutation(api.management.upsertAccessCode);
+  const [busy, setBusy] = useState(false);
+
+  async function toggle(row: CodeRow, kind: "tripIds" | "boardIds", id: string) {
+    const current = row[kind];
+    const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
+    setBusy(true);
+    try {
+      await upsert({
+        code,
+        id: row._id as any,
+        targetCode: row.code,
+        tripIds: (kind === "tripIds" ? next : row.tripIds) as any,
+        boardIds: (kind === "boardIds" ? next : row.boardIds) as any,
+        datingAccess: row.datingAccess,
+        name: row.name,
+        active: row.active,
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function renderRow(label: string, id: string, kind: "tripIds" | "boardIds") {
+    return (
+      <div key={id} className="card" style={{ display: "grid", gap: 8 }}>
+        <span className="cmain" style={{ fontSize: 15 }}>
+          {label}
+        </span>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {codes.map((c) => (
+            <button
+              key={c._id}
+              type="button"
+              className="chip"
+              aria-pressed={c[kind].includes(id)}
+              disabled={busy}
+              style={{ opacity: c.active ? 1 : 0.5 }}
+              onClick={() => toggle(c, kind, id)}
+            >
+              {c.name}
+              {c.active ? "" : " (inactive)"}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <h2 className="section-title" style={{ marginTop: 40 }}>
+        Who has access
+      </h2>
+      <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
+        <div className="ctype">Trips</div>
+        {trips.map((t) => renderRow(tripLabel(t), t._id, "tripIds"))}
+        {boards.length > 0 && <div className="ctype">Boards</div>}
+        {boards.map((b) => renderRow(b.name, b._id, "boardIds"))}
+      </div>
+    </>
   );
 }
 
