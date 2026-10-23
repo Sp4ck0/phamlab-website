@@ -13,6 +13,7 @@ import { useResolvedDays } from "../hooks/useResolvedDays";
 import { useChecks } from "../hooks/useChecks";
 import { useTripGaps } from "../hooks/useTripGaps";
 import { useDueDates } from "../hooks/useDueDates";
+import { useActionItemEdits } from "../hooks/useActionItemEdits";
 import { useTripWeather } from "../hooks/useTripWeather";
 import { todayISO } from "../lib/dueDates";
 import { assignLegColors } from "../lib/tripLogic";
@@ -34,6 +35,7 @@ export function TripPage() {
   const today = todayISO();
   const gaps = useTripGaps(resolvedDays, ticks, today);
   const { overrides: dueOverrides, setDue } = useDueDates(slug || "");
+  const { addItem, updateItem, removeItem } = useActionItemEdits(slug || "");
   const weather = useTripWeather(slug);
   const weatherStops = useMemo(() => deriveWeatherStops(resolvedDays, weather), [resolvedDays, weather]);
 
@@ -132,6 +134,11 @@ export function TripPage() {
         defaultDue={trip.days[0]?.date ?? today}
         dueOverrides={dueOverrides}
         onSetDue={setDue}
+        tripStart={trip.days[0]?.date ?? today}
+        tripEnd={trip.days[trip.days.length - 1]?.date ?? today}
+        onAddItem={addItem}
+        onUpdateItem={updateItem}
+        onRemoveItem={removeItem}
       />
 
       <footer>
