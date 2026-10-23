@@ -35,6 +35,7 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined) {
       lanes: result.board.lanes,
       laneLabels: result.board.laneLabels,
       unread: result.unread,
+      fresh: result.fresh,
       cards,
     };
   }, [result]);

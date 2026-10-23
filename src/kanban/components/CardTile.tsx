@@ -45,6 +45,7 @@ export function CardTile({ card, index, lane, board, onOpen }: Props) {
   );
   const lastReply = card.log[card.log.length - 1];
   const unread = board.unread[card.id] ?? 0;
+  const isNew = board.fresh.includes(card.id);
 
   return (
     <article
@@ -54,7 +55,7 @@ export function CardTile({ card, index, lane, board, onOpen }: Props) {
       data-weight={card.weight}
       data-from={isPair ? card.from : undefined}
       data-dragging={isDragging || undefined}
-      data-unread={unread > 0 || undefined}
+      data-unread={unread > 0 || isNew || undefined}
       onPointerDown={(e) => {
         down.current = { x: e.clientX, y: e.clientY };
       }}
@@ -72,10 +73,16 @@ export function CardTile({ card, index, lane, board, onOpen }: Props) {
       aria-label={`${card.title}, raised by ${from}`}
     >
       <span className="card__spine" aria-hidden="true" />
-      {unread > 0 && (
+      {unread > 0 ? (
         <span className="card__badge" title={`${unread} new ${unread === 1 ? 'reply' : 'replies'}`}>
           {unread}
         </span>
+      ) : (
+        isNew && (
+          <span className="card__badge" title="New card">
+            New
+          </span>
+        )
       )}
 
       <header className="card__head">
