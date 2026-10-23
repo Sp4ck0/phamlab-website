@@ -4,6 +4,8 @@ import { CATEGORY_COLORS, CATEGORY_LABELS } from "../../lib/mapPoints";
 import { useGeocodedPoints } from "../../hooks/useGeocodedPoints";
 import { loadGoogleMaps } from "../../lib/googleMaps";
 
+const ARROW_SPACING_PX = 28;
+
 export function TripMap({ points, route }: { points: MapPointData[]; route: MapPointData[] }) {
   const { points: geocoded, status, error } = useGeocodedPoints(points);
   const { points: geocodedRoute } = useGeocodedPoints(route);
@@ -11,6 +13,14 @@ export function TripMap({ points, route }: { points: MapPointData[]; route: MapP
   const mapInstance = useRef<google.maps.Map | null>(null);
   const markers = useRef<google.maps.Marker[]>([]);
   const polyline = useRef<google.maps.Polyline | null>(null);
+  const frame = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (frame.current !== null) cancelAnimationFrame(frame.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (status !== "ready" || geocoded.length === 0 || !mapRef.current) return;
@@ -54,6 +64,8 @@ export function TripMap({ points, route }: { points: MapPointData[]; route: MapP
         bounds.extend(position);
       });
 
+      if (frame.current !== null) cancelAnimationFrame(frame.current);
+      frame.current = null;
       polyline.current?.setMap(null);
       polyline.current = null;
       if (geocodedRoute.length >= 2) {
@@ -63,9 +75,35 @@ export function TripMap({ points, route }: { points: MapPointData[]; route: MapP
           path,
           geodesic: true,
           strokeColor: CATEGORY_COLORS.city,
-          strokeOpacity: 0.7,
+          strokeOpacity: 0.35,
           strokeWeight: 3,
+          icons: [
+            {
+              icon: {
+                path: google.maps.SymbolPath.FORWARD_OPEN_ARROW,
+                scale: 2.5,
+                strokeColor: CATEGORY_COLORS.city,
+                strokeOpacity: 1,
+                strokeWeight: 2,
+              },
+              offset: "0px",
+              repeat: ARROW_SPACING_PX + "px",
+            },
+          ],
         });
+        // Drift the chevrons forward along the line; with reduced motion they
+        // stay put but still point in the direction of travel.
+        if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          const line = polyline.current;
+          const start = performance.now();
+          const tick = (now: number) => {
+            const icons = line.get("icons");
+            icons[0].offset = ((now - start) / 40) % ARROW_SPACING_PX + "px";
+            line.set("icons", icons);
+            frame.current = requestAnimationFrame(tick);
+          };
+          frame.current = requestAnimationFrame(tick);
+        }
         path.forEach((pt) => bounds.extend(pt));
       }
 
