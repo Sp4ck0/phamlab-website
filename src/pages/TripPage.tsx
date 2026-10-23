@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { PageShell } from "../components/layout/PageShell";
 import { TripHeader } from "../components/trip/TripHeader";
@@ -16,7 +16,7 @@ import { useDueDates } from "../hooks/useDueDates";
 import { useTripWeather } from "../hooks/useTripWeather";
 import { todayISO } from "../lib/dueDates";
 import { assignLegColors } from "../lib/tripLogic";
-import { derivePoints, deriveRouteAddresses } from "../lib/mapPoints";
+import { derivePoints, deriveRouteAddresses, deriveWeatherStops } from "../lib/mapPoints";
 import { NotFoundOrDenied } from "./NotFoundOrDenied";
 
 export function TripPage() {
@@ -35,6 +35,7 @@ export function TripPage() {
   const gaps = useTripGaps(resolvedDays, ticks, today);
   const { overrides: dueOverrides, setDue } = useDueDates(slug || "");
   const weather = useTripWeather(slug);
+  const weatherStops = useMemo(() => deriveWeatherStops(resolvedDays, weather), [resolvedDays, weather]);
 
   function setView(v: TripView) {
     setSearchParams(
@@ -114,7 +115,11 @@ export function TripPage() {
         />
       )}
 
-      <TripMap points={derivePoints(resolvedDays, trip.mapPoints)} route={deriveRouteAddresses(resolvedDays)} />
+      <TripMap
+        points={derivePoints(resolvedDays, trip.mapPoints)}
+        route={deriveRouteAddresses(resolvedDays)}
+        weatherStops={weatherStops}
+      />
 
       <ActionItems
         gaps={gaps}

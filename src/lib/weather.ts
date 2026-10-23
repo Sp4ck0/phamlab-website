@@ -42,3 +42,19 @@ export function weatherTitle(w: DayWeather): string {
   const ago = mins < 60 ? `${mins}m ago` : `${Math.round(mins / 60)}h ago`;
   return `${label} · Forecast · updated ${ago}`;
 }
+
+// One label for several days in the same place: most common condition, the
+// widest temperature range. `typical` if any day is only a historical
+// average, so the label never overstates how forecast-like it is.
+export function summarizeStay(rows: DayWeather[]) {
+  const counts = new Map<number, number>();
+  for (const r of rows) counts.set(r.code, (counts.get(r.code) ?? 0) + 1);
+  const code = [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  return {
+    emoji: weatherIcon(code).emoji,
+    tMax: Math.max(...rows.map((r) => r.tMax)),
+    tMin: Math.min(...rows.map((r) => r.tMin)),
+    count: rows.length,
+    typical: rows.some((r) => r.kind === "typical"),
+  };
+}
