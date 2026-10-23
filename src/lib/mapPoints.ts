@@ -1,4 +1,5 @@
 import type { MapCategory, MapPointData, ResolvedDay, Trip } from "./types";
+import type { DayWeather } from "./weather";
 
 export const CATEGORY_LABELS: Record<MapCategory, string> = {
   hotel: "Hotel",
@@ -81,4 +82,29 @@ export function deriveRouteAddresses(days: ResolvedDay[]): MapPointData[] {
     });
   });
   return route;
+}
+
+export interface WeatherStop extends MapPointData {
+  days: { date: string; weather: DayWeather }[];
+}
+
+// One stop per city with the weather for every day spent there. Cities are
+// keyed by where the day ends (`to` on move days), matching how the backend
+// picks each day's weather location; the home city is excluded like in the
+// other derivations, and revisits merge into a single stop. Days without a
+// weather row are skipped, and so are cities left with none.
+export function deriveWeatherStops(days: ResolvedDay[], weather: Record<string, DayWeather>): WeatherStop[] {
+  const stops = new Map<string, WeatherStop>();
+  days.forEach((d) => {
+    const city = d.to ?? d.city;
+    const country = d.toCountry ?? d.country;
+    const w = weather[d.date];
+    if (!city || city === "Seattle" || !w) return;
+    const key = `${city}|${country}`;
+    if (!stops.has(key)) {
+      stops.set(key, { id: `weather-${key}`, label: city, address: `${city}, ${country}`, category: "city", days: [] });
+    }
+    stops.get(key)!.days.push({ date: d.date, weather: w });
+  });
+  return [...stops.values()];
 }

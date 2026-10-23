@@ -1,17 +1,29 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { MapPointData } from "../../lib/types";
 import { CATEGORY_COLORS, CATEGORY_LABELS } from "../../lib/mapPoints";
+import type { WeatherStop } from "../../lib/mapPoints";
+import { fmtShort } from "../../lib/tripLogic";
+import { summarizeStay, temp, weatherIcon, weatherText } from "../../lib/weather";
 import { useGeocodedPoints } from "../../hooks/useGeocodedPoints";
 import { loadGoogleMaps } from "../../lib/googleMaps";
 
 const ARROW_SPACING_PX = 28;
 
-export function TripMap({ points, route }: { points: MapPointData[]; route: MapPointData[] }) {
+interface Props {
+  points: MapPointData[];
+  route: MapPointData[];
+  weatherStops: WeatherStop[];
+}
+
+export function TripMap({ points, route, weatherStops }: Props) {
   const { points: geocoded, status, error } = useGeocodedPoints(points);
   const { points: geocodedRoute } = useGeocodedPoints(route);
+  const { points: geocodedWeather } = useGeocodedPoints(weatherStops);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<google.maps.Map | null>(null);
+  const [mapReady, setMapReady] = useState(false);
   const markers = useRef<google.maps.Marker[]>([]);
+  const weatherMarkers = useRef<google.maps.Marker[]>([]);
   const polyline = useRef<google.maps.Polyline | null>(null);
   const frame = useRef<number | null>(null);
 
@@ -34,6 +46,7 @@ export function TripMap({ points, route }: { points: MapPointData[]; route: MapP
         mapInstance.current = new google.maps.Map(mapRef.current, {
           zoom: 13,
         });
+        setMapReady(true);
       }
       const map = mapInstance.current;
 
@@ -120,12 +133,49 @@ export function TripMap({ points, route }: { points: MapPointData[]; route: MapP
     };
   }, [geocoded, geocodedRoute, status]);
 
+  // Per-city weather pills. A separate effect from the pins so weather
+  // arriving or refreshing later doesn't re-fit the map under the viewer.
+  useEffect(() => {
+    const map = mapInstance.current;
+    if (!mapReady || !map) return;
+
+    weatherMarkers.current.forEach((m) => m.setMap(null));
+    weatherMarkers.current = [];
+
+    const stopById = new Map(weatherStops.map((s) => [s.id, s]));
+    geocodedWeather.forEach((p) => {
+      const stop = stopById.get(p.id);
+      if (!stop) return;
+      const s = summarizeStay(stop.days.map((d) => d.weather));
+      const text = `${s.emoji} ${temp(s.tMax)}°/${temp(s.tMin)}°${s.count > 1 ? ` · ${s.count}d` : ""}`;
+      const marker = new google.maps.Marker({
+        map,
+        position: { lat: p.lat, lng: p.lng },
+        zIndex: 10,
+        // Label-only marker: a zero-size symbol, with the label lifted above the city pin.
+        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0, labelOrigin: new google.maps.Point(0, -22) },
+        label: { text, className: `map-weather-label${s.typical ? " is-typical" : ""}` },
+      });
+      const rows = stop.days
+        .map(
+          (d) =>
+            `<div style="font:400 12px system-ui;color:#52514e">${escapeHtml(fmtShort(d.date))} ${weatherIcon(d.weather.code).emoji} ${escapeHtml(weatherText(d.weather))}</div>`,
+        )
+        .join("");
+      const info = new google.maps.InfoWindow({
+        content: `<div style="font:600 13px system-ui;color:#0b0b0b;margin-bottom:2px">${escapeHtml(stop.label)}</div>${rows}`,
+      });
+      marker.addListener("click", () => info.open({ map, anchor: marker }));
+      weatherMarkers.current.push(marker);
+    });
+  }, [mapReady, geocodedWeather, weatherStops]);
+
   if (points.length === 0) return null;
 
   return (
     <>
       <h2 className="section-title">Map</h2>
-      <p className="section-sub">Hotels and other spots from this itinerary, joined in travel order.</p>
+      <p className="section-sub">Hotels and other spots from this itinerary, joined in travel order, with the weather for each stay.</p>
 
       {status === "error" && (
         <div className="note">
