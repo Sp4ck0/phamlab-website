@@ -97,7 +97,7 @@ export function TripPage() {
       <AlertsPanel conflicts={trip.conflicts} />
 
       {view === "overview" ? (
-        <OverviewList days={resolvedDays} legColors={legColors} onJump={jumpToDay} />
+        <OverviewList days={resolvedDays} legColors={legColors} weather={weather} onJump={jumpToDay} />
       ) : (
         <DetailedView
           days={resolvedDays}
