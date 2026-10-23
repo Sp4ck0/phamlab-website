@@ -12,6 +12,8 @@ import { useTrip } from "../hooks/useTrip";
 import { useResolvedDays } from "../hooks/useResolvedDays";
 import { useChecks } from "../hooks/useChecks";
 import { useTripGaps } from "../hooks/useTripGaps";
+import { useDueDates } from "../hooks/useDueDates";
+import { todayISO } from "../lib/dueDates";
 import { assignLegColors } from "../lib/tripLogic";
 import { derivePoints } from "../lib/mapPoints";
 import { NotFoundOrDenied } from "./NotFoundOrDenied";
@@ -28,7 +30,9 @@ export function TripPage() {
   const resolvedDays = useResolvedDays(trip);
   const legColors = assignLegColors(resolvedDays);
   const { ticks, toggleTick: toggle, done, toggleActionItem } = useChecks(slug || "");
-  const gaps = useTripGaps(resolvedDays, ticks);
+  const today = todayISO();
+  const gaps = useTripGaps(resolvedDays, ticks, today);
+  const { overrides: dueOverrides, setDue } = useDueDates(slug || "");
 
   function setView(v: TripView) {
     setSearchParams(
@@ -116,6 +120,10 @@ export function TripPage() {
         items={trip.actionItems || []}
         done={done}
         onToggleItem={toggleActionItem}
+        today={today}
+        defaultDue={trip.days[0]?.date ?? today}
+        dueOverrides={dueOverrides}
+        onSetDue={setDue}
       />
 
       <footer>

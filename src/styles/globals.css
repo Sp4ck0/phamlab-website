@@ -27,6 +27,7 @@
   --accent-transit: #eda100; --accent-transit-tint: #fdf3e0;
 
   --danger: #c9453b; --danger-tint: #fbe9e7;
+  --warn: #9a6a00; --warn-tint: #fdf4cf;
   --good: #0ca30c;
 }
 @media (prefers-color-scheme: dark) {
@@ -50,6 +51,7 @@
     --accent-transit: #c98500; --accent-transit-tint: #362a11;
 
     --danger: #e0655a; --danger-tint: #3a1613;
+  --warn: #e0b03a; --warn-tint: #3a3010;
     --good: #0ca30c;
   }
 }
@@ -73,6 +75,7 @@
   --accent-transit: #c98500; --accent-transit-tint: #362a11;
 
   --danger: #e0655a; --danger-tint: #3a1613;
+  --warn: #e0b03a; --warn-tint: #3a3010;
   --good: #0ca30c;
 }
 
@@ -339,6 +342,17 @@ details.tour-box[open] summary::after{content:"Hide"}
 .action-completed>summary:hover{color:var(--text-primary)}
 .action-item input[type="checkbox"]{flex:none;margin-top:3px;width:17px;height:17px;accent-color:var(--good);cursor:pointer}
 .action-item label{flex:1;min-width:0;overflow-wrap:anywhere;cursor:pointer}
+/* Due-date highlight: full-bleed inside the card. Yellow within a week of the
+   due date, red once past it; the chip text says which, so it's not colour-only. */
+.action-item[data-due]{margin:0 -20px;padding-left:20px;padding-right:20px}
+.action-item[data-due="soon"]{background:var(--warn-tint)}
+.action-item[data-due="overdue"]{background:var(--danger-tint)}
+.due-chip{flex:none;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);white-space:nowrap}
+.action-item[data-due="soon"] .due-text{color:var(--warn);font-weight:700}
+.action-item[data-due="overdue"] .due-text{color:var(--danger);font-weight:700}
+.due-input{font:inherit;font-size:12px;color:var(--text-secondary);background:transparent;border:1px solid var(--border);border-radius:6px;padding:2px 4px;cursor:pointer;color-scheme:inherit}
+.due-reset{font:inherit;font-size:14px;line-height:1;color:var(--text-muted);background:none;border:none;cursor:pointer;padding:2px 4px}
+.due-reset:hover{color:var(--text-primary)}
 .action-item .at{font-weight:700;color:var(--text-primary)}
 .action-item .ad{color:var(--text-secondary)}
 .action-item.done .at,.action-item.done .ad{text-decoration:line-through;text-decoration-color:var(--text-muted);color:var(--text-muted)}
@@ -409,6 +423,8 @@ footer code{background:var(--chip-bg);padding:2px 6px;border-radius:4px;color:va
   .flight-box{padding:10px 12px 12px}
   .trip-map{height:260px}
   .action-items,.overview-list,.alert,.trip-map-wrap{border-radius:12px}
+  .action-item{flex-wrap:wrap}
+  .due-chip{margin-left:29px}
 }
 @media print{
   .sidenav,.status,.navtoggle,.navbackdrop,.mobile-topbar{display:none}
