@@ -3,6 +3,7 @@ import type { ActionItem, Group, Status } from "../../lib/types";
 import type { Gap } from "../../lib/tripLogic";
 import { gapLabel } from "../../lib/tripLogic";
 import { dueLabel, dueState } from "../../lib/dueDates";
+import { DueDateInput } from "./DueDateInput";
 
 interface Props {
   gaps: Gap[];
@@ -54,17 +55,8 @@ export function ActionItems({
     const overridden = key in dueOverrides;
     return (
       <div className="due-chip">
-        <span className="due-text">{dueLabel(due, today, isDone)}</span>
-        <input
-          type="date"
-          className="due-input"
-          aria-label="Due date"
-          value={due}
-          onChange={(e) => {
-            const next = e.target.value;
-            onSetDue(key, next && next !== defaultDue ? next : undefined);
-          }}
-        />
+        {!isDone && <span className="due-text">{dueLabel(due, today, isDone)}</span>}
+        <DueDateInput value={due} onCommit={(next) => onSetDue(key, next !== defaultDue ? next : undefined)} />
         {overridden && (
           <button
             type="button"

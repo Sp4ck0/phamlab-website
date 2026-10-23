@@ -29,16 +29,13 @@ export function dueState(due: string, today: string, done: boolean): DueState {
   return "ok";
 }
 
-const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-// "Due Nov 5 · in 3 days", "Due today", "Due Nov 5 · 2 days overdue".
+// Relative wording only ("Due in 3 days", "Due today", "2 days overdue"): the
+// date itself is already shown by the date input beside it. Empty once done.
 export function dueLabel(due: string, today: string, done: boolean): string {
-  const d = new Date(due + "T00:00:00");
-  const base = `Due ${MON[d.getMonth()]} ${d.getDate()}`;
-  if (done) return base;
+  if (done) return "";
   const days = daysBetween(today, due);
   if (days === 0) return "Due today";
-  if (days > 0) return `${base} · in ${days} day${days === 1 ? "" : "s"}`;
+  if (days > 0) return `Due in ${days} day${days === 1 ? "" : "s"}`;
   const late = -days;
-  return `${base} · ${late} day${late === 1 ? "" : "s"} overdue`;
+  return `${late} day${late === 1 ? "" : "s"} overdue`;
 }
