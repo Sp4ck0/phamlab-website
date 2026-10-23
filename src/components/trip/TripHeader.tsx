@@ -64,7 +64,7 @@ export function TripHeader({
             {onlyGaps ? "Show all days" : "Only gaps"}
           </button>
         )}
-        <a className="btn" href={`/trip/${slug}/print`} target="_blank" rel="noopener">
+        <a className="btn" href={`${import.meta.env.BASE_URL}#/trip/${slug}/print`} target="_blank" rel="noopener">
           Export PDF
         </a>
       </div>
