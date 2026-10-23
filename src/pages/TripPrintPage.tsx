@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { useExportActions } from "../hooks/useExportActions";
 import { useTripExport } from "../hooks/useTripExport";
@@ -26,7 +26,11 @@ function Item({ item }: { item: ItineraryItem }) {
 function PrintDoc() {
   const { slug = "" } = useParams<{ slug: string }>();
   const { data, isLoading } = useTripExport(slug);
-  const it = useMemo(() => (data ? buildItinerary(data) : null), [data]);
+  const [params] = useSearchParams();
+  const from = params.get("from");
+  const to = params.get("to");
+  // Invalid or out-of-trip dates fall back to the whole trip.
+  const it = useMemo(() => (data ? buildItinerary(data, { from: from ?? undefined, to: to ?? undefined }) : null), [data, from, to]);
   const { flash, copy, download } = useExportActions(slug, it);
   const printed = useRef(false);
 
@@ -55,6 +59,7 @@ function PrintDoc() {
         <button className="btn" onClick={copy}>
           {flash === "copy" ? "Copied ✓" : flash === "error" ? "Copy failed" : "Copy itinerary"}
         </button>
+        {it.fileSuffix && <span className="pd-sub pd-range">Exporting {it.dates}</span>}
       </div>
 
       <header className="pd-cover">

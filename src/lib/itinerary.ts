@@ -36,6 +36,8 @@ export interface Itinerary {
   glance: { day: number; date: string; place: string; highlight?: string }[];
   days: ItineraryDay[];
   footer: string;
+  // Set when a date range is selected, e.g. "mar3-mar7"; used in filenames.
+  fileSuffix?: string;
 }
 
 // Tag for a booking that isn't for the whole group; "all" (or any id that
@@ -53,13 +55,71 @@ const dateLabel = (iso: string) => {
   return `${DOW[d.getDay()]}, ${MON[d.getMonth()]} ${d.getDate()}`;
 };
 
-export function buildItinerary(data: TripExport): Itinerary {
-  const { groups, days } = data;
+export interface DateRange {
+  from: string;
+  to: string;
+}
+
+const ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+// A usable sub-range of the trip, or undefined for the whole trip (no range,
+// malformed/out-of-trip dates, from > to, or a range covering every day).
+export function normalizeRange(data: TripExport, range?: Partial<DateRange> | null): DateRange | undefined {
+  const first = data.days[0]?.date;
+  const last = data.days[data.days.length - 1]?.date;
+  if (!range?.from || !range.to || !first || !last) return undefined;
+  const { from, to } = range;
+  if (!ISO.test(from) || !ISO.test(to) || from > to || from < first || to > last) return undefined;
+  return from === first && to === last ? undefined : { from, to };
+}
+
+export interface RangeChip {
+  label: string;
+  range: DateRange;
+}
+
+const todayIso = () => {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
+};
+
+// One chip per run of consecutive days based in the same city, plus "Rest of
+// trip" while the trip is underway. Whole-trip runs are skipped.
+export function rangeChips(data: TripExport): RangeChip[] {
+  const chips: RangeChip[] = [];
+  data.days.forEach((d, i) => {
+    const prev = data.days[i - 1];
+    if (prev && prev.city === d.city) chips[chips.length - 1].range.to = d.date;
+    else chips.push({ label: d.city, range: { from: d.date, to: d.date } });
+  });
+  const counts = new Map<string, number>();
+  chips.forEach((c) => counts.set(c.label, (counts.get(c.label) ?? 0) + 1));
+  const labelled = chips
+    .map((c) => ({ ...c, label: counts.get(c.label)! > 1 ? `${c.label} (${fmtShort(c.range.from)})` : c.label }))
+    .filter((c) => normalizeRange(data, c.range));
+
+  const first = data.days[0]?.date;
+  const last = data.days[data.days.length - 1]?.date;
+  const today = todayIso();
+  if (first && last && today > first && today <= last) {
+    labelled.push({ label: "Rest of trip", range: { from: today, to: last } });
+  }
+  return labelled;
+}
+
+export function buildItinerary(data: TripExport, rangeArg?: Partial<DateRange> | null): Itinerary {
+  const { groups } = data;
+  const range = normalizeRange(data, rangeArg);
+  const allDays = data.days;
+  const inRange = (date: string) => !range || (date >= range.from && date <= range.to);
+  const days = allDays.filter((d) => inRange(d.date));
   const first = days[0]?.date;
   const last = days[days.length - 1]?.date;
   let carried: TripExportHotel[] = [];
 
-  const itDays = days.map((d, i): ItineraryDay => {
+  // Built over the whole trip so hotel carry-forward and real day numbers
+  // survive slicing; the range filter is applied afterwards.
+  const itDays = allDays.map((d, i): ItineraryDay => {
     const staying = d.hotels === "same";
     if (!staying) carried = d.hotels as TripExportHotel[];
     const rows: ItineraryRow[] = [];
@@ -101,7 +161,9 @@ export function buildItinerary(data: TripExport): Itinerary {
     return { num: i + 1, date: dateLabel(d.date), place, event: d.event, highlight: d.highlight, rows };
   });
 
+  // Travelers who are on the trip at some point inside the exported span.
   const travelers = groups
+    .filter((g) => (!g.from || g.from <= last) && (!g.to || g.to >= first))
     .map((g) =>
       g.from || g.to ? `${g.name} (${fmtShort(g.from ?? first)}–${fmtShort(g.to ?? last)})` : g.name
     )
@@ -111,21 +173,32 @@ export function buildItinerary(data: TripExport): Itinerary {
     title: data.title,
     emphasis: data.titleEmphasis,
     kicker: data.kicker,
-    dates: `${data.dateRangeLabel} · ${days.length} days`,
+    dates: range
+      ? `${range.from === range.to ? fmtShort(range.from) : `${fmtShort(range.from)} – ${fmtShort(range.to)}`} · ${days.length} of ${allDays.length} days`
+      : `${data.dateRangeLabel} · ${days.length} days`,
     intro: data.sdek,
     route: deriveRoute(
       days.map((d) => ({ city: d.city, to: d.to })),
       []
     ).map((s) => s.label),
     travelers: groups.length > 1 ? travelers : undefined,
-    glance: days.map((d, i) => ({
-      day: i + 1,
-      date: dateLabel(d.date),
-      place: d.to ? `${d.city} → ${d.to}` : d.city,
-      highlight: d.highlight,
-    })),
-    days: itDays,
+    glance: allDays
+      .map((d, i) => ({
+        day: i + 1,
+        iso: d.date,
+        date: dateLabel(d.date),
+        place: d.to ? `${d.city} → ${d.to}` : d.city,
+        highlight: d.highlight,
+      }))
+      .filter((g) => inRange(g.iso))
+      .map(({ day, date, place, highlight }) => ({ day, date, place, highlight })),
+    days: itDays.filter((_, i) => inRange(allDays[i].date)),
     footer: `${data.title} ${data.titleEmphasis}`,
+    fileSuffix: range
+      ? (range.from === range.to ? fmtShort(range.from) : `${fmtShort(range.from)}-${fmtShort(range.to)}`)
+          .toLowerCase()
+          .replace(/ /g, "")
+      : undefined,
   };
 }
 

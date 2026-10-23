@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTripExport } from "../../hooks/useTripExport";
 import { useExportActions } from "../../hooks/useExportActions";
-import { buildItinerary } from "../../lib/itinerary";
+import { buildItinerary, normalizeRange, type DateRange } from "../../lib/itinerary";
+import { RangePicker } from "./RangePicker";
 
 export function ExportMenu({ slug }: { slug: string }) {
   const [open, setOpen] = useState(false);
+  const [range, setRange] = useState<DateRange | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   // Only fetch the export once the menu is opened.
   const { data, isLoading } = useTripExport(slug, open);
-  const itinerary = useMemo(() => (data ? buildItinerary(data) : null), [data]);
+  const itinerary = useMemo(() => (data ? buildItinerary(data, range) : null), [data, range]);
+  const printRange = data ? normalizeRange(data, range) : undefined;
+  const printQuery = printRange ? `?from=${printRange.from}&to=${printRange.to}` : "";
   const { flash, copy, download } = useExportActions(slug, itinerary, () => setOpen(false));
 
   useEffect(() => {
@@ -37,9 +41,10 @@ export function ExportMenu({ slug }: { slug: string }) {
       </button>
       {open && (
         <div className="export-menu-list" role="menu">
+          {data && <RangePicker data={data} value={range} onChange={setRange} />}
           <a
             role="menuitem"
-            href={`${import.meta.env.BASE_URL}#/trip/${slug}/print`}
+            href={`${import.meta.env.BASE_URL}#/trip/${slug}/export${printQuery}`}
             target="_blank"
             rel="noopener"
             onClick={() => setOpen(false)}

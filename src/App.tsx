@@ -34,6 +34,8 @@ export default function App() {
       <Route path="/unlock" element={<UnlockPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/trip/:slug" element={<TripPage />} />
+      <Route path="/trip/:slug/export" element={<TripPrintPage />} />
+      {/* Original URL of the export page — kept so existing links still work. */}
       <Route path="/trip/:slug/print" element={<TripPrintPage />} />
       <Route path="/kanban" element={<KanbanBoardsPage />} />
       <Route path="/kanban/:boardId" element={<KanbanPage />} />
