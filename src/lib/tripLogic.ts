@@ -54,7 +54,14 @@ export function whoLabel(who: Who, groups: Group[], date: string): { label: stri
   return { label, color: "var(--text-secondary)" };
 }
 
-const uid = (dayIndex: number, kind: "f" | "h", i: number) => `${dayIndex}.${kind}.${i}`;
+// Check ids are content-derived, not positional: they're persisted on the
+// backend (see useChecks), and a positional `${dayIndex}.f.${i}` would shift
+// onto the wrong tile whenever a day or flight is inserted. If a tile's
+// route/name/who is later edited its id changes and the check harmlessly
+// falls back to the data's own status.
+const whoKey = (who: Who) => [...(Array.isArray(who) ? who : [who])].sort().join("+");
+const hotelId = (date: string, h: Pick<Hotel, "name" | "who">) => `${date}|h|${h.name}|${whoKey(h.who)}`;
+export const flightId = (date: string, f: Pick<Flight, "route" | "who">) => `${date}|f|${f.route}|${whoKey(f.who)}`;
 
 export const statusOf = (ticks: Record<string, Status>, id: string, raw: Status): Status => ticks[id] ?? raw;
 
@@ -63,17 +70,17 @@ export const statusOf = (ticks: Record<string, Status>, id: string, raw: Status)
  * loop: resolves `hotels:'same'` sentinels by copying the previous
  * explicit night's hotel array forward (tagging entries `carried:true`,
  * keeping the *original* night's `src` id so ticking the source booking
- * updates every carried night), and assigns every flight/hotel a stable
- * `${dayIndex}.f.${i}` / `${dayIndex}.h.${i}` id.
+ * updates every carried night), and assigns every hotel a stable
+ * content-derived id (flights get theirs via `flightId`).
  */
 export function resolveDays(trip: Pick<Trip, "days">): ResolvedDay[] {
   let carried: ResolvedDay["hotels"] = [];
-  const days = trip.days.map((d: Day, di: number) => {
+  const days = trip.days.map((d: Day) => {
     let hotels: ResolvedDay["hotels"];
     if (d.hotels === "same") {
       hotels = carried.map((h) => ({ ...h, carried: true }));
     } else {
-      hotels = (d.hotels || []).map((h: Hotel, i: number) => ({ ...h, src: uid(di, "h", i) }));
+      hotels = (d.hotels || []).map((h: Hotel) => ({ ...h, src: hotelId(d.date, h) }));
       carried = hotels;
     }
     return { ...d, hotels, flights: d.flights || [], _d: new Date(d.date + "T00:00:00") };
@@ -95,10 +102,6 @@ export function resolveDays(trip: Pick<Trip, "days">): ResolvedDay[] {
   });
 
   return days;
-}
-
-export function flightId(dayIndex: number, flightIndex: number) {
-  return uid(dayIndex, "f", flightIndex);
 }
 
 // Different people can each hold a separate booking at the *same* named
@@ -165,15 +168,15 @@ export interface FlightGroup {
 }
 export function mergeFlightsByRoute(
   allFlights: Flight[],
-  dayIndex: number,
+  date: string,
   ticks: Record<string, Status>,
   filter?: (f: Flight) => boolean
 ): FlightGroup[] {
   const groups: FlightGroup[] = [];
   const byKey = new Map<string, FlightGroup>();
-  allFlights.forEach((f, i) => {
+  allFlights.forEach((f) => {
     if (filter && !filter(f)) return;
-    const id = flightId(dayIndex, i);
+    const id = flightId(date, f);
     const ids = Array.isArray(f.who) ? f.who : [f.who];
     const status = statusOf(ticks, id, f.status);
     const key = `${f.route}|${f.detail || ""}`;
@@ -277,31 +280,38 @@ export interface Gap {
   // Tick id(s) this gap resolves when marked booked — absent for "Plan"
   // gaps, which aren't a simple booked/needed toggle.
   ids?: string[];
+  // True once the booking has been ticked off in the UI — such a gap stays
+  // in the list (shown under "Completed") instead of disappearing. A booking
+  // the data itself already marks `booked` was never a gap and isn't listed.
+  done: boolean;
 }
 
 /**
  * Port of renderAlerts()'s gap-computation half: unbooked hotels/flights,
  * plus a "Plan" gap for days with no acts/flights that aren't pure travel
- * days.
+ * days. A booking the data marks `needed` stays listed after it's ticked
+ * off (with `done: true`) so it can be shown as completed and un-ticked.
  */
 export function computeGaps(resolvedDays: ResolvedDay[], ticks: Record<string, Status>): Gap[] {
   const gaps: Gap[] = [];
-  resolvedDays.forEach((d, di) => {
+  resolvedDays.forEach((d) => {
     d.hotels.forEach((h) => {
       if (h.carried) return;
-      if (statusOf(ticks, h.src, h.status) === "needed") {
-        gaps.push({ who: h.who, kind: "Hotel", date: d.date, dateLabel: fmtDow(d._d), text: `${d.city}${d.to ? " → " + d.to : ""}`, ids: [h.src] });
+      const status = statusOf(ticks, h.src, h.status);
+      if (status === "needed" || h.status === "needed") {
+        gaps.push({ who: h.who, kind: "Hotel", date: d.date, dateLabel: fmtDow(d._d), text: `${d.city}${d.to ? " → " + d.to : ""}`, ids: [h.src], done: status === "booked" });
       }
     });
-    d.flights.forEach((f, i) => {
-      const id = flightId(di, i);
-      if (statusOf(ticks, id, f.status) === "needed") {
-        gaps.push({ who: f.who, kind: "Flight", date: d.date, dateLabel: fmtDow(d._d), text: f.route, ids: [id] });
+    d.flights.forEach((f) => {
+      const id = flightId(d.date, f);
+      const status = statusOf(ticks, id, f.status);
+      if (status === "needed" || f.status === "needed") {
+        gaps.push({ who: f.who, kind: "Flight", date: d.date, dateLabel: fmtDow(d._d), text: f.route, ids: [id], done: status === "booked" });
       }
     });
     const blank = !(d.acts && d.acts.length) && !(d.flights && d.flights.length) && d.tag !== "transit";
     if (blank) {
-      gaps.push({ who: "all", kind: "Plan", date: d.date, dateLabel: fmtDow(d._d), text: `${d.city}${d.to ? " → " + d.to : ""}` });
+      gaps.push({ who: "all", kind: "Plan", date: d.date, dateLabel: fmtDow(d._d), text: `${d.city}${d.to ? " → " + d.to : ""}`, done: false });
     }
   });
   return gaps;

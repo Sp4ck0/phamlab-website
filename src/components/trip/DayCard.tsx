@@ -9,7 +9,6 @@ import { TourBox } from "./TourBox";
 
 interface Props {
   day: ResolvedDay;
-  dayIndex: number;
   dayNumber: number;
   legColor: LegColor;
   groups: Group[];
@@ -23,7 +22,6 @@ interface Props {
 
 export function DayCard({
   day: d,
-  dayIndex: di,
   dayNumber,
   legColor,
   groups,
@@ -36,7 +34,7 @@ export function DayCard({
 }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const hotels = d.hotels;
-  const flightGroups = mergeFlightsByRoute(d.flights, di, ticks);
+  const flightGroups = mergeFlightsByRoute(d.flights, d.date, ticks);
   const hotelGroups = mergeHotelsByName(hotels, ticks);
   // On a transition day, the hotel being checked out of renders before the
   // flight tile, and the hotel being checked into (or one just being stayed
