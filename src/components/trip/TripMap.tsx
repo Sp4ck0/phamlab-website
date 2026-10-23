@@ -178,7 +178,7 @@ export function TripMap({ points, route, weatherStops }: Props) {
   // Shared by pins and pills: close whatever is open, then show this one.
   function openInfo(
     map: google.maps.Map,
-    { header, body }: { header: string; body: string },
+    { header, body }: { header: HTMLElement; body: string },
     at: google.maps.Marker | google.maps.LatLngLiteral,
     liftPx = 0,
   ) {
@@ -244,8 +244,13 @@ function infoHtml(title: string, subtitle: string, stop?: WeatherStop) {
         `<div style="font:400 12px system-ui;color:#52514e">${escapeHtml(fmtShort(d.date))} ${weatherIcon(d.weather.code).emoji} ${escapeHtml(weatherText(d.weather))}</div>`,
     )
     .join("");
+  // setHeaderContent takes a DOM node (a string is shown as literal text),
+  // unlike setContent, which accepts an HTML string.
+  const header = document.createElement("div");
+  header.style.cssText = "font:600 13px system-ui;color:#0b0b0b";
+  header.textContent = title;
   return {
-    header: `<div style="font:600 13px system-ui;color:#0b0b0b">${escapeHtml(title)}</div>`,
+    header,
     body:
       (subtitle ? `<div style="font:400 12px system-ui;color:#52514e">${escapeHtml(subtitle)}</div>` : "") +
       (rows ? `<div style="margin-top:${subtitle ? 4 : 0}px">${rows}</div>` : ""),
