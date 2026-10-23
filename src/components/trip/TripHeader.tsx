@@ -1,3 +1,4 @@
+import { useParams } from "react-router-dom";
 import type { Day, Group, HighlightStat } from "../../lib/types";
 import { assignLegColors, deriveRoute, renderCountdown } from "../../lib/tripLogic";
 import { RouteStepper } from "./RouteStepper";
@@ -30,6 +31,7 @@ export function TripHeader({
   onlyGaps: boolean;
   onOnlyGapsChange: (v: boolean) => void;
 }) {
+  const { slug } = useParams<{ slug: string }>();
   const legColors = assignLegColors(days);
   const route = deriveRoute(days, legColors);
   const cities = new Set(days.map((d) => d.city));
@@ -62,6 +64,9 @@ export function TripHeader({
             {onlyGaps ? "Show all days" : "Only gaps"}
           </button>
         )}
+        <a className="btn" href={`/trip/${slug}/print`} target="_blank" rel="noopener">
+          Export PDF
+        </a>
       </div>
     </header>
   );

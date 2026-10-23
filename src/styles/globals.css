@@ -413,3 +413,50 @@ footer code{background:var(--chip-bg);padding:2px 6px;border-radius:4px;color:va
 @media print{
   .sidenav,.status,.navtoggle,.navbackdrop,.mobile-topbar{display:none}
 }
+
+/* ── printable itinerary (/trip/:slug/print) ───────────────
+   Always light + black-on-white regardless of theme. */
+.print-doc{
+  --pd-ink:#111;--pd-sub:#5a5954;--pd-rule:#d8d6cf;
+  max-width:760px;margin:0 auto;padding:32px 24px 60px;
+  background:#fff;color:var(--pd-ink);color-scheme:light;
+  font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+.pd-toolbar{margin-bottom:20px}
+.pd-cover{padding-bottom:22px;margin-bottom:22px;border-bottom:2px solid var(--pd-ink)}
+.pd-kicker{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--pd-sub);margin:0 0 6px}
+.print-doc h1{font:400 34px/1.15 Georgia,"Times New Roman",serif;margin:0 0 6px}
+.print-doc h1 em{font-style:italic}
+.pd-dates{font-size:14px;color:var(--pd-sub);margin:0 0 12px}
+.pd-intro{max-width:64ch;margin:0 0 12px}
+.pd-route{font-weight:600;margin:0 0 8px}
+.pd-travelers{margin:0 0 16px;color:var(--pd-sub)}
+.pd-glance{width:100%;border-collapse:collapse;font-size:12px}
+.pd-glance td{padding:5px 8px 5px 0;border-top:1px solid var(--pd-rule);vertical-align:top}
+.pd-glance td:nth-child(1){white-space:nowrap;font-weight:700}
+.pd-glance td:nth-child(2){white-space:nowrap}
+.pd-day{break-inside:avoid;margin:0 0 18px;padding:2px 0 2px 14px;border-left:3px solid var(--pd-ink)}
+.pd-day h2{font:700 15px/1.3 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;margin:0 0 4px}
+.pd-daynum{display:inline-block;margin-right:8px;text-transform:uppercase;letter-spacing:.08em;font-size:11px;color:var(--pd-sub)}
+.pd-place{font-weight:400;margin-left:10px;color:var(--pd-sub)}
+.pd-event{font-weight:700;margin:0 0 2px}
+.pd-highlight{margin:0 0 8px;color:var(--pd-sub);font-style:italic}
+.pd-row{display:grid;grid-template-columns:64px 1fr;gap:10px;padding:5px 0;border-top:1px solid var(--pd-rule)}
+.pd-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--pd-sub);padding-top:2px}
+.pd-sub{color:var(--pd-sub)}
+.pd-tba{font-style:italic;color:var(--pd-sub)}
+.pd-who{display:inline-block;margin-left:8px;padding:0 6px;border:1px solid var(--pd-rule);border-radius:4px;font-size:10px;font-weight:700;color:var(--pd-sub)}
+.pd-leg{margin-top:2px}
+.pd-layover{font-size:12px;font-style:italic}
+.pd-acts{list-style:none;margin:0;padding:0}
+.pd-acts li{padding:1px 0}
+.pd-time{display:inline-block;min-width:58px;font-weight:700;margin-right:6px}
+.pd-tag{margin-right:6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--pd-sub)}
+.pd-footer{margin-top:28px;padding-top:10px;border-top:1px solid var(--pd-rule);font-size:11px;color:var(--pd-sub)}
+@media print{
+  @page{margin:14mm}
+  .no-print{display:none}
+  .print-doc{max-width:none;padding:0}
+  .pd-cover{break-after:page}
+  .pd-footer{position:fixed;bottom:0;left:0;right:0;margin:0;background:#fff}
+}

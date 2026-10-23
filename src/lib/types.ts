@@ -124,6 +124,49 @@ export interface TripSummary {
   countries: string[];
 }
 
+// Sanitized, shareable projection returned by trips.getTripExport — no
+// ids, prices, statuses, conflicts, or action items. `tba` marks a booking
+// that isn't confirmed yet (only who/route or who is sent in that case).
+export interface TripExportFlight {
+  who: Who;
+  route: string;
+  tba: boolean;
+  title?: string;
+  detail?: string;
+  layovers?: string[];
+  legs?: { route: string; time: string; meta?: string }[];
+}
+export interface TripExportHotel {
+  who: Who;
+  tba: boolean;
+  name?: string;
+  address?: string;
+  detail?: string;
+}
+export interface TripExportDay {
+  date: string;
+  city: string;
+  country: string;
+  to?: string;
+  toCountry?: string;
+  event?: string;
+  highlight?: string;
+  flights: TripExportFlight[];
+  hotels: "same" | TripExportHotel[];
+  acts: { text: string; time?: string; tag?: string }[];
+  tourDetails?: { summary?: string; body?: string };
+}
+export interface TripExport {
+  title: string;
+  titleEmphasis: string;
+  kicker: string;
+  dateRangeLabel: string;
+  citiesLabel: string;
+  sdek?: string;
+  groups: { id: string; name: string; color: string; from?: string; to?: string }[];
+  days: TripExportDay[];
+}
+
 // A day after `hotels:'same'` carry-forward has been resolved and every
 // flight/hotel has been assigned a stable tick id.
 export interface ResolvedHotel extends Hotel {
