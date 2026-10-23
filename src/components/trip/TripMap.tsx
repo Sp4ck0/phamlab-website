@@ -4,11 +4,13 @@ import { CATEGORY_COLORS, CATEGORY_LABELS } from "../../lib/mapPoints";
 import { useGeocodedPoints } from "../../hooks/useGeocodedPoints";
 import { loadGoogleMaps } from "../../lib/googleMaps";
 
-export function TripMap({ points }: { points: MapPointData[] }) {
+export function TripMap({ points, route }: { points: MapPointData[]; route: MapPointData[] }) {
   const { points: geocoded, status, error } = useGeocodedPoints(points);
+  const { points: geocodedRoute } = useGeocodedPoints(route);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<google.maps.Map | null>(null);
   const markers = useRef<google.maps.Marker[]>([]);
+  const polyline = useRef<google.maps.Polyline | null>(null);
 
   useEffect(() => {
     if (status !== "ready" || geocoded.length === 0 || !mapRef.current) return;
@@ -52,7 +54,22 @@ export function TripMap({ points }: { points: MapPointData[] }) {
         bounds.extend(position);
       });
 
-      if (geocoded.length === 1) {
+      polyline.current?.setMap(null);
+      polyline.current = null;
+      if (geocodedRoute.length >= 2) {
+        const path = geocodedRoute.map((p) => ({ lat: p.lat, lng: p.lng }));
+        polyline.current = new google.maps.Polyline({
+          map,
+          path,
+          geodesic: true,
+          strokeColor: CATEGORY_COLORS.city,
+          strokeOpacity: 0.7,
+          strokeWeight: 3,
+        });
+        path.forEach((pt) => bounds.extend(pt));
+      }
+
+      if (geocoded.length === 1 && geocodedRoute.length < 2) {
         map.setCenter({ lat: geocoded[0].lat, lng: geocoded[0].lng });
         map.setZoom(14);
       } else {
@@ -63,14 +80,14 @@ export function TripMap({ points }: { points: MapPointData[] }) {
     return () => {
       cancelled = true;
     };
-  }, [geocoded, status]);
+  }, [geocoded, geocodedRoute, status]);
 
   if (points.length === 0) return null;
 
   return (
     <>
       <h2 className="section-title">Map</h2>
-      <p className="section-sub">Hotels and other spots from this itinerary.</p>
+      <p className="section-sub">Hotels and other spots from this itinerary, joined in travel order.</p>
 
       {status === "error" && (
         <div className="note">

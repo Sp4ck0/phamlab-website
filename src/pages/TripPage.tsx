@@ -16,7 +16,7 @@ import { useDueDates } from "../hooks/useDueDates";
 import { useTripWeather } from "../hooks/useTripWeather";
 import { todayISO } from "../lib/dueDates";
 import { assignLegColors } from "../lib/tripLogic";
-import { derivePoints } from "../lib/mapPoints";
+import { derivePoints, deriveRouteAddresses } from "../lib/mapPoints";
 import { NotFoundOrDenied } from "./NotFoundOrDenied";
 
 export function TripPage() {
@@ -114,7 +114,7 @@ export function TripPage() {
         />
       )}
 
-      <TripMap points={derivePoints(resolvedDays, trip.mapPoints)} />
+      <TripMap points={derivePoints(resolvedDays, trip.mapPoints)} route={deriveRouteAddresses(resolvedDays)} />
 
       <ActionItems
         gaps={gaps}

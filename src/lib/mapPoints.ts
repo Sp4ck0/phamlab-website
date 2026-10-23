@@ -64,3 +64,21 @@ export function derivePoints(days: ResolvedDay[], mapPoints: Trip["mapPoints"]):
 
   return points;
 }
+
+// Ordered city waypoints for the map's route line. Mirrors deriveRoute's
+// walk (city, then `to`) and the home-city exclusion in derivePoints; only
+// consecutive repeats are collapsed so a revisit (A → B → A) still draws.
+export function deriveRouteAddresses(days: ResolvedDay[]): MapPointData[] {
+  const route: MapPointData[] = [];
+  days.forEach((d) => {
+    [
+      { city: d.city, country: d.country },
+      ...(d.to ? [{ city: d.to, country: d.toCountry || d.country }] : []),
+    ].forEach(({ city, country }) => {
+      if (!city || city === "Seattle") return;
+      if (route[route.length - 1]?.label === city) return;
+      route.push({ id: `route-${route.length}`, label: city, address: `${city}, ${country}`, category: "city" });
+    });
+  });
+  return route;
+}
