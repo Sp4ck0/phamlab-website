@@ -190,6 +190,22 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 }
 .btn:hover{color:var(--text-primary);border-color:var(--text-muted)}
 
+/* ── export menu ───────────────────────────────────────── */
+.export-menu{position:relative;display:inline-block}
+.export-menu-list{
+  position:absolute;right:0;top:calc(100% + 6px);z-index:20;min-width:180px;
+  display:flex;flex-direction:column;padding:4px;
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  box-shadow:0 8px 24px rgba(0,0,0,.14);
+}
+.export-menu-list a,.export-menu-list button{
+  font:inherit;font-size:13px;text-align:left;text-decoration:none;
+  padding:9px 12px;border:0;border-radius:8px;background:none;color:var(--text-primary);cursor:pointer;
+}
+.export-menu-list a:hover,.export-menu-list button:hover:not(:disabled){background:var(--chip-bg)}
+.export-menu-list button:disabled{color:var(--text-muted);cursor:default}
+.pd-toolbar{display:flex;gap:8px;flex-wrap:wrap}
+
 /* ── overview (compact list) ───────────────────────────── */
 .overview-list{margin-top:22px;background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden}
 .overview-row{
