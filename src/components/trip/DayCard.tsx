@@ -6,11 +6,14 @@ import { WhoPill } from "./WhoPill";
 import { StatusToggle } from "./StatusToggle";
 import { FlightBox } from "./FlightBox";
 import { TourBox } from "./TourBox";
+import { weatherIcon, weatherText, weatherTitle } from "../../lib/weather";
+import type { DayWeather } from "../../lib/weather";
 
 interface Props {
   day: ResolvedDay;
   dayNumber: number;
   legColor: LegColor;
+  weather?: DayWeather;
   groups: Group[];
   ticks: Record<string, Status>;
   onlyGaps: boolean;
@@ -24,6 +27,7 @@ export function DayCard({
   day: d,
   dayNumber,
   legColor,
+  weather,
   groups,
   ticks,
   onlyGaps,
@@ -101,6 +105,11 @@ export function DayCard({
           </span>
         </div>
         <span className="day-head-right">
+          {weather && (
+            <span className={`weather-badge weather-${weather.kind}`} title={weatherTitle(weather)}>
+              <span aria-hidden="true">{weatherIcon(weather.code).emoji}</span> {weatherText(weather)}
+            </span>
+          )}
           <span className="leg-badge">
             <span className="dot" />
             {legColor.label}

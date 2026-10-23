@@ -283,6 +283,16 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
   padding:4px 10px;border-radius:999px;background:var(--leg-tint,var(--accent-1-tint));color:var(--leg-color,var(--accent-1));
 }
 .leg-badge .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.weather-badge{
+  display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;white-space:nowrap;
+  padding:3px 9px;border-radius:999px;border:1px solid transparent;
+  background:var(--surface-2,rgba(128,128,128,.12));color:var(--text-primary,inherit);
+}
+/* Historical average, not a forecast: dashed, muted, italic. */
+.weather-badge.weather-typical{
+  background:transparent;border:1px dashed var(--text-muted);color:var(--text-muted);font-style:italic;font-weight:500;
+}
+.weather-badge.weather-actual{color:var(--text-muted)}
 .day-subtitle{font-size:13.5px;color:var(--text-secondary);margin:2px 0 14px}
 
 .activity-list{list-style:none;margin:0;padding:0}
