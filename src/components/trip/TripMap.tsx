@@ -8,6 +8,9 @@ import { useGeocodedPoints } from "../../hooks/useGeocodedPoints";
 import { loadGoogleMaps } from "../../lib/googleMaps";
 
 const ARROW_SPACING_PX = 28;
+// Weather pills float this far above their city pin (matches .map-weather-pill's transform);
+// the info window is lifted by the same amount plus the pill's height so it opens above the pill.
+const PILL_INFO_OFFSET_PX = 42;
 
 interface Props {
   points: MapPointData[];
@@ -21,18 +24,27 @@ export function TripMap({ points, route, weatherStops }: Props) {
   const { points: geocodedWeather } = useGeocodedPoints(weatherStops);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<google.maps.Map | null>(null);
+  // One info window shared by every pin and pill, so opening one closes the last.
+  const infoWindow = useRef<google.maps.InfoWindow | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const markers = useRef<google.maps.Marker[]>([]);
-  const weatherMarkers = useRef<google.maps.Marker[]>([]);
+  const weatherOverlays = useRef<google.maps.OverlayView[]>([]);
   const polyline = useRef<google.maps.Polyline | null>(null);
   const frame = useRef<number | null>(null);
+  // Read at click time so a city pin shows weather that arrived after the pin was built.
+  const stopsByAddress = useRef(new Map<string, WeatherStop>());
+  stopsByAddress.current = new Map(weatherStops.map((s) => [s.address, s]));
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") infoWindow.current?.close();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
       if (frame.current !== null) cancelAnimationFrame(frame.current);
-    },
-    [],
-  );
+    };
+  }, []);
 
   useEffect(() => {
     if (status !== "ready" || geocoded.length === 0 || !mapRef.current) return;
@@ -46,6 +58,9 @@ export function TripMap({ points, route, weatherStops }: Props) {
         mapInstance.current = new google.maps.Map(mapRef.current, {
           zoom: 13,
         });
+        const info = new google.maps.InfoWindow();
+        infoWindow.current = info;
+        mapInstance.current.addListener("click", () => info.close());
         setMapReady(true);
       }
       const map = mapInstance.current;
@@ -69,10 +84,10 @@ export function TripMap({ points, route, weatherStops }: Props) {
             strokeWeight: 2,
           },
         });
-        const info = new google.maps.InfoWindow({
-          content: `<div style="font:600 13px system-ui;color:#0b0b0b">${escapeHtml(p.label)}</div><div style="font:400 12px system-ui;color:#52514e">${escapeHtml(CATEGORY_LABELS[p.category])}${p.note ? " · " + escapeHtml(p.note) : ""}</div>`,
+        marker.addListener("click", () => {
+          const stop = p.category === "city" ? stopsByAddress.current.get(p.address) : undefined;
+          openInfo(map, infoHtml(p.label, CATEGORY_LABELS[p.category] + (p.note ? " · " + p.note : ""), stop), marker);
         });
-        marker.addListener("click", () => info.open({ map, anchor: marker }));
         markers.current.push(marker);
         bounds.extend(position);
       });
@@ -139,43 +154,55 @@ export function TripMap({ points, route, weatherStops }: Props) {
     const map = mapInstance.current;
     if (!mapReady || !map) return;
 
-    weatherMarkers.current.forEach((m) => m.setMap(null));
-    weatherMarkers.current = [];
+    weatherOverlays.current.forEach((o) => o.setMap(null));
+    weatherOverlays.current = [];
 
     const stopById = new Map(weatherStops.map((s) => [s.id, s]));
     geocodedWeather.forEach((p) => {
       const stop = stopById.get(p.id);
       if (!stop) return;
       const s = summarizeStay(stop.days.map((d) => d.weather));
-      const text = `${s.emoji} ${temp(s.tMax)}°/${temp(s.tMin)}°${s.count > 1 ? ` · ${s.count}d` : ""}`;
-      const marker = new google.maps.Marker({
-        map,
-        position: { lat: p.lat, lng: p.lng },
-        zIndex: 10,
-        // Label-only marker: a zero-size symbol, with the label lifted above the city pin.
-        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0, labelOrigin: new google.maps.Point(0, -22) },
-        label: { text, className: `map-weather-label${s.typical ? " is-typical" : ""}` },
-      });
-      const rows = stop.days
-        .map(
-          (d) =>
-            `<div style="font:400 12px system-ui;color:#52514e">${escapeHtml(fmtShort(d.date))} ${weatherIcon(d.weather.code).emoji} ${escapeHtml(weatherText(d.weather))}</div>`,
-        )
-        .join("");
-      const info = new google.maps.InfoWindow({
-        content: `<div style="font:600 13px system-ui;color:#0b0b0b;margin-bottom:2px">${escapeHtml(stop.label)}</div>${rows}`,
-      });
-      marker.addListener("click", () => info.open({ map, anchor: marker }));
-      weatherMarkers.current.push(marker);
+      const position = { lat: p.lat, lng: p.lng };
+      const pill = document.createElement("button");
+      pill.type = "button";
+      pill.className = `map-weather-pill${s.typical ? " is-typical" : ""}`;
+      pill.textContent = `${s.emoji} ${temp(s.tMax)}°/${temp(s.tMin)}°${s.count > 1 ? ` · ${s.count}d` : ""}`;
+      pill.setAttribute("aria-label", `${stop.label} weather, ${s.count} ${s.count === 1 ? "day" : "days"}${s.typical ? ", includes historical averages" : ""}`);
+      pill.addEventListener("click", () => openInfo(map, infoHtml(stop.label, "", stop), position, PILL_INFO_OFFSET_PX));
+      const overlay = createPillOverlay(position, pill);
+      overlay.setMap(map);
+      weatherOverlays.current.push(overlay);
     });
   }, [mapReady, geocodedWeather, weatherStops]);
+
+  // Shared by pins and pills: close whatever is open, then show this one.
+  function openInfo(
+    map: google.maps.Map,
+    html: string,
+    at: google.maps.Marker | google.maps.LatLngLiteral,
+    liftPx = 0,
+  ) {
+    const info = infoWindow.current;
+    if (!info) return;
+    info.close();
+    info.setContent(html);
+    info.setOptions({ pixelOffset: new google.maps.Size(0, -liftPx) });
+    if (at instanceof google.maps.Marker) info.open({ map, anchor: at });
+    else {
+      info.setPosition(at);
+      info.open({ map });
+    }
+  }
 
   if (points.length === 0) return null;
 
   return (
     <>
       <h2 className="section-title">Map</h2>
-      <p className="section-sub">Hotels and other spots from this itinerary, joined in travel order, with the weather for each stay.</p>
+      <p className="section-sub">
+        Hotels and other spots from this itinerary, joined in travel order, with the weather for each stay. Tap a pin or
+        weather label for details.
+      </p>
 
       {status === "error" && (
         <div className="note">
@@ -204,6 +231,42 @@ export function TripMap({ points, route, weatherStops }: Props) {
       )}
     </>
   );
+}
+
+// Title, optional subtitle, and (for a city with weather) one line per day.
+function infoHtml(title: string, subtitle: string, stop?: WeatherStop) {
+  const rows = (stop?.days ?? [])
+    .map(
+      (d) =>
+        `<div style="font:400 12px system-ui;color:#52514e">${escapeHtml(fmtShort(d.date))} ${weatherIcon(d.weather.code).emoji} ${escapeHtml(weatherText(d.weather))}</div>`,
+    )
+    .join("");
+  return (
+    `<div style="font:600 13px system-ui;color:#0b0b0b">${escapeHtml(title)}</div>` +
+    (subtitle ? `<div style="font:400 12px system-ui;color:#52514e">${escapeHtml(subtitle)}</div>` : "") +
+    (rows ? `<div style="margin-top:4px">${rows}</div>` : "")
+  );
+}
+
+// A real DOM element on the map (not a marker label), so it can receive clicks
+// and keyboard focus. Positioned above its lat/lng by CSS.
+function createPillOverlay(position: google.maps.LatLngLiteral, el: HTMLElement): google.maps.OverlayView {
+  class PillOverlay extends google.maps.OverlayView {
+    onAdd() {
+      google.maps.OverlayView.preventMapHitsAndGesturesFrom(el);
+      this.getPanes()?.overlayMouseTarget.appendChild(el);
+    }
+    draw() {
+      const p = this.getProjection()?.fromLatLngToDivPixel(new google.maps.LatLng(position));
+      if (!p) return;
+      el.style.left = `${p.x}px`;
+      el.style.top = `${p.y}px`;
+    }
+    onRemove() {
+      el.remove();
+    }
+  }
+  return new PillOverlay();
 }
 
 function escapeHtml(s: string) {
