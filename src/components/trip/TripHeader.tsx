@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import type { Day, Group, HighlightStat } from "../../lib/types";
 import { assignLegColors, deriveRoute, renderCountdown } from "../../lib/tripLogic";
+import { ExportMenu } from "./ExportMenu";
 import { RouteStepper } from "./RouteStepper";
 import { Roster } from "./Roster";
 import { StatTiles } from "./StatTiles";
@@ -64,9 +65,7 @@ export function TripHeader({
             {onlyGaps ? "Show all days" : "Only gaps"}
           </button>
         )}
-        <a className="btn" href={`${import.meta.env.BASE_URL}#/trip/${slug}/print`} target="_blank" rel="noopener">
-          Export PDF
-        </a>
+        {slug && <ExportMenu slug={slug} />}
       </div>
     </header>
   );
