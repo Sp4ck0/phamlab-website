@@ -70,6 +70,8 @@ export interface Board {
   laneLabels?: Partial<Record<LaneId, { name: string; blurb?: string }>>;
   /** Per card id: replies from someone else the viewer hasn't read yet. Cards with none are absent. */
   unread: Record<string, number>;
+  /** Ids of cards someone else raised that the viewer has never opened. */
+  fresh: string[];
 }
 
 export const LANES: { id: LaneId; name: string; blurb: string }[] = [

@@ -36,10 +36,11 @@ export function Thread({ card, board, raisedBy, onReply, onRemoveReply, onRead }
   // Anything on screen has been read — on open, and again whenever their
   // reply lands while the card is open.
   const unread = board.unread[card.id] ?? 0;
+  const isNew = board.fresh.includes(card.id);
   useEffect(() => {
-    if (unread > 0) onRead(card.id);
+    if (unread > 0 || isNew) onRead(card.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- onRead is a fresh closure each render
-  }, [card.id, unread]);
+  }, [card.id, unread, isNew]);
 
   // When a reply lands while the card is open (theirs or the one just
   // sent), bring it into view — but not on open, which would jump past the
