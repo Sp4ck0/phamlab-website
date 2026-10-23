@@ -17,13 +17,14 @@ export function useChecks(slug: string) {
   const setCheck = useMutation(api.checks.setCheck).withOptimisticUpdate((store, args) => {
     const current = store.getQuery(api.checks.listChecks, { slug: args.slug, code: args.code });
     if (current) {
-      store.setQuery(api.checks.listChecks, { slug: args.slug, code: args.code }, { ...current, [args.key]: args.value });
+      const rest = current.filter((c: { key: string }) => c.key !== args.key);
+      store.setQuery(api.checks.listChecks, { slug: args.slug, code: args.code }, [...rest, { key: args.key, value: args.value }]);
     }
   });
 
   const ticks = useMemo(() => {
     const out: Record<string, Status> = {};
-    for (const [key, value] of Object.entries(checks ?? {})) {
+    for (const { key, value } of checks ?? []) {
       if (value === "booked" || value === "needed") out[key] = value;
     }
     return out;
@@ -31,7 +32,7 @@ export function useChecks(slug: string) {
 
   const done = useMemo(() => {
     const out: Record<string, boolean> = {};
-    for (const [key, value] of Object.entries(checks ?? {})) {
+    for (const { key, value } of checks ?? []) {
       if (key.startsWith("ai:") && value === "done") out[key.slice(3)] = true;
     }
     return out;
