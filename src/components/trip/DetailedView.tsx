@@ -1,10 +1,12 @@
 import type { ActionItem, Group, LegColor, ResolvedDay, Status } from "../../lib/types";
 import { DayNav } from "./DayNav";
 import { DayCard } from "./DayCard";
+import type { DayWeather } from "../../lib/weather";
 
 interface Props {
   days: ResolvedDay[];
   legColors: LegColor[];
+  weather: Record<string, DayWeather>;
   groups: Group[];
   ticks: Record<string, Status>;
   onlyGaps: boolean;
@@ -18,6 +20,7 @@ interface Props {
 export function DetailedView({
   days,
   legColors,
+  weather,
   groups,
   ticks,
   onlyGaps,
@@ -37,6 +40,7 @@ export function DetailedView({
             day={d}
             dayNumber={i}
             legColor={legColors[i]}
+            weather={weather[d.date]}
             groups={groups}
             ticks={ticks}
             onlyGaps={onlyGaps}

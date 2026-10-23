@@ -13,6 +13,7 @@ import { useResolvedDays } from "../hooks/useResolvedDays";
 import { useChecks } from "../hooks/useChecks";
 import { useTripGaps } from "../hooks/useTripGaps";
 import { useDueDates } from "../hooks/useDueDates";
+import { useTripWeather } from "../hooks/useTripWeather";
 import { todayISO } from "../lib/dueDates";
 import { assignLegColors } from "../lib/tripLogic";
 import { derivePoints } from "../lib/mapPoints";
@@ -33,6 +34,7 @@ export function TripPage() {
   const today = todayISO();
   const gaps = useTripGaps(resolvedDays, ticks, today);
   const { overrides: dueOverrides, setDue } = useDueDates(slug || "");
+  const weather = useTripWeather(slug);
 
   function setView(v: TripView) {
     setSearchParams(
@@ -100,6 +102,7 @@ export function TripPage() {
         <DetailedView
           days={resolvedDays}
           legColors={legColors}
+          weather={weather}
           groups={trip.groups}
           ticks={ticks}
           onlyGaps={onlyGaps}
