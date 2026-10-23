@@ -6,7 +6,7 @@ import { WhoPill } from "./WhoPill";
 import { StatusToggle } from "./StatusToggle";
 import { FlightBox } from "./FlightBox";
 import { TourBox } from "./TourBox";
-import { weatherIcon, weatherText, weatherTitle } from "../../lib/weather";
+import { WeatherBadge } from "./WeatherBadge";
 import type { DayWeather } from "../../lib/weather";
 
 interface Props {
@@ -105,11 +105,7 @@ export function DayCard({
           </span>
         </div>
         <span className="day-head-right">
-          {weather && (
-            <span className={`weather-badge weather-${weather.kind}`} title={weatherTitle(weather)}>
-              <span aria-hidden="true">{weatherIcon(weather.code).emoji}</span> {weatherText(weather)}
-            </span>
-          )}
+          <WeatherBadge weather={weather} />
           <span className="leg-badge">
             <span className="dot" />
             {legColor.label}

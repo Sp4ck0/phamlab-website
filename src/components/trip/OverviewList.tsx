@@ -1,13 +1,16 @@
 import type { LegColor, ResolvedDay } from "../../lib/types";
 import { DOW, MON } from "../../lib/tripLogic";
+import { WeatherBadge } from "./WeatherBadge";
+import type { DayWeather } from "../../lib/weather";
 
 interface Props {
   days: ResolvedDay[];
   legColors: LegColor[];
+  weather: Record<string, DayWeather>;
   onJump: (dayId: string) => void;
 }
 
-export function OverviewList({ days, legColors, onJump }: Props) {
+export function OverviewList({ days, legColors, weather, onJump }: Props) {
   return (
     <div className="overview-list">
       {days.map((d, i) => {
@@ -31,6 +34,9 @@ export function OverviewList({ days, legColors, onJump }: Props) {
             <div className="ov-city">
               <span className="dot" />
               {leg.label}
+            </div>
+            <div className="ov-weather">
+              <WeatherBadge weather={weather[d.date]} />
             </div>
             <div className="ov-highlight">{d.highlight || d.note || ""}</div>
             <div className="ov-arrow">›</div>

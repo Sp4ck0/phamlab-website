@@ -240,6 +240,7 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
   color:var(--leg-color,var(--accent-1));white-space:nowrap;
 }
 .ov-city .dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
+.ov-weather{flex:none}
 .ov-highlight{flex:1 1 240px;font-size:13.5px;color:var(--text-secondary);min-width:0}
 .ov-arrow{flex:none;color:var(--text-muted);font-size:15px;margin-left:auto}
 @media(max-width:480px){
