@@ -87,12 +87,28 @@ function ManagementConsole({ code }: { code: string }) {
       <h2 className="section-title" style={{ marginTop: 40 }}>
         Existing codes
       </h2>
-      <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
-        {codes.length === 0 && <p className="sdek">No access codes yet.</p>}
-        {codes.map((c) => (
-          <CodeRowEditor key={c._id} code={code} row={c} trips={trips} boards={boards} />
-        ))}
-      </div>
+      {codes.length === 0 ? (
+        <p className="sdek">No access codes yet.</p>
+      ) : (
+        <div style={{ overflowX: "auto", marginTop: 14 }}>
+          <table style={{ borderCollapse: "collapse", fontSize: 14 }}>
+            <thead>
+              <tr>
+                {["Name", "Code", "", "Status", ""].map((h, i) => (
+                  <th key={i} scope="col" style={{ ...cellStyle, textAlign: "left", fontWeight: 500 }}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {codes.map((c) => (
+                <CodeTableRow key={c._id} code={code} row={c} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -308,6 +324,24 @@ function WhoHasAccess({
   const upsert = useMutation(api.management.upsertAccessCode);
   const [busy, setBusy] = useState(false);
 
+  async function toggleDating(row: CodeRow) {
+    setBusy(true);
+    try {
+      await upsert({
+        code,
+        id: row._id as any,
+        targetCode: row.code,
+        tripIds: row.tripIds as any,
+        boardIds: row.boardIds as any,
+        datingAccess: !row.datingAccess,
+        name: row.name,
+        active: row.active,
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function toggle(row: CodeRow, kind: "tripIds" | "boardIds", id: string) {
     const current = row[kind];
     const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
@@ -389,6 +423,31 @@ function WhoHasAccess({
               </tr>
             )}
             {renderRows(boards.map((b) => ({ id: b._id, label: b.name })), "boardIds")}
+            <tr>
+              <th colSpan={codes.length + 1} className="ctype" style={{ ...cellStyle, textAlign: "left" }}>
+                Dating Simulator
+              </th>
+            </tr>
+            <tr>
+              <th scope="row" style={{ ...cellStyle, textAlign: "left", fontWeight: 500 }}>
+                Enabled
+              </th>
+              {codes.map((c) => (
+                <td key={c._id} style={{ ...cellStyle, textAlign: "center", opacity: c.active ? 1 : 0.5 }}>
+                  <button
+                    type="button"
+                    className="chip"
+                    aria-pressed={c.datingAccess}
+                    aria-label={`${c.name}: Dating Simulator`}
+                    disabled={busy}
+                    style={{ minWidth: 32, justifyContent: "center" }}
+                    onClick={() => toggleDating(c)}
+                  >
+                    {c.datingAccess ? "✓" : "–"}
+                  </button>
+                </td>
+              ))}
+            </tr>
           </tbody>
         </table>
       </div>
@@ -398,39 +457,11 @@ function WhoHasAccess({
 
 const cellStyle: CSSProperties = { padding: "6px 10px", borderBottom: "1px solid var(--border)" };
 
-function CodeRowEditor({
-  code,
-  row,
-  trips,
-  boards,
-}: {
-  code: string;
-  row: CodeRow;
-  trips: TripRow[];
-  boards: BoardRow[];
-}) {
+function CodeTableRow({ code, row }: { code: string; row: CodeRow }) {
   const upsert = useMutation(api.management.upsertAccessCode);
   const del = useMutation(api.management.deleteAccessCode);
   const [busy, setBusy] = useState(false);
   const [revealed, setRevealed] = useState(false);
-
-  async function updateAccess(tripIds: string[], boardIds: string[], datingAccess: boolean) {
-    setBusy(true);
-    try {
-      await upsert({
-        code,
-        id: row._id as any,
-        targetCode: row.code,
-        tripIds: tripIds as any,
-        boardIds: boardIds as any,
-        datingAccess,
-        name: row.name,
-        active: row.active,
-      });
-    } finally {
-      setBusy(false);
-    }
-  }
 
   async function toggleActive() {
     setBusy(true);
@@ -460,44 +491,34 @@ function CodeRowEditor({
   }
 
   return (
-    <div className="card" style={{ opacity: busy ? 0.6 : 1 }}>
-      <div className="ctop" style={{ marginBottom: 10, flexWrap: "wrap", rowGap: 8 }}>
-        <span className="cmain" style={{ fontSize: 16, minWidth: 0, wordBreak: "break-word" }}>
-          {row.name}
-        </span>
-        <span className="cmeta" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontFamily: "monospace", letterSpacing: 1 }}>
-            {revealed ? row.code : `${row.code.charAt(0)}${"•".repeat(8)}`}
-          </span>
-          <button
-            className="btn"
-            onClick={() => setRevealed((r) => !r)}
-            disabled={busy}
-            style={{ padding: "2px 10px", fontSize: 12 }}
-          >
-            {revealed ? "Hide" : "Reveal"}
-          </button>
-        </span>
-        <span style={{ marginLeft: "auto", display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button className="btn" aria-pressed={row.active} onClick={toggleActive} disabled={busy}>
-            {row.active ? "Active" : "Inactive"}
-          </button>
-          <button className="btn" onClick={remove} disabled={busy} style={{ color: "var(--danger)", borderColor: "var(--danger)" }}>
-            Delete
-          </button>
-        </span>
-      </div>
-      <AccessSections
-        trips={trips}
-        boards={boards}
-        tripIds={row.tripIds}
-        boardIds={row.boardIds}
-        datingAccess={row.datingAccess}
-        onTripsChange={(tripIds) => updateAccess(tripIds, row.boardIds, row.datingAccess)}
-        onBoardsChange={(boardIds) => updateAccess(row.tripIds, boardIds, row.datingAccess)}
-        onDatingAccessChange={(datingAccess) => updateAccess(row.tripIds, row.boardIds, datingAccess)}
-      />
-    </div>
+    <tr style={{ opacity: busy ? 0.6 : 1 }}>
+      <th scope="row" style={{ ...cellStyle, textAlign: "left", fontWeight: 500 }}>
+        {row.name}
+      </th>
+      <td style={{ ...cellStyle, fontFamily: "monospace", letterSpacing: 1 }}>
+        {revealed ? row.code : `${row.code.charAt(0)}${"•".repeat(8)}`}
+      </td>
+      <td style={cellStyle}>
+        <button
+          className="btn"
+          onClick={() => setRevealed((r) => !r)}
+          disabled={busy}
+          style={{ padding: "2px 10px", fontSize: 12 }}
+        >
+          {revealed ? "Hide" : "Reveal"}
+        </button>
+      </td>
+      <td style={cellStyle}>
+        <button className="btn" aria-pressed={row.active} onClick={toggleActive} disabled={busy}>
+          {row.active ? "Active" : "Inactive"}
+        </button>
+      </td>
+      <td style={cellStyle}>
+        <button className="btn" onClick={remove} disabled={busy} style={{ color: "var(--danger)", borderColor: "var(--danger)" }}>
+          Delete
+        </button>
+      </td>
+    </tr>
   );
 }
 
