@@ -19,12 +19,12 @@ interface ChatMessage {
 
 interface CoachingReport {
   scores: {
-    warmth: number;
-    listening: number;
-    play: number;
-    clarity: number;
-    curiosity: number;
-    closing: number;
+    warmth: number | null;
+    listening: number | null;
+    play: number | null;
+    clarity: number | null;
+    curiosity: number | null;
+    closing: number | null;
   };
   summary: string;
   strengths: string[];
@@ -508,13 +508,13 @@ function CoachingReportView({ report }: { report: CoachingReport }) {
           <div key={key} style={{ display: "grid", gap: 4 }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
               <span className="ctype">{label}</span>
-              <span>{report.scores[key]}/10</span>
+              <span>{report.scores[key] === null ? "—" : `${report.scores[key]}/10`}</span>
             </div>
             <div style={{ height: 8, borderRadius: 4, background: "var(--border)", overflow: "hidden" }}>
               <div
                 style={{
                   height: "100%",
-                  width: `${Math.max(0, Math.min(10, report.scores[key])) * 10}%`,
+                  width: `${Math.max(0, Math.min(10, report.scores[key] ?? 0)) * 10}%`,
                   background: "var(--accent-1)",
                 }}
               />
@@ -526,18 +526,20 @@ function CoachingReportView({ report }: { report: CoachingReport }) {
       <p className="sdek">{report.summary}</p>
 
       <div style={{ display: "grid", gap: 16, marginTop: 8 }}>
-        <div>
-          <div className="ctype" style={{ marginBottom: 6 }}>
-            Strengths
+        {report.strengths.length > 0 && (
+          <div>
+            <div className="ctype" style={{ marginBottom: 6 }}>
+              Strengths
+            </div>
+            <ul style={{ margin: 0, paddingLeft: 20 }}>
+              {report.strengths.map((s, i) => (
+                <li key={i} className="sdek">
+                  {s}
+                </li>
+              ))}
+            </ul>
           </div>
-          <ul style={{ margin: 0, paddingLeft: 20 }}>
-            {report.strengths.map((s, i) => (
-              <li key={i} className="sdek">
-                {s}
-              </li>
-            ))}
-          </ul>
-        </div>
+        )}
         <div>
           <div className="ctype" style={{ marginBottom: 6 }}>
             Try next time
