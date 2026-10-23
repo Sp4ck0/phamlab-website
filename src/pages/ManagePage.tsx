@@ -328,30 +328,32 @@ function WhoHasAccess({
     }
   }
 
-  function renderRow(label: string, id: string, kind: "tripIds" | "boardIds") {
-    return (
-      <div key={id} className="card" style={{ display: "grid", gap: 8 }}>
-        <span className="cmain" style={{ fontSize: 15 }}>
-          {label}
-        </span>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-          {codes.map((c) => (
-            <button
-              key={c._id}
-              type="button"
-              className="chip"
-              aria-pressed={c[kind].includes(id)}
-              disabled={busy}
-              style={{ opacity: c.active ? 1 : 0.5 }}
-              onClick={() => toggle(c, kind, id)}
-            >
-              {c.name}
-              {c.active ? "" : " (inactive)"}
-            </button>
-          ))}
-        </div>
-      </div>
-    );
+  function renderRows(items: { id: string; label: string }[], kind: "tripIds" | "boardIds") {
+    return items.map((item) => (
+      <tr key={item.id}>
+        <th scope="row" style={{ ...cellStyle, textAlign: "left", fontWeight: 500, whiteSpace: "nowrap" }}>
+          {item.label}
+        </th>
+        {codes.map((c) => {
+          const has = c[kind].includes(item.id);
+          return (
+            <td key={c._id} style={{ ...cellStyle, textAlign: "center", opacity: c.active ? 1 : 0.5 }}>
+              <button
+                type="button"
+                className="chip"
+                aria-pressed={has}
+                aria-label={`${c.name}: ${item.label}`}
+                disabled={busy}
+                style={{ minWidth: 32, justifyContent: "center" }}
+                onClick={() => toggle(c, kind, item.id)}
+              >
+                {has ? "✓" : "–"}
+              </button>
+            </td>
+          );
+        })}
+      </tr>
+    ));
   }
 
   return (
@@ -359,15 +361,42 @@ function WhoHasAccess({
       <h2 className="section-title" style={{ marginTop: 40 }}>
         Who has access
       </h2>
-      <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
-        <div className="ctype">Trips</div>
-        {trips.map((t) => renderRow(tripLabel(t), t._id, "tripIds"))}
-        {boards.length > 0 && <div className="ctype">Boards</div>}
-        {boards.map((b) => renderRow(b.name, b._id, "boardIds"))}
+      <div style={{ overflowX: "auto", marginTop: 14 }}>
+        <table style={{ borderCollapse: "collapse", fontSize: 14 }}>
+          <thead>
+            <tr>
+              <th style={cellStyle} />
+              {codes.map((c) => (
+                <th key={c._id} scope="col" style={{ ...cellStyle, fontWeight: 500, opacity: c.active ? 1 : 0.5 }}>
+                  {c.name}
+                  {c.active ? "" : " (inactive)"}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th colSpan={codes.length + 1} className="ctype" style={{ ...cellStyle, textAlign: "left" }}>
+                Trips
+              </th>
+            </tr>
+            {renderRows(trips.map((t) => ({ id: t._id, label: tripLabel(t) })), "tripIds")}
+            {boards.length > 0 && (
+              <tr>
+                <th colSpan={codes.length + 1} className="ctype" style={{ ...cellStyle, textAlign: "left" }}>
+                  Boards
+                </th>
+              </tr>
+            )}
+            {renderRows(boards.map((b) => ({ id: b._id, label: b.name })), "boardIds")}
+          </tbody>
+        </table>
       </div>
     </>
   );
 }
+
+const cellStyle: CSSProperties = { padding: "6px 10px", borderBottom: "1px solid var(--border)" };
 
 function CodeRowEditor({
   code,
