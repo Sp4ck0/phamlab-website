@@ -178,14 +178,17 @@ export function TripMap({ points, route, weatherStops }: Props) {
   // Shared by pins and pills: close whatever is open, then show this one.
   function openInfo(
     map: google.maps.Map,
-    html: string,
+    { header, body }: { header: string; body: string },
     at: google.maps.Marker | google.maps.LatLngLiteral,
     liftPx = 0,
   ) {
     const info = infoWindow.current;
     if (!info) return;
     info.close();
-    info.setContent(html);
+    // The title goes in the header row (shared with the close button) instead
+    // of the body, which otherwise leaves an empty strip above it.
+    info.setHeaderContent(header);
+    info.setContent(body);
     info.setOptions({ pixelOffset: new google.maps.Size(0, -liftPx) });
     if (at instanceof google.maps.Marker) info.open({ map, anchor: at });
     else {
@@ -241,11 +244,12 @@ function infoHtml(title: string, subtitle: string, stop?: WeatherStop) {
         `<div style="font:400 12px system-ui;color:#52514e">${escapeHtml(fmtShort(d.date))} ${weatherIcon(d.weather.code).emoji} ${escapeHtml(weatherText(d.weather))}</div>`,
     )
     .join("");
-  return (
-    `<div style="font:600 13px system-ui;color:#0b0b0b">${escapeHtml(title)}</div>` +
-    (subtitle ? `<div style="font:400 12px system-ui;color:#52514e">${escapeHtml(subtitle)}</div>` : "") +
-    (rows ? `<div style="margin-top:4px">${rows}</div>` : "")
-  );
+  return {
+    header: `<div style="font:600 13px system-ui;color:#0b0b0b">${escapeHtml(title)}</div>`,
+    body:
+      (subtitle ? `<div style="font:400 12px system-ui;color:#52514e">${escapeHtml(subtitle)}</div>` : "") +
+      (rows ? `<div style="margin-top:${subtitle ? 4 : 0}px">${rows}</div>` : ""),
+  };
 }
 
 // A real DOM element on the map (not a marker label), so it can receive clicks
