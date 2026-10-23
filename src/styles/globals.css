@@ -432,6 +432,8 @@ footer code{background:var(--chip-bg);padding:2px 6px;border-radius:4px;color:va
 }
 .map-weather-pill:hover{box-shadow:0 2px 8px rgba(0,0,0,.4)}
 .map-weather-pill:focus-visible{outline:2px solid #2a78d6;outline-offset:2px}
+/* Collides with a longer stay at this zoom; visibility (not display) keeps its size measurable. */
+.map-weather-pill.is-hidden{visibility:hidden;pointer-events:none}
 /* Includes a historical average, not purely a forecast. */
 .map-weather-pill.is-typical{border:1px dashed #898781;color:#52514e;font-style:italic;font-weight:500}
 .map-legend{display:flex;flex-wrap:wrap;gap:14px;padding:14px 18px;border-top:1px solid var(--gridline)}

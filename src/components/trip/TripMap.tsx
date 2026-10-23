@@ -11,6 +11,18 @@ const ARROW_SPACING_PX = 28;
 // Weather pills float this far above their city pin (matches .map-weather-pill's transform);
 // the info window is lifted by the same amount plus the pill's height so it opens above the pill.
 const PILL_INFO_OFFSET_PX = 42;
+const PILL_LIFT_PX = 14; // gap between pill and pin; matches .map-weather-pill's transform
+const PILL_GAP_PX = 4; // minimum clear space between pills before one is hidden
+const COMPACT_ZOOM_MAX = 6; // at or below this zoom, pills show just emoji + high
+
+interface PillEntry {
+  el: HTMLElement;
+  overlay: google.maps.OverlayView;
+  position: google.maps.LatLngLiteral;
+  priority: number;
+  full: string;
+  compact: string;
+}
 
 interface Props {
   points: MapPointData[];
@@ -157,22 +169,79 @@ export function TripMap({ points, route, weatherStops }: Props) {
     weatherOverlays.current.forEach((o) => o.setMap(null));
     weatherOverlays.current = [];
 
+    const entries: PillEntry[] = [];
+
+    // Zoomed out, full labels pile on top of each other. Use a compact label
+    // below COMPACT_ZOOM_MAX, then hide any pill that would collide with one
+    // already placed, longest stays first. Hidden cities still show their
+    // weather when you click the city pin.
+    function declutter() {
+      const projection = entries[0]?.overlay.getProjection();
+      if (!projection) return;
+      const compact = (map?.getZoom() ?? 0) <= COMPACT_ZOOM_MAX;
+      entries.forEach((e) => {
+        e.el.textContent = compact ? e.compact : e.full;
+      });
+      const placed: { l: number; r: number; t: number; b: number }[] = [];
+      [...entries]
+        .sort((a, b) => b.priority - a.priority)
+        .forEach((e) => {
+          const p = projection.fromLatLngToDivPixel(new google.maps.LatLng(e.position));
+          if (!p) return;
+          const w = e.el.offsetWidth;
+          const h = e.el.offsetHeight;
+          const box = {
+            l: p.x - w / 2 - PILL_GAP_PX,
+            r: p.x + w / 2 + PILL_GAP_PX,
+            t: p.y - PILL_LIFT_PX - h - PILL_GAP_PX,
+            b: p.y - PILL_LIFT_PX + PILL_GAP_PX,
+          };
+          const collides = placed.some((q) => box.l < q.r && box.r > q.l && box.t < q.b && box.b > q.t);
+          e.el.classList.toggle("is-hidden", collides);
+          if (!collides) placed.push(box);
+        });
+    }
+    let queued = false;
+    let disposed = false;
+    const scheduleDeclutter = () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        if (!disposed) declutter();
+      });
+    };
+
     const stopById = new Map(weatherStops.map((s) => [s.id, s]));
     geocodedWeather.forEach((p) => {
       const stop = stopById.get(p.id);
       if (!stop) return;
       const s = summarizeStay(stop.days.map((d) => d.weather));
       const position = { lat: p.lat, lng: p.lng };
+      const range = `${temp(s.tMax)}°/${temp(s.tMin)}°`;
       const pill = document.createElement("button");
       pill.type = "button";
       pill.className = `map-weather-pill${s.typical ? " is-typical" : ""}`;
-      pill.textContent = `${s.emoji} ${temp(s.tMax)}°/${temp(s.tMin)}°${s.count > 1 ? ` · ${s.count}d` : ""}`;
       pill.setAttribute("aria-label", `${stop.label} weather, ${s.count} ${s.count === 1 ? "day" : "days"}${s.typical ? ", includes historical averages" : ""}`);
       pill.addEventListener("click", () => openInfo(map, infoHtml(stop.label, "", stop), position, PILL_INFO_OFFSET_PX));
-      const overlay = createPillOverlay(position, pill);
+      const overlay = createPillOverlay(position, pill, scheduleDeclutter);
+      const entry: PillEntry = {
+        el: pill,
+        overlay,
+        position,
+        priority: s.count,
+        full: `${s.emoji} ${range}${s.count > 1 ? ` · ${s.count}d` : ""}`,
+        compact: `${s.emoji} ${temp(s.tMax)}°`,
+      };
+      pill.textContent = entry.full;
+      entries.push(entry);
       overlay.setMap(map);
       weatherOverlays.current.push(overlay);
     });
+
+    return () => {
+      disposed = true;
+    };
   }, [mapReady, geocodedWeather, weatherStops]);
 
   // Shared by pins and pills: close whatever is open, then show this one.
@@ -259,7 +328,11 @@ function infoHtml(title: string, subtitle: string, stop?: WeatherStop) {
 
 // A real DOM element on the map (not a marker label), so it can receive clicks
 // and keyboard focus. Positioned above its lat/lng by CSS.
-function createPillOverlay(position: google.maps.LatLngLiteral, el: HTMLElement): google.maps.OverlayView {
+function createPillOverlay(
+  position: google.maps.LatLngLiteral,
+  el: HTMLElement,
+  onDraw: () => void,
+): google.maps.OverlayView {
   class PillOverlay extends google.maps.OverlayView {
     onAdd() {
       google.maps.OverlayView.preventMapHitsAndGesturesFrom(el);
@@ -270,6 +343,7 @@ function createPillOverlay(position: google.maps.LatLngLiteral, el: HTMLElement)
       if (!p) return;
       el.style.left = `${p.x}px`;
       el.style.top = `${p.y}px`;
+      onDraw();
     }
     onRemove() {
       el.remove();
