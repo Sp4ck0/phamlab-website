@@ -291,15 +291,35 @@ export interface Gap {
  * plus a "Plan" gap for days with no acts/flights that aren't pure travel
  * days. A booking the data marks `needed` stays listed after it's ticked
  * off (with `done: true`) so it can be shown as completed and un-ticked.
+ * Back-to-back blank days in the same place collapse into one "Plan" row
+ * spanning the date range (e.g. "Fri Nov 20 – Sun Nov 22"). Likewise a hotel
+ * that has an explicit entry on consecutive days (its check-in day, then the
+ * day after) becomes one row covering both, ticked together.
  */
 export function computeGaps(resolvedDays: ResolvedDay[], ticks: Record<string, Status>): Gap[] {
   const gaps: Gap[] = [];
-  resolvedDays.forEach((d) => {
+  let openPlan: { gap: Gap; startLabel: string } | null = null;
+  const openHotels = new Map<string, { gap: Gap; startLabel: string; dayIndex: number }>();
+  resolvedDays.forEach((d, di) => {
     d.hotels.forEach((h) => {
       if (h.carried) return;
       const status = statusOf(ticks, h.src, h.status);
       if (status === "needed" || h.status === "needed") {
-        gaps.push({ who: h.who, kind: "Hotel", date: d.date, dateLabel: fmtDow(d._d), text: `${d.city}${d.to ? " → " + d.to : ""}`, ids: [h.src], done: status === "booked" });
+        // The city the hotel is in: on a transition day the incoming hotel is
+        // at the destination, an outgoing one is still at the origin.
+        const text = h.checkIn && d.to ? d.to : d.city;
+        const key = `${h.name}|${whoKey(h.who)}`;
+        const prev = openHotels.get(key);
+        if (prev && prev.dayIndex === di - 1) {
+          prev.gap.ids!.push(h.src);
+          prev.gap.done = prev.gap.done && status === "booked";
+          prev.gap.dateLabel = `${prev.startLabel} – ${fmtDow(d._d)}`;
+          prev.dayIndex = di;
+        } else {
+          const gap: Gap = { who: h.who, kind: "Hotel", date: d.date, dateLabel: fmtDow(d._d), text, ids: [h.src], done: status === "booked" };
+          gaps.push(gap);
+          openHotels.set(key, { gap, startLabel: gap.dateLabel, dayIndex: di });
+        }
       }
     });
     d.flights.forEach((f) => {
@@ -311,7 +331,16 @@ export function computeGaps(resolvedDays: ResolvedDay[], ticks: Record<string, S
     });
     const blank = !(d.acts && d.acts.length) && !(d.flights && d.flights.length) && d.tag !== "transit";
     if (blank) {
-      gaps.push({ who: "all", kind: "Plan", date: d.date, dateLabel: fmtDow(d._d), text: `${d.city}${d.to ? " → " + d.to : ""}`, done: false });
+      const text = `${d.city}${d.to ? " → " + d.to : ""}`;
+      if (openPlan && openPlan.gap.text === text) {
+        openPlan.gap.dateLabel = `${openPlan.startLabel} – ${fmtDow(d._d)}`;
+      } else {
+        const gap: Gap = { who: "all", kind: "Plan", date: d.date, dateLabel: fmtDow(d._d), text, done: false };
+        gaps.push(gap);
+        openPlan = { gap, startLabel: gap.dateLabel };
+      }
+    } else {
+      openPlan = null;
     }
   });
   return gaps;
