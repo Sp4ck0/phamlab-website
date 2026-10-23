@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "@convex/api";
 import { TripPage } from "./pages/TripPage";
+import { TripPrintPage } from "./pages/TripPrintPage";
 import { UnlockPage } from "./pages/UnlockPage";
 import { LoginPage } from "./pages/LoginPage";
 import { ManagePage } from "./pages/ManagePage";
@@ -33,6 +34,7 @@ export default function App() {
       <Route path="/unlock" element={<UnlockPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/trip/:slug" element={<TripPage />} />
+      <Route path="/trip/:slug/print" element={<TripPrintPage />} />
       <Route path="/kanban" element={<KanbanBoardsPage />} />
       <Route path="/kanban/:boardId" element={<KanbanPage />} />
       <Route path="/manage" element={<ManagePage />} />
