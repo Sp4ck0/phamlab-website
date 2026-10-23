@@ -1,6 +1,6 @@
 // Ported 1:1 from the original static site's trip.js — the pure logic
 // functions, decoupled from DOM rendering.
-import type { Act, Day, Flight, FlightLeg, Group, Hotel, LegColor, ResolvedDay, Status, Trip, Who } from "./types";
+import type { Act, Day, Flight, FlightLeg, Group, Hotel, LegColor, ResolvedDay, Status, TransportMode, Trip, Who } from "./types";
 
 // Normalizes a legacy plain-string activity and a rich {tag,time,text}
 // activity to the same shape for rendering.
@@ -155,7 +155,11 @@ export function mergeHotelsByName(hotels: ResolvedDay["hotels"], ticks: Record<s
 // route + detail) — merge those into one card/box instead of repeating it
 // once per person, same principle as mergeHotelsByName above, now applied
 // to flights too.
+const MODE_LABEL: Record<TransportMode, string> = { flight: "Flight", train: "Train", bus: "Bus", ferry: "Ferry" };
+export const modeLabel = (mode?: TransportMode) => MODE_LABEL[mode || "flight"];
+
 export interface FlightGroup {
+  mode?: TransportMode;
   route: string;
   detail?: string;
   title?: string;
@@ -179,7 +183,7 @@ export function mergeFlightsByRoute(
     const id = flightId(date, f);
     const ids = Array.isArray(f.who) ? f.who : [f.who];
     const status = statusOf(ticks, id, f.status);
-    const key = `${f.route}|${f.detail || ""}`;
+    const key = `${f.mode || "flight"}|${f.route}|${f.detail || ""}`;
     if (byKey.has(key)) {
       const g = byKey.get(key)!;
       g.who.push(...ids);
@@ -187,6 +191,7 @@ export function mergeFlightsByRoute(
       g.statuses.push(status);
     } else {
       const g: FlightGroup = {
+        mode: f.mode,
         route: f.route,
         detail: f.detail,
         title: f.title,
@@ -273,7 +278,7 @@ export function fmtDow(d: Date) {
 
 export interface Gap {
   who: Who;
-  kind: "Hotel" | "Flight" | "Plan";
+  kind: "Hotel" | "Flight" | "Train" | "Bus" | "Ferry" | "Plan";
   date: string;
   dateLabel: string;
   text: string;
@@ -326,7 +331,7 @@ export function computeGaps(resolvedDays: ResolvedDay[], ticks: Record<string, S
       const id = flightId(d.date, f);
       const status = statusOf(ticks, id, f.status);
       if (status === "needed" || f.status === "needed") {
-        gaps.push({ who: f.who, kind: "Flight", date: d.date, dateLabel: fmtDow(d._d), text: f.route, ids: [id], done: status === "booked" });
+        gaps.push({ who: f.who, kind: modeLabel(f.mode) as Gap["kind"], date: d.date, dateLabel: fmtDow(d._d), text: f.route, ids: [id], done: status === "booked" });
       }
     });
     // A day that's already over can't be planned any more, so it's not a gap.
