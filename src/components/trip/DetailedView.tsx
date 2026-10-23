@@ -35,7 +35,6 @@ export function DetailedView({
           <DayCard
             key={d.date}
             day={d}
-            dayIndex={i}
             dayNumber={i}
             legColor={legColors[i]}
             groups={groups}

@@ -10,9 +10,8 @@ import { TripMap } from "../components/trip/TripMap";
 import type { TripView } from "../components/trip/ViewToggle";
 import { useTrip } from "../hooks/useTrip";
 import { useResolvedDays } from "../hooks/useResolvedDays";
-import { useTicks } from "../hooks/useTicks";
+import { useChecks } from "../hooks/useChecks";
 import { useTripGaps } from "../hooks/useTripGaps";
-import { useActionItems } from "../hooks/useActionItems";
 import { assignLegColors } from "../lib/tripLogic";
 import { derivePoints } from "../lib/mapPoints";
 import { NotFoundOrDenied } from "./NotFoundOrDenied";
@@ -28,9 +27,8 @@ export function TripPage() {
 
   const resolvedDays = useResolvedDays(trip);
   const legColors = assignLegColors(resolvedDays);
-  const { ticks, toggle } = useTicks(slug || "");
+  const { ticks, toggleTick: toggle, done, toggleActionItem } = useChecks(slug || "");
   const gaps = useTripGaps(resolvedDays, ticks);
-  const { done, toggle: toggleActionItem } = useActionItems(slug || "");
 
   function setView(v: TripView) {
     setSearchParams(
@@ -114,7 +112,6 @@ export function TripPage() {
       <ActionItems
         gaps={gaps}
         groups={trip.groups}
-        ticks={ticks}
         onToggleGap={toggle}
         items={trip.actionItems || []}
         done={done}
@@ -122,8 +119,8 @@ export function TripPage() {
       />
 
       <footer>
-        Trip content is stored in Convex — ask to have a change made rather than editing code. Quick ticks are
-        stored in localStorage, per device.
+        Trip content is stored in Convex — ask to have a change made rather than editing code. Check-offs are saved
+        for everyone with access to this trip.
       </footer>
     </PageShell>
   );
