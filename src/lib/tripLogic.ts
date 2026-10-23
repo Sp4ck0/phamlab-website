@@ -277,8 +277,8 @@ export interface Gap {
   date: string;
   dateLabel: string;
   text: string;
-  // Tick id(s) this gap resolves when marked booked — absent for "Plan"
-  // gaps, which aren't a simple booked/needed toggle.
+  // Tick id(s) this gap resolves when marked booked (or, for a "Plan" gap,
+  // dismissed).
   ids?: string[];
   // True once the booking has been ticked off in the UI — such a gap stays
   // in the list (shown under "Completed") instead of disappearing. A booking
@@ -296,7 +296,7 @@ export interface Gap {
  * that has an explicit entry on consecutive days (its check-in day, then the
  * day after) becomes one row covering both, ticked together.
  */
-export function computeGaps(resolvedDays: ResolvedDay[], ticks: Record<string, Status>): Gap[] {
+export function computeGaps(resolvedDays: ResolvedDay[], ticks: Record<string, Status>, today: string): Gap[] {
   const gaps: Gap[] = [];
   let openPlan: { gap: Gap; startLabel: string } | null = null;
   const openHotels = new Map<string, { gap: Gap; startLabel: string; dayIndex: number }>();
@@ -329,13 +329,20 @@ export function computeGaps(resolvedDays: ResolvedDay[], ticks: Record<string, S
         gaps.push({ who: f.who, kind: "Flight", date: d.date, dateLabel: fmtDow(d._d), text: f.route, ids: [id], done: status === "booked" });
       }
     });
-    const blank = !(d.acts && d.acts.length) && !(d.flights && d.flights.length) && d.tag !== "transit";
+    // A day that's already over can't be planned any more, so it's not a gap.
+    const blank = !(d.acts && d.acts.length) && !(d.flights && d.flights.length) && d.tag !== "transit" && d.date >= today;
     if (blank) {
       const text = `${d.city}${d.to ? " → " + d.to : ""}`;
+      // One dismiss id per blank day, so merge boundaries shifting later
+      // (a day gets planned) never loses another day's dismissal.
+      const id = `${d.date}|p|${text}`;
+      const dismissed = statusOf(ticks, id, "needed") === "booked";
       if (openPlan && openPlan.gap.text === text) {
+        openPlan.gap.ids!.push(id);
+        openPlan.gap.done = openPlan.gap.done && dismissed;
         openPlan.gap.dateLabel = `${openPlan.startLabel} – ${fmtDow(d._d)}`;
       } else {
-        const gap: Gap = { who: "all", kind: "Plan", date: d.date, dateLabel: fmtDow(d._d), text, done: false };
+        const gap: Gap = { who: "all", kind: "Plan", date: d.date, dateLabel: fmtDow(d._d), text, ids: [id], done: dismissed };
         gaps.push(gap);
         openPlan = { gap, startLabel: gap.dateLabel };
       }
