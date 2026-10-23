@@ -12,7 +12,8 @@ function downloadText(filename: string, text: string, mime: string) {
 }
 
 export function downloadMarkdown(slug: string, it: Itinerary) {
-  downloadText(`${slug}-itinerary.md`, toMarkdown(it), "text/markdown;charset=utf-8");
+  const suffix = it.fileSuffix ? `-${it.fileSuffix}` : "";
+  downloadText(`${slug}-itinerary${suffix}.md`, toMarkdown(it), "text/markdown;charset=utf-8");
 }
 
 // Writes rich text (pastes formatted into Notes/Docs/Gmail) and Markdown
