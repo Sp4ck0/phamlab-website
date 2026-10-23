@@ -24,9 +24,13 @@ export interface FlightLeg {
   meta?: string;
 }
 
+export type TransportMode = "flight" | "train" | "bus" | "ferry";
+
 export interface Flight {
   who: Who;
   route: string;
+  // Absent means "flight" (rows predate this field).
+  mode?: TransportMode;
   detail?: string;
   status: Status;
   // Rich multi-leg presentation — when `legs` is present the flight

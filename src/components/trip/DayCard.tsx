@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { ActionItem, Group, LegColor, ResolvedDay, Status } from "../../lib/types";
-import { DOW, MON, actParts, gapLabel, mergeFlightsByRoute, mergeHotelsByName, statusOf } from "../../lib/tripLogic";
+import { DOW, MON, actParts, gapLabel, mergeFlightsByRoute, mergeHotelsByName, modeLabel, statusOf } from "../../lib/tripLogic";
 import type { HotelGroup } from "../../lib/tripLogic";
 import { WhoPill } from "./WhoPill";
 import { StatusToggle } from "./StatusToggle";
@@ -145,7 +145,7 @@ export function DayCard({
                     <div className={`card ${status === "needed" ? "miss" : ""}`} key={`fc${gi}`}>
                       <StatusToggle ids={g.ids} status={status} onToggle={onToggle} />
                       <div className="ctop">
-                        <span className="ctype">Flight</span>
+                        <span className="ctype">{modeLabel(g.mode)}</span>
                         <WhoPill who={uniqueWho.length === 1 ? uniqueWho[0] : uniqueWho} groups={groups} date={d.date} />
                       </div>
                       <div className={`cmain ${status === "needed" ? "todo" : ""}`}>{g.route}</div>

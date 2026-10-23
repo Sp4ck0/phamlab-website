@@ -42,7 +42,7 @@ export function TripHeader({
     { value: String(days.length), label: `Days` },
     { value: String(cities.size), label: "Cities / stops" },
     highlightStat || { value: renderCountdown(days), label: "Countdown" },
-    { value: String(flightLegs), label: "Flight legs" },
+    { value: String(flightLegs), label: "Travel legs" },
   ];
 
   return (
