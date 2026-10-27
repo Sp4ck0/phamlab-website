@@ -150,6 +150,13 @@ export function DayCard({
                       </div>
                       <div className={`cmain ${status === "needed" ? "todo" : ""}`}>{g.route}</div>
                       <div className="cmeta">{g.detail || ""}</div>
+                      {g.url && (
+                        <div className="cmeta">
+                          <a href={g.url} target="_blank" rel="noopener">
+                            {new URL(g.url).hostname.replace(/^(www|us)\./, "")} ↗
+                          </a>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

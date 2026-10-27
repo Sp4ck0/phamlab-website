@@ -39,6 +39,7 @@ export interface Flight {
   price?: string;
   legs?: FlightLeg[];
   layovers?: string[];
+  url?: string;
 }
 
 export interface Hotel {

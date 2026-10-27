@@ -166,6 +166,7 @@ export interface FlightGroup {
   price?: string;
   legs?: FlightLeg[];
   layovers?: string[];
+  url?: string;
   who: string[];
   ids: string[];
   statuses: Status[];
@@ -198,6 +199,7 @@ export function mergeFlightsByRoute(
         price: f.price,
         legs: f.legs,
         layovers: f.layovers,
+        url: f.url,
         who: [...ids],
         ids: [id],
         statuses: [status],
