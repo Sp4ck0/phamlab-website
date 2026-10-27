@@ -305,9 +305,19 @@ export function computeGaps(resolvedDays: ResolvedDay[], ticks: Record<string, S
   const gaps: Gap[] = [];
   let openPlan: { gap: Gap; startLabel: string } | null = null;
   const openHotels = new Map<string, { gap: Gap; startLabel: string; dayIndex: number }>();
+  const planSpans: { gap: Gap; first: number; last: number }[] = [];
   resolvedDays.forEach((d, di) => {
     d.hotels.forEach((h) => {
-      if (h.carried) return;
+      if (h.carried) {
+        // Carried days only stretch the label through to checkout; the row's
+        // ids and done state stay tied to the explicit entries.
+        const open = openHotels.get(`${h.name}|${whoKey(h.who)}`);
+        if (open && open.dayIndex === di - 1) {
+          open.gap.dateLabel = `${open.startLabel} – ${fmtDow(d._d)}`;
+          open.dayIndex = di;
+        }
+        return;
+      }
       const status = statusOf(ticks, h.src, h.status);
       if (status === "needed" || h.status === "needed") {
         // The city the hotel is in: on a transition day the incoming hotel is
@@ -346,14 +356,26 @@ export function computeGaps(resolvedDays: ResolvedDay[], ticks: Record<string, S
         openPlan.gap.ids!.push(id);
         openPlan.gap.done = openPlan.gap.done && dismissed;
         openPlan.gap.dateLabel = `${openPlan.startLabel} – ${fmtDow(d._d)}`;
+        planSpans[planSpans.length - 1].last = di;
       } else {
         const gap: Gap = { who: "all", kind: "Plan", date: d.date, dateLabel: fmtDow(d._d), text, ids: [id], done: dismissed };
         gaps.push(gap);
         openPlan = { gap, startLabel: gap.dateLabel };
+        planSpans.push({ gap, first: di, last: di });
       }
     } else {
       openPlan = null;
     }
+  });
+  // Plan rows only cover the blank days, but the stay runs from the move day
+  // that arrives in the city through the move day that leaves it.
+  planSpans.forEach(({ gap, first, last }) => {
+    const city = resolvedDays[first].city;
+    const arrive = resolvedDays[first - 1];
+    const depart = resolvedDays[last + 1];
+    const start = arrive && arrive.to === city ? arrive : resolvedDays[first];
+    const end = depart && depart.city === city && depart.to ? depart : resolvedDays[last];
+    if (start !== end) gap.dateLabel = `${fmtDow(start._d)} – ${fmtDow(end._d)}`;
   });
   return gaps;
 }
