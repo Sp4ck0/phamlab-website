@@ -1,11 +1,11 @@
 import { useParams } from "react-router-dom";
+import type { RefObject } from "react";
 import type { Day, Group, HighlightStat } from "../../lib/types";
 import { assignLegColors, deriveRoute, renderCountdown } from "../../lib/tripLogic";
 import { ExportMenu } from "./ExportMenu";
 import { RouteStepper } from "./RouteStepper";
 import { Roster } from "./Roster";
 import { StatTiles } from "./StatTiles";
-import { ViewToggle, type TripView } from "./ViewToggle";
 
 export function TripHeader({
   kicker,
@@ -15,8 +15,7 @@ export function TripHeader({
   days,
   highlightStat,
   groups,
-  view,
-  onViewChange,
+  filterRef,
   onlyGaps,
   onOnlyGapsChange,
 }: {
@@ -27,8 +26,7 @@ export function TripHeader({
   days: Day[];
   highlightStat?: HighlightStat;
   groups: Group[];
-  view: TripView;
-  onViewChange: (v: TripView) => void;
+  filterRef: RefObject<HTMLButtonElement | null>;
   onlyGaps: boolean;
   onOnlyGapsChange: (v: boolean) => void;
 }) {
@@ -59,12 +57,9 @@ export function TripHeader({
       <Roster groups={groups} />
       <StatTiles stats={stats} />
       <div className="view-row">
-        <ViewToggle view={view} onChange={onViewChange} />
-        {view === "detailed" && (
-          <button className="btn" aria-pressed={onlyGaps} onClick={() => onOnlyGapsChange(!onlyGaps)}>
-            {onlyGaps ? "Show all days" : "Only gaps"}
-          </button>
-        )}
+        <button ref={filterRef} type="button" className="btn" aria-pressed={onlyGaps} onClick={() => onOnlyGapsChange(!onlyGaps)}>
+          {onlyGaps ? "Show all days" : "Only gaps"}
+        </button>
         {slug && <ExportMenu slug={slug} />}
       </div>
     </header>

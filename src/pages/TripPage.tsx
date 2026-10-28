@@ -1,13 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useMemo, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
 import { PageShell } from "../components/layout/PageShell";
 import { TripHeader } from "../components/trip/TripHeader";
 import { AlertsPanel } from "../components/trip/AlertsPanel";
-import { OverviewList } from "../components/trip/OverviewList";
 import { DetailedView } from "../components/trip/DetailedView";
 import { ActionItems } from "../components/trip/ActionItems";
 import { TripMap } from "../components/trip/TripMap";
-import type { TripView } from "../components/trip/ViewToggle";
+import { ItineraryStart, TripEntryBoundary } from "../components/trip/TripEntryBoundary";
 import { useTrip } from "../hooks/useTrip";
 import { useResolvedDays } from "../hooks/useResolvedDays";
 import { useChecks } from "../hooks/useChecks";
@@ -21,13 +20,15 @@ import { derivePoints, deriveRouteAddresses, deriveWeatherStops } from "../lib/m
 import { NotFoundOrDenied } from "./NotFoundOrDenied";
 
 export function TripPage() {
+  return <TripEntryBoundary><TripPageEntry /></TripEntryBoundary>;
+}
+
+function TripPageEntry() {
   const { slug } = useParams<{ slug: string }>();
   const { trip, isLoading } = useTrip(slug);
-  const [searchParams, setSearchParams] = useSearchParams();
-  const view: TripView = searchParams.get("view") === "detailed" ? "detailed" : "overview";
 
   const [onlyGaps, setOnlyGaps] = useState(false);
-  const [pendingScrollTo, setPendingScrollTo] = useState<string | null>(null);
+  const filterRef = useRef<HTMLButtonElement>(null);
 
   const resolvedDays = useResolvedDays(trip);
   const legColors = assignLegColors(resolvedDays);
@@ -38,32 +39,6 @@ export function TripPage() {
   const { addItem, updateItem, removeItem } = useActionItemEdits(slug || "");
   const weather = useTripWeather(slug);
   const weatherStops = useMemo(() => deriveWeatherStops(resolvedDays, weather), [resolvedDays, weather]);
-
-  function setView(v: TripView) {
-    setSearchParams(
-      (prev) => {
-        const p = new URLSearchParams(prev);
-        p.set("view", v);
-        return p;
-      },
-      { replace: true }
-    );
-  }
-
-  function jumpToDay(dayId: string) {
-    setView("detailed");
-    setPendingScrollTo(dayId);
-  }
-
-  // Scroll to the requested day only after the Detailed view has actually
-  // rendered (switching view is a re-render, not a synchronous DOM change).
-  useEffect(() => {
-    if (view === "detailed" && pendingScrollTo) {
-      const el = document.getElementById(pendingScrollTo);
-      el?.scrollIntoView({ behavior: "smooth", block: "start" });
-      setPendingScrollTo(null);
-    }
-  }, [view, pendingScrollTo]);
 
   if (isLoading) {
     return (
@@ -91,17 +66,14 @@ export function TripPage() {
         days={trip.days}
         highlightStat={trip.highlightStat}
         groups={trip.groups}
-        view={view}
-        onViewChange={setView}
+        filterRef={filterRef}
         onlyGaps={onlyGaps}
         onOnlyGapsChange={setOnlyGaps}
       />
 
       <AlertsPanel conflicts={trip.conflicts} />
 
-      {view === "overview" ? (
-        <OverviewList days={resolvedDays} legColors={legColors} weather={weather} onJump={jumpToDay} />
-      ) : (
+      <ItineraryStart key={trip._id}>
         <DetailedView
           days={resolvedDays}
           legColors={legColors}
@@ -110,12 +82,13 @@ export function TripPage() {
           ticks={ticks}
           onlyGaps={onlyGaps}
           onToggle={toggle}
-          onJump={jumpToDay}
+          onOnlyGapsChange={setOnlyGaps}
+          filterRef={filterRef}
           actionItems={trip.actionItems || []}
           actionItemsDone={done}
           onToggleActionItem={toggleActionItem}
         />
-      )}
+      </ItineraryStart>
 
       <TripMap
         points={derivePoints(resolvedDays, trip.mapPoints)}
