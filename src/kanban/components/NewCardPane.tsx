@@ -131,7 +131,7 @@ export function NewCardPane({ board, draft, open, onChange, onMinimize, onExpand
               aria-label="Collapse pane"
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
-              exit={{ x: '100%' }}
+              exit={{ opacity: 0, transition: { duration: 0.08 } }}
               transition={{ type: 'spring', stiffness: 320, damping: 34 }}
             >
               ›
@@ -142,7 +142,7 @@ export function NewCardPane({ board, draft, open, onChange, onMinimize, onExpand
 
       {draft && !open && (
         <button className="newcard-tab" onClick={onExpand} aria-label="Reopen draft">
-          ✎ Draft{draft.title.trim() ? `: ${draft.title.trim().slice(0, 24)}` : ''}
+          ‹
         </button>
       )}
     </>

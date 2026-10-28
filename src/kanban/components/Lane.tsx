@@ -9,9 +9,11 @@ interface Props {
   board: Board;
   onOpen: (id: string) => void;
   onStartAdd: (lane: LaneId) => void;
+  /** True when the in-progress draft is targeting this column. */
+  hasDraft: boolean;
 }
 
-export function Lane({ lane, board, onOpen, onStartAdd }: Props) {
+export function Lane({ lane, board, onOpen, onStartAdd, hasDraft }: Props) {
   const meta = boardLanes(board).find((l) => l.id === lane)!;
   const { ref, isDropTarget } = useDroppable({
     id: lane,
@@ -43,8 +45,8 @@ export function Lane({ lane, board, onOpen, onStartAdd }: Props) {
 
         {visible.length === 0 && <p className="lane__empty">Nothing here yet.</p>}
 
-        <button className="lane__add" onClick={() => onStartAdd(lane)}>
-          + write one
+        <button className="lane__add" data-draft={hasDraft || undefined} onClick={() => onStartAdd(lane)}>
+          {hasDraft ? 'Go to draft ›' : '+ write one'}
         </button>
       </div>
     </section>
