@@ -1,5 +1,6 @@
-import { Link } from "react-router-dom";
-import { useQuery } from "convex/react";
+import { Link, useNavigate } from "react-router-dom";
+import { useConvexAuth, useQuery } from "convex/react";
+import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "@convex/api";
 import { PageShell } from "../components/layout/PageShell";
 import { useAccessCode } from "../hooks/useAccessCode";
@@ -11,10 +12,19 @@ const UNITS: { value: TempUnit; label: string }[] = [
 ];
 
 export function SettingsPage() {
-  const { code } = useAccessCode();
+  const { code, clear } = useAccessCode();
   const { tempUnit, setTempUnit } = useSettings();
+  const { isAuthenticated } = useConvexAuth();
+  const { signOut } = useAuthActions();
+  const navigate = useNavigate();
   // undefined = loading, null = no grant (no code and not logged in).
   const settings = useQuery(api.settings.getSettings, code ? { code } : {});
+
+  async function handleLogout() {
+    clear();
+    if (isAuthenticated) await signOut();
+    navigate("/unlock");
+  }
 
   if (settings === undefined) {
     return (
@@ -63,6 +73,15 @@ export function SettingsPage() {
               </button>
             ))}
           </div>
+        </div>
+        <div className="setting-row">
+          <div>
+            <div className="setting-label">Account</div>
+            <div className="sdek">Forget this device's access code and sign out.</div>
+          </div>
+          <button className="btn" onClick={handleLogout}>
+            Log out
+          </button>
         </div>
       </div>
     </PageShell>

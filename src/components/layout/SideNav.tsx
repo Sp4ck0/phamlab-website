@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { useConvexAuth, useQuery } from "convex/react";
-import { useAuthActions } from "@convex-dev/auth/react";
+import { Link, useLocation, useParams } from "react-router-dom";
+import { useQuery } from "convex/react";
 import { api } from "@convex/api";
 import { useAccessibleTrips } from "../../hooks/useAccessibleTrips";
 import { useAccessCode } from "../../hooks/useAccessCode";
@@ -15,13 +14,10 @@ export function SideNav() {
   const { trips } = useAccessibleTrips();
   const { slug: activeSlug, boardId: activeBoardId } = useParams();
   const location = useLocation();
-  const { code, clear } = useAccessCode();
+  const { code } = useAccessCode();
   const isManagementCode = useQuery(api.management.checkManagementAccess, code ? { code } : "skip");
   const isDatingCode = useQuery(api.dating.checkDatingAccess, code ? { code } : "skip");
   const { boards } = useKanbanBoards();
-  const { isAuthenticated } = useConvexAuth();
-  const { signOut } = useAuthActions();
-  const navigate = useNavigate();
   const { isDark, toggle: toggleTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [showLog, setShowLog] = useState(false);
@@ -48,11 +44,16 @@ export function SideNav() {
     return () => window.removeEventListener("keydown", onKey);
   }, [isOpen]);
 
-  async function handleLogout() {
-    clear();
-    if (isAuthenticated) await signOut();
-    navigate("/unlock");
-  }
+  const themeButton = (
+    <button
+      className="btn btn-icon"
+      onClick={toggleTheme}
+      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      title={isDark ? "Light mode" : "Dark mode"}
+    >
+      <ThemeIcon isDark={isDark} />
+    </button>
+  );
 
   return (
     <>
@@ -75,6 +76,7 @@ export function SideNav() {
         </button>
         <span className="navmark">🧳</span>
         <span className="navtitle">Pham Lab</span>
+        {themeButton}
       </div>
       <div className="navbackdrop" data-open={isOpen ? "true" : undefined} onClick={() => setIsOpen(false)} />
 
@@ -82,6 +84,7 @@ export function SideNav() {
         <div className="navhead">
           <span className="navmark">🧳</span>
           <span className="navtitle">Pham Lab</span>
+          {themeButton}
         </div>
         {trips && trips.length > 0 && (
           <div className="navgroup">
@@ -180,24 +183,9 @@ export function SideNav() {
           <button className="btn" onClick={() => setShowLog(true)}>
             What's new
           </button>
-          <div className="navrow">
-            <Link className="btn" to="/settings">
-              Settings
-            </Link>
-            <button
-              className="btn btn-icon"
-              onClick={toggleTheme}
-              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-              title={isDark ? "Light mode" : "Dark mode"}
-            >
-              <ThemeIcon isDark={isDark} />
-            </button>
-          </div>
-          {(code || isAuthenticated) && (
-            <button className="btn" onClick={handleLogout}>
-              Log out
-            </button>
-          )}
+          <Link className="btn" to="/settings">
+            Settings
+          </Link>
         </div>
       </nav>
       {showLog && <VersionLog onClose={() => setShowLog(false)} />}

@@ -132,9 +132,8 @@ a{color:inherit}
 }
 .navfooter{display:flex;flex-direction:column;gap:8px;margin-top:auto;padding-top:14px;border-top:1px solid var(--gridline)}
 .navfooter .btn{width:100%;justify-content:center;display:flex}
-.navfooter .navrow{display:flex;gap:8px}
-.navfooter .navrow .btn{text-decoration:none;align-items:center}
-.navfooter .navrow .btn-icon{width:auto;flex:none;padding:8px 10px}
+.navfooter a.btn{text-decoration:none;align-items:center}
+.btn-icon{display:grid;place-items:center;flex:none;padding:8px 10px;margin-left:auto}
 .setting-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;border-top:1px solid var(--gridline)}
 .setting-label{font-size:14px;font-weight:600;color:var(--text-primary)}
 .setting-chips{display:flex;gap:8px}
