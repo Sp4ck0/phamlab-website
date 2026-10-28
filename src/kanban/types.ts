@@ -47,7 +47,24 @@ export interface Card {
   followUp: string | null;
   createdAt: string;
   /** Free-form running notes, appended over time. */
-  log: { id: string; at: string; by: PersonId; byName?: string; text: string }[];
+  log: {
+    id: string;
+    at: string;
+    by: PersonId;
+    byName?: string;
+    text: string;
+    imageUrls?: KanbanImage[];
+  }[];
+  /** Images attached to the longer version. */
+  noteImageUrls?: KanbanImage[];
+}
+
+/** An uploaded image: pixel size (to reserve its box before it loads) and a signed URL. */
+export interface KanbanImage {
+  id: string;
+  w: number;
+  h: number;
+  url: string;
 }
 
 export interface Person {

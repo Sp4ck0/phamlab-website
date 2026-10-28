@@ -105,6 +105,11 @@ export function CardTile({ card, index, lane, board, onOpen }: Props) {
       <h3 className="card__title">{card.title}</h3>
 
       {card.note && <p className="card__note">{card.note}</p>}
+      {!!card.noteImageUrls?.length && (
+        <p className="card__note" aria-label={`${card.noteImageUrls.length} attached images`}>
+          📷 {card.noteImageUrls.length}
+        </p>
+      )}
 
       {lastReply && (
         <p className="card__replies">

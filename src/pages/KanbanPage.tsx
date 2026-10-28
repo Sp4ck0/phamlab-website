@@ -28,8 +28,20 @@ function sameCardIds(a: Board["lanes"], b: Board["lanes"]) {
 export function KanbanPage() {
   const { boardId } = useParams<{ boardId: string }>();
   const { code } = useAccessCode();
-  const { board, isLoading, authorized, setLanes, addCard, updateCard, removeCard, addReply, removeReply, markRead } =
-    useKanbanBoard(boardId as Id<"kanban_boards"> | undefined);
+  const {
+    board,
+    isLoading,
+    authorized,
+    setLanes,
+    addCard,
+    updateCard,
+    removeCard,
+    addReply,
+    removeReply,
+    addNoteImages,
+    removeNoteImage,
+    markRead,
+  } = useKanbanBoard(boardId as Id<"kanban_boards"> | undefined);
 
   const [openId, setOpenId] = useState<string | null>(null);
   const due = useDue(board);
@@ -189,6 +201,8 @@ export function KanbanPage() {
               }}
               onReply={addReply}
               onRemoveReply={removeReply}
+              onAddNoteImages={addNoteImages}
+              onRemoveNoteImage={removeNoteImage}
               onRead={markRead}
             />
           </div>

@@ -3,7 +3,11 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/api";
 import type { Id } from "@convex/dataModel";
 import { useAccessCode } from "../hooks/useAccessCode";
+import { uploadImages } from "./lib";
 import type { Board, Card, LaneId, QuickAddDraft } from "./types";
+
+// uploadImages returns plain-string ids; the mutations want branded storage ids.
+type ReplyImages = { id: Id<"_storage">; w: number; h: number }[];
 
 export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined) {
   const { code } = useAccessCode();
@@ -16,6 +20,9 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined) {
   const addReplyMut = useMutation(api.kanban.addReply);
   const removeReplyMut = useMutation(api.kanban.removeReply);
   const markReadMut = useMutation(api.kanban.markCardRead);
+  const uploadUrlMut = useMutation(api.kanban.generateImageUploadUrl);
+  const addNoteImagesMut = useMutation(api.kanban.addNoteImages);
+  const removeNoteImageMut = useMutation(api.kanban.removeNoteImage);
 
   const board: Board | null = useMemo(() => {
     if (!result?.authorized || !result.board) return null;
@@ -63,9 +70,34 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined) {
     void removeCardMut({ code, boardId, cardId: id as Id<"kanban_cards"> });
   }
 
-  function addReply(id: string, text: string) {
+  // Images go to Convex storage first (resized in the browser), then ride
+  // along with the mutation as { id, w, h }. Returned so the caller can show
+  // an "uploading" state and surface a failure.
+  const uploadFiles = (files: File[]) => {
+    if (!code || !boardId) return Promise.resolve([]);
+    return uploadImages(files, () => uploadUrlMut({ code, boardId }));
+  };
+
+  async function addReply(id: string, text: string, files: File[] = []) {
     if (!code || !boardId) return;
-    void addReplyMut({ code, boardId, cardId: id as Id<"kanban_cards">, text });
+    const images = files.length ? ((await uploadFiles(files)) as ReplyImages) : undefined;
+    await addReplyMut({ code, boardId, cardId: id as Id<"kanban_cards">, text, images });
+  }
+
+  async function addNoteImages(id: string, files: File[]) {
+    if (!code || !boardId || !files.length) return;
+    const images = (await uploadFiles(files)) as ReplyImages;
+    await addNoteImagesMut({ code, boardId, cardId: id as Id<"kanban_cards">, images });
+  }
+
+  function removeNoteImage(id: string, imageId: string) {
+    if (!code || !boardId) return;
+    void removeNoteImageMut({
+      code,
+      boardId,
+      cardId: id as Id<"kanban_cards">,
+      imageId: imageId as Id<"_storage">,
+    });
   }
 
   function removeReply(id: string, replyId: string) {
@@ -88,6 +120,8 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined) {
     removeCard,
     addReply,
     removeReply,
+    addNoteImages,
+    removeNoteImage,
     markRead,
   };
 }
