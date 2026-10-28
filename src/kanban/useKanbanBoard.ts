@@ -55,11 +55,6 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined) {
     void setLanesMut({ code, boardId, lanes: update(board.lanes) as Board["lanes"] });
   }
 
-  function addCard(lane: LaneId, draft: QuickAddDraft) {
-    if (!code || !boardId) return;
-    void addCardMut({ code, boardId, lane, ...draft });
-  }
-
   function updateCard(id: string, patch: Partial<Card>) {
     if (!code || !boardId) return;
     void updateCardMut({ code, boardId, cardId: id as Id<"kanban_cards">, ...patch });
@@ -82,6 +77,15 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined) {
     if (!code || !boardId) return;
     const images = files.length ? ((await uploadFiles(files)) as ReplyImages) : undefined;
     await addReplyMut({ code, boardId, cardId: id as Id<"kanban_cards">, text, images });
+  }
+
+  // Upload first so a failed upload creates nothing, then create the card and
+  // attach the images to its longer version.
+  async function addCard(lane: LaneId, draft: QuickAddDraft, files: File[] = []) {
+    if (!code || !boardId) return;
+    const images = files.length ? ((await uploadFiles(files)) as ReplyImages) : [];
+    const cardId = await addCardMut({ code, boardId, lane, ...draft });
+    if (images.length) await addNoteImagesMut({ code, boardId, cardId, images });
   }
 
   async function addNoteImages(id: string, files: File[]) {
