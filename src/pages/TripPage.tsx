@@ -8,6 +8,7 @@ import { ActionItems } from "../components/trip/ActionItems";
 import { TripMap } from "../components/trip/TripMap";
 import { ItineraryStart, TripEntryBoundary } from "../components/trip/TripEntryBoundary";
 import { useTrip } from "../hooks/useTrip";
+import { useRememberTab } from "../hooks/useRememberTab";
 import { useResolvedDays } from "../hooks/useResolvedDays";
 import { useChecks } from "../hooks/useChecks";
 import { useTripGaps } from "../hooks/useTripGaps";
@@ -26,6 +27,7 @@ export function TripPage() {
 function TripPageEntry() {
   const { slug } = useParams<{ slug: string }>();
   const { trip, isLoading } = useTrip(slug);
+  useRememberTab(trip ? `/trip/${slug}` : null);
 
   const [onlyGaps, setOnlyGaps] = useState(false);
   const filterRef = useRef<HTMLButtonElement>(null);

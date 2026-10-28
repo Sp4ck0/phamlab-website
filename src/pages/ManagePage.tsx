@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/api";
 import { PageShell } from "../components/layout/PageShell";
 import { useAccessCode } from "../hooks/useAccessCode";
+import { useRememberTab } from "../hooks/useRememberTab";
 
 interface TripRow {
   _id: string;
@@ -29,6 +30,7 @@ interface CodeRow {
 export function ManagePage() {
   const { code } = useAccessCode();
   const isAuthorized = useQuery(api.management.checkManagementAccess, code ? { code } : "skip");
+  useRememberTab(isAuthorized ? "/manage" : null);
 
   // Without a code the query is skipped and useQuery returns undefined
   // forever — that must fall through to "Not authorized" below, not the

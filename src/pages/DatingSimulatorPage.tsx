@@ -4,6 +4,7 @@ import { useAction, useQuery } from "convex/react";
 import { api } from "@convex/api";
 import { PageShell } from "../components/layout/PageShell";
 import { useAccessCode } from "../hooks/useAccessCode";
+import { useRememberTab } from "../hooks/useRememberTab";
 
 interface PersonaRow {
   id: string;
@@ -80,6 +81,7 @@ const SCORE_LABELS: { key: keyof CoachingReport["scores"]; label: string }[] = [
 export function DatingSimulatorPage() {
   const { code } = useAccessCode();
   const isAuthorized = useQuery(api.dating.checkDatingAccess, code ? { code } : "skip");
+  useRememberTab(isAuthorized ? "/dating-simulator" : null);
 
   // Without a code the query is skipped and useQuery returns undefined
   // forever — that must fall through to "Not authorized" below, not the

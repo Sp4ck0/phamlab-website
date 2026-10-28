@@ -7,6 +7,7 @@ import type { Id } from "@convex/dataModel";
 import { PageShell } from "../components/layout/PageShell";
 import { useAccessCode } from "../hooks/useAccessCode";
 import { useKanbanBoard } from "../kanban/useKanbanBoard";
+import { useRememberTab } from "../hooks/useRememberTab";
 import { Lane } from "../kanban/components/Lane";
 import { CardDrawer } from "../kanban/components/CardDrawer";
 import { NewCardPane } from "../kanban/components/NewCardPane";
@@ -44,6 +45,7 @@ export function KanbanPage() {
     removeNoteImage,
     markRead,
   } = useKanbanBoard(boardId as Id<"kanban_boards"> | undefined);
+  useRememberTab(authorized && board ? `/kanban/${boardId}` : null);
 
   const [openId, setOpenId] = useState<string | null>(null);
   // The card being written in the new-card pane. Minimizing only hides the
