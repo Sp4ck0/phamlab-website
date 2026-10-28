@@ -36,6 +36,21 @@ the same shape — reuse it rather than inventing a new gating mechanism:
    feature based on the same `checkXAccess` query, so the link only shows up
    for codes that actually have access.
 
+## Shipping a user-facing change: add a "What's new" entry
+
+The "What's new" panel in the side nav reads the backend's `version_log`
+table. Entries are not generated from PRs — after a user-facing feature or
+fix is merged (and its backend, if any, is deployed), add one from the
+`phamlab` repo:
+
+`npx convex run admin:addVersionLog '{"area":"trips","version":"2026.10.28.10","title":"...","notes":"...","links":[{"label":"Website #71","url":"https://github.com/Sp4ck0/phamlab-website/pull/71"}],"date":"2026-10-28"}'`
+
+`area` is one of `board | trips | dating | manage | general | other` and
+decides who sees it (the matching access gate; general/other are public).
+Use `other` for dev-only changes. Link every related PR (backend and
+website) so one feature is one entry. A daily check posts to Slack for any
+merged PR whose URL isn't linked by an entry, so don't skip this step.
+
 ## Before pushing to git
 
 The app is designed so this repo never needs to contain real trip data —
