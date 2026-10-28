@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import { useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "@convex/api";
 import { TripPage } from "./pages/TripPage";
 import { TripPrintPage } from "./pages/TripPrintPage";
@@ -12,21 +12,38 @@ import { KanbanPage } from "./pages/KanbanPage";
 import { DatingSimulatorPage } from "./pages/DatingSimulatorPage";
 import { useAccessibleTrips } from "./hooks/useAccessibleTrips";
 import { useAccessCode } from "./hooks/useAccessCode";
+import { useKanbanBoards } from "./kanban/useKanbanBoards";
+import { loadLastTab } from "./lib/lastTab";
 import { RouteScrollPolicy } from "./components/trip/TripEntryBoundary";
 
-// A code doesn't need any trips to be valid (e.g. dating-simulator-only or
-// boards-only access) — fall back to those before giving up and bouncing to
-// /unlock, so a trip-less code doesn't loop back to the unlock screen.
+// Base-URL entry: resume the last visited tab if it is still accessible,
+// otherwise the first accessible tab (same order as the side nav: trips,
+// boards, dating, manage), otherwise /unlock. A code doesn't need any trips to
+// be valid (e.g. dating-only or boards-only access), so every tab type counts.
 function Home() {
-  const { trips, isLoading } = useAccessibleTrips();
+  const { trips, isLoading: tripsLoading } = useAccessibleTrips();
   const { code } = useAccessCode();
+  const { isLoading: authLoading } = useConvexAuth();
+  const { boards, isLoading: boardsLoading } = useKanbanBoards();
   const isDatingCode = useQuery(api.dating.checkDatingAccess, code ? { code } : "skip");
+  const isManagementCode = useQuery(api.management.checkManagementAccess, code ? { code } : "skip");
 
-  if (isLoading) return null;
-  if (trips && trips.length > 0) return <Navigate to={`/trip/${trips[0].slug}`} replace />;
-  if (code && isDatingCode === undefined) return null;
-  if (isDatingCode) return <Navigate to="/dating-simulator" replace />;
-  return <Navigate to="/unlock" replace />;
+  // Queries skipped for lack of a code stay undefined forever, so only wait on
+  // them when a code exists. Unknown is never treated as "no access".
+  if (authLoading || tripsLoading || boardsLoading) return null;
+  if (code && (isDatingCode === undefined || isManagementCode === undefined)) return null;
+
+  const tabs = [
+    ...(trips ?? []).map((t) => `/trip/${t.slug}`),
+    ...boards.map((b) => `/kanban/${b._id}`),
+    ...(isDatingCode ? ["/dating-simulator"] : []),
+    ...(isManagementCode ? ["/manage"] : []),
+  ];
+  // Only a path that exactly matches a currently accessible tab is used, so a
+  // stale, revoked or tampered stored value falls through to the top tab.
+  const last = loadLastTab();
+  const target = last && tabs.includes(last) ? last : tabs[0];
+  return <Navigate to={target ?? "/unlock"} replace />;
 }
 
 export default function App() {

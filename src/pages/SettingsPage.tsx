@@ -5,6 +5,7 @@ import { api } from "@convex/api";
 import { PageShell } from "../components/layout/PageShell";
 import { useAccessCode } from "../hooks/useAccessCode";
 import { useSettings, type TempUnit } from "../hooks/useSettings";
+import { clearLastTab } from "../lib/lastTab";
 
 const UNITS: { value: TempUnit; label: string }[] = [
   { value: "F", label: "°F" },
@@ -22,6 +23,7 @@ export function SettingsPage() {
 
   async function handleLogout() {
     clear();
+    clearLastTab();
     if (isAuthenticated) await signOut();
     navigate("/unlock");
   }
