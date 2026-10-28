@@ -180,24 +180,90 @@ export function actUrl(a: Act, day: ResolvedDay, dayNumber: number, index = -1):
   });
 }
 
+// IATA airport code -> IANA zone, so each leg of a multi-leg flight gets its
+// own departure and arrival zone from the route text ("SEA → TPE").
+const AIRPORT_TZ: Record<string, string> = {};
+const addAirports = (zone: string, codes: string) => codes.split(" ").forEach((c) => (AIRPORT_TZ[c] = zone));
+addAirports("America/Los_Angeles", "SEA SFO SJC OAK LAX SAN SNA BUR PDX LAS");
+addAirports("America/Phoenix", "PHX");
+addAirports("America/Denver", "DEN SLC");
+addAirports("America/Chicago", "DFW IAH AUS ORD MDW MSP");
+addAirports("America/New_York", "ATL JFK EWR LGA BOS IAD DCA PHL MIA MCO CLT DTW YYZ");
+addAirports("America/Anchorage", "ANC");
+addAirports("Pacific/Honolulu", "HNL OGG");
+addAirports("Asia/Taipei", "TPE TSA KHH RMQ");
+addAirports("Asia/Seoul", "ICN GMP PUS CJU");
+addAirports("Asia/Tokyo", "NRT HND KIX ITM NGO FUK CTS OKA HIJ");
+addAirports("Asia/Shanghai", "PEK PKX PVG SHA CAN SZX CTU TFU CKG XIY HGH NKG TAO XMN KMG");
+addAirports("Asia/Hong_Kong", "HKG");
+addAirports("Asia/Macau", "MFM");
+addAirports("Asia/Bangkok", "BKK DMK HKT CNX USM KBV");
+addAirports("Asia/Ho_Chi_Minh", "SGN HAN DAD CXR PQC");
+addAirports("Asia/Singapore", "SIN");
+addAirports("Asia/Kuala_Lumpur", "KUL PEN BKI");
+addAirports("Asia/Manila", "MNL CEB");
+addAirports("Asia/Jakarta", "CGK");
+addAirports("Asia/Makassar", "DPS");
+addAirports("Asia/Phnom_Penh", "PNH REP");
+addAirports("Asia/Kolkata", "DEL BOM BLR");
+addAirports("Asia/Dubai", "DXB AUH");
+addAirports("Asia/Qatar", "DOH");
+addAirports("Europe/Istanbul", "IST SAW");
+addAirports("Europe/London", "LHR LGW");
+addAirports("Europe/Dublin", "DUB");
+addAirports("Europe/Paris", "CDG ORY");
+addAirports("Europe/Amsterdam", "AMS");
+addAirports("Europe/Berlin", "FRA MUC BER");
+addAirports("Europe/Madrid", "MAD BCN");
+addAirports("Europe/Rome", "FCO MXP VCE");
+addAirports("Europe/Zurich", "ZRH");
+addAirports("Europe/Vienna", "VIE");
+addAirports("Europe/Lisbon", "LIS OPO");
+addAirports("Europe/Athens", "ATH");
+addAirports("Europe/Prague", "PRG");
+addAirports("Europe/Budapest", "BUD");
+addAirports("Australia/Sydney", "SYD MEL CBR");
+addAirports("Australia/Brisbane", "BNE");
+addAirports("Pacific/Auckland", "AKL");
+
+const airportZone = (side: string) => {
+  const code = /\b[A-Z]{3}\b/.exec(side)?.[0];
+  return (code && AIRPORT_TZ[code]) || null;
+};
+
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+/** A leg's own date ("Wed, Nov 4 · 12:10 AM → …"), else `fallback`; the year comes from `fallback`. */
+function legDate(time: string, fallback: string): string {
+  const hit = /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})\b/i.exec(time);
+  if (!hit) return fallback;
+  const base = new Date(fallback + "T00:00:00Z");
+  let year = base.getUTCFullYear();
+  const at = (y: number) => Date.UTC(y, MONTHS.indexOf(hit[1].toLowerCase()), +hit[2]);
+  // A Jan leg on a Dec day (or the reverse) belongs to the adjacent year.
+  if (at(year) - base.getTime() < -182 * 864e5) year++;
+  else if (at(year) - base.getTime() > 182 * 864e5) year--;
+  return new Date(at(year)).toISOString().slice(0, 10);
+}
+
 /**
- * One leg of a transport booking. The data records only the origin and
- * destination of the day, so a leg's departure zone is known for the first
- * leg and its arrival zone for the last; otherwise it has no button / falls
- * back to a one-hour departure marker rather than guessing a zone.
+ * One leg of a transport booking. Zones come from the route's airport codes
+ * when known; otherwise the day's origin (first leg) and destination (last
+ * leg) are used. With no departure zone there is no button, and with no
+ * arrival zone the event is a one-hour departure marker — never a guessed zone.
  */
 export function legUrl(
   leg: { route: string; time: string; meta?: string }, legIndex: number, legCount: number,
   mode: TransportMode | undefined, day: ResolvedDay, dayNumber: number, detail?: string,
 ): string | null {
   const t = parseLegTime(leg.time);
-  const depTz = legIndex === 0 ? zoneFor(day.city, day.country) : null;
+  const [from, to = ""] = leg.route.split(/\s*(?:→|->|–|—)\s*/);
+  const depTz = airportZone(from) || (legIndex === 0 ? zoneFor(day.city, day.country) : null);
   if (!t || !depTz) return null;
-  const arrTz = legIndex === legCount - 1 ? zoneFor(day.to || day.city, day.toCountry || day.country) : null;
+  const arrTz = airportZone(to) || (legIndex === legCount - 1 ? zoneFor(day.to || day.city, day.toCountry || day.country) : null);
   return timedUrl({
-    title: transportTitle(mode, leg.route, leg.meta, detail), date: day.date, start: t.dep, tz: depTz,
+    title: transportTitle(mode, leg.route, leg.meta, detail), date: legDate(leg.time, day.date), start: t.dep, tz: depTz,
     end: arrTz ? t.arr : undefined, endDayOffset: t.arrDayOffset, endTz: arrTz, defaultMinutes: 60,
-    location: leg.route.split(/\s*(?:→|->|–|—)\s*/)[0], details: detailsFor(dayNumber),
+    location: from, details: detailsFor(dayNumber),
   });
 }
 
