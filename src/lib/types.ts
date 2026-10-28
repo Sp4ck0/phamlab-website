@@ -53,7 +53,8 @@ export type Tag = "" | "move" | "transit" | "event" | undefined;
 
 // An activity is either a plain string (legacy — no tag/time shown) or a
 // richer object with an optional tag pill and time prefix.
-export type Act = string | { tag?: string; time?: string; text: string };
+// `endTime` (local HH:MM) is never displayed; it only sets the calendar link's end.
+export type Act = string | { tag?: string; time?: string; endTime?: string; text: string };
 
 export interface TourDetails {
   summary: string;

@@ -171,8 +171,11 @@ export function actUrl(a: Act, day: ResolvedDay, dayNumber: number, index = -1):
     if (gap > 0) minutes = Math.min(minutes, gap);
     break;
   }
+  // An explicit endTime wins, but only when it falls after the start on the same day.
+  const explicitEnd = parseTime(a.endTime);
+  const end = explicitEnd && explicitEnd.h * 60 + explicitEnd.m > startMin ? explicitEnd : undefined;
   return timedUrl({
-    title: `${emoji} ${text}`, date: day.date, start, tz: zoneFor(day.city, day.country),
+    title: `${emoji} ${text}`, date: day.date, start, end, tz: zoneFor(day.city, day.country),
     defaultMinutes: minutes, location: where(day), details: detailsFor(dayNumber),
   });
 }
