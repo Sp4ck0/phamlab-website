@@ -8,6 +8,7 @@ import { useAccessCode } from "../../hooks/useAccessCode";
 import { useTheme } from "../../hooks/useTheme";
 import { useKanbanBoards } from "../../kanban/useKanbanBoards";
 import { flagEmoji, navCountdown, navMonthLabel } from "../../lib/tripLogic";
+import { VersionLog } from "./VersionLog";
 
 export function SideNav() {
   const { trips } = useAccessibleTrips();
@@ -22,6 +23,7 @@ export function SideNav() {
   const navigate = useNavigate();
   const { isDark, toggle: toggleTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
+  const [showLog, setShowLog] = useState(false);
 
   // Close the mobile drawer whenever the route changes (link tap, back/forward).
   useEffect(() => {
@@ -174,6 +176,9 @@ export function SideNav() {
         )}
 
         <div className="navfooter">
+          <button className="btn" onClick={() => setShowLog(true)}>
+            What's new
+          </button>
           <button className="btn" onClick={toggleTheme}>
             {isDark ? "Light mode" : "Dark mode"}
           </button>
@@ -184,6 +189,7 @@ export function SideNav() {
           )}
         </div>
       </nav>
+      {showLog && <VersionLog onClose={() => setShowLog(false)} />}
     </>
   );
 }

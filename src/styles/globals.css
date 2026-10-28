@@ -132,6 +132,19 @@ a{color:inherit}
 }
 .navfooter{display:flex;flex-direction:column;gap:8px;margin-top:auto;padding-top:14px;border-top:1px solid var(--gridline)}
 .navfooter .btn{width:100%;justify-content:center;display:flex}
+.vlog-backdrop{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:16px}
+.vlog{width:min(560px,100%);max-height:min(80vh,720px);display:flex;flex-direction:column;background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.vlog-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--gridline)}
+.vlog-head h2{margin:0;font-size:17px;color:var(--text-primary)}
+.vlog-list{overflow-y:auto;padding:4px 16px 16px}
+.vlog-entry{padding:12px 0;border-bottom:1px solid var(--gridline)}
+.vlog-entry:last-child{border-bottom:0}
+.vlog-entry h3{margin:6px 0 2px;font-size:14.5px;color:var(--text-primary)}
+.vlog-entry p{margin:0;font-size:13px;line-height:1.5;color:var(--text-secondary)}
+.vlog-meta{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--text-muted)}
+.vlog-chip{background:var(--chip-bg);color:var(--text-secondary);border-radius:999px;padding:2px 8px}
+.vlog-links{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:6px;font-size:12px}
+.vlog-empty{padding:16px 0;color:var(--text-muted);font-size:13px}
 
 .mobile-topbar{display:none}
 .navtoggle{display:none}
