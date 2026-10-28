@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { Board, Card, Kind, LaneId, PersonId } from '../types';
 import { BOARD_COPY, PEOPLE } from '../types';
-import { boardLanes, uid } from '../lib';
+import { boardLanes, pastedImages, uid } from '../lib';
+import { ImageGallery } from './ImageGallery';
+import { ImagePicker } from './ImagePicker';
 import { Thread } from './Thread';
 
 interface Props {
@@ -13,8 +15,10 @@ interface Props {
   onChange: (id: string, patch: Partial<Card>) => void;
   onMove: (id: string, to: LaneId) => void;
   onDelete: (id: string) => void;
-  onReply: (id: string, text: string) => void;
+  onReply: (id: string, text: string, files: File[]) => Promise<void>;
   onRemoveReply: (id: string, replyId: string) => void;
+  onAddNoteImages: (id: string, files: File[]) => Promise<void>;
+  onRemoveNoteImage: (id: string, imageId: string) => void;
   onRead: (id: string) => void;
 }
 
@@ -28,6 +32,8 @@ export function CardDrawer({
   onDelete,
   onReply,
   onRemoveReply,
+  onAddNoteImages,
+  onRemoveNoteImage,
   onRead,
 }: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -40,9 +46,12 @@ export function CardDrawer({
   const [title, setTitle] = useState(card?.title ?? '');
   const [note, setNote] = useState(card?.note ?? '');
   const [actionDrafts, setActionDrafts] = useState<Record<string, string>>({});
+  const [noteBusy, setNoteBusy] = useState(false);
+  const [noteError, setNoteError] = useState('');
 
   useEffect(() => {
     setConfirmDelete(false);
+    setNoteError('');
     setTitle(card?.title ?? '');
     setNote(card?.note ?? '');
     setActionDrafts({});
@@ -55,6 +64,19 @@ export function CardDrawer({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
+
+  const attach = async (files: File[]) => {
+    if (!card) return;
+    setNoteBusy(true);
+    setNoteError('');
+    try {
+      await onAddNoteImages(card.id, files);
+    } catch (e) {
+      setNoteError(e instanceof Error ? e.message : "Couldn't add that image");
+    } finally {
+      setNoteBusy(false);
+    }
+  };
 
   const name = (who: PersonId) => board.people[who].name;
   const copy = BOARD_COPY[board.type];
@@ -212,8 +234,33 @@ export function CardDrawer({
                     setNote(e.target.value);
                     onChange(card.id, { note: e.target.value });
                   }}
+                  onPaste={(e) => {
+                    const pasted = pastedImages(e);
+                    if (pasted.length) {
+                      e.preventDefault();
+                      void attach(pasted);
+                    }
+                  }}
                 />
               </label>
+              <div className="field note-images">
+                <ImageGallery
+                  images={card.noteImageUrls ?? []}
+                  label="Attachment on the longer version"
+                  onRemove={(imageId) => onRemoveNoteImage(card.id, imageId)}
+                />
+                <div className="note-images__bar">
+                  <ImagePicker onPick={(files) => void attach(files)} disabled={noteBusy} />
+                  <span className="thread__hint">
+                    {noteBusy ? 'Uploading…' : 'Paste a screenshot or tap 📎 to add images'}
+                  </span>
+                </div>
+                {noteError && (
+                  <span className="thread__hint thread__error" role="alert">
+                    {noteError}
+                  </span>
+                )}
+              </div>
 
               <section className="field">
                 <span className="label">Action items</span>

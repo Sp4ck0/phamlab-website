@@ -59,6 +59,50 @@ export function unreadCards(board: Board) {
     .sort((x, y) => (waitingSince(x) < waitingSince(y) ? -1 : 1));
 }
 
+const MAX_EDGE = 2000; // long edge; keeps text in bug screenshots legible
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // matches the server cap
+
+/** Downscale to MAX_EDGE and re-encode as WebP; GIFs and small-enough files pass through. */
+async function prepareImage(file: File): Promise<{ blob: Blob; w: number; h: number }> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+  const w = Math.round(bitmap.width * scale);
+  const h = Math.round(bitmap.height * scale);
+  if (file.type === "image/gif" || (scale === 1 && file.size <= MAX_UPLOAD_BYTES / 4)) {
+    bitmap.close();
+    return { blob: file, w, h };
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, w, h);
+  bitmap.close();
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", 0.85));
+  if (!blob) throw new Error("Couldn't process that image");
+  return { blob, w, h };
+}
+
+/** Upload images to Convex storage; returns the { id, w, h } the mutations take. */
+export async function uploadImages(files: File[], getUploadUrl: () => Promise<string>) {
+  return Promise.all(
+    files.map(async (file) => {
+      const { blob, w, h } = await prepareImage(file);
+      const res = await fetch(await getUploadUrl(), {
+        method: "POST",
+        headers: { "Content-Type": blob.type },
+        body: blob,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const { storageId } = (await res.json()) as { storageId: string };
+      return { id: storageId, w, h };
+    })
+  );
+}
+
+/** Image files from a paste event (screenshots arrive as clipboard files). */
+export const pastedImages = (e: React.ClipboardEvent) =>
+  Array.from(e.clipboardData.files).filter((f) => f.type.startsWith("image/"));
+
 export function progress(card: Card) {
   const total = card.actions.length;
   const done = card.actions.filter((a) => a.done).length;
