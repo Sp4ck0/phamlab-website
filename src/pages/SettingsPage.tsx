@@ -4,13 +4,8 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "@convex/api";
 import { PageShell } from "../components/layout/PageShell";
 import { useAccessCode } from "../hooks/useAccessCode";
-import { useSettings, type TempUnit } from "../hooks/useSettings";
+import { useSettings } from "../hooks/useSettings";
 import { clearLastTab } from "../lib/lastTab";
-
-const UNITS: { value: TempUnit; label: string }[] = [
-  { value: "F", label: "°F" },
-  { value: "C", label: "°C" },
-];
 
 export function SettingsPage() {
   const { code, clear } = useAccessCode();
@@ -62,19 +57,17 @@ export function SettingsPage() {
             <div className="setting-label">Temperature</div>
             <div className="sdek">Used for weather on days and the map.</div>
           </div>
-          <div className="setting-chips" role="group" aria-label="Temperature unit">
-            {UNITS.map((u) => (
-              <button
-                key={u.value}
-                type="button"
-                className="chip"
-                aria-pressed={tempUnit === u.value}
-                onClick={() => setTempUnit(u.value)}
-              >
-                {u.label}
-              </button>
-            ))}
-          </div>
+          <button
+            type="button"
+            role="switch"
+            className="unit-toggle"
+            aria-checked={tempUnit === "C"}
+            aria-label="Temperature unit, Celsius"
+            onClick={() => setTempUnit(tempUnit === "F" ? "C" : "F")}
+          >
+            <span data-on={tempUnit === "F" ? "true" : undefined}>°F</span>
+            <span data-on={tempUnit === "C" ? "true" : undefined}>°C</span>
+          </button>
         </div>
         <div className="setting-row">
           <div>
