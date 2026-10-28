@@ -209,20 +209,20 @@ export function DayCard({
                       type="checkbox"
                       id={`${rowId}-ai-${item.id}`}
                       checked={isDone}
+                      aria-labelledby={`${rowId}-ai-${item.id}-text`}
                       onChange={() => onToggleActionItem(item.id)}
                     />
-                    <label htmlFor={`${rowId}-ai-${item.id}`}>
+                    <span className="action-text" id={`${rowId}-ai-${item.id}-text`}>
                       {badge && (
                         <span
                           className="who"
-                          onClick={(e) => e.preventDefault()}
                           style={{ ...badgeStyle, display: "inline-block", padding: "3px 7px", borderRadius: 6, fontSize: 10, fontWeight: 700, marginRight: 7 }}
                         >
                           {badge.label}
                         </span>
                       )}
                       <span className="at">{item.title} —</span> <span className="ad">{item.detail}</span>
-                    </label>
+                    </span>
                   </div>
                 );
               })}

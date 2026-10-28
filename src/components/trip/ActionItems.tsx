@@ -119,8 +119,8 @@ export function ActionItems({
     if (due) onSetDue(`ai:${item.id}`, due);
   }
 
-  // The due-date control sits next to the row's <label>, never inside it: a
-  // label wraps the checkbox, so a date input inside would toggle the item.
+  // Only the checkbox toggles an item; the row text is a plain span so it can
+  // be selected and copied without marking the item complete.
   const dueControl = (key: string, due: string, isDone: boolean) => (
     <div className="due-chip">
       {!isDone && <span className="due-text">{dueLabel(due, today, isDone)}</span>}
@@ -155,18 +155,18 @@ export function ActionItems({
             type="checkbox"
             id={checkboxId}
             checked={g.done}
+            aria-labelledby={`${checkboxId}-text`}
             onChange={() => onToggleGap(g.ids!, g.done ? "booked" : "needed")}
           />
-          <label htmlFor={checkboxId}>
+          <span className="action-text" id={`${checkboxId}-text`}>
             <span
               className="who"
-              onClick={(e) => e.preventDefault()}
               style={{ ...style, display: "inline-block", padding: "3px 7px", borderRadius: 6, fontSize: 10, fontWeight: 700, marginRight: 7 }}
             >
               {label}
             </span>
             <span className="at">{g.kind}</span> <span className="ad">— {g.text} · {g.dateLabel}</span>
-          </label>
+          </span>
           {dueControl(dueKey, due, g.done)}
         </div>
       ),
@@ -204,19 +204,18 @@ export function ActionItems({
           data-due={state === "ok" ? undefined : state}
           key={item.id}
         >
-          <input type="checkbox" id={`ai-${item.id}`} checked={isDone} onChange={() => onToggleItem(item.id)} />
-          <label htmlFor={`ai-${item.id}`}>
+          <input type="checkbox" id={`ai-${item.id}`} aria-labelledby={`ai-${item.id}-text`} checked={isDone} onChange={() => onToggleItem(item.id)} />
+          <span className="action-text" id={`ai-${item.id}-text`}>
             {badge && (
               <span
                 className="who"
-                onClick={(e) => e.preventDefault()}
                 style={{ ...badgeStyle, display: "inline-block", padding: "3px 7px", borderRadius: 6, fontSize: 10, fontWeight: 700, marginRight: 7 }}
               >
                 {badge.label}
               </span>
             )}
             <span className="at">{item.title} —</span> <span className="ad">{item.detail}</span>
-          </label>
+          </span>
           <div className="row-actions">
             <button type="button" className="icon-btn" aria-label={`Edit ${item.title}`} onClick={() => startEdit(item.id, isDone)}>
               <PencilIcon />
