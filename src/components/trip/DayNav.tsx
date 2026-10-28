@@ -1,21 +1,14 @@
-import type { ResolvedDay } from "../../lib/types";
+import type { ItineraryRow } from "../../lib/itineraryState";
 import { DOW, MON } from "../../lib/tripLogic";
 
-export function DayNav({ days, onJump }: { days: ResolvedDay[]; onJump: (dayId: string) => void }) {
+export function DayNav({ rows, onJump }: { rows: ItineraryRow[]; onJump: (rowId: string) => void }) {
   return (
     <div className="daynav-shell">
-      <nav className="daynav">
-        {days.map((d) => (
-          <a
-            key={d.date}
-            href={`#day-${d.date}`}
-            onClick={(e) => {
-              e.preventDefault();
-              onJump(`day-${d.date}`);
-            }}
-          >
-            <span className="d">{DOW[d._d.getDay()]}</span> {MON[d._d.getMonth()]} {d._d.getDate()}
-          </a>
+      <nav className="daynav" aria-label="Jump to itinerary day">
+        {rows.map(({ id, day: d }, i) => (
+          <button type="button" key={id} onClick={() => onJump(id)}>
+            <span className="d">Day {i} · {DOW[d._d.getDay()]}</span> {MON[d._d.getMonth()]} {d._d.getDate()}
+          </button>
         ))}
       </nav>
     </div>

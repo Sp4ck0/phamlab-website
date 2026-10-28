@@ -11,6 +11,7 @@ import { KanbanPage } from "./pages/KanbanPage";
 import { DatingSimulatorPage } from "./pages/DatingSimulatorPage";
 import { useAccessibleTrips } from "./hooks/useAccessibleTrips";
 import { useAccessCode } from "./hooks/useAccessCode";
+import { RouteScrollPolicy } from "./components/trip/TripEntryBoundary";
 
 // A code doesn't need any trips to be valid (e.g. dating-simulator-only or
 // boards-only access) — fall back to those before giving up and bouncing to
@@ -29,6 +30,8 @@ function Home() {
 
 export default function App() {
   return (
+    <>
+    <RouteScrollPolicy />
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/unlock" element={<UnlockPage />} />
@@ -43,5 +46,6 @@ export default function App() {
       <Route path="/dating-simulator" element={<DatingSimulatorPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   );
 }

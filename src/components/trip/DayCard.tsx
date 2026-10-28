@@ -1,6 +1,5 @@
-import { useState } from "react";
 import type { ActionItem, Group, LegColor, ResolvedDay, Status } from "../../lib/types";
-import { DOW, MON, actParts, gapLabel, mergeFlightsByRoute, mergeHotelsByName, modeLabel, statusOf } from "../../lib/tripLogic";
+import { DOW, MON, actParts, gapLabel, mergeFlightsByRoute, mergeHotelsByName, modeLabel } from "../../lib/tripLogic";
 import type { HotelGroup } from "../../lib/tripLogic";
 import { WhoPill } from "./WhoPill";
 import { StatusToggle } from "./StatusToggle";
@@ -16,7 +15,9 @@ interface Props {
   weather?: DayWeather;
   groups: Group[];
   ticks: Record<string, Status>;
-  onlyGaps: boolean;
+  rowId: string;
+  expanded: boolean;
+  onExpandedChange: () => void;
   onToggle: (ids: string[], status: Status) => void;
   dayActionItems: ActionItem[];
   actionItemsDone: Record<string, boolean>;
@@ -30,13 +31,15 @@ export function DayCard({
   weather,
   groups,
   ticks,
-  onlyGaps,
+  rowId,
+  expanded,
+  onExpandedChange,
   onToggle,
   dayActionItems,
   actionItemsDone,
   onToggleActionItem,
 }: Props) {
-  const [collapsed, setCollapsed] = useState(false);
+  const collapsed = !expanded;
   const hotels = d.hotels;
   const flightGroups = mergeFlightsByRoute(d.flights, d.date, ticks);
   const hotelGroups = mergeHotelsByName(hotels, ticks);
@@ -50,14 +53,6 @@ export function DayCard({
   const checkoutHotels = hasFlights ? hotelGroups.filter((g) => g.checkOut && !g.checkIn) : [];
   const otherHotels = hasFlights ? hotelGroups.filter((g) => !(g.checkOut && !g.checkIn)) : hotelGroups;
   const noPlan = !(d.acts && d.acts.length) && !(d.flights && d.flights.length) && d.tag !== "transit";
-
-  const hasGap =
-    flightGroups.some((g) => g.statuses.includes("needed")) ||
-    hotels.filter((h) => !h.carried).some((h) => statusOf(ticks, h.src, h.status) === "needed") ||
-    noPlan;
-  const hidden = onlyGaps && !hasGap;
-
-  if (hidden) return null;
 
   const renderHotelCard = (g: HotelGroup, key: string | number) => {
     const s: Status = g.statuses.includes("needed") ? "needed" : "booked";
@@ -94,16 +89,17 @@ export function DayCard({
   return (
     <section
       className="day-card"
-      id={`day-${d.date}`}
+      id={rowId}
       style={{ ["--leg-color" as string]: legColor.color, ["--leg-tint" as string]: legColor.tint }}
     >
-      <button type="button" className="day-head day-head-btn" aria-expanded={!collapsed} onClick={() => setCollapsed((v) => !v)}>
-        <div className="day-title-group">
+      <h2 className="day-heading">
+      <button id={`${rowId}-trigger`} type="button" className="day-head day-head-btn" aria-expanded={expanded} aria-controls={`${rowId}-panel`} onClick={onExpandedChange}>
+        <span className="day-title-group">
           <span className="day-num">Day {dayNumber}</span>
           <span className="day-date">
             {DOW[d._d.getDay()]}, {MON[d._d.getMonth()]} {d._d.getDate()}
           </span>
-        </div>
+        </span>
         <span className="day-head-right">
           <WeatherBadge weather={weather} />
           <span className="leg-badge">
@@ -122,9 +118,11 @@ export function DayCard({
             <path d="M3.5 5.25L7 8.75l3.5-3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </span>
+        {(d.highlight || d.note) && <span className="day-summary">{d.highlight || d.note}</span>}
       </button>
-      {(d.highlight || d.note) && <p className="day-subtitle">{d.highlight || d.note}</p>}
+      </h2>
 
+      <div id={`${rowId}-panel`} aria-labelledby={`${rowId}-trigger`} hidden={!expanded}>
       {!collapsed && (
         <>
           {flightGroups
@@ -197,11 +195,11 @@ export function DayCard({
                   <div className={`action-item ${isDone ? "done" : ""}`} key={item.id}>
                     <input
                       type="checkbox"
-                      id={`day-ai-${item.id}`}
+                      id={`${rowId}-ai-${item.id}`}
                       checked={isDone}
                       onChange={() => onToggleActionItem(item.id)}
                     />
-                    <label htmlFor={`day-ai-${item.id}`}>
+                    <label htmlFor={`${rowId}-ai-${item.id}`}>
                       {badge && (
                         <span
                           className="who"
@@ -220,6 +218,7 @@ export function DayCard({
           )}
         </>
       )}
+      </div>
     </section>
   );
 }
