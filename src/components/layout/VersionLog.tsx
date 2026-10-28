@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useVersionLog } from "../../hooks/useVersionLog";
 
 const AREA: Record<string, { emoji: string; label: string }> = {
@@ -12,6 +12,12 @@ const AREA: Record<string, { emoji: string; label: string }> = {
 
 export function VersionLog({ onClose }: { onClose: () => void }) {
   const { entries, isLoading } = useVersionLog();
+  const [filter, setFilter] = useState<string>("all");
+
+  // Only offer areas this viewer actually has entries for.
+  const counts = new Map<string, number>();
+  entries?.forEach((e) => counts.set(e.area, (counts.get(e.area) ?? 0) + 1));
+  const shown = filter === "all" ? entries : entries?.filter((e) => e.area === filter);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -36,10 +42,29 @@ export function VersionLog({ onClose }: { onClose: () => void }) {
             ✕
           </button>
         </div>
+        {counts.size > 1 && (
+          <div className="vlog-filters" role="group" aria-label="Filter by area">
+            <button className="vlog-filter" data-active={filter === "all" ? "true" : undefined} onClick={() => setFilter("all")}>
+              All ({entries?.length})
+            </button>
+            {Object.entries(AREA)
+              .filter(([key]) => counts.has(key))
+              .map(([key, a]) => (
+                <button
+                  key={key}
+                  className="vlog-filter"
+                  data-active={filter === key ? "true" : undefined}
+                  onClick={() => setFilter(key)}
+                >
+                  {a.emoji} {a.label} ({counts.get(key)})
+                </button>
+              ))}
+          </div>
+        )}
         <div className="vlog-list">
           {isLoading && <p className="vlog-empty">Loading…</p>}
           {entries && entries.length === 0 && <p className="vlog-empty">Nothing here yet.</p>}
-          {entries?.map((e) => {
+          {shown?.map((e) => {
             const area = AREA[e.area] ?? AREA.other;
             return (
               <article key={e._id} className="vlog-entry">
