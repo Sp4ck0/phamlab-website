@@ -535,6 +535,35 @@ button {
   overflow: hidden;
 }
 
+/* First attached image, as a preview; the drawer has them all. Not
+   interactive, so it never gets in the way of dragging or opening the card. */
+.card__image {
+  position: relative;
+  margin-top: 8px;
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid var(--rule);
+  background: var(--paper-2);
+  pointer-events: none;
+}
+.card__image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.card__image-more {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.6);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
 /* "They wrote back" — the latest reply, flagged when it hasn't been opened here. */
 .card__replies {
   margin: 8px 0 0;

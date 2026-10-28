@@ -43,6 +43,8 @@ export function CardTile({ card, index, lane, board, onOpen }: Props) {
   const nextStepOwners = PEOPLE.filter((p) =>
     card.actions.some((a) => !a.done && a.owner === p)
   );
+  const noteImages = card.noteImageUrls ?? [];
+  const first = noteImages[0];
   const lastReply = card.log[card.log.length - 1];
   const unread = board.unread[card.id] ?? 0;
   const isNew = board.fresh.includes(card.id);
@@ -105,10 +107,16 @@ export function CardTile({ card, index, lane, board, onOpen }: Props) {
       <h3 className="card__title">{card.title}</h3>
 
       {card.note && <p className="card__note">{card.note}</p>}
-      {!!card.noteImageUrls?.length && (
-        <p className="card__note" aria-label={`${card.noteImageUrls.length} attached images`}>
-          📷 {card.noteImageUrls.length}
-        </p>
+      {first && (
+        <div
+          className="card__image"
+          // Follow the picture's shape, but keep tall screenshots and thin
+          // banners from making the tile lopsided (the drawer shows it whole).
+          style={{ aspectRatio: Math.min(Math.max(first.w / first.h, 1.2), 2.5) }}
+        >
+          <img src={first.url} alt="" width={first.w} height={first.h} loading="lazy" decoding="async" />
+          {noteImages.length > 1 && <span className="card__image-more">+{noteImages.length - 1}</span>}
+        </div>
       )}
 
       {lastReply && (
