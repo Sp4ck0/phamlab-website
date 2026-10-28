@@ -409,7 +409,7 @@ details.tour-box[open] summary::after{content:"Hide"}
 .action-completed>summary{cursor:pointer;font-size:13.5px;font-weight:700;color:var(--text-secondary);padding:6px 2px 10px;list-style-position:inside}
 .action-completed>summary:hover{color:var(--text-primary)}
 .action-item input[type="checkbox"]{flex:none;margin-top:3px;width:17px;height:17px;accent-color:var(--good);cursor:pointer}
-.action-item label{flex:1;min-width:0;overflow-wrap:anywhere;cursor:pointer}
+.action-item .action-text{flex:1;min-width:0;overflow-wrap:anywhere}
 /* Due-date state is shown by the chip text alone: yellow within a week of the
    due date, red once past it. */
 .due-chip{flex:none;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);white-space:nowrap}
