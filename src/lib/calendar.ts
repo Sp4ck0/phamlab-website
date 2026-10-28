@@ -154,15 +154,26 @@ export function transportTitle(mode: TransportMode | undefined, route: string, .
 const where = (d: Pick<ResolvedDay, "city" | "country">) => [d.city, d.country].filter(Boolean).join(", ");
 export const detailsFor = (dayNumber: number) => `Pham Lab · Day ${dayNumber}`;
 
-export function actUrl(a: Act, day: ResolvedDay, dayNumber: number): string | null {
+// Default length per tag, capped at the next timed act that day so back-to-back
+// events don't overlap in the calendar.
+export function actUrl(a: Act, day: ResolvedDay, dayNumber: number, index = -1): string | null {
   if (typeof a === "string") return null;
   const start = parseTime(a.time);
   const text = plain(a.text);
   if (!start || !text) return null;
   const emoji = (a.tag && TAG_EMOJI[a.tag]) || "📍";
+  let minutes = (a.tag && DEFAULT_MINUTES[a.tag]) || 60;
+  const startMin = start.h * 60 + start.m;
+  for (const n of index >= 0 ? day.acts.slice(index + 1) : []) {
+    const next = typeof n === "string" ? null : parseTime(n.time);
+    if (!next) continue;
+    const gap = next.h * 60 + next.m - startMin;
+    if (gap > 0) minutes = Math.min(minutes, gap);
+    break;
+  }
   return timedUrl({
     title: `${emoji} ${text}`, date: day.date, start, tz: zoneFor(day.city, day.country),
-    defaultMinutes: (a.tag && DEFAULT_MINUTES[a.tag]) || 60, location: where(day), details: detailsFor(dayNumber),
+    defaultMinutes: minutes, location: where(day), details: detailsFor(dayNumber),
   });
 }
 
