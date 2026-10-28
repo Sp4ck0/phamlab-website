@@ -5,6 +5,7 @@ import type { WeatherStop } from "../../lib/mapPoints";
 import { fmtShort } from "../../lib/tripLogic";
 import { summarizeStay, temp, weatherIcon, weatherText } from "../../lib/weather";
 import { useGeocodedPoints } from "../../hooks/useGeocodedPoints";
+import { useSettings, type TempUnit } from "../../hooks/useSettings";
 import { loadGoogleMaps } from "../../lib/googleMaps";
 
 const ARROW_SPACING_PX = 28;
@@ -46,6 +47,10 @@ export function TripMap({ points, route, weatherStops }: Props) {
   // Read at click time so a city pin shows weather that arrived after the pin was built.
   const stopsByAddress = useRef(new Map<string, WeatherStop>());
   stopsByAddress.current = new Map(weatherStops.map((s) => [s.address, s]));
+  const { tempUnit } = useSettings();
+  // Same click-time read for the unit, so toggling it doesn't rebuild every pin.
+  const tempUnitRef = useRef(tempUnit);
+  tempUnitRef.current = tempUnit;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -98,7 +103,7 @@ export function TripMap({ points, route, weatherStops }: Props) {
         });
         marker.addListener("click", () => {
           const stop = p.category === "city" ? stopsByAddress.current.get(p.address) : undefined;
-          openInfo(map, infoHtml(p.label, CATEGORY_LABELS[p.category] + (p.note ? " · " + p.note : ""), stop), marker);
+          openInfo(map, infoHtml(p.label, CATEGORY_LABELS[p.category] + (p.note ? " · " + p.note : ""), tempUnitRef.current, stop), marker);
         });
         markers.current.push(marker);
         bounds.extend(position);
@@ -218,12 +223,12 @@ export function TripMap({ points, route, weatherStops }: Props) {
       if (!stop) return;
       const s = summarizeStay(stop.days.map((d) => d.weather));
       const position = { lat: p.lat, lng: p.lng };
-      const range = `${temp(s.tMax)}°/${temp(s.tMin)}°`;
+      const range = `${temp(s.tMax, tempUnit)}°/${temp(s.tMin, tempUnit)}°`;
       const pill = document.createElement("button");
       pill.type = "button";
       pill.className = `map-weather-pill${s.typical ? " is-typical" : ""}`;
       pill.setAttribute("aria-label", `${stop.label} weather, ${s.count} ${s.count === 1 ? "day" : "days"}${s.typical ? ", includes historical averages" : ""}`);
-      pill.addEventListener("click", () => openInfo(map, infoHtml(stop.label, "", stop), position, PILL_INFO_OFFSET_PX));
+      pill.addEventListener("click", () => openInfo(map, infoHtml(stop.label, "", tempUnit, stop), position, PILL_INFO_OFFSET_PX));
       const overlay = createPillOverlay(position, pill, scheduleDeclutter);
       const entry: PillEntry = {
         el: pill,
@@ -231,7 +236,7 @@ export function TripMap({ points, route, weatherStops }: Props) {
         position,
         priority: s.count,
         full: `${s.emoji} ${range}${s.count > 1 ? ` · ${s.count}d` : ""}`,
-        compact: `${s.emoji} ${temp(s.tMax)}°`,
+        compact: `${s.emoji} ${temp(s.tMax, tempUnit)}°`,
       };
       pill.textContent = entry.full;
       entries.push(entry);
@@ -242,7 +247,7 @@ export function TripMap({ points, route, weatherStops }: Props) {
     return () => {
       disposed = true;
     };
-  }, [mapReady, geocodedWeather, weatherStops]);
+  }, [mapReady, geocodedWeather, weatherStops, tempUnit]);
 
   // Shared by pins and pills: close whatever is open, then show this one.
   function openInfo(
@@ -306,11 +311,11 @@ export function TripMap({ points, route, weatherStops }: Props) {
 }
 
 // Title, optional subtitle, and (for a city with weather) one line per day.
-function infoHtml(title: string, subtitle: string, stop?: WeatherStop) {
+function infoHtml(title: string, subtitle: string, unit: TempUnit, stop?: WeatherStop) {
   const rows = (stop?.days ?? [])
     .map(
       (d) =>
-        `<div style="font:400 12px system-ui;color:#52514e">${escapeHtml(fmtShort(d.date))} ${weatherIcon(d.weather.code).emoji} ${escapeHtml(weatherText(d.weather))}</div>`,
+        `<div style="font:400 12px system-ui;color:#52514e">${escapeHtml(fmtShort(d.date))} ${weatherIcon(d.weather.code).emoji} ${escapeHtml(weatherText(d.weather, unit))}</div>`,
     )
     .join("");
   // setHeaderContent takes a DOM node (a string is shown as literal text),

@@ -22,12 +22,11 @@ export function weatherIcon(code: number): { emoji: string; label: string } {
   return { emoji: "⛅", label: "Mixed" };
 }
 
-// Stored in °C; flip to "F" to display Fahrenheit.
-const UNIT = "C" as "C" | "F";
-export const temp = (c: number) => Math.round(UNIT === "F" ? (c * 9) / 5 + 32 : c);
+// Stored in °C; converted to the viewer's unit (Settings) for display.
+export const temp = (c: number, unit: "C" | "F") => Math.round(unit === "F" ? (c * 9) / 5 + 32 : c);
 
-export function weatherText(w: DayWeather): string {
-  const range = `${temp(w.tMax)}°/${temp(w.tMin)}°`;
+export function weatherText(w: DayWeather, unit: "C" | "F"): string {
+  const range = `${temp(w.tMax, unit)}°/${temp(w.tMin, unit)}°`;
   if (w.kind === "forecast" && w.precipProb != null) return `${range} · ${w.precipProb}% rain`;
   if (w.kind === "typical") return `${range} · typical`;
   return range;
