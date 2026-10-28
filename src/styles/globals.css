@@ -132,6 +132,12 @@ a{color:inherit}
 }
 .navfooter{display:flex;flex-direction:column;gap:8px;margin-top:auto;padding-top:14px;border-top:1px solid var(--gridline)}
 .navfooter .btn{width:100%;justify-content:center;display:flex}
+.navfooter .navrow{display:flex;gap:8px}
+.navfooter .navrow .btn{text-decoration:none;align-items:center}
+.navfooter .navrow .btn-icon{width:auto;flex:none;padding:8px 10px}
+.setting-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;border-top:1px solid var(--gridline)}
+.setting-label{font-size:14px;font-weight:600;color:var(--text-primary)}
+.setting-chips{display:flex;gap:8px}
 .vlog-backdrop{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:16px}
 .vlog{width:min(560px,100%);max-height:min(80vh,720px);display:flex;flex-direction:column;background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
 .vlog-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--gridline)}

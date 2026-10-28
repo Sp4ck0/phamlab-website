@@ -9,6 +9,7 @@ import { useTheme } from "../../hooks/useTheme";
 import { useKanbanBoards } from "../../kanban/useKanbanBoards";
 import { flagEmoji, navCountdown, navMonthLabel } from "../../lib/tripLogic";
 import { VersionLog } from "./VersionLog";
+import { ThemeIcon } from "./ThemeIcon";
 
 export function SideNav() {
   const { trips } = useAccessibleTrips();
@@ -179,9 +180,19 @@ export function SideNav() {
           <button className="btn" onClick={() => setShowLog(true)}>
             What's new
           </button>
-          <button className="btn" onClick={toggleTheme}>
-            {isDark ? "Light mode" : "Dark mode"}
-          </button>
+          <div className="navrow">
+            <Link className="btn" to="/settings">
+              Settings
+            </Link>
+            <button
+              className="btn btn-icon"
+              onClick={toggleTheme}
+              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+              title={isDark ? "Light mode" : "Dark mode"}
+            >
+              <ThemeIcon isDark={isDark} />
+            </button>
+          </div>
           {(code || isAuthenticated) && (
             <button className="btn" onClick={handleLogout}>
               Log out
