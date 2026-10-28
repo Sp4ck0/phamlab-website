@@ -107,7 +107,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
       ) : null}
       <div className="timeline">
         {state.rows.map(({ id, day: d }, i) => visible[i] && (
-          <DayCard key={id} rowId={id} day={d} dayNumber={i} legColor={legColors[i]} weather={weather[d.date]}
+          <DayCard key={id} rowId={id} day={d} days={days} dayNumber={i} legColor={legColors[i]} weather={weather[d.date]}
             groups={groups} ticks={ticks} expanded={state.expanded.has(id)} onExpandedChange={() => {
               setState(current => {
                 const expanded = new Set(current.expanded);

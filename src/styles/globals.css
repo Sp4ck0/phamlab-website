@@ -317,6 +317,8 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 .activity-text{flex:1;min-width:0;overflow-wrap:anywhere;color:var(--text-primary)}
 .activity-text a{color:var(--accent-1);font-weight:600;text-decoration:underline}
 .activity-time{font-variant-numeric:tabular-nums;color:var(--text-secondary);font-weight:600;margin-right:4px}
+.gcal-btn{display:inline-block;margin-left:6px;font-size:13px;line-height:1;text-decoration:none;border:none;opacity:.7;vertical-align:baseline}
+.gcal-btn:hover,.gcal-btn:focus-visible{opacity:1}
 
 details.tour-box{margin-top:14px;border:1px solid var(--border);border-radius:12px;background:var(--page);overflow:hidden}
 details.tour-box summary{
