@@ -43,22 +43,22 @@ export function VersionLog({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         {counts.size > 1 && (
-          <div className="vlog-filters" role="group" aria-label="Filter by area">
-            <button className="vlog-filter" data-active={filter === "all" ? "true" : undefined} onClick={() => setFilter("all")}>
-              All ({entries?.length})
-            </button>
-            {Object.entries(AREA)
-              .filter(([key]) => counts.has(key))
-              .map(([key, a]) => (
-                <button
-                  key={key}
-                  className="vlog-filter"
-                  data-active={filter === key ? "true" : undefined}
-                  onClick={() => setFilter(key)}
-                >
-                  {a.emoji} {a.label} ({counts.get(key)})
-                </button>
-              ))}
+          <div className="vlog-filters">
+            <select
+              className="vlog-select"
+              aria-label="Filter by area"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+            >
+              <option value="all">All areas ({entries?.length})</option>
+              {Object.entries(AREA)
+                .filter(([key]) => counts.has(key))
+                .map(([key, a]) => (
+                  <option key={key} value={key}>
+                    {a.emoji} {a.label} ({counts.get(key)})
+                  </option>
+                ))}
+            </select>
           </div>
         )}
         <div className="vlog-list">
