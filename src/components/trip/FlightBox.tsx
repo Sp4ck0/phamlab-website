@@ -1,8 +1,17 @@
 import type { FlightGroup } from "../../lib/tripLogic";
 import { StatusToggle } from "./StatusToggle";
-import type { Status } from "../../lib/types";
+import type { ResolvedDay, Status } from "../../lib/types";
+import { AddToCalendar } from "./AddToCalendar";
+import { legUrl } from "../../lib/calendar";
 
-export function FlightBox({ group, onToggle }: { group: FlightGroup; onToggle: (ids: string[], status: Status) => void }) {
+interface Props {
+  group: FlightGroup;
+  onToggle: (ids: string[], status: Status) => void;
+  day?: ResolvedDay;
+  dayNumber?: number;
+}
+
+export function FlightBox({ group, onToggle, day, dayNumber = 0 }: Props) {
   const status: Status = group.statuses.includes("needed") ? "needed" : "booked";
   const legs = group.legs || [];
 
@@ -19,7 +28,10 @@ export function FlightBox({ group, onToggle }: { group: FlightGroup; onToggle: (
         <div key={i}>
           <div className="flight-leg">
             <div className="fl-route">{leg.route}</div>
-            <div className="fl-time">{leg.time}</div>
+            <div className="fl-time">
+              {leg.time}
+              {day && <AddToCalendar url={legUrl(leg, i, legs.length, group.mode, day, dayNumber, group.detail)} />}
+            </div>
             {leg.meta && <div className="fl-meta">{leg.meta}</div>}
           </div>
           {group.layovers?.[i] && <div className="fl-layover">{group.layovers[i]}</div>}

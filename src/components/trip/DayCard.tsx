@@ -6,10 +6,14 @@ import { StatusToggle } from "./StatusToggle";
 import { FlightBox } from "./FlightBox";
 import { TourBox } from "./TourBox";
 import { WeatherBadge } from "./WeatherBadge";
+import { AddToCalendar } from "./AddToCalendar";
+import { actUrl, hotelUrl, transportUrl } from "../../lib/calendar";
 import type { DayWeather } from "../../lib/weather";
 
 interface Props {
   day: ResolvedDay;
+  // Whole resolved trip, to find a hotel's check-out date for its calendar link.
+  days?: ResolvedDay[];
   dayNumber: number;
   legColor: LegColor;
   weather?: DayWeather;
@@ -26,6 +30,7 @@ interface Props {
 
 export function DayCard({
   day: d,
+  days,
   dayNumber,
   legColor,
   weather,
@@ -73,7 +78,10 @@ export function DayCard({
           <span className="ctype">{ctype}</span>
           <WhoPill who={uniqueWho.length === 1 ? uniqueWho[0] : uniqueWho} groups={groups} date={d.date} />
         </div>
-        <div className={`cmain ${s === "needed" ? "todo" : ""}`}>{nm}</div>
+        <div className={`cmain ${s === "needed" ? "todo" : ""}`}>
+          {nm}
+          {g.checkIn && days && <AddToCalendar url={hotelUrl(g.name, g.address, days, dayNumber)} />}
+        </div>
         {g.address && (
           <div className="cmeta">
             <a href={`https://maps.google.com/?q=${encodeURIComponent(g.address)}`} target="_blank" rel="noopener">
@@ -128,7 +136,7 @@ export function DayCard({
           {flightGroups
             .filter((g) => g.legs && g.legs.length)
             .map((g, gi) => (
-              <FlightBox key={`fb${gi}`} group={g} onToggle={onToggle} />
+              <FlightBox key={`fb${gi}`} group={g} onToggle={onToggle} day={d} dayNumber={dayNumber} />
             ))}
 
           {(checkoutHotels.length > 0 || flightGroups.some((g) => !(g.legs && g.legs.length)) || otherHotels.length > 0) && (
@@ -146,7 +154,10 @@ export function DayCard({
                         <span className="ctype">{modeLabel(g.mode)}</span>
                         <WhoPill who={uniqueWho.length === 1 ? uniqueWho[0] : uniqueWho} groups={groups} date={d.date} />
                       </div>
-                      <div className={`cmain ${status === "needed" ? "todo" : ""}`}>{g.route}</div>
+                      <div className={`cmain ${status === "needed" ? "todo" : ""}`}>
+                        {g.route}
+                        <AddToCalendar url={transportUrl(g, d, dayNumber)} />
+                      </div>
                       <div className="cmeta">{g.detail || ""}</div>
                     </div>
                   );
@@ -165,6 +176,7 @@ export function DayCard({
                     <span className="activity-text">
                       {time && <span className="activity-time">{time}</span>}
                       <span dangerouslySetInnerHTML={{ __html: text }} />
+                      <AddToCalendar url={actUrl(a, d, dayNumber)} />
                     </span>
                   </li>
                 );
