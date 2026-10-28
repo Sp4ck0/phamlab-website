@@ -106,12 +106,17 @@ export function timedUrl(a: TimedArgs): string | null {
   if (!a.tz) return null;
   const s = wall(a.date, a.start);
   const crossZone = !!a.end && !!a.endTz && a.endTz !== a.tz;
+  // A trip can't end before it starts, so an arrival that lands "before" the
+  // departure (older data omits the "+1") is taken to be the next day.
+  let off = a.endDayOffset ?? 0;
   if (crossZone) {
-    const e = wall(a.date, a.end!, a.endDayOffset ?? 0);
-    const dates = `${fmtUtc(wallToUtc(s, a.tz))}/${fmtUtc(wallToUtc(e, a.endTz!))}`;
-    return link({ title: a.title, dates, tz: a.tz, location: a.location, details: a.details });
+    const sUtc = wallToUtc(s, a.tz);
+    let eUtc = wallToUtc(wall(a.date, a.end!, off), a.endTz!);
+    for (let i = 0; i < 2 && eUtc <= sUtc; i++) eUtc = wallToUtc(wall(a.date, a.end!, ++off), a.endTz!);
+    return link({ title: a.title, dates: `${fmtUtc(sUtc)}/${fmtUtc(eUtc)}`, tz: a.tz, location: a.location, details: a.details });
   }
-  const e = a.end ? wall(a.date, a.end, a.endDayOffset ?? 0) : wall(a.date, a.start, 0, a.defaultMinutes);
+  if (a.end && off === 0 && a.end.h * 60 + a.end.m <= a.start.h * 60 + a.start.m) off = 1;
+  const e = a.end ? wall(a.date, a.end, off) : wall(a.date, a.start, 0, a.defaultMinutes);
   return link({ title: a.title, dates: `${fmtWall(s)}/${fmtWall(e)}`, tz: a.tz, location: a.location, details: a.details });
 }
 
@@ -132,7 +137,9 @@ export const MODE_EMOJI: Record<TransportMode, string> = { flight: "✈️", tra
 const DEFAULT_MINUTES: Record<string, number> = { Food: 90, Sightsee: 120, Activity: 120 };
 
 const plain = (html: string) => new DOMParser().parseFromString(html, "text/html").body.textContent?.trim() || "";
-const arrow = (route: string) => route.replace(/\s*(?:→|->|–|—)\s*|\s+to\s+/gi, " → ").trim();
+// Older data writes airport pairs as "SEA-NRT"; treat that as "SEA → NRT".
+const hyphenAirports = (route: string) => route.replace(/\b([A-Z]{3})-([A-Z]{3})\b/g, "$1 → $2");
+const arrow = (route: string) => hyphenAirports(route).replace(/\s*(?:→|->|–|—)\s*|\s+to\s+/gi, " → ").trim();
 
 /** "KE018", "ke 18" etc. → "KE 018"; the first plausible flight number in the text. */
 export function flightNumber(...texts: (string | undefined)[]): string | null {
@@ -256,7 +263,7 @@ export function legUrl(
   mode: TransportMode | undefined, day: ResolvedDay, dayNumber: number, detail?: string,
 ): string | null {
   const t = parseLegTime(leg.time);
-  const [from, to = ""] = leg.route.split(/\s*(?:→|->|–|—)\s*/);
+  const [from, to = ""] = hyphenAirports(leg.route).split(/\s*(?:→|->|–|—)\s*/);
   const depTz = airportZone(from) || (legIndex === 0 ? zoneFor(day.city, day.country) : null);
   if (!t || !depTz) return null;
   const arrTz = airportZone(to) || (legIndex === legCount - 1 ? zoneFor(day.to || day.city, day.toCountry || day.country) : null);
