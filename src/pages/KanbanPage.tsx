@@ -215,7 +215,7 @@ export function KanbanPage() {
 
             <main className="board">
               {boardLanes(board).map((l) => (
-                <Lane key={l.id} lane={l.id} board={displayBoard} onOpen={setOpenId} onStartAdd={startAdd} />
+                <Lane key={l.id} lane={l.id} board={displayBoard} onOpen={setOpenId} onStartAdd={startAdd} hasDraft={draft?.lane === l.id} />
               ))}
             </main>
 
