@@ -163,10 +163,15 @@ export const BOARD_COPY: Record<
   },
 };
 
-/** Fields collected by the lane's inline "+ write one" quick-add form. */
+/** Fields collected by the "+ write one" new-card pane. */
 export interface QuickAddDraft {
   title: string;
   note: string;
   kind: Kind;
   weight: Weight;
+}
+
+/** A card being written in the new-card pane, including its target column. */
+export interface NewCardDraft extends QuickAddDraft {
+  lane: LaneId;
 }

@@ -328,35 +328,6 @@ button {
   color: var(--ink);
 }
 
-.quickadd {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.quickadd textarea {
-  width: 100%;
-  background: var(--card);
-  border: 1px solid var(--rule-firm);
-  border-radius: 10px;
-  padding: 10px;
-  resize: vertical;
-  font-size: 13.5px;
-}
-.quickadd textarea:focus {
-  outline: none;
-  border-color: var(--ink);
-}
-.quickadd__row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.quickadd__actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
 /* ── Card ────────────────────────────────────────────────────── */
 
 .card {
@@ -690,6 +661,30 @@ button {
 .drawer[data-kind='feedback']::before,
 .drawer[data-kind='feature']::before {
   background: var(--ink-b);
+}
+
+.newcard-tab {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  max-width: 220px;
+  padding: 10px 12px;
+  background: var(--paper);
+  border: 1px solid var(--rule-firm);
+  border-right: none;
+  border-radius: 10px 0 0 10px;
+  box-shadow: -6px 0 20px var(--shadow);
+  color: var(--ink);
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  z-index: 45;
+}
+.newcard-tab:hover {
+  background: var(--rule);
 }
 
 .drawer__inner {

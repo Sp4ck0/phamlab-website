@@ -9,8 +9,10 @@ import { useAccessCode } from "../hooks/useAccessCode";
 import { useKanbanBoard } from "../kanban/useKanbanBoard";
 import { Lane } from "../kanban/components/Lane";
 import { CardDrawer } from "../kanban/components/CardDrawer";
+import { NewCardPane } from "../kanban/components/NewCardPane";
+import { BOARD_COPY } from "../kanban/types";
 import { boardLanes, laneOf, unreadCards, useDue, viewerSeat } from "../kanban/lib";
-import type { Board, LaneId } from "../kanban/types";
+import type { Board, LaneId, NewCardDraft } from "../kanban/types";
 import "../kanban/kanban.css";
 
 // Every card id present in `lanes`, across all lanes combined — used to
@@ -44,6 +46,15 @@ export function KanbanPage() {
   } = useKanbanBoard(boardId as Id<"kanban_boards"> | undefined);
 
   const [openId, setOpenId] = useState<string | null>(null);
+  // The card being written in the new-card pane. Minimizing only hides the
+  // pane (`paneOpen`); the draft survives until it's added or discarded.
+  const [draft, setDraft] = useState<NewCardDraft | null>(null);
+  const [paneOpen, setPaneOpen] = useState(false);
+  // The card drawer and the new-card pane share the right edge, so opening a
+  // card tucks the pane away.
+  useEffect(() => {
+    if (openId) setPaneOpen(false);
+  }, [openId]);
   const due = useDue(board);
   // While dragging, reordering happens against this local copy only — the
   // server mutation fires once on drop, not on every dragover frame. Once
@@ -102,6 +113,24 @@ export function KanbanPage() {
   const displayBoard = dragLanes ? { ...board, lanes } : board;
   const openCard = openId ? (displayBoard.cards[openId] ?? null) : null;
   const unread = unreadCards(board);
+
+  const startAdd = (lane: LaneId) => {
+    setDraft((d) =>
+      d
+        ? { ...d, lane }
+        : { lane, title: "", note: "", kind: BOARD_COPY[board.type].defaultKind, weight: "medium" }
+    );
+    setOpenId(null);
+    setPaneOpen(true);
+  };
+
+  const submitDraft = () => {
+    if (!draft || !draft.title.trim()) return;
+    const { lane, ...rest } = draft;
+    addCard(lane, { ...rest, title: draft.title.trim(), note: draft.note.trim() });
+    setDraft(null);
+    setPaneOpen(false);
+  };
 
   const moveToLane = (id: string, to: LaneId) => {
     setLanes((lanes) => {
@@ -184,9 +213,23 @@ export function KanbanPage() {
 
             <main className="board">
               {boardLanes(board).map((l) => (
-                <Lane key={l.id} lane={l.id} board={displayBoard} onOpen={setOpenId} onQuickAdd={addCard} />
+                <Lane key={l.id} lane={l.id} board={displayBoard} onOpen={setOpenId} onStartAdd={startAdd} />
               ))}
             </main>
+
+            <NewCardPane
+              board={displayBoard}
+              draft={draft}
+              open={paneOpen}
+              onChange={(patch) => setDraft((d) => (d ? { ...d, ...patch } : d))}
+              onMinimize={() => setPaneOpen(false)}
+              onExpand={() => setPaneOpen(true)}
+              onDiscard={() => {
+                setDraft(null);
+                setPaneOpen(false);
+              }}
+              onSubmit={submitDraft}
+            />
 
             <CardDrawer
               card={openCard}
