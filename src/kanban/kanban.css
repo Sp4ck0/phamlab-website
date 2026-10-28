@@ -668,8 +668,9 @@ button {
   top: 50%;
   right: 0;
   transform: translateY(-50%);
-  max-width: 220px;
-  padding: 10px 12px;
+  writing-mode: vertical-rl;
+  max-height: 260px;
+  padding: 12px 10px;
   background: var(--paper);
   border: 1px solid var(--rule-firm);
   border-right: none;
@@ -685,6 +686,30 @@ button {
 }
 .newcard-tab:hover {
   background: var(--rule);
+}
+
+/* Sits just left of the open pane; clicking it collapses the pane to
+   .newcard-tab on the right edge. */
+.newcard-handle {
+  position: fixed;
+  top: 50%;
+  right: min(540px, 100%);
+  transform: translateY(-50%);
+  width: 28px;
+  height: 56px;
+  background: var(--paper);
+  border: 1px solid var(--rule-firm);
+  border-right: none;
+  border-radius: 10px 0 0 10px;
+  box-shadow: -6px 0 20px var(--shadow);
+  color: var(--ink-soft);
+  font-size: 18px;
+  cursor: pointer;
+  z-index: 51;
+}
+.newcard-handle:hover {
+  background: var(--rule);
+  color: var(--ink);
 }
 
 .drawer__inner {
@@ -1081,6 +1106,16 @@ button {
 /* ── Narrow screens ──────────────────────────────────────────── */
 
 @media (max-width: 720px) {
+  /* The pane is full width here, so the handle overlaps its left edge. */
+  .newcard-handle {
+    right: auto;
+    left: 0;
+    border: 1px solid var(--rule-firm);
+    border-left: none;
+    border-radius: 0 10px 10px 0;
+    box-shadow: 6px 0 20px var(--shadow);
+  }
+
   .top {
     padding: 14px 16px 12px;
   }

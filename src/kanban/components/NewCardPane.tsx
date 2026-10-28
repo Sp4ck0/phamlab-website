@@ -65,14 +65,6 @@ export function NewCardPane({ board, draft, open, onChange, onMinimize, onExpand
                       </button>
                     ))}
                   </div>
-                  <div>
-                    <button className="drawer__close" onClick={onMinimize} aria-label="Minimize">
-                      ⟩
-                    </button>
-                    <button className="drawer__close" onClick={onDiscard} aria-label="Discard draft">
-                      ✕
-                    </button>
-                  </div>
                 </header>
 
                 <label className="field">
@@ -124,8 +116,8 @@ export function NewCardPane({ board, draft, open, onChange, onMinimize, onExpand
                 </div>
 
                 <footer className="drawer__foot">
-                  <button className="ghost" onClick={onMinimize}>
-                    Minimize
+                  <button className="ghost" onClick={onDiscard}>
+                    Cancel
                   </button>
                   <button className="btn" onClick={onSubmit} disabled={!draft.title.trim()}>
                     Add card
@@ -133,6 +125,17 @@ export function NewCardPane({ board, draft, open, onChange, onMinimize, onExpand
                 </footer>
               </div>
             </motion.aside>
+            <motion.button
+              className="newcard-handle"
+              onClick={onMinimize}
+              aria-label="Collapse pane"
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', stiffness: 320, damping: 34 }}
+            >
+              ›
+            </motion.button>
           </>
         )}
       </AnimatePresence>
