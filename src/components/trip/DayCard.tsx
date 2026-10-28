@@ -176,7 +176,7 @@ export function DayCard({
                     <span className="activity-text">
                       {time && <span className="activity-time">{time}</span>}
                       <span dangerouslySetInnerHTML={{ __html: text }} />
-                      <AddToCalendar url={actUrl(a, d, dayNumber)} />
+                      <AddToCalendar url={actUrl(a, d, dayNumber, ai)} />
                     </span>
                   </li>
                 );
