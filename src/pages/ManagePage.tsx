@@ -70,7 +70,6 @@ function ManagementConsole({ code }: { code: string }) {
   const trips = useQuery(api.management.listTrips, { code }) as TripRow[] | undefined;
   const boards = useQuery(api.management.listBoards, { code }) as BoardRow[] | undefined;
   const codes = useQuery(api.management.listAccessCodes, { code }) as CodeRow[] | undefined;
-  const [adding, setAdding] = useState(false);
 
   if (trips === undefined || boards === undefined || codes === undefined) {
     return <div style={{ padding: "80px 0", color: "var(--text-muted)" }}>Loading…</div>;
@@ -83,19 +82,11 @@ function ManagementConsole({ code }: { code: string }) {
       </h2>
       <p className="sdek">Create access codes and control which trips and boards each one unlocks.</p>
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginTop: 32 }}>
-        <h2 className="section-title" style={{ margin: 0 }}>
-          Existing codes
-        </h2>
-        {!adding && (
-          <button className="btn" type="button" onClick={() => setAdding(true)}>
-            + Add code
-          </button>
-        )}
-      </div>
-      {adding && (
-        <AddCodeForm code={code} existingCodes={codes.map((c) => c.code)} onDone={() => setAdding(false)} />
-      )}
+      <h2 className="section-title" style={{ marginTop: 32 }}>
+        Existing codes
+      </h2>
+      <AddCodeForm code={code} existingCodes={codes.map((c) => c.code)} />
+
       {codes.length === 0 ? (
         <p className="sdek">No access codes yet.</p>
       ) : (
@@ -133,7 +124,7 @@ function tripLabel(t: TripRow) {
 
 // Name + code only: what each code unlocks is set afterwards in the "Who has
 // access" grid below, so there is one place to manage trips/boards/dating.
-function AddCodeForm({ code, existingCodes, onDone }: { code: string; existingCodes: string[]; onDone: () => void }) {
+function AddCodeForm({ code, existingCodes }: { code: string; existingCodes: string[] }) {
   const upsert = useMutation(api.management.upsertAccessCode);
   const [name, setName] = useState("");
   const [newCode, setNewCode] = useState("");
@@ -173,7 +164,8 @@ function AddCodeForm({ code, existingCodes, onDone }: { code: string; existingCo
         name: name.trim(),
         active: true,
       });
-      onDone();
+      setName("");
+      setNewCode("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't create that code.");
     } finally {
@@ -184,12 +176,10 @@ function AddCodeForm({ code, existingCodes, onDone }: { code: string; existingCo
   return (
     <form
       onSubmit={submit}
-      onKeyDown={(e) => e.key === "Escape" && onDone()}
       className="card"
-      style={{ display: "grid", gap: 12, maxWidth: 560, marginTop: 14 }}
+      style={{ display: "grid", gap: 12, maxWidth: 560, marginTop: 14, marginBottom: 24 }}
     >
       <input
-        autoFocus
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Name — e.g. Tony's cousins"
@@ -215,9 +205,6 @@ function AddCodeForm({ code, existingCodes, onDone }: { code: string; existingCo
       <div style={{ display: "flex", gap: 8 }}>
         <button className="btn" type="submit" disabled={submitting}>
           {submitting ? "Adding…" : "Add code"}
-        </button>
-        <button className="btn" type="button" onClick={onDone} disabled={submitting}>
-          Cancel
         </button>
       </div>
     </form>
