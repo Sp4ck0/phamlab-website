@@ -3,6 +3,7 @@ import { useConvexAuth, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "@convex/api";
 import { PageShell } from "../components/layout/PageShell";
+import { McpTokens } from "../components/McpTokens";
 import { NotificationChannels } from "../components/NotificationChannels";
 import { useAccessCode } from "../hooks/useAccessCode";
 import { useSettings } from "../hooks/useSettings";
@@ -71,6 +72,7 @@ export function SettingsPage() {
           </button>
         </div>
         <NotificationChannels />
+        <McpTokens />
         <div className="setting-row">
           <div>
             <div className="setting-label">Account</div>
