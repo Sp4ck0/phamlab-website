@@ -4,6 +4,8 @@ import type { Gap } from "../../lib/tripLogic";
 import { gapLabel } from "../../lib/tripLogic";
 import { dueLabel, dueState } from "../../lib/dueDates";
 import type { ActionItemFields } from "../../hooks/useActionItemEdits";
+import { useAiFocus } from "../../hooks/useAiFocus";
+import { flash, scrollBehavior, SETTLE_MS } from "../../lib/flash";
 import { ActionItemEditor } from "./ActionItemEditor";
 import { DueDateInput } from "./DueDateInput";
 
@@ -96,6 +98,25 @@ export function ActionItems({
     const t = setTimeout(() => setDeleted(null), UNDO_MS);
     return () => clearTimeout(t);
   }, [deleted]);
+
+  // The AI pointed at an item (mcpFocus.ts): scroll to it and blink it. A done
+  // item sits in the collapsed Completed list, so open that first; the item may
+  // also not have arrived yet, so wait for it.
+  const { focus, consume } = useAiFocus("actionItem");
+  useEffect(() => {
+    if (!focus) return;
+    const id = focus.target.id;
+    if (!items.some((i) => i.id === id)) return;
+    if (done[id]) setCompletedOpen(true);
+    const t = setTimeout(() => {
+      const el = document.getElementById(`ai-row-${id}`);
+      if (!el) return;
+      consume(focus.nonce);
+      el.scrollIntoView({ block: "center", behavior: scrollBehavior() });
+      setTimeout(() => flash(el), 250);
+    }, SETTLE_MS);
+    return () => clearTimeout(t);
+  }, [focus, items, done, consume]);
 
   const editorProps = { groups, minDate: tripStart, maxDate: tripEnd, onCancel: () => setEditing(null) };
 
@@ -202,6 +223,7 @@ export function ActionItems({
         <div
           className={`action-item ${isDone ? "done" : ""}`}
           data-due={state === "ok" ? undefined : state}
+          id={`ai-row-${item.id}`}
           key={item.id}
         >
           <input type="checkbox" id={`ai-${item.id}`} aria-labelledby={`ai-${item.id}-text`} checked={isDone} onChange={() => onToggleItem(item.id)} />

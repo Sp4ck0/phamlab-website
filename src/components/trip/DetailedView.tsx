@@ -1,6 +1,8 @@
-import { useId, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import type { ActionItem, Group, LegColor, ResolvedDay, Status } from "../../lib/types";
+import { useAiFocus } from "../../hooks/useAiFocus";
+import { flash, SETTLE_MS } from "../../lib/flash";
 import { reconcileRows } from "../../lib/itineraryState";
 import { mergeFlightsByRoute, statusOf } from "../../lib/tripLogic";
 import { DayNav } from "./DayNav";
@@ -98,6 +100,26 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
     setState(current => ({ ...current, expanded: new Set([...current.expanded, id]) }));
     setPending({ id }); // A new intent also makes repeat jumps work.
   }
+
+  // The AI pointed at a day (mcpFocus.ts): open and scroll to it like a nav
+  // jump, then blink it. The day may not have arrived yet, so wait for it.
+  const { focus, consume } = useAiFocus("day");
+  useEffect(() => {
+    if (!focus) return;
+    const row = state.rows.find(r => r.day.date === focus.target.date);
+    if (!row) return;
+    const t = setTimeout(() => {
+      consume(focus.nonce);
+      jump(row.id);
+      setTimeout(() => {
+        const el = document.getElementById(row.id);
+        if (el) flash(el);
+      }, 250);
+    }, SETTLE_MS);
+    return () => clearTimeout(t);
+    // jump is recreated every render and only reads this render's state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus, state.rows, consume]);
   return (
     <>
       <DayNav rows={state.rows} onJump={jump} />
