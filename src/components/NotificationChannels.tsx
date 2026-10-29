@@ -16,17 +16,37 @@ type Channel = {
   status: "pending" | "verified";
 };
 
-const TYPE_COPY: Record<ChannelType, { label: string; placeholder: string; hint: string }> = {
+const TYPE_COPY: Record<
+  ChannelType,
+  { label: string; placeholder: string; hint: string; steps?: { needs: string; list: string[] } }
+> = {
   email: { label: "Email", placeholder: "you@example.com", hint: "We'll email a 6-digit code to confirm it." },
   slack: {
     label: "Slack",
     placeholder: "https://hooks.slack.com/services/…",
     hint: "Paste an Incoming Webhook URL for the channel. We'll post a 6-digit code there to confirm it.",
+    steps: {
+      needs: "You need permission to add apps in the workspace.",
+      list: [
+        "Go to api.slack.com/apps → Create New App → From scratch. Name it something like “phamlab notify” and pick the workspace.",
+        "In the app, open Incoming Webhooks and switch it on.",
+        "Click Add New Webhook to Workspace, choose the channel (or your own DM) it should post to, and click Allow.",
+        "Copy the URL. It looks like https://hooks.slack.com/services/T…/B…/….",
+      ],
+    },
   },
   discord: {
     label: "Discord",
     placeholder: "https://discord.com/api/webhooks/…",
     hint: "Paste a channel webhook URL (Channel settings → Integrations). We'll post a 6-digit code there to confirm it.",
+    steps: {
+      needs: "You need the “Manage Webhooks” permission on the server, which you have if you own it.",
+      list: [
+        "Open the server, then go to the channel's gear icon → Integrations → Webhooks.",
+        "Click New Webhook, give it a name (and optionally an avatar), and pick the channel it should post to.",
+        "Click Copy Webhook URL. It looks like https://discord.com/api/webhooks/….",
+      ],
+    },
   },
 };
 
@@ -189,6 +209,18 @@ export function NotificationChannels() {
           Send code
         </button>
         <div className="sdek notif-add__hint">{error || TYPE_COPY[type].hint}</div>
+        {TYPE_COPY[type].steps && (
+          <details className="sdek notif-add__hint notif-steps">
+            <summary>How do I get a {TYPE_COPY[type].label} webhook URL?</summary>
+            <p>{TYPE_COPY[type].steps.needs}</p>
+            <ol>
+              {TYPE_COPY[type].steps.list.map((s) => (
+                <li key={s}>{s}</li>
+              ))}
+            </ol>
+            <p>Treat the URL like a password: anyone who has it can post to that channel.</p>
+          </details>
+        )}
       </form>
     </>
   );
