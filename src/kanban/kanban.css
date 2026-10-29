@@ -415,12 +415,11 @@ button {
 }
 
 /* Card color. Pair-board feedback climbs yellow -> orange -> red as it gets
-   heavier and appreciation climbs through three shades of green. On the
-   features board color follows the kind instead — bug red, feature blue,
-   appreciation green — with minor cards a lighter shade (the weight meter
-   carries the rest). Reuses the site's own accent tokens rather than
-   inventing a bespoke palette, so it stays in sync with the rest of the
-   app's light/dark themes. */
+   heavier. Otherwise color follows the kind — bug red, feature blue,
+   appreciation green — at full strength for every weight, so the small kind
+   chip stays legible (the weight meter and spine carry the weight). Reuses
+   the site's own accent tokens rather than inventing a bespoke palette, so
+   it stays in sync with the rest of the app's light/dark themes. */
 .card[data-kind='feedback'][data-weight='minor'] {
   --sev: var(--accent-transit);
 }
@@ -436,20 +435,8 @@ button {
 .card[data-kind='bug'] {
   --sev: var(--danger);
 }
-.card[data-kind='feature'][data-weight='minor'] {
-  --sev: color-mix(in srgb, var(--accent-1) 55%, var(--page));
-}
-.card[data-kind='bug'][data-weight='minor'] {
-  --sev: color-mix(in srgb, var(--danger) 55%, var(--page));
-}
-.card[data-kind='appreciation'][data-weight='minor'] {
-  --sev: color-mix(in srgb, var(--accent-3) 55%, var(--page));
-}
-.card[data-kind='appreciation'][data-weight='medium'] {
+.card[data-kind='appreciation'] {
   --sev: var(--accent-3);
-}
-.card[data-kind='appreciation'][data-weight='major'] {
-  --sev: var(--good);
 }
 
 .card__kind {
