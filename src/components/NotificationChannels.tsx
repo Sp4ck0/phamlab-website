@@ -5,7 +5,7 @@ import type { Id } from "@convex/dataModel";
 import { useAccessCode } from "../hooks/useAccessCode";
 import { ChannelIcon } from "./ChannelIcon";
 import { useKanbanBoards } from "../kanban/useKanbanBoards";
-import { BoardNotifyOptions } from "../kanban/components/NotifyMenu";
+import { BoardNotifyChips } from "../kanban/components/NotifyMenu";
 
 type ChannelType = "email" | "slack" | "discord";
 // Email is switched off (the backend rejects it) until a sender is set up;
@@ -175,8 +175,7 @@ export function NotificationChannels() {
         <div>
           <div className="setting-label">Notifications</div>
           <div className="sdek">
-            Add a place to get notified, then pick what you want to hear about on each board below (or from the
-            bell on the board). A channel only works once you've entered the code we send to it.
+            Connect a channel, then choose what to be notified about on each board.
           </div>
         </div>
       </div>
@@ -221,17 +220,17 @@ export function NotificationChannels() {
           </details>
         )}
       </form>
-      {boards.map((b) => (
-        <div key={b._id} className="setting-row" style={{ flexDirection: "column", alignItems: "stretch" }}>
-          <div>
-            <div className="setting-label">{b.name}</div>
-            <div className="sdek">What to notify you about on this board.</div>
-          </div>
-          <div className="notif-board">
-            <BoardNotifyOptions boardId={b._id} />
-          </div>
+      {boards.length > 0 && (
+        <div className="setting-row notif-boards">
+          <div className="setting-label">Notify me about</div>
+          {boards.map((b) => (
+            <div key={b._id} className="notif-boardrow">
+              <span className="notif-boardrow__name">{b.name}</span>
+              <BoardNotifyChips boardId={b._id} />
+            </div>
+          ))}
         </div>
-      ))}
+      )}
     </>
   );
 }
