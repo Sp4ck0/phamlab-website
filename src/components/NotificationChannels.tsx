@@ -84,9 +84,7 @@ function ChannelRow({ channel }: { channel: Channel }) {
   return (
     <div className="setting-row" style={{ alignItems: "flex-start" }}>
       <div style={{ minWidth: 0 }}>
-        <div className="setting-label">
-          {channel.label} <span className="sdek">· {TYPE_COPY[channel.type].label}</span>
-        </div>
+        <div className="setting-label">{channel.label}</div>
         <div className="sdek">
           {channel.masked} ·{" "}
           {channel.status === "verified"
@@ -149,7 +147,6 @@ export function NotificationChannels() {
   const channels = useQuery(api.notifications.listChannels, args) as Channel[] | null | undefined;
   const add = useMutation(api.notifications.addChannel);
   const [type, setType] = useState<ChannelType>("slack");
-  const [label, setLabel] = useState("");
   const [target, setTarget] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -160,8 +157,7 @@ export function NotificationChannels() {
     setBusy(true);
     setError("");
     try {
-      await add({ ...args, type, label, target });
-      setLabel("");
+      await add({ ...args, type, label: TYPE_COPY[type].label, target });
       setTarget("");
     } catch (err) {
       setError(errorText(err));
@@ -197,13 +193,6 @@ export function NotificationChannels() {
             </option>
           ))}
         </select>
-        <input
-          className="ai-input"
-          placeholder="Name (e.g. My email)"
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          aria-label="Channel name"
-        />
         <input
           className="ai-input notif-add__target"
           placeholder={TYPE_COPY[type].placeholder}
