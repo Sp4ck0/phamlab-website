@@ -3,6 +3,8 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/api";
 import type { Id } from "@convex/dataModel";
 import { useAccessCode } from "../hooks/useAccessCode";
+import { useKanbanBoards } from "../kanban/useKanbanBoards";
+import { BoardNotifyOptions } from "../kanban/components/NotifyMenu";
 
 type ChannelType = "email" | "slack" | "discord";
 // Email is switched off (the backend rejects it) until a sender is set up;
@@ -24,7 +26,7 @@ const TYPE_COPY: Record<
   slack: {
     label: "Slack",
     placeholder: "https://hooks.slack.com/services/…",
-    hint: "Paste an Incoming Webhook URL for the channel. We'll post a 6-digit code there to confirm it.",
+    hint: "Paste an Incoming Webhook URL, then click Connect. We'll post a 6-digit code to that Slack channel; type it back here to finish.",
     steps: {
       needs: "You need permission to add apps in the workspace.",
       list: [
@@ -38,7 +40,7 @@ const TYPE_COPY: Record<
   discord: {
     label: "Discord",
     placeholder: "https://discord.com/api/webhooks/…",
-    hint: "Paste a channel webhook URL (Channel settings → Integrations). We'll post a 6-digit code there to confirm it.",
+    hint: "Paste a channel webhook URL, then click Connect. We'll post a 6-digit code to that Discord channel; type it back here to finish.",
     steps: {
       needs: "You need the “Manage Webhooks” permission on the server, which you have if you own it.",
       list: [
@@ -86,7 +88,10 @@ function ChannelRow({ channel }: { channel: Channel }) {
           {channel.label} <span className="sdek">· {TYPE_COPY[channel.type].label}</span>
         </div>
         <div className="sdek">
-          {channel.masked} · {channel.status === "verified" ? "Confirmed" : "Waiting for your code"}
+          {channel.masked} ·{" "}
+          {channel.status === "verified"
+            ? "Connected"
+            : `Not connected yet — we posted a 6-digit code to your ${TYPE_COPY[channel.type].label} channel. Enter it below.`}
         </div>
         {channel.status === "pending" && (
           <form
@@ -148,6 +153,7 @@ export function NotificationChannels() {
   const [target, setTarget] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const { boards } = useKanbanBoards();
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -170,8 +176,8 @@ export function NotificationChannels() {
         <div>
           <div className="setting-label">Notifications</div>
           <div className="sdek">
-            Add a place to get notified, then pick what you want to hear about from a board's bell menu. A channel
-            only works once you've entered the code we send to it.
+            Add a place to get notified, then pick what you want to hear about on each board below (or from the
+            bell on the board). A channel only works once you've entered the code we send to it.
           </div>
         </div>
       </div>
@@ -206,7 +212,7 @@ export function NotificationChannels() {
           aria-label="Channel address"
         />
         <button className="btn" type="submit" disabled={busy || !target.trim()}>
-          Send code
+          {busy ? "Connecting…" : `Connect ${TYPE_COPY[type].label}`}
         </button>
         <div className="sdek notif-add__hint">{error || TYPE_COPY[type].hint}</div>
         {TYPE_COPY[type].steps && (
@@ -222,6 +228,17 @@ export function NotificationChannels() {
           </details>
         )}
       </form>
+      {boards.map((b) => (
+        <div key={b._id} className="setting-row" style={{ flexDirection: "column", alignItems: "stretch" }}>
+          <div>
+            <div className="setting-label">{b.name}</div>
+            <div className="sdek">What to notify you about on this board.</div>
+          </div>
+          <div className="notif-board">
+            <BoardNotifyOptions boardId={b._id} />
+          </div>
+        </div>
+      ))}
     </>
   );
 }
