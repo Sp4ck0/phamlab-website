@@ -1,5 +1,6 @@
 import { CollisionPriority } from '@dnd-kit/abstract';
 import { useDroppable } from '@dnd-kit/react';
+import { useState } from 'react';
 import type { Board, LaneId } from '../types';
 import { boardLanes } from '../lib';
 import { CardTile } from './CardTile';
@@ -13,7 +14,11 @@ interface Props {
   hasDraft: boolean;
 }
 
+/** The Done lane only shows its newest cards until expanded; new cards are prepended, so the head is newest. */
+const DONE_PREVIEW = 10;
+
 export function Lane({ lane, board, onOpen, onStartAdd, hasDraft }: Props) {
+  const [expanded, setExpanded] = useState(false);
   const meta = boardLanes(board).find((l) => l.id === lane)!;
   const { ref, isDropTarget } = useDroppable({
     id: lane,
@@ -23,6 +28,8 @@ export function Lane({ lane, board, onOpen, onStartAdd, hasDraft }: Props) {
   });
 
   const visible = board.lanes[lane];
+  const hidden = lane === 'settled' && !expanded ? Math.max(0, visible.length - DONE_PREVIEW) : 0;
+  const shown = hidden ? visible.slice(0, DONE_PREVIEW) : visible;
 
   return (
     <section className="lane" data-over={isDropTarget || undefined}>
@@ -35,13 +42,24 @@ export function Lane({ lane, board, onOpen, onStartAdd, hasDraft }: Props) {
       </header>
 
       <div className="lane__body" ref={ref}>
-        {visible.map((id, index) => {
+        {shown.map((id, index) => {
           // A dangling id (references a card that's gone) shouldn't take the
           // whole board down — just skip that tile.
           const card = board.cards[id];
           if (!card) return null;
           return <CardTile key={id} card={card} index={index} lane={lane} board={board} onOpen={onOpen} />;
         })}
+
+        {hidden > 0 && (
+          <button className="lane__more" onClick={() => setExpanded(true)}>
+            Show {hidden} more ›
+          </button>
+        )}
+        {expanded && lane === 'settled' && visible.length > DONE_PREVIEW && (
+          <button className="lane__more" onClick={() => setExpanded(false)}>
+            ‹ Show newest {DONE_PREVIEW} only
+          </button>
+        )}
 
         {visible.length === 0 && <p className="lane__empty">Nothing here yet.</p>}
 
