@@ -414,25 +414,33 @@ button {
   margin-bottom: 6px;
 }
 
-/* Severity color — how urgent this card is at a glance. Feedback climbs
-   yellow -> orange -> red as it gets heavier; appreciation climbs through
-   three shades of green. Reuses the site's own accent tokens rather than
+/* Card color. Pair-board feedback climbs yellow -> orange -> red as it gets
+   heavier and appreciation climbs through three shades of green. On the
+   features board color follows the kind instead — bug red, feature blue,
+   appreciation green — with minor cards a lighter shade (the weight meter
+   carries the rest). Reuses the site's own accent tokens rather than
    inventing a bespoke palette, so it stays in sync with the rest of the
    app's light/dark themes. */
-.card[data-kind='feedback'][data-weight='minor'],
-.card[data-kind='feature'][data-weight='minor'],
-.card[data-kind='bug'][data-weight='minor'] {
+.card[data-kind='feedback'][data-weight='minor'] {
   --sev: var(--accent-transit);
 }
-.card[data-kind='feedback'][data-weight='medium'],
-.card[data-kind='feature'][data-weight='medium'],
-.card[data-kind='bug'][data-weight='medium'] {
+.card[data-kind='feedback'][data-weight='medium'] {
   --sev: var(--accent-2);
 }
-.card[data-kind='feedback'][data-weight='major'],
-.card[data-kind='feature'][data-weight='major'],
-.card[data-kind='bug'][data-weight='major'] {
+.card[data-kind='feedback'][data-weight='major'] {
   --sev: var(--danger);
+}
+.card[data-kind='feature'] {
+  --sev: var(--accent-1);
+}
+.card[data-kind='bug'] {
+  --sev: var(--danger);
+}
+.card[data-kind='feature'][data-weight='minor'] {
+  --sev: color-mix(in srgb, var(--accent-1) 55%, var(--page));
+}
+.card[data-kind='bug'][data-weight='minor'] {
+  --sev: color-mix(in srgb, var(--danger) 55%, var(--page));
 }
 .card[data-kind='appreciation'][data-weight='minor'] {
   --sev: color-mix(in srgb, var(--accent-3) 55%, var(--page));
@@ -678,12 +686,16 @@ button {
   background: var(--ink-soft);
 }
 .drawer[data-kind='appreciation']::before {
-  background: var(--gold);
+  background: var(--accent-3);
 }
-.drawer[data-kind='feedback']::before,
-.drawer[data-kind='feature']::before,
-.drawer[data-kind='bug']::before {
+.drawer[data-kind='feedback']::before {
   background: var(--ink-b);
+}
+.drawer[data-kind='feature']::before {
+  background: var(--accent-1);
+}
+.drawer[data-kind='bug']::before {
+  background: var(--danger);
 }
 
 .newcard-thumbs {
