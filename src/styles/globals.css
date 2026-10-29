@@ -136,6 +136,11 @@ a{color:inherit}
 .btn-icon{display:grid;place-items:center;flex:none;padding:8px 10px;margin-left:auto}
 .setting-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;border-top:1px solid var(--gridline)}
 .setting-label{font-size:14px;font-weight:600;color:var(--text-primary)}
+.notif-add{flex-wrap:wrap;justify-content:flex-start}
+.notif-add__target{flex:1 1 240px}
+.notif-add__hint{flex-basis:100%}
+.notif-confirm{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.notif-confirm .ai-input{width:130px}
 .unit-toggle{
   position:relative;display:inline-grid;grid-template-columns:1fr 1fr;align-items:center;flex:none;
   width:84px;height:32px;padding:0;border:1px solid var(--border);border-radius:999px;background:var(--card);

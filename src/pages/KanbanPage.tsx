@@ -11,6 +11,7 @@ import { useRememberTab } from "../hooks/useRememberTab";
 import { Lane } from "../kanban/components/Lane";
 import { CardDrawer } from "../kanban/components/CardDrawer";
 import { NewCardPane } from "../kanban/components/NewCardPane";
+import { NotifyMenu } from "../kanban/components/NotifyMenu";
 import { BOARD_COPY } from "../kanban/types";
 import { boardLanes, laneOf, unreadCards, useDue, viewerSeat } from "../kanban/lib";
 import type { Board, LaneId, NewCardDraft } from "../kanban/types";
@@ -203,6 +204,7 @@ export function KanbanPage() {
               </div>
 
               <div className="top__tools">
+                <NotifyMenu boardId={boardId as Id<"kanban_boards">} />
                 {unread.length > 0 && (
                   <button
                     className="nudge nudge--replies"

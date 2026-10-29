@@ -3,6 +3,7 @@ import { useConvexAuth, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "@convex/api";
 import { PageShell } from "../components/layout/PageShell";
+import { NotificationChannels } from "../components/NotificationChannels";
 import { useAccessCode } from "../hooks/useAccessCode";
 import { useSettings } from "../hooks/useSettings";
 import { clearLastTab } from "../lib/lastTab";
@@ -69,6 +70,7 @@ export function SettingsPage() {
             <span data-on={tempUnit === "C" ? "true" : undefined}>°C</span>
           </button>
         </div>
+        <NotificationChannels />
         <div className="setting-row">
           <div>
             <div className="setting-label">Account</div>
