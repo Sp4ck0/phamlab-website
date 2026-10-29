@@ -367,7 +367,7 @@ function WhoHasAccess({
   function renderRows(items: { id: string; label: string }[], kind: "tripIds" | "boardIds") {
     return items.map((item) => (
       <tr key={item.id}>
-        <th scope="row" style={{ ...cellStyle, textAlign: "left", fontWeight: 500, whiteSpace: "nowrap" }}>
+        <th scope="row" style={{ ...cellStyle, textAlign: "left", fontWeight: 500, whiteSpace: "nowrap", position: "sticky", left: 0, background: "var(--card)" }}>
           {item.label}
         </th>
         {codes.map((c) => {
@@ -528,7 +528,7 @@ const inputStyle: CSSProperties = {
   padding: "10px 14px",
   border: "1px solid var(--border)",
   borderRadius: 10,
-  fontSize: 14,
+  fontSize: 16,
   fontFamily: "inherit",
   background: "var(--page)",
   color: "var(--text-primary)",
