@@ -7,11 +7,11 @@ import { useAccessCode } from "../../hooks/useAccessCode";
 
 type NotifyEvent = "reply" | "card_added" | "card_moved" | "card_changed";
 
-const EVENTS: { id: NotifyEvent; label: string }[] = [
-  { id: "reply", label: "New replies" },
-  { id: "card_added", label: "New cards" },
-  { id: "card_moved", label: "Cards moved between lanes" },
-  { id: "card_changed", label: "Cards edited or removed" },
+const EVENTS: { id: NotifyEvent; label: string; short: string }[] = [
+  { id: "reply", label: "New replies", short: "Replies" },
+  { id: "card_added", label: "New cards", short: "New cards" },
+  { id: "card_moved", label: "Cards moved between lanes", short: "Moved" },
+  { id: "card_changed", label: "Cards edited or removed", short: "Edited" },
 ];
 
 // Typed by hand: Convex infers the notifications query results as `any` (see
@@ -26,9 +26,7 @@ function useSubscribedEvents(boardId: Id<"kanban_boards">) {
   return { args, current: subs?.find((s) => s.boardId === boardId)?.events ?? [] };
 }
 
-// The event checkboxes for one board, shared by the board's bell menu and the
-// Settings page.
-export function BoardNotifyOptions({ boardId }: { boardId: Id<"kanban_boards"> }) {
+function useToggleEvent(boardId: Id<"kanban_boards">) {
   const { args, current } = useSubscribedEvents(boardId);
   const save = useMutation(api.notifications.setBoardSubscription);
   const [error, setError] = useState("");
@@ -42,7 +40,12 @@ export function BoardNotifyOptions({ boardId }: { boardId: Id<"kanban_boards"> }
       setError("Couldn't save that");
     }
   }
+  return { current, error, toggle };
+}
 
+// The event checkboxes for one board, in the board's bell menu.
+export function BoardNotifyOptions({ boardId }: { boardId: Id<"kanban_boards"> }) {
+  const { current, error, toggle } = useToggleEvent(boardId);
   return (
     <>
       {EVENTS.map((e) => (
@@ -53,6 +56,28 @@ export function BoardNotifyOptions({ boardId }: { boardId: Id<"kanban_boards"> }
       ))}
       {error && <div className="notify__note" role="alert">{error}</div>}
     </>
+  );
+}
+
+// The same choices as compact on/off chips, for the Settings page.
+export function BoardNotifyChips({ boardId }: { boardId: Id<"kanban_boards"> }) {
+  const { current, error, toggle } = useToggleEvent(boardId);
+  return (
+    <div className="notif-chips">
+      {EVENTS.map((e) => (
+        <button
+          key={e.id}
+          type="button"
+          className="notif-chip"
+          aria-pressed={current.includes(e.id)}
+          title={e.label}
+          onClick={() => void toggle(e.id)}
+        >
+          {e.short}
+        </button>
+      ))}
+      {error && <span className="notify__note" role="alert">{error}</span>}
+    </div>
   );
 }
 
