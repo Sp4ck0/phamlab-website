@@ -10,7 +10,6 @@ import { StatTiles } from "./StatTiles";
 export function TripHeader({
   kicker,
   title,
-  titleEmphasis,
   dateRangeLabel,
   days,
   highlightStat,
@@ -21,7 +20,6 @@ export function TripHeader({
 }: {
   kicker: string;
   title: string;
-  titleEmphasis: string;
   dateRangeLabel: string;
   days: Day[];
   highlightStat?: HighlightStat;
@@ -46,9 +44,7 @@ export function TripHeader({
   return (
     <header className="hero" style={{ position: "relative" }}>
       <p className="eyebrow">{kicker}</p>
-      <h1>
-        {title} {titleEmphasis}
-      </h1>
+      <h1>{title}</h1>
       <p className="subdate">
         {dateRangeLabel} · {days.length} days
       </p>

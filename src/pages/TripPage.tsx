@@ -63,7 +63,6 @@ function TripPageEntry() {
       <TripHeader
         kicker={trip.kicker}
         title={trip.title}
-        titleEmphasis={trip.titleEmphasis}
         dateRangeLabel={trip.dateRangeLabel}
         days={trip.days}
         highlightStat={trip.highlightStat}
