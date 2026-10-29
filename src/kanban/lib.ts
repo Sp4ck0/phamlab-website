@@ -115,6 +115,7 @@ export const KIND_TONE: Record<Kind, string> = {
   appreciation: "var(--gold)",
   feedback: "var(--ink-soft)",
   feature: "var(--ink-soft)",
+  bug: "var(--ink-soft)",
 };
 
 const today = () => new Date().toISOString().slice(0, 10);

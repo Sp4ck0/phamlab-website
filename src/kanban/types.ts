@@ -9,9 +9,9 @@ export type BoardType = 'pair' | 'features';
 
 /**
  * The flavours of card. Colour and tone follow from this. A pair board offers
- * appreciation/feedback; a features board offers feature/appreciation.
+ * appreciation/feedback; a features board offers feature/bug/appreciation.
  */
-export type Kind = 'appreciation' | 'feedback' | 'feature';
+export type Kind = 'appreciation' | 'feedback' | 'feature' | 'bug';
 
 /**
  * How much this weighs on the person who raised it — deliberately their call,
@@ -148,7 +148,8 @@ export const BOARD_COPY: Record<
       { id: 'settled', name: 'Done', blurb: 'Shipped and working. Kudos live here too.' },
     ],
     kinds: [
-      { id: 'feature', label: 'Feature', hint: 'Something you’d like added, changed, or fixed' },
+      { id: 'feature', label: 'Feature', hint: 'Something you’d like added or changed' },
+      { id: 'bug', label: 'Bug', hint: 'Something that’s broken or not working right' },
       { id: 'appreciation', label: 'Appreciation', hint: 'Something that’s working well' },
     ],
     weights: [
