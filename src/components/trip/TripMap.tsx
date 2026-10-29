@@ -64,7 +64,15 @@ export function TripMap({ points, route, weatherStops }: Props) {
   }, []);
 
   useEffect(() => {
-    if (status !== "ready" || geocoded.length === 0 || !mapRef.current) return;
+    if (status !== "ready" || geocoded.length === 0) {
+      // The map's <div> is unmounted while loading; drop the map built on it so
+      // the next render builds a fresh one on the new <div> instead of reusing
+      // an instance attached to a detached element (a blank map).
+      mapInstance.current = null;
+      setMapReady(false);
+      return;
+    }
+    if (!mapRef.current) return;
     let cancelled = false;
 
     (async () => {
