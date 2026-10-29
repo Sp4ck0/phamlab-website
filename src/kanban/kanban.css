@@ -314,6 +314,18 @@ button {
   margin: 0;
 }
 
+.lane__more {
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  padding: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.lane__more:hover {
+  color: var(--ink);
+}
+
 .lane__add {
   background: none;
   border: 1px dashed var(--rule-firm);
