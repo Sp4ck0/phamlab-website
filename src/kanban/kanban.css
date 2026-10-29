@@ -407,15 +407,18 @@ button {
    inventing a bespoke palette, so it stays in sync with the rest of the
    app's light/dark themes. */
 .card[data-kind='feedback'][data-weight='minor'],
-.card[data-kind='feature'][data-weight='minor'] {
+.card[data-kind='feature'][data-weight='minor'],
+.card[data-kind='bug'][data-weight='minor'] {
   --sev: var(--accent-transit);
 }
 .card[data-kind='feedback'][data-weight='medium'],
-.card[data-kind='feature'][data-weight='medium'] {
+.card[data-kind='feature'][data-weight='medium'],
+.card[data-kind='bug'][data-weight='medium'] {
   --sev: var(--accent-2);
 }
 .card[data-kind='feedback'][data-weight='major'],
-.card[data-kind='feature'][data-weight='major'] {
+.card[data-kind='feature'][data-weight='major'],
+.card[data-kind='bug'][data-weight='major'] {
   --sev: var(--danger);
 }
 .card[data-kind='appreciation'][data-weight='minor'] {
@@ -665,7 +668,8 @@ button {
   background: var(--gold);
 }
 .drawer[data-kind='feedback']::before,
-.drawer[data-kind='feature']::before {
+.drawer[data-kind='feature']::before,
+.drawer[data-kind='bug']::before {
   background: var(--ink-b);
 }
 
