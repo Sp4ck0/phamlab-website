@@ -1,17 +1,29 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/api";
 import type { Id } from "@convex/dataModel";
 import { useAccessCode } from "../hooks/useAccessCode";
-import { uploadImages } from "./lib";
+import { DONE_PREVIEW, uploadImages } from "./lib";
 import type { Board, Card, LaneId, QuickAddDraft } from "./types";
 
 // uploadImages returns plain-string ids; the mutations want branded storage ids.
 type ReplyImages = { id: Id<"_storage">; w: number; h: number }[];
 
-export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined) {
+// allDone: load every Done card; otherwise only the newest DONE_PREVIEW (the
+// server still lists all the ids, so the lane's count and "show more" work).
+export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined, { allDone = false } = {}) {
   const { code } = useAccessCode();
-  const result = useQuery(api.kanban.getBoard, code && boardId ? { code, boardId } : "skip");
+  const latest = useQuery(
+    api.kanban.getBoard,
+    code && boardId ? { code, boardId, settledLimit: allDone ? undefined : DONE_PREVIEW } : "skip"
+  );
+  // Expanding or collapsing Done changes the query args, and useQuery reports
+  // undefined until the new result arrives. Keep showing the last result for
+  // the same board meanwhile so the page doesn't flash back to loading.
+  const previous = useRef<{ boardId: string; result: typeof latest } | null>(null);
+  if (latest !== undefined && boardId) previous.current = { boardId, result: latest };
+  const held = previous.current;
+  const result = latest ?? (held && held.boardId === boardId ? held.result : undefined);
 
   const addCardMut = useMutation(api.kanban.addCard);
   const updateCardMut = useMutation(api.kanban.updateCard);

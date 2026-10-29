@@ -1,8 +1,7 @@
 import { CollisionPriority } from '@dnd-kit/abstract';
 import { useDroppable } from '@dnd-kit/react';
-import { useState } from 'react';
 import type { Board, LaneId } from '../types';
-import { boardLanes } from '../lib';
+import { boardLanes, DONE_PREVIEW } from '../lib';
 import { CardTile } from './CardTile';
 
 interface Props {
@@ -12,13 +11,16 @@ interface Props {
   onStartAdd: (lane: LaneId) => void;
   /** True when the in-progress draft is targeting this column. */
   hasDraft: boolean;
+  /**
+   * The Done lane only shows its newest DONE_PREVIEW cards until expanded (new
+   * cards are prepended, so the head is newest). The page owns this because
+   * expanding also asks the server for the rest of the cards.
+   */
+  expanded: boolean;
+  onExpandedChange: (expanded: boolean) => void;
 }
 
-/** The Done lane only shows its newest cards until expanded; new cards are prepended, so the head is newest. */
-const DONE_PREVIEW = 10;
-
-export function Lane({ lane, board, onOpen, onStartAdd, hasDraft }: Props) {
-  const [expanded, setExpanded] = useState(false);
+export function Lane({ lane, board, onOpen, onStartAdd, hasDraft, expanded, onExpandedChange }: Props) {
   const meta = boardLanes(board).find((l) => l.id === lane)!;
   const { ref, isDropTarget } = useDroppable({
     id: lane,
@@ -51,12 +53,12 @@ export function Lane({ lane, board, onOpen, onStartAdd, hasDraft }: Props) {
         })}
 
         {hidden > 0 && (
-          <button className="lane__more" onClick={() => setExpanded(true)}>
+          <button className="lane__more" onClick={() => onExpandedChange(true)}>
             Show {hidden} more ›
           </button>
         )}
         {expanded && lane === 'settled' && visible.length > DONE_PREVIEW && (
-          <button className="lane__more" onClick={() => setExpanded(false)}>
+          <button className="lane__more" onClick={() => onExpandedChange(false)}>
             ‹ Show newest {DONE_PREVIEW} only
           </button>
         )}

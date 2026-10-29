@@ -47,6 +47,8 @@ function fitToViewport(el: HTMLDivElement | null) {
 export function KanbanPage() {
   const { boardId } = useParams<{ boardId: string }>();
   const { code } = useAccessCode();
+  // Done loads its newest cards only until expanded (see useKanbanBoard).
+  const [allDone, setAllDone] = useState(false);
   const {
     board,
     isLoading,
@@ -60,7 +62,7 @@ export function KanbanPage() {
     addNoteImages,
     removeNoteImage,
     markRead,
-  } = useKanbanBoard(boardId as Id<"kanban_boards"> | undefined);
+  } = useKanbanBoard(boardId as Id<"kanban_boards"> | undefined, { allDone });
   useRememberTab(authorized && board ? `/kanban/${boardId}` : null);
 
   const [openId, setOpenId] = useState<string | null>(null);
@@ -242,7 +244,16 @@ export function KanbanPage() {
 
             <main className="board">
               {boardLanes(board).map((l) => (
-                <Lane key={l.id} lane={l.id} board={displayBoard} onOpen={setOpenId} onStartAdd={startAdd} hasDraft={draft?.lane === l.id} />
+                <Lane
+                  key={l.id}
+                  lane={l.id}
+                  board={displayBoard}
+                  onOpen={setOpenId}
+                  onStartAdd={startAdd}
+                  hasDraft={draft?.lane === l.id}
+                  expanded={allDone}
+                  onExpandedChange={setAllDone}
+                />
               ))}
             </main>
 

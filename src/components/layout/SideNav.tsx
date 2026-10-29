@@ -5,7 +5,7 @@ import { api } from "@convex/api";
 import { useAccessibleTrips } from "../../hooks/useAccessibleTrips";
 import { useAccessCode } from "../../hooks/useAccessCode";
 import { useTheme } from "../../hooks/useTheme";
-import { useKanbanBoards } from "../../kanban/useKanbanBoards";
+import { useKanbanBoardUnread } from "../../kanban/useKanbanBoards";
 import { flagEmoji, navCountdown, navMonthLabel } from "../../lib/tripLogic";
 import { VersionLog } from "./VersionLog";
 import { ThemeIcon } from "./ThemeIcon";
@@ -17,7 +17,7 @@ export function SideNav() {
   const { code } = useAccessCode();
   const isManagementCode = useQuery(api.management.checkManagementAccess, code ? { code } : "skip");
   const isDatingCode = useQuery(api.dating.checkDatingAccess, code ? { code } : "skip");
-  const { boards } = useKanbanBoards();
+  const { boards } = useKanbanBoardUnread();
   const { isDark, toggle: toggleTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [showLog, setShowLog] = useState(false);
