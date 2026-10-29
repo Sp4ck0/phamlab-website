@@ -54,7 +54,7 @@ export function UnlockPage() {
               padding: "10px 14px",
               border: "1px solid var(--border)",
               borderRadius: 10,
-              fontSize: 14,
+              fontSize: 16,
               fontFamily: "inherit",
               background: "var(--card)",
               color: "var(--text-primary)",

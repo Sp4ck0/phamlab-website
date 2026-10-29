@@ -34,6 +34,7 @@
   position: relative;
   display: block;
   height: 78vh;
+  height: 78dvh;
   min-height: 560px;
   margin: 0;
   background: var(--paper);
@@ -1381,3 +1382,12 @@ button {
 }
 
 } /* @scope (.kanban-app) */
+
+/* iOS zooms the page when a focused field is under 16px. */
+@media (hover: none) {
+  .kanban-app textarea,
+  .kanban-app select,
+  .kanban-app input:not([type='checkbox']):not([type='file']) {
+    font-size: 16px;
+  }
+}

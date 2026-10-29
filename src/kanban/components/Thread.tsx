@@ -200,7 +200,8 @@ export function Thread({ card, board, raisedBy, onReply, onRemoveReply, onRead }
             }
           }}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+            // Touch keyboards have no Shift+Enter, so Enter stays a newline there.
+            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && !window.matchMedia('(hover: none)').matches) {
               e.preventDefault();
               void send();
             }
@@ -216,7 +217,9 @@ export function Thread({ card, board, raisedBy, onReply, onRemoveReply, onRead }
         </span>
       )}
       <span className="thread__hint">
-        Enter to send · Shift+Enter for a new line · paste or 📎 to add images
+        {window.matchMedia('(hover: none)').matches
+          ? 'Tap Send to post · paste or 📎 to add images'
+          : 'Enter to send · Shift+Enter for a new line · paste or 📎 to add images'}
       </span>
     </section>
   );

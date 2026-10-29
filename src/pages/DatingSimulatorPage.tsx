@@ -346,7 +346,7 @@ function ChatScreen({
 
   return (
     <div style={{ padding: "40px 0 0", display: "grid", gap: 12, maxWidth: 640 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
         <h2 className="shead" style={{ margin: 0 }}>
           {persona.name}, {persona.age}
         </h2>
@@ -883,6 +883,7 @@ function IconStop({ size = 18 }: { size?: number }) {
 function bubbleStyle(role: ChatMessage["role"]): CSSProperties {
   return {
     maxWidth: "75%",
+    overflowWrap: "anywhere",
     padding: "8px 12px",
     borderRadius: 14,
     fontSize: 14,
@@ -895,10 +896,11 @@ function bubbleStyle(role: ChatMessage["role"]): CSSProperties {
 
 const inputStyle: CSSProperties = {
   flex: 1,
+  minWidth: 0,
   padding: "10px 14px",
   border: "1px solid var(--border)",
   borderRadius: 10,
-  fontSize: 14,
+  fontSize: 16,
   fontFamily: "inherit",
   background: "var(--page)",
   color: "var(--text-primary)",

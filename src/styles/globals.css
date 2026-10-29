@@ -523,8 +523,20 @@ footer code{background:var(--chip-bg);padding:2px 6px;border-radius:4px;color:va
   .trip-map{height:260px}
   .action-items,.overview-list,.alert,.trip-map-wrap{border-radius:12px}
   .action-item{flex-wrap:wrap}
-  .due-chip{margin-left:29px}
+  .due-chip{flex:0 0 calc(100% - 29px);margin-left:29px}
+  .ai-input,.due-input,.range-picker select{font-size:16px}
+  .ai-editor-actions{flex-wrap:wrap}
+  .ai-day{min-width:0}
+  .add-btn,.ai-chip{padding-top:9px;padding-bottom:9px}
+  .due-input{padding:7px 8px}
+  .btn{padding-top:11px;padding-bottom:11px}
+  .view-row{position:relative}
+  .export-menu{position:static}
+  .export-menu-list{left:0;right:0;width:auto;max-width:none}
+  .range-picker select{width:100%;max-width:100%}
+  .print-doc{padding:20px 16px 40px}
 }
+body:has(.print-doc){padding:0}
 @media(prefers-reduced-motion:reduce){.day-chevron{transition:none}}
 @media print{
   .sidenav,.status,.navtoggle,.navbackdrop,.mobile-topbar{display:none}
@@ -601,4 +613,9 @@ footer code{background:var(--chip-bg);padding:2px 6px;border-radius:4px;color:va
 .icon-btn:hover{color:var(--text-primary);background:var(--chip-bg)}
 .undo-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;padding:8px 14px;font-size:13px;color:var(--text-secondary);background:var(--chip-bg);border-radius:10px}
 .undo-bar button{font:inherit;font-size:13px;font-weight:700;color:var(--text-primary);background:none;border:none;cursor:pointer;text-decoration:underline}
-@media (hover:none){.row-actions{opacity:1}}
+@media (hover:none){
+  .row-actions{opacity:1}
+  .icon-btn{width:36px;height:36px}
+  .status::after{content:"";position:absolute;inset:-12px}
+}
+.cmain,.cmeta,.flight-box-title,.fl-route,.fl-meta,.note,.tour-body,.alert li{overflow-wrap:anywhere}
