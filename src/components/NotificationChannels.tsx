@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/api";
 import type { Id } from "@convex/dataModel";
 import { useAccessCode } from "../hooks/useAccessCode";
+import { ChannelIcon } from "./ChannelIcon";
 import { useKanbanBoards } from "../kanban/useKanbanBoards";
 import { BoardNotifyOptions } from "../kanban/components/NotifyMenu";
 
@@ -20,12 +21,11 @@ type Channel = {
 
 const TYPE_COPY: Record<
   ChannelType,
-  { label: string; icon: string; placeholder: string; hint: string; steps?: { needs: string; list: string[] } }
+  { label: string; placeholder: string; hint: string; steps?: { needs: string; list: string[] } }
 > = {
-  email: { label: "Email", icon: "✉️", placeholder: "you@example.com", hint: "We'll email a 6-digit code to confirm it." },
+  email: { label: "Email", placeholder: "you@example.com", hint: "We'll email a 6-digit code to confirm it." },
   slack: {
     label: "Slack",
-    icon: "💬",
     placeholder: "https://hooks.slack.com/services/…",
     hint: "Paste an Incoming Webhook URL, then click Connect. We'll post a 6-digit code to that Slack channel; type it back here to finish.",
     steps: {
@@ -40,7 +40,6 @@ const TYPE_COPY: Record<
   },
   discord: {
     label: "Discord",
-    icon: "🎮",
     placeholder: "https://discord.com/api/webhooks/…",
     hint: "Paste a channel webhook URL, then click Connect. We'll post a 6-digit code to that Discord channel; type it back here to finish.",
     steps: {
@@ -86,8 +85,8 @@ function ChannelRow({ channel }: { channel: Channel }) {
   return (
     <div className="setting-row" style={{ alignItems: "flex-start" }}>
       <div style={{ minWidth: 0 }}>
-        <div className="setting-label">
-          {TYPE_COPY[channel.type].icon} {channel.label}
+        <div className="setting-label notif-name">
+          <ChannelIcon type={channel.type} /> {channel.label}
         </div>
         <div className="sdek">
           {channel.masked} ·{" "}
@@ -185,18 +184,19 @@ export function NotificationChannels() {
         <ChannelRow key={c._id} channel={c} />
       ))}
       <form className="setting-row notif-add" onSubmit={(e) => void submit(e)}>
-        <select
-          className="ai-input"
-          value={type}
-          onChange={(e) => setType(e.target.value as ChannelType)}
-          aria-label="Channel type"
-        >
+        <div className="notif-type" role="group" aria-label="Channel type">
           {ADDABLE_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {TYPE_COPY[t].icon} {TYPE_COPY[t].label}
-            </option>
+            <button
+              key={t}
+              type="button"
+              className="btn notif-type__opt"
+              aria-pressed={type === t}
+              onClick={() => setType(t)}
+            >
+              <ChannelIcon type={t} size={16} /> {TYPE_COPY[t].label}
+            </button>
           ))}
-        </select>
+        </div>
         <input
           className="ai-input notif-add__target"
           placeholder={TYPE_COPY[type].placeholder}
@@ -205,7 +205,7 @@ export function NotificationChannels() {
           aria-label="Channel address"
         />
         <button className="btn" type="submit" disabled={busy || !target.trim()}>
-          {busy ? "Connecting…" : `Connect ${TYPE_COPY[type].icon} ${TYPE_COPY[type].label}`}
+          {busy ? "Connecting…" : `Connect ${TYPE_COPY[type].label}`}
         </button>
         <div className="sdek notif-add__hint">{error || TYPE_COPY[type].hint}</div>
         {TYPE_COPY[type].steps && (
