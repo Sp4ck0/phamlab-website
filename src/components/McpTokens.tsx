@@ -81,8 +81,8 @@ export function McpTokens() {
             </summary>
             <ul className="sdek" style={{ paddingLeft: 20 }}>
               <li>
-                <strong>ChatGPT:</strong> turn on Developer mode (Settings → Apps &amp; Connectors → Advanced), create a
-                connector with this address, and choose OAuth. Menu names vary by plan.
+                <strong>ChatGPT:</strong> on the left pane, select "Plugins". Then click "Add" at the top right →
+                "Add Custom MCP Server". For Connection, use this address, and choose OAuth.
               </li>
               <li>
                 <strong>Claude:</strong> Settings → Connectors → Add custom connector, and paste the address.
