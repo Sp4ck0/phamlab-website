@@ -20,11 +20,12 @@ type Channel = {
 
 const TYPE_COPY: Record<
   ChannelType,
-  { label: string; placeholder: string; hint: string; steps?: { needs: string; list: string[] } }
+  { label: string; icon: string; placeholder: string; hint: string; steps?: { needs: string; list: string[] } }
 > = {
-  email: { label: "Email", placeholder: "you@example.com", hint: "We'll email a 6-digit code to confirm it." },
+  email: { label: "Email", icon: "✉️", placeholder: "you@example.com", hint: "We'll email a 6-digit code to confirm it." },
   slack: {
     label: "Slack",
+    icon: "💬",
     placeholder: "https://hooks.slack.com/services/…",
     hint: "Paste an Incoming Webhook URL, then click Connect. We'll post a 6-digit code to that Slack channel; type it back here to finish.",
     steps: {
@@ -39,6 +40,7 @@ const TYPE_COPY: Record<
   },
   discord: {
     label: "Discord",
+    icon: "🎮",
     placeholder: "https://discord.com/api/webhooks/…",
     hint: "Paste a channel webhook URL, then click Connect. We'll post a 6-digit code to that Discord channel; type it back here to finish.",
     steps: {
@@ -84,7 +86,9 @@ function ChannelRow({ channel }: { channel: Channel }) {
   return (
     <div className="setting-row" style={{ alignItems: "flex-start" }}>
       <div style={{ minWidth: 0 }}>
-        <div className="setting-label">{channel.label}</div>
+        <div className="setting-label">
+          {TYPE_COPY[channel.type].icon} {channel.label}
+        </div>
         <div className="sdek">
           {channel.masked} ·{" "}
           {channel.status === "verified"
@@ -189,7 +193,7 @@ export function NotificationChannels() {
         >
           {ADDABLE_TYPES.map((t) => (
             <option key={t} value={t}>
-              {TYPE_COPY[t].label}
+              {TYPE_COPY[t].icon} {TYPE_COPY[t].label}
             </option>
           ))}
         </select>
@@ -201,7 +205,7 @@ export function NotificationChannels() {
           aria-label="Channel address"
         />
         <button className="btn" type="submit" disabled={busy || !target.trim()}>
-          {busy ? "Connecting…" : `Connect ${TYPE_COPY[type].label}`}
+          {busy ? "Connecting…" : `Connect ${TYPE_COPY[type].icon} ${TYPE_COPY[type].label}`}
         </button>
         <div className="sdek notif-add__hint">{error || TYPE_COPY[type].hint}</div>
         {TYPE_COPY[type].steps && (
