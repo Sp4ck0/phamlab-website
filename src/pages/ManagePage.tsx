@@ -70,6 +70,7 @@ function ManagementConsole({ code }: { code: string }) {
   const trips = useQuery(api.management.listTrips, { code }) as TripRow[] | undefined;
   const boards = useQuery(api.management.listBoards, { code }) as BoardRow[] | undefined;
   const codes = useQuery(api.management.listAccessCodes, { code }) as CodeRow[] | undefined;
+  const [adding, setAdding] = useState(false);
 
   if (trips === undefined || boards === undefined || codes === undefined) {
     return <div style={{ padding: "80px 0", color: "var(--text-muted)" }}>Loading…</div>;
@@ -82,13 +83,19 @@ function ManagementConsole({ code }: { code: string }) {
       </h2>
       <p className="sdek">Create access codes and control which trips and boards each one unlocks.</p>
 
-      <NewCodeForm code={code} trips={trips} boards={boards} existingCodes={codes.map((c) => c.code)} />
-
-      <WhoHasAccess code={code} trips={trips} boards={boards} codes={codes} />
-
-      <h2 className="section-title" style={{ marginTop: 40 }}>
-        Existing codes
-      </h2>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginTop: 32 }}>
+        <h2 className="section-title" style={{ margin: 0 }}>
+          Existing codes
+        </h2>
+        {!adding && (
+          <button className="btn" type="button" onClick={() => setAdding(true)}>
+            + Add code
+          </button>
+        )}
+      </div>
+      {adding && (
+        <AddCodeForm code={code} existingCodes={codes.map((c) => c.code)} onDone={() => setAdding(false)} />
+      )}
       {codes.length === 0 ? (
         <p className="sdek">No access codes yet.</p>
       ) : (
@@ -111,6 +118,8 @@ function ManagementConsole({ code }: { code: string }) {
           </table>
         </div>
       )}
+
+      <WhoHasAccess code={code} trips={trips} boards={boards} codes={codes} />
     </div>
   );
 }
@@ -122,131 +131,31 @@ function tripLabel(t: TripRow) {
   return `${year ? `${year} ` : ""}${t.navIcon} ${t.title}`;
 }
 
-function TripCheckboxes({ trips, selected, onChange }: { trips: TripRow[]; selected: string[]; onChange: (tripIds: string[]) => void }) {
-  function toggle(tripId: string) {
-    onChange(selected.includes(tripId) ? selected.filter((id) => id !== tripId) : [...selected, tripId]);
-  }
-  return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-      {trips.map((t) => (
-        <button
-          key={t._id}
-          type="button"
-          className="chip"
-          aria-pressed={selected.includes(t._id)}
-          onClick={() => toggle(t._id)}
-        >
-          {tripLabel(t)}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function BoardCheckboxes({ boards, selected, onChange }: { boards: BoardRow[]; selected: string[]; onChange: (boardIds: string[]) => void }) {
-  function toggle(boardId: string) {
-    onChange(selected.includes(boardId) ? selected.filter((id) => id !== boardId) : [...selected, boardId]);
-  }
-  if (boards.length === 0) {
-    return <p className="sdek" style={{ margin: 0 }}>No boards yet.</p>;
-  }
-  return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-      {boards.map((b) => (
-        <button
-          key={b._id}
-          type="button"
-          className="chip"
-          aria-pressed={selected.includes(b._id)}
-          onClick={() => toggle(b._id)}
-        >
-          {b.name}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function AccessSections({
-  trips,
-  boards,
-  tripIds,
-  boardIds,
-  datingAccess,
-  onTripsChange,
-  onBoardsChange,
-  onDatingAccessChange,
-}: {
-  trips: TripRow[];
-  boards: BoardRow[];
-  tripIds: string[];
-  boardIds: string[];
-  datingAccess: boolean;
-  onTripsChange: (tripIds: string[]) => void;
-  onBoardsChange: (boardIds: string[]) => void;
-  onDatingAccessChange: (datingAccess: boolean) => void;
-}) {
-  return (
-    <div style={{ display: "grid", gap: 14 }}>
-      <div>
-        <div className="ctype" style={{ marginBottom: 6 }}>
-          Trips
-        </div>
-        <TripCheckboxes trips={trips} selected={tripIds} onChange={onTripsChange} />
-      </div>
-      <div>
-        <div className="ctype" style={{ marginBottom: 6 }}>
-          Boards
-        </div>
-        <BoardCheckboxes boards={boards} selected={boardIds} onChange={onBoardsChange} />
-      </div>
-      <div>
-        <div className="ctype" style={{ marginBottom: 6 }}>
-          Dating Simulator
-        </div>
-        <button
-          type="button"
-          className="chip"
-          aria-pressed={datingAccess}
-          onClick={() => onDatingAccessChange(!datingAccess)}
-        >
-          {datingAccess ? "Enabled" : "Disabled"}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function NewCodeForm({
-  code,
-  trips,
-  boards,
-  existingCodes,
-}: {
-  code: string;
-  trips: TripRow[];
-  boards: BoardRow[];
-  existingCodes: string[];
-}) {
+// Name + code only: what each code unlocks is set afterwards in the "Who has
+// access" grid below, so there is one place to manage trips/boards/dating.
+function AddCodeForm({ code, existingCodes, onDone }: { code: string; existingCodes: string[]; onDone: () => void }) {
   const upsert = useMutation(api.management.upsertAccessCode);
-  const [newCode, setNewCode] = useState("");
   const [name, setName] = useState("");
-  const [tripIds, setTripIds] = useState<string[]>([]);
-  const [boardIds, setBoardIds] = useState<string[]>([]);
-  const [datingAccess, setDatingAccess] = useState(false);
+  const [newCode, setNewCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  function generate() {
+    const bytes = crypto.getRandomValues(new Uint8Array(8));
+    const alphabet = "abcdefghjkmnpqrstuvwxyz23456789";
+    setNewCode(Array.from(bytes, (b) => alphabet[b % alphabet.length]).join(""));
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     const normalized = newCode.trim().toLowerCase();
-    if (!normalized) {
-      setError("Enter a code.");
-      return;
-    }
     if (!name.trim()) {
       setError("Enter a name.");
+      return;
+    }
+    if (!normalized) {
+      setError("Enter a code, or generate one.");
       return;
     }
     if (existingCodes.includes(normalized)) {
@@ -258,17 +167,13 @@ function NewCodeForm({
       await upsert({
         code,
         targetCode: newCode,
-        tripIds: tripIds as any,
-        boardIds: boardIds as any,
-        datingAccess,
+        tripIds: [] as any,
+        boardIds: [] as any,
+        datingAccess: false,
         name: name.trim(),
         active: true,
       });
-      setNewCode("");
-      setName("");
-      setTripIds([]);
-      setBoardIds([]);
-      setDatingAccess(false);
+      onDone();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't create that code.");
     } finally {
@@ -277,35 +182,44 @@ function NewCodeForm({
   }
 
   return (
-    <form onSubmit={submit} className="card" style={{ display: "grid", gap: 12, maxWidth: 560 }}>
-      <div className="ctype">New access code</div>
+    <form
+      onSubmit={submit}
+      onKeyDown={(e) => e.key === "Escape" && onDone()}
+      className="card"
+      style={{ display: "grid", gap: 12, maxWidth: 560, marginTop: 14 }}
+    >
       <input
+        autoFocus
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Name — e.g. Tony's cousins"
-        required
+        aria-label="Name"
         style={inputStyle}
       />
-      <input
-        value={newCode}
-        onChange={(e) => setNewCode(e.target.value)}
-        placeholder="Code — e.g. sunshine"
-        style={inputStyle}
-      />
-      <AccessSections
-        trips={trips}
-        boards={boards}
-        tripIds={tripIds}
-        boardIds={boardIds}
-        datingAccess={datingAccess}
-        onTripsChange={setTripIds}
-        onBoardsChange={setBoardIds}
-        onDatingAccessChange={setDatingAccess}
-      />
+      <div style={{ display: "flex", gap: 8 }}>
+        <input
+          value={newCode}
+          onChange={(e) => setNewCode(e.target.value)}
+          placeholder="Code — e.g. sunshine"
+          aria-label="Code"
+          style={{ ...inputStyle, flex: 1, minWidth: 0 }}
+        />
+        <button className="btn" type="button" onClick={generate}>
+          Generate
+        </button>
+      </div>
+      <p className="sdek" style={{ margin: 0, fontSize: 13 }}>
+        The new code starts with no access — turn on trips and boards in the grid below.
+      </p>
       {error && <p style={{ color: "var(--danger)", fontSize: 13, margin: 0 }}>{error}</p>}
-      <button className="btn" type="submit" disabled={submitting} style={{ justifySelf: "start" }}>
-        {submitting ? "Creating…" : "Create code"}
-      </button>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button className="btn" type="submit" disabled={submitting}>
+          {submitting ? "Adding…" : "Add code"}
+        </button>
+        <button className="btn" type="button" onClick={onDone} disabled={submitting}>
+          Cancel
+        </button>
+      </div>
     </form>
   );
 }
