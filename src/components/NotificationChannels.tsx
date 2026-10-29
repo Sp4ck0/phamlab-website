@@ -3,8 +3,14 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/api";
 import type { Id } from "@convex/dataModel";
 import { useAccessCode } from "../hooks/useAccessCode";
+import { ChannelIcon } from "./ChannelIcon";
+import { useKanbanBoards } from "../kanban/useKanbanBoards";
+import { BoardNotifyOptions } from "../kanban/components/NotifyMenu";
 
 type ChannelType = "email" | "slack" | "discord";
+// Email is switched off (the backend rejects it) until a sender is set up;
+// TYPE_COPY keeps its entry so any existing email channel still renders.
+const ADDABLE_TYPES: ChannelType[] = ["slack", "discord"];
 type Channel = {
   _id: Id<"notification_channels">;
   type: ChannelType;
@@ -13,17 +19,37 @@ type Channel = {
   status: "pending" | "verified";
 };
 
-const TYPE_COPY: Record<ChannelType, { label: string; placeholder: string; hint: string }> = {
+const TYPE_COPY: Record<
+  ChannelType,
+  { label: string; placeholder: string; hint: string; steps?: { needs: string; list: string[] } }
+> = {
   email: { label: "Email", placeholder: "you@example.com", hint: "We'll email a 6-digit code to confirm it." },
   slack: {
     label: "Slack",
     placeholder: "https://hooks.slack.com/services/…",
-    hint: "Paste an Incoming Webhook URL for the channel. We'll post a 6-digit code there to confirm it.",
+    hint: "Paste an Incoming Webhook URL, then click Connect. We'll post a 6-digit code to that Slack channel; type it back here to finish.",
+    steps: {
+      needs: "You need permission to add apps in the workspace.",
+      list: [
+        "Go to api.slack.com/apps → Create New App → From scratch. Name it something like “phamlab notify” and pick the workspace.",
+        "In the app, open Incoming Webhooks and switch it on.",
+        "Click Add New Webhook to Workspace, choose the channel (or your own DM) it should post to, and click Allow.",
+        "Copy the URL. It looks like https://hooks.slack.com/services/T…/B…/….",
+      ],
+    },
   },
   discord: {
     label: "Discord",
     placeholder: "https://discord.com/api/webhooks/…",
-    hint: "Paste a channel webhook URL (Channel settings → Integrations). We'll post a 6-digit code there to confirm it.",
+    hint: "Paste a channel webhook URL, then click Connect. We'll post a 6-digit code to that Discord channel; type it back here to finish.",
+    steps: {
+      needs: "You need the “Manage Webhooks” permission on the server, which you have if you own it.",
+      list: [
+        "Open the server, then go to the channel's gear icon → Integrations → Webhooks.",
+        "Click New Webhook, give it a name (and optionally an avatar), and pick the channel it should post to.",
+        "Click Copy Webhook URL. It looks like https://discord.com/api/webhooks/….",
+      ],
+    },
   },
 };
 
@@ -59,11 +85,14 @@ function ChannelRow({ channel }: { channel: Channel }) {
   return (
     <div className="setting-row" style={{ alignItems: "flex-start" }}>
       <div style={{ minWidth: 0 }}>
-        <div className="setting-label">
-          {channel.label} <span className="sdek">· {TYPE_COPY[channel.type].label}</span>
+        <div className="setting-label notif-name">
+          <ChannelIcon type={channel.type} /> {channel.label}
         </div>
         <div className="sdek">
-          {channel.masked} · {channel.status === "verified" ? "Confirmed" : "Waiting for your code"}
+          {channel.masked} ·{" "}
+          {channel.status === "verified"
+            ? "Connected"
+            : `Not connected yet — we posted a 6-digit code to your ${TYPE_COPY[channel.type].label} channel. Enter it below.`}
         </div>
         {channel.status === "pending" && (
           <form
@@ -120,19 +149,18 @@ export function NotificationChannels() {
   // each other, so Convex infers these results as `any`.
   const channels = useQuery(api.notifications.listChannels, args) as Channel[] | null | undefined;
   const add = useMutation(api.notifications.addChannel);
-  const [type, setType] = useState<ChannelType>("email");
-  const [label, setLabel] = useState("");
+  const [type, setType] = useState<ChannelType>("slack");
   const [target, setTarget] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const { boards } = useKanbanBoards();
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError("");
     try {
-      await add({ ...args, type, label, target });
-      setLabel("");
+      await add({ ...args, type, label: TYPE_COPY[type].label, target });
       setTarget("");
     } catch (err) {
       setError(errorText(err));
@@ -147,8 +175,8 @@ export function NotificationChannels() {
         <div>
           <div className="setting-label">Notifications</div>
           <div className="sdek">
-            Add a place to get notified, then pick what you want to hear about from a board's bell menu. A channel
-            only works once you've entered the code we send to it.
+            Add a place to get notified, then pick what you want to hear about on each board below (or from the
+            bell on the board). A channel only works once you've entered the code we send to it.
           </div>
         </div>
       </div>
@@ -156,25 +184,19 @@ export function NotificationChannels() {
         <ChannelRow key={c._id} channel={c} />
       ))}
       <form className="setting-row notif-add" onSubmit={(e) => void submit(e)}>
-        <select
-          className="ai-input"
-          value={type}
-          onChange={(e) => setType(e.target.value as ChannelType)}
-          aria-label="Channel type"
-        >
-          {(Object.keys(TYPE_COPY) as ChannelType[]).map((t) => (
-            <option key={t} value={t}>
-              {TYPE_COPY[t].label}
-            </option>
+        <div className="notif-type" role="group" aria-label="Channel type">
+          {ADDABLE_TYPES.map((t) => (
+            <button
+              key={t}
+              type="button"
+              className="btn notif-type__opt"
+              aria-pressed={type === t}
+              onClick={() => setType(t)}
+            >
+              <ChannelIcon type={t} size={16} /> {TYPE_COPY[t].label}
+            </button>
           ))}
-        </select>
-        <input
-          className="ai-input"
-          placeholder="Name (e.g. My email)"
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          aria-label="Channel name"
-        />
+        </div>
         <input
           className="ai-input notif-add__target"
           placeholder={TYPE_COPY[type].placeholder}
@@ -183,10 +205,33 @@ export function NotificationChannels() {
           aria-label="Channel address"
         />
         <button className="btn" type="submit" disabled={busy || !target.trim()}>
-          Send code
+          {busy ? "Connecting…" : `Connect ${TYPE_COPY[type].label}`}
         </button>
         <div className="sdek notif-add__hint">{error || TYPE_COPY[type].hint}</div>
+        {TYPE_COPY[type].steps && (
+          <details className="sdek notif-add__hint notif-steps">
+            <summary>How do I get a {TYPE_COPY[type].label} webhook URL?</summary>
+            <p>{TYPE_COPY[type].steps.needs}</p>
+            <ol>
+              {TYPE_COPY[type].steps.list.map((s) => (
+                <li key={s}>{s}</li>
+              ))}
+            </ol>
+            <p>Treat the URL like a password: anyone who has it can post to that channel.</p>
+          </details>
+        )}
       </form>
+      {boards.map((b) => (
+        <div key={b._id} className="setting-row" style={{ flexDirection: "column", alignItems: "stretch" }}>
+          <div>
+            <div className="setting-label">{b.name}</div>
+            <div className="sdek">What to notify you about on this board.</div>
+          </div>
+          <div className="notif-board">
+            <BoardNotifyOptions boardId={b._id} />
+          </div>
+        </div>
+      ))}
     </>
   );
 }
