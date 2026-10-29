@@ -29,6 +29,21 @@ function sameCardIds(a: Board["lanes"], b: Board["lanes"]) {
   return idsA.length === idsB.length && idsA.every((id, i) => id === idsB[i]);
 }
 
+// Ref callback: tells the board how much page sits above and below it
+// (mobile top bar, wrap padding) so its CSS height can fill the rest of the
+// viewport. Re-measured on resize.
+function fitToViewport(el: HTMLDivElement | null) {
+  if (!el) return;
+  const fit = () => {
+    const top = el.getBoundingClientRect().top + window.scrollY;
+    const bottomPad = parseFloat(getComputedStyle(el.parentElement!).paddingBottom) || 0;
+    el.style.setProperty("--kb-offset", `${top + bottomPad}px`);
+  };
+  fit();
+  window.addEventListener("resize", fit);
+  return () => window.removeEventListener("resize", fit);
+}
+
 export function KanbanPage() {
   const { boardId } = useParams<{ boardId: string }>();
   const { code } = useAccessCode();
@@ -157,7 +172,7 @@ export function KanbanPage() {
 
   return (
     <PageShell fullWidth>
-      <div className="kanban-app">
+      <div className="kanban-app" ref={fitToViewport}>
         <DragDropProvider
           sensors={[
             PointerSensor.configure({

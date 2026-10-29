@@ -28,13 +28,14 @@
   box-sizing: border-box;
 }
 
-/* Embedded in the page (not a standalone full-page app), so the board
-   gets a bounded height instead of filling the viewport. */
+/* Fills the viewport below whatever sits above it: --kb-offset is the space
+   above + below the board, measured by fitToViewport in KanbanPage. The
+   fallback matches the old fixed 78vh until it's measured. */
 :scope {
   position: relative;
   display: block;
-  height: 78vh;
-  height: 78dvh;
+  height: calc(100vh - var(--kb-offset, 22vh));
+  height: calc(100dvh - var(--kb-offset, 22dvh));
   min-height: 560px;
   margin: 0;
   background: var(--paper);
