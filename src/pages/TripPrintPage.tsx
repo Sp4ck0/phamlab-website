@@ -64,9 +64,7 @@ function PrintDoc() {
 
       <header className="pd-cover">
         <p className="pd-kicker">{it.kicker}</p>
-        <h1>
-          {it.title} <em>{it.emphasis}</em>
-        </h1>
+        <h1>{it.title}</h1>
         <p className="pd-dates">{it.dates}</p>
         {it.intro && <p className="pd-intro">{it.intro}</p>}
         <p className="pd-route">{it.route.join("  →  ")}</p>

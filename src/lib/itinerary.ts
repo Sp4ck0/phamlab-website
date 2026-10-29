@@ -27,7 +27,6 @@ export interface ItineraryDay {
 }
 export interface Itinerary {
   title: string;
-  emphasis: string;
   kicker: string;
   dates: string;
   intro?: string;
@@ -171,7 +170,6 @@ export function buildItinerary(data: TripExport, rangeArg?: Partial<DateRange> |
 
   return {
     title: data.title,
-    emphasis: data.titleEmphasis,
     kicker: data.kicker,
     dates: range
       ? `${range.from === range.to ? fmtShort(range.from) : `${fmtShort(range.from)} – ${fmtShort(range.to)}`} · ${days.length} of ${allDays.length} days`
@@ -193,7 +191,7 @@ export function buildItinerary(data: TripExport, rangeArg?: Partial<DateRange> |
       .filter((g) => inRange(g.iso))
       .map(({ day, date, place, highlight }) => ({ day, date, place, highlight })),
     days: itDays.filter((_, i) => inRange(allDays[i].date)),
-    footer: `${data.title} ${data.titleEmphasis}`,
+    footer: data.title,
     fileSuffix: range
       ? (range.from === range.to ? fmtShort(range.from) : `${fmtShort(range.from)}-${fmtShort(range.to)}`)
           .toLowerCase()
@@ -206,7 +204,7 @@ const escMd = (s: string) => s.replace(/([\\`*_[\]|<>])/g, "\\$1");
 
 export function toMarkdown(it: Itinerary): string {
   const out: string[] = [];
-  out.push(`# ${escMd(it.title)} *${escMd(it.emphasis)}*`, "");
+  out.push(`# ${escMd(it.title)}`, "");
   out.push(`_${escMd(it.kicker)}_ · ${escMd(it.dates)}`, "");
   if (it.intro) out.push(escMd(it.intro), "");
   out.push(`**Route:** ${it.route.map(escMd).join(" → ")}`, "");
@@ -246,7 +244,7 @@ const escHtml = (s: string) =>
 // Plain semantic HTML for the rich clipboard flavor (Notes, Docs, Gmail).
 export function toHtml(it: Itinerary): string {
   const h: string[] = [];
-  h.push(`<h1>${escHtml(it.title)} <em>${escHtml(it.emphasis)}</em></h1>`);
+  h.push(`<h1>${escHtml(it.title)}</h1>`);
   h.push(`<p><em>${escHtml(it.kicker)}</em> · ${escHtml(it.dates)}</p>`);
   if (it.intro) h.push(`<p>${escHtml(it.intro)}</p>`);
   h.push(`<p><strong>Route:</strong> ${it.route.map(escHtml).join(" → ")}</p>`);

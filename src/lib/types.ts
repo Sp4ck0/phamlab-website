@@ -105,7 +105,6 @@ export interface Trip {
   _id: string;
   slug: string;
   title: string;
-  titleEmphasis: string;
   kicker: string;
   dateRangeLabel: string;
   citiesLabel: string;
@@ -163,7 +162,6 @@ export interface TripExportDay {
 }
 export interface TripExport {
   title: string;
-  titleEmphasis: string;
   kicker: string;
   dateRangeLabel: string;
   citiesLabel: string;

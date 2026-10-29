@@ -580,7 +580,6 @@ body:has(.print-doc){padding:0}
 .pd-cover{padding-bottom:22px;margin-bottom:22px;border-bottom:2px solid var(--pd-ink)}
 .pd-kicker{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--pd-sub);margin:0 0 6px}
 .print-doc h1{font:400 34px/1.15 Georgia,"Times New Roman",serif;margin:0 0 6px}
-.print-doc h1 em{font-style:italic}
 .pd-dates{font-size:14px;color:var(--pd-sub);margin:0 0 12px}
 .pd-intro{max-width:64ch;margin:0 0 12px}
 .pd-route{font-weight:600;margin:0 0 8px}
