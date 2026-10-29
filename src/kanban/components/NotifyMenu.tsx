@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/api";
@@ -86,12 +87,50 @@ export function NotifyMenu({ boardId }: { boardId: Id<"kanban_boards"> }) {
   const { args, current } = useSubscribedEvents(boardId);
   const channels = useQuery(api.notifications.listChannels, args) as { status: "pending" | "verified" }[] | null | undefined;
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const hasVerified = (channels ?? []).some((c) => c.status === "verified");
+
+  // The panel is portaled to <body> and positioned in viewport coordinates so
+  // the board's `overflow: hidden` can't clip it; clamped to stay on screen.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const r = buttonRef.current?.getBoundingClientRect();
+      if (!r) return;
+      const width = Math.min(280, window.innerWidth - 24);
+      setPos({ top: r.bottom + 6, left: Math.max(12, Math.min(r.left, window.innerWidth - width - 12)), width });
+    };
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (!panelRef.current?.contains(t) && !buttonRef.current?.contains(t)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
 
   return (
     <div className="notify">
       <button
+        ref={buttonRef}
         className="nudge"
         aria-expanded={open}
         aria-haspopup="true"
@@ -100,16 +139,19 @@ export function NotifyMenu({ boardId }: { boardId: Id<"kanban_boards"> }) {
       >
         {current.length > 0 ? "🔔 Notifying" : "🔕 Notify me"}
       </button>
-      {open && (
-        <div className="notify__panel">
-          <BoardNotifyOptions boardId={boardId} />
-          {channels && !hasVerified && (
-            <div className="notify__note">
-              Nothing will send until you confirm a channel in <Link to="/settings">Settings</Link>.
-            </div>
-          )}
-        </div>
-      )}
+      {open &&
+        pos &&
+        createPortal(
+          <div ref={panelRef} className="notify-pop" style={pos}>
+            <BoardNotifyOptions boardId={boardId} />
+            {channels && !hasVerified && (
+              <div className="notify__note">
+                Nothing will send until you confirm a channel in <Link to="/settings">Settings</Link>.
+              </div>
+            )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
