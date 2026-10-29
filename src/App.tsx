@@ -16,6 +16,8 @@ import { useAccessCode } from "./hooks/useAccessCode";
 import { useKanbanBoards } from "./kanban/useKanbanBoards";
 import { loadLastTab } from "./lib/lastTab";
 import { RouteScrollPolicy } from "./components/trip/TripEntryBoundary";
+import { FollowAiEdits } from "./components/FollowAiEdits";
+import { AiFocusProvider } from "./hooks/useAiFocus";
 
 // Base-URL entry: resume the last visited tab if it is still accessible,
 // otherwise the first accessible tab (same order as the side nav: trips,
@@ -49,8 +51,9 @@ function Home() {
 
 export default function App() {
   return (
-    <>
+    <AiFocusProvider>
     <RouteScrollPolicy />
+    <FollowAiEdits />
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/unlock" element={<UnlockPage />} />
@@ -67,6 +70,6 @@ export default function App() {
       <Route path="/dating-simulator" element={<DatingSimulatorPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
-    </>
+    </AiFocusProvider>
   );
 }

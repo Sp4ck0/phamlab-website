@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useConvexAuth, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
@@ -7,11 +8,13 @@ import { McpTokens } from "../components/McpTokens";
 import { NotificationChannels } from "../components/NotificationChannels";
 import { useAccessCode } from "../hooks/useAccessCode";
 import { useSettings } from "../hooks/useSettings";
+import { loadFollowAi, saveFollowAi, subscribeFollowAi } from "../lib/followAi";
 import { clearLastTab } from "../lib/lastTab";
 
 export function SettingsPage() {
   const { code, clear } = useAccessCode();
   const { tempUnit, setTempUnit } = useSettings();
+  const followAi = useSyncExternalStore(subscribeFollowAi, loadFollowAi);
   const { isAuthenticated } = useConvexAuth();
   const { signOut } = useAuthActions();
   const navigate = useNavigate();
@@ -69,6 +72,26 @@ export function SettingsPage() {
           >
             <span data-on={tempUnit === "F" ? "true" : undefined}>°F</span>
             <span data-on={tempUnit === "C" ? "true" : undefined}>°C</span>
+          </button>
+        </div>
+        <div className="setting-row">
+          <div>
+            <div className="setting-label">Follow AI edits</div>
+            <div className="sdek">
+              When an AI assistant adds or changes something on a trip, or points at part of it, this device opens the
+              trip, scrolls there and blinks it. Only the tab you used last moves. Applies to this browser only.
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            className="unit-toggle"
+            aria-checked={followAi}
+            aria-label="Follow AI edits on this device"
+            onClick={() => saveFollowAi(!followAi)}
+          >
+            <span data-on={!followAi ? "true" : undefined}>Off</span>
+            <span data-on={followAi ? "true" : undefined}>On</span>
           </button>
         </div>
         <NotificationChannels />

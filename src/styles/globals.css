@@ -446,8 +446,22 @@ details.tour-box[open] summary::after{content:"Hide"}
 
 /* ── action items ───────────────────────────── */
 .action-items{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:6px 20px}
-.action-item{display:flex;gap:12px;align-items:flex-start;padding:13px 0;border-top:1px solid var(--gridline);font-size:14px}
+.action-item{display:flex;gap:12px;align-items:flex-start;padding:13px 0;border-top:1px solid var(--gridline);font-size:14px;scroll-margin-top:96px}
 .action-item:first-child{border-top:none}
+
+/* Blink on whatever the AI just pointed at (flash.ts); a day card or an action item. */
+.ai-focus-flash{animation:ai-focus-flash 1.8s ease-in-out}
+@keyframes ai-focus-flash{
+  0%,25%,60%,100%{box-shadow:0 0 0 0 transparent}
+  10%,45%,80%{box-shadow:0 0 0 3px var(--accent-1),0 0 18px 2px var(--accent-1)}
+}
+@media(prefers-reduced-motion:reduce){
+  .ai-focus-flash{animation-name:ai-focus-fade;animation-duration:2.4s}
+  @keyframes ai-focus-fade{
+    0%,60%{box-shadow:0 0 0 3px var(--accent-1)}
+    100%{box-shadow:0 0 0 0 transparent}
+  }
+}
 .action-items-empty{padding:16px 20px;font-size:14px;color:var(--text-secondary)}
 .action-completed{margin-top:14px}
 .action-completed>summary{cursor:pointer;font-size:13.5px;font-weight:700;color:var(--text-secondary);padding:6px 2px 10px;list-style-position:inside}
