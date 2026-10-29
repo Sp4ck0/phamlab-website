@@ -7,6 +7,8 @@ import { UnlockPage } from "./pages/UnlockPage";
 import { LoginPage } from "./pages/LoginPage";
 import { ManagePage } from "./pages/ManagePage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { ConnectPage } from "./pages/ConnectPage";
+import { ConnectionsPage } from "./pages/ConnectionsPage";
 import { KanbanBoardsPage } from "./pages/KanbanBoardsPage";
 import { KanbanPage } from "./pages/KanbanPage";
 import { DatingSimulatorPage } from "./pages/DatingSimulatorPage";
@@ -62,6 +64,8 @@ export default function App() {
       <Route path="/kanban/:boardId" element={<KanbanPage />} />
       <Route path="/manage" element={<ManagePage />} />
       <Route path="/settings" element={<SettingsPage />} />
+      <Route path="/connect" element={<ConnectPage />} />
+      <Route path="/connections" element={<ConnectionsPage />} />
       <Route path="/dating-simulator" element={<DatingSimulatorPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

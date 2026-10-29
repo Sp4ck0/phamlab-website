@@ -71,6 +71,15 @@ export function SettingsPage() {
         </div>
         <div className="setting-row">
           <div>
+            <div className="setting-label">Connected apps</div>
+            <div className="sdek">Apps allowed to read your itineraries, like ChatGPT.</div>
+          </div>
+          <Link className="btn" to="/connections">
+            Manage
+          </Link>
+        </div>
+        <div className="setting-row">
+          <div>
             <div className="setting-label">Account</div>
             <div className="sdek">Forget this device's access code and sign out.</div>
           </div>

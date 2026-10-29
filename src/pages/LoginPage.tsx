@@ -1,11 +1,16 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { PageShell } from "../components/layout/PageShell";
+
+// Only same-origin paths may be returned to ("/connect?req=..."), never "//host" or "/\\host".
+const safeNext = (next: string | null) => (next && /^\/(?![/\\])/.test(next) ? next : "/");
 
 export function LoginPage() {
   const { signIn } = useAuthActions();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const next = safeNext(searchParams.get("next"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +26,7 @@ export function LoginPage() {
     setSubmitting(true);
     try {
       await signIn("password", { email, password, flow: mode });
-      navigate("/");
+      navigate(next);
     } catch {
       setError(mode === "signIn" ? "Couldn't sign in — check your email and password." : "Couldn't create that account.");
     } finally {
