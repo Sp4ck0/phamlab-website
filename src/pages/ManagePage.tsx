@@ -25,7 +25,11 @@ interface CodeRow {
   tripIds: string[];
   boardIds: string[];
   datingAccess: boolean;
+  mcpAccess: "read" | "write" | null;
 }
+
+// Off → read-only → read & write → off.
+const NEXT_MCP = { null: "read", read: "write", write: null } as const;
 
 export function ManagePage() {
   const { code } = useAccessCode();
@@ -245,6 +249,25 @@ function WhoHasAccess({
     }
   }
 
+  async function cycleMcp(row: CodeRow) {
+    setBusy(true);
+    try {
+      await upsert({
+        code,
+        id: row._id as any,
+        targetCode: row.code,
+        tripIds: row.tripIds as any,
+        boardIds: row.boardIds as any,
+        datingAccess: row.datingAccess,
+        mcpAccess: NEXT_MCP[`${row.mcpAccess}`],
+        name: row.name,
+        active: row.active,
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function toggle(row: CodeRow, kind: "tripIds" | "boardIds", id: string) {
     const current = row[kind];
     const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
@@ -347,6 +370,31 @@ function WhoHasAccess({
                     onClick={() => toggleDating(c)}
                   >
                     {c.datingAccess ? "✓" : "–"}
+                  </button>
+                </td>
+              ))}
+            </tr>
+            <tr>
+              <th colSpan={codes.length + 1} className="ctype" style={{ ...cellStyle, textAlign: "left" }}>
+                MCP (AI assistant)
+              </th>
+            </tr>
+            <tr>
+              <th scope="row" style={{ ...cellStyle, textAlign: "left", fontWeight: 500 }}>
+                Access
+              </th>
+              {codes.map((c) => (
+                <td key={c._id} style={{ ...cellStyle, textAlign: "center", opacity: c.active ? 1 : 0.5 }}>
+                  <button
+                    type="button"
+                    className="chip"
+                    aria-pressed={c.mcpAccess !== null}
+                    aria-label={`${c.name}: MCP access, ${c.mcpAccess ?? "off"} (click to change)`}
+                    disabled={busy}
+                    style={{ minWidth: 32, justifyContent: "center", whiteSpace: "nowrap" }}
+                    onClick={() => cycleMcp(c)}
+                  >
+                    {c.mcpAccess === "write" ? "Read + write" : c.mcpAccess === "read" ? "Read" : "–"}
                   </button>
                 </td>
               ))}
