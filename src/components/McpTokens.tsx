@@ -4,12 +4,11 @@ import { api } from "@convex/api";
 import type { Id } from "@convex/dataModel";
 import { useAccessCode } from "../hooks/useAccessCode";
 
-type Token = {
+type Connection = {
   _id: Id<"mcp_tokens">;
   label: string;
   createdAt: number;
   lastUsedAt?: number;
-  revokedAt?: number;
 };
 
 function errorText(e: unknown) {
@@ -21,27 +20,36 @@ function errorText(e: unknown) {
 
 const day = (ms: number) => new Date(ms).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 
-// Lets someone whose grant an admin has enabled for MCP register tokens for an
-// AI assistant. Renders nothing when MCP isn't enabled for them.
+// The MCP server address: the Convex deployment's HTTP origin plus /mcp.
+const MCP_URL = `${String(import.meta.env.VITE_CONVEX_URL).replace(".convex.cloud", ".convex.site")}/mcp`;
+
+// How to connect an AI assistant, and the apps already connected. Renders
+// nothing when an admin hasn't enabled MCP for the viewer.
 export function McpTokens() {
   const { code } = useAccessCode();
   const args = code ? { code } : {};
   const info = useQuery(api.mcpTokens.listTokens, args);
-  const create = useMutation(api.mcpTokens.createToken);
   const revoke = useMutation(api.mcpTokens.revokeToken);
-  const [label, setLabel] = useState("");
-  const [fresh, setFresh] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
   if (!info) return null;
 
-  async function run(fn: () => Promise<void>) {
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(MCP_URL);
+      setCopied(true);
+    } catch {
+      setMessage("Couldn't copy — select the address and copy it manually.");
+    }
+  }
+
+  async function remove(id: Id<"mcp_tokens">) {
     setBusy(true);
     setMessage("");
     try {
-      await fn();
+      await revoke({ ...args, id });
     } catch (e) {
       setMessage(errorText(e));
     } finally {
@@ -49,17 +57,7 @@ export function McpTokens() {
     }
   }
 
-  async function copy() {
-    if (!fresh) return;
-    try {
-      await navigator.clipboard.writeText(fresh);
-      setCopied(true);
-    } catch {
-      setMessage("Couldn't copy — select the token and copy it manually.");
-    }
-  }
-
-  const tokens = info.tokens as Token[];
+  const apps = info.tokens as Connection[];
   const access = info.mcpAccess === "write" ? "look up and edit your trips" : "look up your trips (read-only)";
 
   return (
@@ -68,48 +66,33 @@ export function McpTokens() {
         <div style={{ minWidth: 0, flex: 1 }}>
           <div className="setting-label">AI assistant access (MCP)</div>
           <div className="sdek">
-            Create a token so an AI assistant can {access}. Treat it like a password — you'll only see it once.
+            Connect an AI assistant so it can {access}. Add this address as a connector, then approve the connection when
+            it sends you back here.
           </div>
-          <form
-            className="notif-confirm"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void run(async () => {
-                const token = await create({ ...args, label });
-                setFresh(token);
-                setCopied(false);
-                setLabel("");
-              });
-            }}
-          >
-            <input
-              className="ai-input"
-              placeholder="Token name"
-              maxLength={60}
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              aria-label="Token name"
-            />
-            <button className="btn" type="submit" disabled={busy || !label.trim()}>
-              Create token
+          <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 10, flexWrap: "wrap" }}>
+            <code style={{ wordBreak: "break-all", fontSize: 13 }}>{MCP_URL}</code>
+            <button className="btn" type="button" onClick={() => void copy()}>
+              {copied ? "Copied" : "Copy"}
             </button>
-          </form>
-          {fresh && (
-            <div className="card" style={{ marginTop: 12, display: "grid", gap: 8 }}>
-              <div className="sdek" style={{ margin: 0 }}>
-                Copy this now — it won't be shown again.
-              </div>
-              <code style={{ wordBreak: "break-all", fontSize: 13 }}>{fresh}</code>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button className="btn" type="button" onClick={() => void copy()}>
-                  {copied ? "Copied" : "Copy"}
-                </button>
-                <button className="btn" type="button" onClick={() => setFresh(null)}>
-                  Done
-                </button>
-              </div>
-            </div>
-          )}
+          </div>
+          <details style={{ marginTop: 10 }}>
+            <summary className="sdek" style={{ cursor: "pointer" }}>
+              How do I connect it?
+            </summary>
+            <ul className="sdek" style={{ paddingLeft: 20 }}>
+              <li>
+                <strong>ChatGPT:</strong> turn on Developer mode (Settings → Apps &amp; Connectors → Advanced), create a
+                connector with this address, and choose OAuth. Menu names vary by plan.
+              </li>
+              <li>
+                <strong>Claude:</strong> Settings → Connectors → Add custom connector, and paste the address.
+              </li>
+              <li>
+                <strong>Claude Code:</strong> run <code>claude mcp add --transport http phamlab {MCP_URL}</code>, then{" "}
+                <code>/mcp</code> and choose Authenticate.
+              </li>
+            </ul>
+          </details>
           {message && (
             <div className="sdek" role="status">
               {message}
@@ -117,21 +100,17 @@ export function McpTokens() {
           )}
         </div>
       </div>
-      {tokens.map((t) => (
-        <div className="setting-row" key={t._id} style={{ opacity: t.revokedAt ? 0.5 : 1 }}>
+      {apps.map((a) => (
+        <div className="setting-row" key={a._id}>
           <div style={{ minWidth: 0 }}>
-            <div className="setting-label">{t.label}</div>
+            <div className="setting-label">{a.label}</div>
             <div className="sdek">
-              {t.revokedAt
-                ? `Revoked ${day(t.revokedAt)}`
-                : `Created ${day(t.createdAt)} · ${t.lastUsedAt ? `last used ${day(t.lastUsedAt)}` : "never used"}`}
+              Connected {day(a.createdAt)} · {a.lastUsedAt ? `last used ${day(a.lastUsedAt)}` : "not used yet"}
             </div>
           </div>
-          {!t.revokedAt && (
-            <button className="btn" disabled={busy} onClick={() => void run(() => revoke({ ...args, id: t._id }))}>
-              Revoke
-            </button>
-          )}
+          <button className="btn" disabled={busy} onClick={() => void remove(a._id)}>
+            Disconnect
+          </button>
         </div>
       ))}
     </>
