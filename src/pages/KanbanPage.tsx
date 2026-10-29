@@ -52,6 +52,8 @@ export function KanbanPage() {
   // pane (`paneOpen`); the draft survives until it's added or discarded.
   const [draft, setDraft] = useState<NewCardDraft | null>(null);
   const [paneOpen, setPaneOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   // The card drawer and the new-card pane share the right edge, so opening a
   // card tucks the pane away.
   useEffect(() => {
@@ -120,18 +122,26 @@ export function KanbanPage() {
     setDraft((d) =>
       d
         ? { ...d, lane }
-        : { lane, title: "", note: "", kind: BOARD_COPY[board.type].defaultKind, weight: "medium" }
+        : { lane, title: "", note: "", kind: BOARD_COPY[board.type].defaultKind, weight: "medium", images: [] }
     );
     setOpenId(null);
     setPaneOpen(true);
   };
 
-  const submitDraft = () => {
-    if (!draft || !draft.title.trim()) return;
-    const { lane, ...rest } = draft;
-    addCard(lane, { ...rest, title: draft.title.trim(), note: draft.note.trim() });
-    setDraft(null);
-    setPaneOpen(false);
+  const submitDraft = async () => {
+    if (!draft || !draft.title.trim() || submitting) return;
+    const { lane, images, ...rest } = draft;
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+      await addCard(lane, { ...rest, title: draft.title.trim(), note: draft.note.trim() }, images);
+      setDraft(null);
+      setPaneOpen(false);
+    } catch (e) {
+      setSubmitError(e instanceof Error ? e.message : "Couldn't add that card");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const moveToLane = (id: string, to: LaneId) => {
@@ -230,7 +240,9 @@ export function KanbanPage() {
                 setDraft(null);
                 setPaneOpen(false);
               }}
-              onSubmit={submitDraft}
+              onSubmit={() => void submitDraft()}
+              busy={submitting}
+              error={submitError}
             />
 
             <CardDrawer

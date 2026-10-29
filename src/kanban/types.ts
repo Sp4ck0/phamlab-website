@@ -174,4 +174,6 @@ export interface QuickAddDraft {
 /** A card being written in the new-card pane, including its target column. */
 export interface NewCardDraft extends QuickAddDraft {
   lane: LaneId;
+  /** Images to attach to the longer version once the card is created. */
+  images: File[];
 }

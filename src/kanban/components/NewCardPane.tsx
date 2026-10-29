@@ -1,8 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { Board, NewCardDraft } from '../types';
 import { BOARD_COPY } from '../types';
-import { boardLanes } from '../lib';
+import { boardLanes, pastedImages } from '../lib';
+import { ImagePicker } from './ImagePicker';
+
+const MAX_IMAGES = 8;
 
 interface Props {
   board: Board;
@@ -15,10 +18,20 @@ interface Props {
   onExpand: () => void;
   onDiscard: () => void;
   onSubmit: () => void;
+  /** True while images upload and the card is created. */
+  busy: boolean;
+  error: string;
 }
 
-export function NewCardPane({ board, draft, open, onChange, onMinimize, onExpand, onDiscard, onSubmit }: Props) {
+export function NewCardPane({ board, draft, open, onChange, onMinimize, onExpand, onDiscard, onSubmit, busy, error }: Props) {
   const copy = BOARD_COPY[board.type];
+
+  const images = draft?.images;
+  const previews = useMemo(() => (images ?? []).map((f) => URL.createObjectURL(f)), [images]);
+  useEffect(() => () => previews.forEach((u) => URL.revokeObjectURL(u)), [previews]);
+  const attach = (files: File[]) => {
+    if (draft) onChange({ images: [...draft.images, ...files].slice(0, MAX_IMAGES) });
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -96,8 +109,47 @@ export function NewCardPane({ board, draft, open, onChange, onMinimize, onExpand
                     value={draft.note}
                     placeholder="Say more, if you want to (optional)"
                     onChange={(e) => onChange({ note: e.target.value })}
+                    onPaste={(e) => {
+                      const pasted = pastedImages(e);
+                      if (pasted.length) {
+                        e.preventDefault();
+                        attach(pasted);
+                      }
+                    }}
                   />
                 </label>
+
+                <div className="field note-images">
+                  {previews.length > 0 && (
+                    <div className="newcard-thumbs">
+                      {previews.map((url, i) => (
+                        <div key={url} className="newcard-thumb">
+                          <img src={url} alt="" />
+                          <button
+                            type="button"
+                            aria-label={`Remove image ${i + 1}`}
+                            onClick={() => onChange({ images: draft.images.filter((_, j) => j !== i) })}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="note-images__bar">
+                    <ImagePicker onPick={attach} disabled={busy || draft.images.length >= MAX_IMAGES} />
+                    <span className="thread__hint">
+                      {draft.images.length >= MAX_IMAGES
+                        ? `Up to ${MAX_IMAGES} images`
+                        : 'Paste a screenshot or tap 📎 to add images'}
+                    </span>
+                  </div>
+                  {error && (
+                    <span className="thread__hint thread__error" role="alert">
+                      {error}
+                    </span>
+                  )}
+                </div>
 
                 <div className="field">
                   <span className="label">Weight</span>
@@ -119,8 +171,8 @@ export function NewCardPane({ board, draft, open, onChange, onMinimize, onExpand
                   <button className="ghost" onClick={onDiscard}>
                     Cancel
                   </button>
-                  <button className="btn" onClick={onSubmit} disabled={!draft.title.trim()}>
-                    Add card
+                  <button className="btn" onClick={onSubmit} disabled={!draft.title.trim() || busy}>
+                    {busy ? 'Adding…' : 'Add card'}
                   </button>
                 </footer>
               </div>
