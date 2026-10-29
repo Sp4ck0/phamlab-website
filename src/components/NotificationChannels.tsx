@@ -5,6 +5,9 @@ import type { Id } from "@convex/dataModel";
 import { useAccessCode } from "../hooks/useAccessCode";
 
 type ChannelType = "email" | "slack" | "discord";
+// Email is switched off (the backend rejects it) until a sender is set up;
+// TYPE_COPY keeps its entry so any existing email channel still renders.
+const ADDABLE_TYPES: ChannelType[] = ["slack", "discord"];
 type Channel = {
   _id: Id<"notification_channels">;
   type: ChannelType;
@@ -120,7 +123,7 @@ export function NotificationChannels() {
   // each other, so Convex infers these results as `any`.
   const channels = useQuery(api.notifications.listChannels, args) as Channel[] | null | undefined;
   const add = useMutation(api.notifications.addChannel);
-  const [type, setType] = useState<ChannelType>("email");
+  const [type, setType] = useState<ChannelType>("slack");
   const [label, setLabel] = useState("");
   const [target, setTarget] = useState("");
   const [error, setError] = useState("");
@@ -162,7 +165,7 @@ export function NotificationChannels() {
           onChange={(e) => setType(e.target.value as ChannelType)}
           aria-label="Channel type"
         >
-          {(Object.keys(TYPE_COPY) as ChannelType[]).map((t) => (
+          {ADDABLE_TYPES.map((t) => (
             <option key={t} value={t}>
               {TYPE_COPY[t].label}
             </option>
