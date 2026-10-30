@@ -101,6 +101,8 @@ export interface Board {
   fresh: string[];
   /** Cards with unread replies, longest-waiting first. */
   unreadOrder: string[];
+  /** Every card with a follow-up date, wherever it sits — including Done cards the board doesn't load. */
+  followUps: { id: string; weight: Weight; followUp: string }[];
 }
 
 export const LANES: { id: LaneId; name: string; blurb: string }[] = [

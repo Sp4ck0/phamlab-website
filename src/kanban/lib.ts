@@ -113,14 +113,18 @@ export const KIND_TONE: Record<Kind, string> = {
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-/** Cards whose follow-up date has arrived. Drives the nudge in the header. */
+/**
+ * Cards whose follow-up date has arrived. Drives the nudge in the header. Reads
+ * the server's list (board.followUps) rather than board.cards, which doesn't
+ * hold the Done cards past the newest few.
+ */
 export function useDue(board: Board | null) {
   return useMemo(() => {
     if (!board) return [];
     const now = today();
-    return Object.values(board.cards)
-      .filter((c) => c.followUp && c.followUp <= now)
+    return board.followUps
+      .filter((c) => c.followUp <= now)
       // Heaviest first, then oldest — so the nudge opens the one that matters most.
-      .sort((x, y) => WEIGHT_RANK[y.weight] - WEIGHT_RANK[x.weight] || (x.followUp! < y.followUp! ? -1 : 1));
+      .sort((x, y) => WEIGHT_RANK[y.weight] - WEIGHT_RANK[x.weight] || (x.followUp < y.followUp ? -1 : 1));
   }, [board]);
 }
