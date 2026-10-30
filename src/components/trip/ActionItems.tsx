@@ -11,7 +11,7 @@ import { DueDateInput } from "./DueDateInput";
 import { TaskRow } from "./TaskRow";
 
 interface Props {
-  // Every task for the trip. Decisions are shown in the alerts panel instead.
+  // Every task for the trip. Decisions are also listed in the alerts panel.
   tasks: Task[];
   // The stored items behind the editable tasks, for editing and undoing a delete.
   items: ActionItem[];
@@ -97,8 +97,6 @@ export function ActionItems({
     return () => clearTimeout(t);
   }, [deleted]);
 
-  const listed = tasks.filter((t) => t.kind !== "decision");
-
   // The AI pointed at an item (mcpFocus.ts): scroll to it and blink it. A done
   // item sits in the collapsed Completed list, so open that first; the item may
   // also not have arrived yet, so wait for it.
@@ -106,7 +104,7 @@ export function ActionItems({
   useEffect(() => {
     if (!focus) return;
     const id = focus.target.id;
-    const task = listed.find((t) => t.editable && itemId(t) === id);
+    const task = tasks.find((t) => t.editable && itemId(t) === id);
     if (!task) return;
     if (task.done) setCompletedOpen(true);
     const t = setTimeout(() => {
@@ -117,7 +115,7 @@ export function ActionItems({
       setTimeout(() => flash(el), 250);
     }, SETTLE_MS);
     return () => clearTimeout(t);
-  }, [focus, listed, consume]);
+  }, [focus, tasks, consume]);
 
   const editorProps = { groups, minDate: tripStart, maxDate: tripEnd, onCancel: () => setEditing(null) };
 
@@ -182,6 +180,7 @@ export function ActionItems({
           done={task.done}
           onToggle={() => onSetDone(task.refs, !task.done)}
           badge={badge}
+          pill={task.kind === "decision" ? "Decision" : undefined}
           lead={task.title}
           body={task.detail}
           scope={task.scope.kind === "trip" ? undefined : scopeLabel(task.scope)}
@@ -218,7 +217,7 @@ export function ActionItems({
     );
   };
 
-  const rows = listed.map(rowFor).sort(byDueThenDate);
+  const rows = tasks.map(rowFor).sort(byDueThenDate);
   const open = rows.filter((r) => !r.done);
   const completed = rows.filter((r) => r.done);
   const total = rows.length;
