@@ -84,6 +84,7 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined, { allDo
       unread: unread?.unread ?? {},
       fresh: unread?.fresh ?? [],
       unreadOrder: unread?.unreadOrder ?? [],
+      followUps: unread?.followUps ?? [],
       cards,
     };
   }, [result, unreadResult]);
