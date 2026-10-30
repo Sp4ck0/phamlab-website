@@ -113,7 +113,7 @@ export function ImageViewer({ images, openAt, onClose }: Props) {
 
       <div className="img-viewer__bar">
         <span>{count > 1 ? `${index + 1} / ${count}` : ''}</span>
-        <a href={image.url} target="_blank" rel="noreferrer">
+        <a href={image.url} target="_blank" rel="noopener noreferrer">
           Open original
         </a>
         <button className="img-viewer__btn" aria-label="Close" onClick={() => dialog.current?.close()}>

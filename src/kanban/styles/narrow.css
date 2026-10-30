@@ -1,0 +1,33 @@
+@scope (.kanban-app) {
+/* ── Narrow screens ──────────────────────────────────────────── */
+
+@media (max-width: 720px) {
+  /* The pane is full width here, so the handle overlaps its left edge. */
+  .newcard-handle {
+    right: auto;
+    left: 0;
+    border: 1px solid var(--rule-firm);
+    border-left: none;
+    border-radius: 0 10px 10px 0;
+    box-shadow: 6px 0 20px var(--shadow);
+  }
+
+  .top {
+    padding: 14px 16px 12px;
+  }
+  .board {
+    scroll-snap-type: x mandatory;
+  }
+  .lane {
+    flex: 0 0 84vw;
+    min-width: 84vw;
+    scroll-snap-align: start;
+  }
+  .drawer__inner {
+    padding: 20px 18px 36px;
+  }
+  .drawer__title {
+    font-size: 23px;
+  }
+}
+}

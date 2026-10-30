@@ -1,0 +1,177 @@
+/* ═══════════════════════════════════════════════════════════════
+   Kanban board — same card-based look as the rest of the site.
+   Two accent colors, one for each person, running through the board.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Scoped to .kanban-app so these generic class names (.card, .btn, .label…)
+   never leak into or collide with the rest of the site's styles. :scope
+   here refers to .kanban-app itself, not the document root. Colors are
+   aliases onto the site's own tokens (src/styles/globals.css) so the board
+   follows the global light/dark toggle instead of keeping its own theme. */
+@scope (.kanban-app) {
+:scope {
+  --paper: var(--page);
+  --paper-2: var(--chip-bg);
+  --ink: var(--text-primary);
+  --ink-soft: var(--text-muted);
+  --rule: var(--gridline);
+  --rule-firm: var(--border);
+  --ink-a: var(--accent-1);
+  --ink-b: var(--accent-3);
+  --gold: var(--accent-2);
+  --rust: var(--danger);
+  --shadow: var(--border);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Fills the viewport below whatever sits above it: --kb-offset is the space
+   above + below the board, measured by fitToViewport in KanbanPage. The
+   fallback matches the old fixed 78vh until it's measured. */
+:scope {
+  position: relative;
+  display: block;
+  height: calc(100vh - var(--kb-offset, 22vh));
+  height: calc(100dvh - var(--kb-offset, 22dvh));
+  min-height: 560px;
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+input,
+textarea,
+select,
+button {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink-b);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ── Shared bits ─────────────────────────────────────────────── */
+
+.label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex: none;
+  background: var(--ink-soft);
+}
+.dot[data-who='a'] {
+  background: var(--ink-a);
+}
+.dot[data-who='b'] {
+  background: var(--ink-b);
+}
+
+.btn {
+  background: var(--card);
+  color: var(--ink-soft);
+  border: 1px solid var(--rule-firm);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.btn:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--ink-soft);
+}
+.btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.btn--big {
+  padding: 12px 26px;
+  font-size: 14px;
+}
+.btn--danger {
+  background: var(--rust);
+  border-color: var(--rust);
+  color: #fff;
+}
+
+.ghost {
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 5px 8px;
+  border-radius: 2px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.ghost:hover {
+  color: var(--ink);
+  background: var(--rule);
+}
+.ghost--icon {
+  font-size: 15px;
+  line-height: 1;
+}
+
+/* Segmented control — pill tabs, matching the site's .view-toggle */
+.seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--paper-2);
+  border-radius: 999px;
+}
+.seg button {
+  background: none;
+  border: none;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.seg button:hover {
+  color: var(--ink);
+}
+.seg button[data-on] {
+  color: var(--ink);
+  background: var(--card);
+  box-shadow: 0 1px 2px var(--shadow);
+}
+.seg--people button[data-on][data-who='a'] {
+  color: var(--ink-a);
+}
+.seg--people button[data-on][data-who='b'] {
+  color: var(--ink-b);
+}
+.seg--tight button {
+  padding: 5px 10px;
+  font-size: 11px;
+}
+}

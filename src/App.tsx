@@ -19,6 +19,15 @@ import { RouteScrollPolicy } from "./components/trip/TripEntryBoundary";
 import { FollowAiEdits } from "./components/FollowAiEdits";
 import { AiFocusProvider } from "./hooks/useAiFocus";
 
+// Shown while the entry redirect waits on auth/access, instead of a blank page.
+function BootSpinner() {
+  return (
+    <div className="boot" role="status" aria-label="Loading">
+      <div className="boot-spinner" />
+    </div>
+  );
+}
+
 // Base-URL entry: resume the last visited tab if it is still accessible,
 // otherwise the first accessible tab (same order as the side nav: trips,
 // boards, dating, manage), otherwise /unlock. A code doesn't need any trips to
@@ -33,8 +42,8 @@ function Home() {
 
   // Queries skipped for lack of a code stay undefined forever, so only wait on
   // them when a code exists. Unknown is never treated as "no access".
-  if (authLoading || tripsLoading || boardsLoading) return null;
-  if (code && (isDatingCode === undefined || isManagementCode === undefined)) return null;
+  if (authLoading || tripsLoading || boardsLoading) return <BootSpinner />;
+  if (code && (isDatingCode === undefined || isManagementCode === undefined)) return <BootSpinner />;
 
   const tabs = [
     ...(trips ?? []).map((t) => `/trip/${t.slug}`),

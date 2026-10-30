@@ -46,7 +46,7 @@ export function ExportMenu({ slug }: { slug: string }) {
             role="menuitem"
             href={`${import.meta.env.BASE_URL}#/trip/${slug}/export${printQuery}`}
             target="_blank"
-            rel="noopener"
+            rel="noopener noreferrer"
             onClick={() => setOpen(false)}
           >
             Print / Save as PDF

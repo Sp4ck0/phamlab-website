@@ -1,3 +1,4 @@
+import { sanitizeHtml } from "../../lib/sanitizeHtml";
 import type { Conflict } from "../../lib/types";
 
 export function AlertsPanel({ conflicts }: { conflicts: Conflict[] }) {
@@ -11,7 +12,7 @@ export function AlertsPanel({ conflicts }: { conflicts: Conflict[] }) {
         </h3>
         <ul>
           {conflicts.map((c, i) => (
-            <li key={i} dangerouslySetInnerHTML={{ __html: c.text }} />
+            <li key={i} dangerouslySetInnerHTML={{ __html: sanitizeHtml(c.text) }} />
           ))}
         </ul>
       </div>

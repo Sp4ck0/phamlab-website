@@ -3,7 +3,7 @@
 export function AddToCalendar({ url }: { url: string | null }) {
   if (!url) return null;
   return (
-    <a className="gcal-btn" href={url} target="_blank" rel="noopener" aria-label="Add to Google Calendar" title="Add to Google Calendar">
+    <a className="gcal-btn" href={url} target="_blank" rel="noopener noreferrer" aria-label="Add to Google Calendar" title="Add to Google Calendar">
       📅
     </a>
   );
