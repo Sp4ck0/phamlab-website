@@ -25,11 +25,14 @@ export type Reply = Card["log"][number];
 /** Which a/b seat the current viewer writes as; "a" if their code has no seat. */
 export const viewerSeat = (board: Board): PersonId => board.viewerPersonId ?? "a";
 
-export function replyAuthor(board: Board, reply: Reply) {
+// Just who wrote it, so a tile can use these with a card's lastReply summary.
+type ReplyAuthor = Pick<Reply, "by" | "byName">;
+
+export function replyAuthor(board: Board, reply: ReplyAuthor) {
   return board.type === "pair" ? board.people[reply.by].name : (reply.byName ?? "Someone");
 }
 
-export function isMine(board: Board, reply: Reply) {
+export function isMine(board: Board, reply: ReplyAuthor) {
   return board.type === "pair" ? reply.by === viewerSeat(board) : reply.byName === board.viewerName;
 }
 
@@ -47,19 +50,6 @@ export function dayLabel(iso: string) {
   if (days === 0) return "today";
   if (days === 1) return "yesterday";
   return `${MONTHS[d.getMonth()]} ${d.getDate()}${d.getFullYear() === now.getFullYear() ? "" : ` ’${String(d.getFullYear()).slice(2)}`}`;
-}
-
-/**
- * Cards with replies from someone else that the viewer hasn't opened yet
- * (tracked per person on the server), longest-waiting first.
- */
-export function unreadCards(board: Board) {
-  const waitingSince = (card: Card) =>
-    card.log.filter((r) => !isMine(board, r)).slice(-board.unread[card.id])[0]?.at ?? "";
-  return Object.keys(board.unread)
-    .map((id) => board.cards[id])
-    .filter((card): card is Card => !!card)
-    .sort((x, y) => (waitingSince(x) < waitingSince(y) ? -1 : 1));
 }
 
 const MAX_EDGE = 2000; // long edge; keeps text in bug screenshots legible

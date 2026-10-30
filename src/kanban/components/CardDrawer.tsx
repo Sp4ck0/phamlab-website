@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { Board, Card, Kind, LaneId, PersonId } from '../types';
 import { BOARD_COPY, PEOPLE } from '../types';
@@ -21,6 +21,15 @@ interface Props {
   onRemoveNoteImage: (id: string, imageId: string) => void;
   onRead: (id: string) => void;
 }
+
+/** Typing is saved once it pauses this long (see saveSoon). */
+const SAVE_DELAY_MS = 600;
+
+type Actions = Card['actions'];
+
+/** Actions with any not-yet-saved typed text laid over them. */
+const withDrafts = (actions: Actions, drafts: Record<string, string>): Actions =>
+  actions.map((a) => (drafts[a.id] === undefined ? a : { ...a, text: drafts[a.id] }));
 
 export function CardDrawer({
   card,
@@ -48,6 +57,31 @@ export function CardDrawer({
   const [actionDrafts, setActionDrafts] = useState<Record<string, string>>({});
   const [noteBusy, setNoteBusy] = useState(false);
   const [noteError, setNoteError] = useState('');
+
+  // Each save rewrites the card and reloads the board for everyone looking at
+  // it, so text isn't pushed on every keystroke: saveSoon queues it (the latest
+  // per field wins) and flush sends what's queued — after a pause, on blur,
+  // and when the drawer closes or moves to another card.
+  const pending = useRef(new Map<string, () => void>());
+  const saveTimer = useRef<number | undefined>(undefined);
+  const flush = () => {
+    window.clearTimeout(saveTimer.current);
+    const saves = [...pending.current.values()];
+    pending.current.clear();
+    saves.forEach((save) => save());
+  };
+  const saveSoon = (field: string, save: () => void) => {
+    pending.current.set(field, save);
+    window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(flush, SAVE_DELAY_MS);
+  };
+  useEffect(() => flush, [card?.id]);
+
+  // Latest card / typed action text, for a queued save to read when it fires.
+  const cardRef = useRef(card);
+  cardRef.current = card;
+  const draftsRef = useRef(actionDrafts);
+  draftsRef.current = actionDrafts;
 
   useEffect(() => {
     setConfirmDelete(false);
@@ -86,20 +120,30 @@ export function CardDrawer({
   const addAction = (text: string) => {
     if (!card || !text.trim()) return;
     onChange(card.id, {
-      actions: [...card.actions, { id: uid(), text: text.trim(), done: false, owner: null }],
+      actions: [...withDrafts(card.actions, actionDrafts), { id: uid(), text: text.trim(), done: false, owner: null }],
     });
   };
 
-  const patchAction = (actionId: string, patch: Partial<Card['actions'][number]>) => {
+  const patchAction = (actionId: string, patch: Partial<Actions[number]>) => {
     if (!card) return;
     onChange(card.id, {
-      actions: card.actions.map((a) => (a.id === actionId ? { ...a, ...patch } : a)),
+      actions: withDrafts(card.actions, actionDrafts).map((a) => (a.id === actionId ? { ...a, ...patch } : a)),
     });
   };
 
   const setActionText = (actionId: string, text: string) => {
-    setActionDrafts((prev) => ({ ...prev, [actionId]: text }));
-    patchAction(actionId, { text });
+    if (!card) return;
+    const drafts = { ...actionDrafts, [actionId]: text };
+    setActionDrafts(drafts);
+    // If the drawer has moved to another card by the time this fires, fall
+    // back to what this card looked like when the typing happened.
+    const id = card.id;
+    const snapshot = card.actions;
+    saveSoon('actions', () => {
+      const current = cardRef.current;
+      const same = current?.id === id;
+      onChange(id, { actions: withDrafts(same ? current.actions : snapshot, same ? draftsRef.current : drafts) });
+    });
   };
 
   return (
@@ -148,9 +192,12 @@ export function CardDrawer({
                 value={title}
                 placeholder="Say it plainly"
                 onChange={(e) => {
-                  setTitle(e.target.value);
-                  onChange(card.id, { title: e.target.value });
+                  const value = e.target.value;
+                  const id = card.id;
+                  setTitle(value);
+                  saveSoon('title', () => onChange(id, { title: value }));
                 }}
+                onBlur={flush}
               />
 
               <div className="who__block">
@@ -231,9 +278,12 @@ export function CardDrawer({
                   value={note}
                   placeholder={copy.notePlaceholder}
                   onChange={(e) => {
-                    setNote(e.target.value);
-                    onChange(card.id, { note: e.target.value });
+                    const value = e.target.value;
+                    const id = card.id;
+                    setNote(value);
+                    saveSoon('note', () => onChange(id, { note: value }));
                   }}
+                  onBlur={flush}
                   onPaste={(e) => {
                     const pasted = pastedImages(e);
                     if (pasted.length) {
@@ -278,6 +328,7 @@ export function CardDrawer({
                       <input
                         value={actionDrafts[a.id] ?? a.text}
                         onChange={(e) => setActionText(a.id, e.target.value)}
+                        onBlur={flush}
                       />
                       {isPair && (
                         <div className="owner">
@@ -300,7 +351,7 @@ export function CardDrawer({
                         aria-label="Remove action item"
                         onClick={() =>
                           onChange(card.id, {
-                            actions: card.actions.filter((x) => x.id !== a.id),
+                            actions: withDrafts(card.actions, actionDrafts).filter((x) => x.id !== a.id),
                           })
                         }
                       >

@@ -43,9 +43,8 @@ export function CardTile({ card, index, lane, board, onOpen }: Props) {
   const nextStepOwners = PEOPLE.filter((p) =>
     card.actions.some((a) => !a.done && a.owner === p)
   );
-  const noteImages = card.noteImageUrls ?? [];
-  const first = noteImages[0];
-  const lastReply = card.log[card.log.length - 1];
+  const first = card.noteImageUrls?.[0];
+  const lastReply = card.lastReply;
   const unread = board.unread[card.id] ?? 0;
   const isNew = board.fresh.includes(card.id);
 
@@ -115,13 +114,13 @@ export function CardTile({ card, index, lane, board, onOpen }: Props) {
           style={{ aspectRatio: Math.min(Math.max(first.w / first.h, 1.2), 2.5) }}
         >
           <img src={first.url} alt="" width={first.w} height={first.h} loading="lazy" decoding="async" />
-          {noteImages.length > 1 && <span className="card__image-more">+{noteImages.length - 1}</span>}
+          {card.noteImageCount > 1 && <span className="card__image-more">+{card.noteImageCount - 1}</span>}
         </div>
       )}
 
       {lastReply && (
         <p className="card__replies">
-          {unread > 0 ? `${unread} new` : `${card.log.length} ${card.log.length === 1 ? 'reply' : 'replies'}`}
+          {unread > 0 ? `${unread} new` : `${card.replyCount} ${card.replyCount === 1 ? 'reply' : 'replies'}`}
           {' · '}
           {isMine(board, lastReply) ? 'You' : replyAuthor(board, lastReply)} replied {dayLabel(lastReply.at)}
         </p>
