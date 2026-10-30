@@ -4,6 +4,9 @@ import type { Board, Card, Kind, LaneId, PersonId, Weight } from "./types";
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
 
+/** How many Done cards the board loads and shows before "Show N more". */
+export const DONE_PREVIEW = 10;
+
 export function laneOf(board: Board, cardId: string): LaneId | null {
   for (const lane of Object.keys(board.lanes) as LaneId[]) {
     if (board.lanes[lane].includes(cardId)) return lane;

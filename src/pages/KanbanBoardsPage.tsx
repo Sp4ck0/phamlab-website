@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
 import { PageShell } from "../components/layout/PageShell";
 import { useAccessCode } from "../hooks/useAccessCode";
-import { useKanbanBoards } from "../kanban/useKanbanBoards";
+import { useKanbanBoardUnread } from "../kanban/useKanbanBoards";
 
 export function KanbanBoardsPage() {
   const { code } = useAccessCode();
-  const { boards, isLoading, authorized } = useKanbanBoards();
+  const { boards, isLoading, authorized } = useKanbanBoardUnread();
 
   if (!code) {
     return (
