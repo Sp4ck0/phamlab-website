@@ -82,6 +82,8 @@ function TripPageEntry() {
         tripStart={trip.days[0]?.date ?? today}
         tripEnd={trip.days[trip.days.length - 1]?.date ?? today}
         onSetDone={setDone}
+        onSetDue={setDue}
+        onAddItem={addItem}
         onUpdateItem={updateItem}
         onRemoveItem={removeItem}
       />
