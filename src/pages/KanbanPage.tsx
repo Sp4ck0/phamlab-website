@@ -8,6 +8,7 @@ import { PageShell } from "../components/layout/PageShell";
 import { useAccessCode } from "../hooks/useAccessCode";
 import { useKanbanBoard, useKanbanCard } from "../kanban/useKanbanBoard";
 import { useRememberTab } from "../hooks/useRememberTab";
+import { useAiCardFocus } from "../hooks/useAiFocus";
 import { Lane } from "../kanban/components/Lane";
 import { CardDrawer } from "../kanban/components/CardDrawer";
 import { NewCardPane } from "../kanban/components/NewCardPane";
@@ -79,6 +80,14 @@ export function KanbanPage() {
   useEffect(() => {
     if (openId) setPaneOpen(false);
   }, [openId]);
+  // The AI pointed at a card (FollowAiEdits brought us here): open it. The
+  // drawer loads the card by id, so it works wherever the card sits on the board.
+  const { focus: aiFocus, consume: consumeAiFocus } = useAiCardFocus();
+  useEffect(() => {
+    if (!aiFocus) return;
+    setOpenId(aiFocus.target.id);
+    consumeAiFocus(aiFocus.nonce);
+  }, [aiFocus, consumeAiFocus]);
   const due = useDue(board);
   // While dragging, reordering happens against this local copy only — the
   // server mutation fires once on drop, not on every dragover frame. Once

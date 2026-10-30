@@ -1,9 +1,15 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
 
-export type FocusTarget = { kind: "trip" } | { kind: "day"; date: string } | { kind: "actionItem"; id: string };
+export type FocusTarget =
+  | { kind: "trip" }
+  | { kind: "day"; date: string }
+  | { kind: "actionItem"; id: string }
+  | { kind: "board" }
+  | { kind: "card"; id: string };
 
-// Mirrors the backend's mcp_focus row (mcpFocus.ts getFocus).
+// Mirrors the backend's mcp_focus row (mcpFocus.ts getFocus). For the board
+// and card targets, `slug` is the board's id.
 export interface AiFocus {
   slug: string;
   target: FocusTarget;
@@ -48,4 +54,12 @@ export function useAiFocus<K extends FocusTarget["kind"]>(kind: K) {
   const { slug } = useParams();
   const match = focus && focus.slug === slug && focus.target.kind === kind ? focus : null;
   return { focus: match as (AiFocus & { target: Extract<FocusTarget, { kind: K }> }) | null, consume };
+}
+
+/** The pending card focus, if it targets the board on screen. */
+export function useAiCardFocus() {
+  const { focus, consume } = useCtx();
+  const { boardId } = useParams();
+  const match = focus && focus.slug === boardId && focus.target.kind === "card" ? focus : null;
+  return { focus: match as (AiFocus & { target: Extract<FocusTarget, { kind: "card" }> }) | null, consume };
 }
