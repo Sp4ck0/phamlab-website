@@ -22,7 +22,7 @@ interface Props {
   // Muted text after the lead: the route/city, or the item's detail.
   body?: string;
   // When it applies ("Fri Nov 20 – Sun Nov 22"); left out for whole-trip items.
-  scope?: string;
+  scope?: ReactNode;
   // Edit / delete buttons.
   actions?: ReactNode;
   // The due-date chip; the per-day lists have none.
@@ -37,7 +37,7 @@ const badgeBase = { display: "inline-block", padding: "3px 7px", borderRadius: 6
 // copied without marking the task complete. Shared by the Action Items list and
 // the per-day checklists.
 export function TaskRow({ domId, rowId, done, onToggle, badge, pill, lead, body, scope, actions, due, dueState }: Props) {
-  const rest = [body, scope].filter(Boolean).join(" · ");
+  const hasRest = !!(body || scope);
   const tint = (color: string | null) =>
     color ? { background: `${color}1a`, color } : { background: "var(--chip-bg)", color: "var(--text-secondary)" };
   return (
@@ -56,12 +56,16 @@ export function TaskRow({ domId, rowId, done, onToggle, badge, pill, lead, body,
         {pill && <span style={{ ...tint(null), ...badgeBase }}>{pill}</span>}
         <span className="at">
           {lead}
-          {rest ? " —" : ""}
+          {hasRest ? " —" : ""}
         </span>
-        {rest && (
+        {hasRest && (
           <>
             {" "}
-            <span className="ad">{rest}</span>
+            <span className="ad">
+              {body}
+              {body && scope ? " · " : ""}
+              {scope}
+            </span>
           </>
         )}
       </span>

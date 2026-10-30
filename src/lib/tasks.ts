@@ -2,7 +2,7 @@
 import type { Status, Task, TaskScope } from "./types";
 import { fmtDow, modeLabel } from "./tripLogic";
 
-const dow = (iso: string) => fmtDow(new Date(iso + "T00:00:00"));
+export const dow = (iso: string) => fmtDow(new Date(iso + "T00:00:00"));
 
 export const scopeStart = (s: TaskScope): string | undefined => (s.kind === "day" ? s.date : s.kind === "range" ? s.start : undefined);
 export const scopeEnd = (s: TaskScope): string | undefined => (s.kind === "day" ? s.date : s.kind === "range" ? s.end : undefined);
