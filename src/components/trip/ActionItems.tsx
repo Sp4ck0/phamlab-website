@@ -197,7 +197,7 @@ export function ActionItems({
       );
     }
 
-    // Derived: a booking or a blank day. Ticking covers every night/day merged into it.
+    // Derived: a booking, a blank day or a move with no transport. Ticking covers every night/day merged into it.
     return row(
       <TaskRow
         key={task.key}
@@ -206,7 +206,13 @@ export function ActionItems({
         onToggle={() => onSetDone(task.refs, !task.done)}
         badge={badge}
         lead={kindLabel(task) ?? task.title}
-        body={task.mode === "hotel" && task.detail ? `${task.title} · ${task.detail}` : task.title}
+        body={
+          task.mode === "hotel" && task.detail
+            ? `${task.title} · ${task.detail}`
+            : task.kind === "transport"
+              ? `${task.title} · nothing entered yet`
+              : task.title
+        }
         scope={<ScopeLinks scope={task.scope} />}
         dueState={state}
         due={dueControl}

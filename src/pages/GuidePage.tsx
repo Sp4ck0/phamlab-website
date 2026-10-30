@@ -52,7 +52,7 @@ export function GuidePage() {
           <li>
             <strong>Trips.</strong> A day-by-day itinerary with flights and trains, hotels, activities, weather and a
             map. The <em>Action Items</em> list at the bottom collects what still needs doing: bookings marked
-            needed, days with nothing planned, decisions and to-dos. Each can be ticked off and given a due date.
+            needed, days with nothing planned, moves between places with no transport entered, decisions and to-dos. Each can be ticked off and given a due date.
           </li>
           <li>
             <strong>Boards.</strong> A shared board of cards for things to talk through, with replies and per-card

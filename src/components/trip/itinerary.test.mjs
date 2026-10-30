@@ -30,17 +30,20 @@ function mount(element) {
   act(() => root.render(wrap(element)));
   return { container, root: { render: (next) => root.render(wrap(next)), unmount: () => root.unmount() }, close() { act(() => root.unmount()); container.remove(); } };
 }
-test('only-gaps dates come from open booking and plan tasks, one per open night or day', async () => {
-  const { gapDates } = await import('../../lib/tasks.ts');
+test('only-gaps dates come from open booking, plan and transport tasks, one per open night or day', async () => {
+  const { gapDates, kindLabel } = await import('../../lib/tasks.ts');
+  assert.equal(kindLabel({ kind: 'transport', scope: { kind: 'day', date: '2040-01-07' } }), 'Transport');
   const task = (kind, refs, refsDone) => ({ kind, refs, refsDone });
   const dates = gapDates([
     task('booking', ['booking:2040-01-02|h|Synthetic|a', 'booking:2040-01-03|h|Synthetic|a'], [true, false]), // half-booked stay
     task('plan', ['plan:2040-01-05|p|Synthetic'], [false]),
     task('plan', ['plan:2040-01-06|p|Synthetic'], [true]), // dismissed
+    task('transport', ['transport:2040-01-07|t|Synthetic A → Synthetic B'], [false]), // a move with nothing entered
+    task('transport', ['transport:2040-01-08|t|Synthetic B → Synthetic C'], [true]), // dismissed
     task('custom', ['item:synthetic'], [false]), // a to-do is not a gap
     task('decision', ['item:synthetic-decision'], [false]),
   ]);
-  assert.deepEqual([...dates].sort(), ['2040-01-03', '2040-01-05']);
+  assert.deepEqual([...dates].sort(), ['2040-01-03', '2040-01-05', '2040-01-07']);
 });
 test('controlled closed day exposes an associated empty panel, not detail descendants', () => {
   const view = mount(React.createElement(DayCard, props));

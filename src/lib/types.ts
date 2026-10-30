@@ -92,7 +92,7 @@ export interface ActionItem {
 
 // One row of the Action Items list, derived by the backend (convex/travel/tasks.ts).
 // `kind` is why it exists, `scope` is when it applies.
-export type TaskKind = "booking" | "plan" | "decision" | "custom";
+export type TaskKind = "booking" | "plan" | "transport" | "decision" | "custom";
 export type TaskScope =
   | { kind: "trip" }
   | { kind: "day"; date: string }
