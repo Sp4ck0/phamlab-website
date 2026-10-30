@@ -17,7 +17,8 @@ interface SettingsCtx {
   setTempUnit: (unit: TempUnit) => void;
 }
 
-const Ctx = createContext<SettingsCtx | null>(null);
+// Exported so tests can supply plain values instead of a Convex-backed provider.
+export const Ctx = createContext<SettingsCtx | null>(null);
 
 function readTheme(): Theme | undefined {
   const stored = localStorage.getItem(THEME_KEY);

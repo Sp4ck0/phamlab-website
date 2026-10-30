@@ -66,5 +66,8 @@ export function useTasks(slug: string, today: string) {
     [setDone, done]
   );
 
-  return { tasks, ticks, done, setDone, setDue, toggleTick, toggleActionItem };
+  // False until the first answer arrives (the tasks are just empty meanwhile).
+  const loaded = result !== undefined;
+
+  return { tasks, loaded, ticks, done, setDone, setDue, toggleTick, toggleActionItem };
 }

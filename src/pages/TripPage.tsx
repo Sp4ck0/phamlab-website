@@ -15,6 +15,7 @@ import { useActionItemEdits } from "../hooks/useActionItemEdits";
 import { useTripWeather } from "../hooks/useTripWeather";
 import { todayISO } from "../lib/dueDates";
 import { assignLegColors } from "../lib/tripLogic";
+import { gapDates } from "../lib/tasks";
 import { derivePoints, deriveRouteAddresses, deriveWeatherStops } from "../lib/mapPoints";
 import { NotFoundOrDenied } from "./NotFoundOrDenied";
 
@@ -33,7 +34,13 @@ function TripPageEntry() {
   const resolvedDays = useResolvedDays(trip);
   const legColors = assignLegColors(resolvedDays);
   const today = todayISO();
-  const { tasks, ticks, done, setDone, setDue, toggleTick: toggle, toggleActionItem } = useTasks(slug || "", today);
+  const { tasks, loaded, ticks, done, setDone, setDue, toggleTick: toggle, toggleActionItem } = useTasks(slug || "", today);
+  // "Only gaps" follows the task list, so it can't disagree with Action Items.
+  const isGap = useMemo(() => {
+    if (!loaded) return undefined;
+    const dates = gapDates(tasks);
+    return (day: { date: string }) => dates.has(day.date);
+  }, [loaded, tasks]);
   const { addItem, updateItem, removeItem } = useActionItemEdits(slug || "");
   const weather = useTripWeather(slug);
   const weatherStops = useMemo(() => deriveWeatherStops(resolvedDays, weather), [resolvedDays, weather]);
@@ -87,6 +94,7 @@ function TripPageEntry() {
           groups={trip.groups}
           ticks={ticks}
           onlyGaps={onlyGaps}
+          isGap={isGap}
           onToggle={toggle}
           onOnlyGapsChange={setOnlyGaps}
           filterRef={filterRef}
