@@ -8,6 +8,7 @@ import { TourBox } from "./TourBox";
 import { WeatherBadge } from "./WeatherBadge";
 import { AddToCalendar } from "./AddToCalendar";
 import { actUrl, hotelUrl, transportUrl } from "../../lib/calendar";
+import { sanitizeHtml } from "../../lib/sanitizeHtml";
 import type { DayWeather } from "../../lib/weather";
 
 interface Props {
@@ -84,7 +85,7 @@ export function DayCard({
         </div>
         {g.address && (
           <div className="cmeta">
-            <a href={`https://maps.google.com/?q=${encodeURIComponent(g.address)}`} target="_blank" rel="noopener">
+            <a href={`https://maps.google.com/?q=${encodeURIComponent(g.address)}`} target="_blank" rel="noopener noreferrer">
               {g.address}
             </a>
           </div>
@@ -175,7 +176,7 @@ export function DayCard({
                     {tag && <span className="act-tag">{tag}</span>}
                     <span className="activity-text">
                       {time && <span className="activity-time">{time}</span>}
-                      <span dangerouslySetInnerHTML={{ __html: text }} />
+                      <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(text) }} />
                     </span>
                     <AddToCalendar url={actUrl(a, d, dayNumber, ai)} />
                   </li>
@@ -191,7 +192,7 @@ export function DayCard({
           {d.tourDetails && <TourBox tourDetails={d.tourDetails} />}
           {d.callout && (
             <div className="note">
-              <span dangerouslySetInnerHTML={{ __html: d.callout }} />
+              <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(d.callout) }} />
             </div>
           )}
 

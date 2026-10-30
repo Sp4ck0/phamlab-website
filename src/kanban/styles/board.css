@@ -1,0 +1,108 @@
+@scope (.kanban-app) {
+/* ── Board + lanes ───────────────────────────────────────────── */
+
+.board {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 1px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: var(--rule);
+  scrollbar-width: thin;
+}
+
+.lane {
+  flex: 1 0 288px;
+  min-width: 288px;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  transition: background 0.25s ease;
+}
+.lane[data-over] {
+  background: var(--paper-2);
+}
+
+.lane__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.lane__name {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  margin: 0;
+}
+
+.lane__blurb {
+  margin: 3px 0 0;
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--ink-soft);
+  max-width: 26ch;
+}
+
+.lane__count {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  padding-top: 2px;
+}
+
+.lane__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 12px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scrollbar-width: thin;
+}
+
+.lane__empty {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  font-style: italic;
+  opacity: 0.75;
+  padding: 10px 4px;
+  margin: 0;
+}
+
+.lane__more {
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  padding: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.lane__more:hover {
+  color: var(--ink);
+}
+
+.lane__add {
+  background: none;
+  border: 1px dashed var(--rule-firm);
+  border-radius: 10px;
+  color: var(--ink-soft);
+  padding: 9px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.lane__add:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+.lane__add[data-draft] {
+  border-style: solid;
+  border-color: var(--ink-b);
+  color: var(--ink-b);
+}
+}

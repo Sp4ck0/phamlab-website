@@ -1,0 +1,255 @@
+@scope (.kanban-app) {
+/* ── Images (replies and the longer version) ───────────────────── */
+
+.msg__content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: inherit;
+  gap: 4px;
+}
+.msg__images {
+  max-width: min(260px, 100%);
+}
+.note-images__bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.note-images__bar .thread__hint {
+  margin-top: 0;
+}
+.thread__error {
+  color: var(--rust);
+}
+
+.img-gallery {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  max-width: 100%;
+}
+.img-gallery:not(:empty) {
+  margin-bottom: 6px;
+}
+.img-gallery:not([data-count='1']) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.img-thumb {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid var(--rule);
+  background: var(--paper-2); /* skeleton while the image loads */
+}
+/* A lone image keeps its own shape: scaled to fit, never cropped or stretched.
+   The width/height attributes reserve the box before it loads. */
+.img-gallery[data-count='1'] {
+  display: block;
+  width: fit-content;
+}
+.img-gallery[data-count='1'] img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 320px;
+}
+.msg__images .img-gallery[data-count='1'] img {
+  max-height: 260px;
+}
+/* Several images become uniform tiles; the viewer shows each in full. */
+.img-gallery:not([data-count='1']) .img-thumb__open {
+  aspect-ratio: 1;
+}
+.img-gallery:not([data-count='1']) img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.img-thumb__open {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+}
+.img-thumb__open:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+.img-thumb__more {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 0.5);
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+}
+.img-thumb__remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.6);
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+}
+.img-thumb:hover .img-thumb__remove,
+.img-thumb__remove:focus-visible {
+  opacity: 1;
+}
+@media (hover: none) {
+  .img-thumb__remove {
+    opacity: 0.85;
+  }
+}
+
+.thread__pending {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 6px;
+  padding: 0;
+  list-style: none;
+}
+.thread__pending .img-thumb {
+  width: 64px;
+  height: 64px;
+}
+.thread__pending img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.thread__pending .img-thumb[data-uploading] {
+  opacity: 0.5;
+}
+
+.img-viewer {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: rgb(0 0 0 / 0.9);
+  color: #fff;
+  overflow: hidden;
+}
+.img-viewer[open] {
+  animation: img-viewer-in 0.16s ease-out;
+}
+@keyframes img-viewer-in {
+  from {
+    opacity: 0;
+  }
+}
+.img-viewer::backdrop {
+  background: transparent;
+}
+.img-viewer__stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  overflow: auto;
+  cursor: zoom-in;
+  touch-action: pan-x pan-y pinch-zoom;
+  user-select: none;
+}
+.img-viewer__stage img {
+  margin: auto; /* centres, but still scrolls from the edge once larger than the screen */
+  max-width: 100vw;
+  max-height: 100dvh;
+  object-fit: contain;
+}
+.img-viewer__stage[data-zoomed] {
+  cursor: grab;
+}
+.img-viewer__stage[data-zoomed] img {
+  max-width: none;
+  max-height: none;
+}
+.img-viewer__bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  background: linear-gradient(rgb(0 0 0 / 0.55), transparent);
+  font-size: 13px;
+  pointer-events: none;
+}
+.img-viewer__bar > * {
+  pointer-events: auto;
+}
+.img-viewer__bar a {
+  margin-left: auto;
+  color: #fff;
+}
+.img-viewer__btn {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.14);
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+}
+.img-viewer__btn:hover {
+  background: rgb(255 255 255 / 0.28);
+}
+.img-viewer__nav {
+  position: absolute;
+  top: 50%;
+  translate: 0 -50%;
+  font-size: 28px;
+  line-height: 1;
+}
+.img-viewer__nav[data-dir='prev'] {
+  left: 12px;
+}
+.img-viewer__nav[data-dir='next'] {
+  right: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+} /* @scope (.kanban-app) */
+
+/* iOS zooms the page when a focused field is under 16px. */
+@media (hover: none) {
+  .kanban-app textarea,
+  .kanban-app select,
+  .kanban-app input:not([type='checkbox']):not([type='file']) {
+    font-size: 16px;
+  }
+}

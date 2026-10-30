@@ -27,3 +27,6 @@ src/_generated
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code session worktrees (nested checkouts of this repo)
+.claude-worktrees

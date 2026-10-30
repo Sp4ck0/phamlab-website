@@ -79,7 +79,7 @@ export function VersionLog({ onClose }: { onClose: () => void }) {
                 {e.links.length > 0 && (
                   <div className="vlog-links">
                     {e.links.map((l) => (
-                      <a key={l.url} href={l.url} target="_blank" rel="noreferrer">
+                      <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer">
                         {l.label} ↗
                       </a>
                     ))}
