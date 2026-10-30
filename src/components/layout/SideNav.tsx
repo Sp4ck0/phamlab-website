@@ -183,6 +183,9 @@ export function SideNav() {
           <button className="btn" onClick={() => setShowLog(true)}>
             What's new
           </button>
+          <Link className="btn" to="/guide">
+            Guide
+          </Link>
           <Link className="btn" to="/settings">
             Settings
           </Link>

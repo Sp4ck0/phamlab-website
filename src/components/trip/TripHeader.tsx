@@ -2,6 +2,7 @@ import { useParams } from "react-router-dom";
 import type { RefObject } from "react";
 import type { Day, Group, HighlightStat } from "../../lib/types";
 import { assignLegColors, deriveRoute, renderCountdown } from "../../lib/tripLogic";
+import { StarterPromptButton } from "../StarterPromptButton";
 import { ExportMenu } from "./ExportMenu";
 import { RouteStepper } from "./RouteStepper";
 import { Roster } from "./Roster";
@@ -57,6 +58,7 @@ export function TripHeader({
           {onlyGaps ? "Show all days" : "Only gaps"}
         </button>
         {slug && <ExportMenu slug={slug} />}
+        {slug && <StarterPromptButton trip={{ slug, title }} />}
       </div>
     </header>
   );
