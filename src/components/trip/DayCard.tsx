@@ -1,9 +1,10 @@
 import type { ActionItem, Group, LegColor, ResolvedDay, Status } from "../../lib/types";
-import { DOW, MON, actParts, gapLabel, mergeFlightsByRoute, mergeHotelsByName, modeLabel } from "../../lib/tripLogic";
+import { DOW, MON, actParts, fmtShort, gapLabel, mergeFlightsByRoute, mergeHotelsByName, modeLabel } from "../../lib/tripLogic";
 import type { HotelGroup } from "../../lib/tripLogic";
 import { WhoPill } from "./WhoPill";
 import { StatusToggle } from "./StatusToggle";
 import { FlightBox } from "./FlightBox";
+import { TaskRow } from "./TaskRow";
 import { TourBox } from "./TourBox";
 import { WeatherBadge } from "./WeatherBadge";
 import { AddToCalendar } from "./AddToCalendar";
@@ -198,35 +199,20 @@ export function DayCard({
 
           {dayActionItems.length > 0 && (
             <div className="action-items" style={{ marginTop: 14 }}>
-              {dayActionItems.map((item) => {
-                const isDone = !!actionItemsDone[item.id];
-                const badge = item.who ? gapLabel(item.who, groups, item.date || d.date) : null;
-                const badgeStyle = badge?.color
-                  ? { background: `${badge.color}1a`, color: badge.color }
-                  : { background: "var(--chip-bg)", color: "var(--text-secondary)" };
-                return (
-                  <div className={`action-item ${isDone ? "done" : ""}`} key={item.id}>
-                    <input
-                      type="checkbox"
-                      id={`${rowId}-ai-${item.id}`}
-                      checked={isDone}
-                      aria-labelledby={`${rowId}-ai-${item.id}-text`}
-                      onChange={() => onToggleActionItem(item.id)}
-                    />
-                    <span className="action-text" id={`${rowId}-ai-${item.id}-text`}>
-                      {badge && (
-                        <span
-                          className="who"
-                          style={{ ...badgeStyle, display: "inline-block", padding: "3px 7px", borderRadius: 6, fontSize: 10, fontWeight: 700, marginRight: 7 }}
-                        >
-                          {badge.label}
-                        </span>
-                      )}
-                      <span className="at">{item.title}{item.detail ? " —" : ""}</span>{item.detail && <> <span className="ad">{item.detail}</span></>}
-                    </span>
-                  </div>
-                );
-              })}
+              {dayActionItems.map((item) => (
+                <TaskRow
+                  key={item.id}
+                  domId={`${rowId}-ai-${item.id}`}
+                  done={!!actionItemsDone[item.id]}
+                  onToggle={() => onToggleActionItem(item.id)}
+                  badge={item.who ? gapLabel(item.who, groups, item.date || d.date) : null}
+                  pill={item.kind === "decision" ? "Decision" : undefined}
+                  lead={item.title}
+                  body={item.detail}
+                  // The day is already obvious; a range is worth spelling out.
+                  scope={item.endDate ? `${fmtShort(item.date ?? d.date)} – ${fmtShort(item.endDate)}` : undefined}
+                />
+              ))}
             </div>
           )}
         </>

@@ -10,9 +10,7 @@ import { ItineraryStart, TripEntryBoundary } from "../components/trip/TripEntryB
 import { useTrip } from "../hooks/useTrip";
 import { useRememberTab } from "../hooks/useRememberTab";
 import { useResolvedDays } from "../hooks/useResolvedDays";
-import { useChecks } from "../hooks/useChecks";
-import { useTripGaps } from "../hooks/useTripGaps";
-import { useDueDates } from "../hooks/useDueDates";
+import { useTasks } from "../hooks/useTasks";
 import { useActionItemEdits } from "../hooks/useActionItemEdits";
 import { useTripWeather } from "../hooks/useTripWeather";
 import { todayISO } from "../lib/dueDates";
@@ -34,10 +32,8 @@ function TripPageEntry() {
 
   const resolvedDays = useResolvedDays(trip);
   const legColors = assignLegColors(resolvedDays);
-  const { ticks, toggleTick: toggle, done, toggleActionItem } = useChecks(slug || "");
   const today = todayISO();
-  const gaps = useTripGaps(resolvedDays, ticks, today);
-  const { overrides: dueOverrides, setDue } = useDueDates(slug || "");
+  const { tasks, ticks, done, setDone, setDue, toggleTick: toggle, toggleActionItem } = useTasks(slug || "", today);
   const { addItem, updateItem, removeItem } = useActionItemEdits(slug || "");
   const weather = useTripWeather(slug);
   const weatherStops = useMemo(() => deriveWeatherStops(resolvedDays, weather), [resolvedDays, weather]);
@@ -72,7 +68,16 @@ function TripPageEntry() {
         onOnlyGapsChange={setOnlyGaps}
       />
 
-      <AlertsPanel conflicts={trip.conflicts} />
+      <AlertsPanel
+        tasks={tasks}
+        items={trip.actionItems || []}
+        groups={trip.groups}
+        tripStart={trip.days[0]?.date ?? today}
+        tripEnd={trip.days[trip.days.length - 1]?.date ?? today}
+        onSetDone={setDone}
+        onUpdateItem={updateItem}
+        onRemoveItem={removeItem}
+      />
 
       <ItineraryStart key={trip._id}>
         <DetailedView
@@ -98,15 +103,12 @@ function TripPageEntry() {
       />
 
       <ActionItems
-        gaps={gaps}
-        groups={trip.groups}
-        onToggleGap={toggle}
+        tasks={tasks}
         items={trip.actionItems || []}
-        done={done}
-        onToggleItem={toggleActionItem}
+        groups={trip.groups}
+        onSetDone={setDone}
         today={today}
         defaultDue={trip.days[0]?.date ?? today}
-        dueOverrides={dueOverrides}
         onSetDue={setDue}
         tripStart={trip.days[0]?.date ?? today}
         tripEnd={trip.days[trip.days.length - 1]?.date ?? today}

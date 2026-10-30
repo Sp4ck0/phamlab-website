@@ -1,27 +1,27 @@
 import { useEffect, useState, type ReactNode } from "react";
-import type { ActionItem, Group, Status } from "../../lib/types";
-import type { Gap } from "../../lib/tripLogic";
+import type { ActionItem, Group, Task } from "../../lib/types";
 import { gapLabel } from "../../lib/tripLogic";
 import { dueLabel, dueState } from "../../lib/dueDates";
+import { kindLabel, scopeLabel, scopeStart } from "../../lib/tasks";
 import type { ActionItemFields } from "../../hooks/useActionItemEdits";
 import { useAiFocus } from "../../hooks/useAiFocus";
 import { flash, scrollBehavior, SETTLE_MS } from "../../lib/flash";
 import { ActionItemEditor } from "./ActionItemEditor";
 import { DueDateInput } from "./DueDateInput";
+import { TaskRow } from "./TaskRow";
 
 interface Props {
-  gaps: Gap[];
-  groups: Group[];
-  onToggleGap: (ids: string[], status: Status) => void;
+  // Every task for the trip. Decisions are shown in the alerts panel instead.
+  tasks: Task[];
+  // The stored items behind the editable tasks, for editing and undoing a delete.
   items: ActionItem[];
-  done: Record<string, boolean>;
-  onToggleItem: (id: string) => void;
+  groups: Group[];
+  onSetDone: (keys: string[], done: boolean) => void;
   today: string;
   // Every row's due date unless overridden: the trip's start date.
   defaultDue: string;
-  dueOverrides: Record<string, string>;
   onSetDue: (key: string, dueDate: string | undefined) => void;
-  // Bounds for an item's optional "day" picker.
+  // Bounds for an item's optional day / range pickers.
   tripStart: string;
   tripEnd: string;
   onAddItem: (fields: ActionItemFields & { id?: string }) => Promise<unknown>;
@@ -44,9 +44,10 @@ interface Deleted {
 }
 
 const UNDO_MS = 6000;
+const itemId = (task: Task) => task.key.slice("item:".length);
 
 // Soonest due first; ties (and the common case where everything still has the
-// default due date) fall back to the item's own date. Undated items sort to
+// default due date) fall back to the task's own date. Whole-trip tasks sort to
 // the end, after everything with a date.
 function byDueThenDate(a: Row, b: Row) {
   if (a.due !== b.due) return a.due.localeCompare(b.due);
@@ -72,15 +73,12 @@ const TrashIcon = () => (
 );
 
 export function ActionItems({
-  gaps,
-  groups,
-  onToggleGap,
+  tasks,
   items,
-  done,
-  onToggleItem,
+  groups,
+  onSetDone,
   today,
   defaultDue,
-  dueOverrides,
   onSetDue,
   tripStart,
   tripEnd,
@@ -99,6 +97,8 @@ export function ActionItems({
     return () => clearTimeout(t);
   }, [deleted]);
 
+  const listed = tasks.filter((t) => t.kind !== "decision");
+
   // The AI pointed at an item (mcpFocus.ts): scroll to it and blink it. A done
   // item sits in the collapsed Completed list, so open that first; the item may
   // also not have arrived yet, so wait for it.
@@ -106,8 +106,9 @@ export function ActionItems({
   useEffect(() => {
     if (!focus) return;
     const id = focus.target.id;
-    if (!items.some((i) => i.id === id)) return;
-    if (done[id]) setCompletedOpen(true);
+    const task = listed.find((t) => t.editable && itemId(t) === id);
+    if (!task) return;
+    if (task.done) setCompletedOpen(true);
     const t = setTimeout(() => {
       const el = document.getElementById(`ai-row-${id}`);
       if (!el) return;
@@ -116,7 +117,7 @@ export function ActionItems({
       setTimeout(() => flash(el), 250);
     }, SETTLE_MS);
     return () => clearTimeout(t);
-  }, [focus, items, done, consume]);
+  }, [focus, listed, consume]);
 
   const editorProps = { groups, minDate: tripStart, maxDate: tripEnd, onCancel: () => setEditing(null) };
 
@@ -125,8 +126,8 @@ export function ActionItems({
     setEditing(id);
   }
 
-  function remove(item: ActionItem, isDone: boolean) {
-    setDeleted({ item, done: isDone, due: dueOverrides[`ai:${item.id}`] });
+  function remove(task: Task, item: ActionItem) {
+    setDeleted({ item, done: task.done, due: task.dueDateIsDefault ? undefined : (task.dueDate ?? undefined) });
     if (editing === item.id) setEditing(null);
     void onRemoveItem(item.id);
   }
@@ -136,123 +137,88 @@ export function ActionItems({
     const { item, done: wasDone, due } = deleted;
     setDeleted(null);
     await onAddItem(item);
-    if (wasDone) onToggleItem(item.id);
-    if (due) onSetDue(`ai:${item.id}`, due);
+    if (wasDone) onSetDone([`item:${item.id}`], true);
+    if (due) onSetDue(`item:${item.id}`, due);
   }
 
-  // Only the checkbox toggles an item; the row text is a plain span so it can
-  // be selected and copied without marking the item complete.
-  const dueControl = (key: string, due: string, isDone: boolean) => (
-    <div className="due-chip">
-      {!isDone && <span className="due-text">{dueLabel(due, today, isDone)}</span>}
-      <DueDateInput
-        value={due}
-        onCommit={(next) => onSetDue(key, next !== defaultDue ? next : undefined)}
-        onReset={() => onSetDue(key, undefined)}
-      />
-    </div>
-  );
+  const rowFor = (task: Task): Row => {
+    const start = scopeStart(task.scope);
+    const due = task.dueDate ?? defaultDue;
+    const state = dueState(due, today, task.done);
+    const dueControl = (
+      <div className="due-chip">
+        {!task.done && <span className="due-text">{dueLabel(due, today, task.done)}</span>}
+        <DueDateInput
+          value={due}
+          onCommit={(next) => onSetDue(task.key, next !== defaultDue ? next : undefined)}
+          onReset={() => onSetDue(task.key, undefined)}
+        />
+      </div>
+    );
+    const row = (node: ReactNode): Row => ({ date: start, due, done: task.done, node });
+    const badge = task.who !== undefined ? gapLabel(task.who, groups, start ?? "") : null;
 
-  const gapRows: Row[] = gaps.map((g, i) => {
-    const { label, color } = gapLabel(g.who, groups, g.date);
-    const style = color
-      ? { background: `${color}1a`, color }
-      : { background: "var(--chip-bg)", color: "var(--text-secondary)" };
-    const checkboxId = `gap-${i}`;
-    const dueKey = g.ids![0];
-    const due = dueOverrides[dueKey] ?? defaultDue;
-    const state = dueState(due, today, g.done);
-    return {
-      date: g.date as string | undefined,
-      due,
-      done: g.done,
-      node: (
-        <div
-          className={`action-item ${g.done ? "done" : ""}`}
-          data-due={state === "ok" ? undefined : state}
-          key={checkboxId}
-        >
-          <input
-            type="checkbox"
-            id={checkboxId}
-            checked={g.done}
-            aria-labelledby={`${checkboxId}-text`}
-            onChange={() => onToggleGap(g.ids!, g.done ? "booked" : "needed")}
-          />
-          <span className="action-text" id={`${checkboxId}-text`}>
-            <span
-              className="who"
-              style={{ ...style, display: "inline-block", padding: "3px 7px", borderRadius: 6, fontSize: 10, fontWeight: 700, marginRight: 7 }}
-            >
-              {label}
-            </span>
-            <span className="at">{g.kind}</span> <span className="ad">— {g.text} · {g.dateLabel}</span>
-          </span>
-          {dueControl(dueKey, due, g.done)}
-        </div>
-      ),
-    };
-  });
-
-  const itemRows: Row[] = items.map((item) => {
-    const isDone = !!done[item.id];
-    const badge = item.who ? gapLabel(item.who, groups, item.date || "") : null;
-    const badgeStyle = badge?.color
-      ? { background: `${badge.color}1a`, color: badge.color }
-      : { background: "var(--chip-bg)", color: "var(--text-secondary)" };
-    const dueKey = `ai:${item.id}`;
-    const due = dueOverrides[dueKey] ?? defaultDue;
-    const state = dueState(due, today, isDone);
-    const isEditing = editing === item.id;
-    return {
-      date: item.date,
-      due,
-      done: isDone,
-      node: isEditing ? (
-        <div className="action-item" key={item.id}>
-          <ActionItemEditor
-            {...editorProps}
-            initial={item}
-            onSave={async (fields) => {
-              await onUpdateItem(item.id, fields);
-              setEditing(null);
-            }}
-          />
-        </div>
-      ) : (
-        <div
-          className={`action-item ${isDone ? "done" : ""}`}
-          data-due={state === "ok" ? undefined : state}
-          id={`ai-row-${item.id}`}
-          key={item.id}
-        >
-          <input type="checkbox" id={`ai-${item.id}`} aria-labelledby={`ai-${item.id}-text`} checked={isDone} onChange={() => onToggleItem(item.id)} />
-          <span className="action-text" id={`ai-${item.id}-text`}>
-            {badge && (
-              <span
-                className="who"
-                style={{ ...badgeStyle, display: "inline-block", padding: "3px 7px", borderRadius: 6, fontSize: 10, fontWeight: 700, marginRight: 7 }}
-              >
-                {badge.label}
-              </span>
-            )}
-            <span className="at">{item.title}{item.detail ? " —" : ""}</span>{item.detail && <> <span className="ad">{item.detail}</span></>}
-          </span>
-          <div className="row-actions">
-            <button type="button" className="icon-btn" aria-label={`Edit ${item.title}`} onClick={() => startEdit(item.id, isDone)}>
-              <PencilIcon />
-            </button>
-            <button type="button" className="icon-btn" aria-label={`Delete ${item.title}`} onClick={() => remove(item, isDone)}>
-              <TrashIcon />
-            </button>
+    const item = task.editable ? items.find((i) => i.id === itemId(task)) : undefined;
+    if (task.editable && item) {
+      if (editing === item.id) {
+        return row(
+          <div className="action-item" key={task.key}>
+            <ActionItemEditor
+              {...editorProps}
+              initial={item}
+              onSave={async (fields) => {
+                await onUpdateItem(item.id, fields);
+                setEditing(null);
+              }}
+            />
           </div>
-          {dueControl(dueKey, due, isDone)}
-        </div>
-      ),
-    };
-  });
+        );
+      }
+      return row(
+        <TaskRow
+          key={task.key}
+          domId={`ai-${item.id}`}
+          rowId={`ai-row-${item.id}`}
+          done={task.done}
+          onToggle={() => onSetDone(task.refs, !task.done)}
+          badge={badge}
+          lead={task.title}
+          body={task.detail}
+          scope={task.scope.kind === "trip" ? undefined : scopeLabel(task.scope)}
+          dueState={state}
+          due={dueControl}
+          actions={
+            <>
+              <button type="button" className="icon-btn" aria-label={`Edit ${task.title}`} onClick={() => startEdit(item.id, task.done)}>
+                <PencilIcon />
+              </button>
+              <button type="button" className="icon-btn" aria-label={`Delete ${task.title}`} onClick={() => remove(task, item)}>
+                <TrashIcon />
+              </button>
+            </>
+          }
+        />
+      );
+    }
 
-  const rows = [...gapRows, ...itemRows].sort(byDueThenDate);
+    // Derived: a booking or a blank day. Ticking covers every night/day merged into it.
+    return row(
+      <TaskRow
+        key={task.key}
+        domId={`task-${task.key}`}
+        done={task.done}
+        onToggle={() => onSetDone(task.refs, !task.done)}
+        badge={badge}
+        lead={kindLabel(task) ?? task.title}
+        body={task.mode === "hotel" && task.detail ? `${task.title} · ${task.detail}` : task.title}
+        scope={scopeLabel(task.scope)}
+        dueState={state}
+        due={dueControl}
+      />
+    );
+  };
+
+  const rows = listed.map(rowFor).sort(byDueThenDate);
   const open = rows.filter((r) => !r.done);
   const completed = rows.filter((r) => r.done);
   const total = rows.length;

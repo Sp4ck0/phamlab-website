@@ -83,7 +83,38 @@ export interface ActionItem {
   title: string;
   detail: string;
   date?: string;
+  // Last day when the item covers a range starting at `date`.
+  endDate?: string;
   who?: Who;
+  // Absent = "custom" (a to-do).
+  kind?: "custom" | "decision";
+}
+
+// One row of the Action Items list, derived by the backend (convex/travel/tasks.ts).
+// `kind` is why it exists, `scope` is when it applies.
+export type TaskKind = "booking" | "plan" | "decision" | "custom";
+export type TaskScope =
+  | { kind: "trip" }
+  | { kind: "day"; date: string }
+  | { kind: "range"; start: string; end: string };
+
+export interface Task {
+  key: string;
+  kind: TaskKind;
+  // Booking only: what is being booked.
+  mode?: "hotel" | "flight" | "train" | "bus" | "ferry";
+  scope: TaskScope;
+  who?: Who;
+  title: string;
+  detail?: string;
+  // State keys toggled together; refsDone is each one's own done-state.
+  refs: string[];
+  refsDone: boolean[];
+  done: boolean;
+  dueDate: string | null;
+  dueDateIsDefault: boolean;
+  // Stored items (decision/custom) can be edited and removed.
+  editable: boolean;
 }
 
 export interface HighlightStat {
