@@ -25,6 +25,7 @@ export function coversDay(s: TaskScope, date: string): boolean {
 export function kindLabel(t: Task): string | undefined {
   if (t.kind === "booking") return t.mode === "hotel" ? "Hotel" : modeLabel(t.mode);
   if (t.kind === "plan") return "Plan";
+  if (t.kind === "transport") return "Transport";
   if (t.kind === "decision") return "Decision";
   return undefined;
 }
@@ -49,14 +50,15 @@ export function ticksFromTasks(tasks: Task[]): Record<string, Status> {
   return out;
 }
 
-// Dates that still have something open: a hotel/transport still to book or a
-// blank day still to plan. Each ref's key carries its own date right after the
-// prefix (`booking:2040-01-02|…`), so a stay or run of blank days that merged
-// into one task still marks only the nights/days that are actually open.
+// Dates that still have something open: a hotel/transport still to book, a
+// blank day still to plan, or a move with no transport entered. Each ref's key
+// carries its own date right after the prefix (`booking:2040-01-02|…`), so a stay
+// or run of blank days that merged into one task still marks only the
+// nights/days that are actually open.
 export function gapDates(tasks: Task[]): Set<string> {
   const out = new Set<string>();
   for (const t of tasks) {
-    if (t.kind !== "booking" && t.kind !== "plan") continue;
+    if (t.kind !== "booking" && t.kind !== "plan" && t.kind !== "transport") continue;
     t.refs.forEach((ref, i) => {
       if (t.refsDone[i]) return;
       const start = ref.indexOf(":") + 1;
