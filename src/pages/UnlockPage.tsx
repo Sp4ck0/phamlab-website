@@ -11,6 +11,8 @@ export function UnlockPage() {
   const [input, setInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // After too many wrong codes site-wide the backend pauses unlocking for a while.
+  const [paused, setPaused] = useState(false);
 
   // A mutation (not a reactive query) so submitting a code notifies Slack
   // exactly once per attempt, instead of re-running on every render.
@@ -23,6 +25,13 @@ export function UnlockPage() {
     const code = input.trim();
     const result = await attemptAccessCode({ code });
     setSubmitting(false);
+    if (result.locked) {
+      const mins = Math.max(1, Math.ceil(result.retryAfterSeconds / 60));
+      setError(`Too many wrong codes just now, so unlocking is paused. Try again in about ${mins} minute${mins === 1 ? "" : "s"}.`);
+      setPaused(true);
+      setTimeout(() => setPaused(false), result.retryAfterSeconds * 1000);
+      return;
+    }
     if (!result.valid) {
       setError("That code didn't unlock anything — double check it and try again.");
       return;
@@ -60,7 +69,7 @@ export function UnlockPage() {
               color: "var(--text-primary)",
             }}
           />
-          <button className="btn" type="submit" disabled={submitting}>
+          <button className="btn" type="submit" disabled={submitting || paused}>
             {submitting ? "Checking…" : "Unlock"}
           </button>
         </form>
