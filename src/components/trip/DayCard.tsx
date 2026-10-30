@@ -6,6 +6,7 @@ import { StatusToggle } from "./StatusToggle";
 import { FlightBox } from "./FlightBox";
 import { TaskRow } from "./TaskRow";
 import { TourBox } from "./TourBox";
+import { Linkify } from "./Linkify";
 import { WeatherBadge } from "./WeatherBadge";
 import { AddToCalendar } from "./AddToCalendar";
 import { actUrl, hotelUrl, transportUrl } from "../../lib/calendar";
@@ -91,7 +92,7 @@ export function DayCard({
             </a>
           </div>
         )}
-        {g.detail && <div className="cmeta">{g.detail}</div>}
+        {g.detail && <div className="cmeta"><Linkify text={g.detail} /></div>}
       </div>
     );
   };
@@ -160,7 +161,7 @@ export function DayCard({
                         {g.route}
                         <AddToCalendar url={transportUrl(g, d, dayNumber)} />
                       </div>
-                      <div className="cmeta">{g.detail || ""}</div>
+                      <div className="cmeta"><Linkify text={g.detail || ""} /></div>
                     </div>
                   );
                 })}

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { DueState } from "../../lib/dueDates";
+import { Linkify } from "./Linkify";
 
 interface Badge {
   label: string;
@@ -55,14 +56,14 @@ export function TaskRow({ domId, rowId, done, onToggle, badge, pill, lead, body,
         )}
         {pill && <span style={{ ...tint(null), ...badgeBase }}>{pill}</span>}
         <span className="at">
-          {lead}
+          <Linkify text={lead} />
           {hasRest ? " —" : ""}
         </span>
         {hasRest && (
           <>
             {" "}
             <span className="ad">
-              {body}
+              {body && <Linkify text={body} />}
               {body && scope ? " · " : ""}
               {scope}
             </span>

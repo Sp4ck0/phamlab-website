@@ -270,4 +270,37 @@ test('latest jump wins and a removed pending occurrence never scrolls to a survi
     assert.equal(view.container.querySelectorAll('.day-card').length, 1);
   } finally { view.close(); }
 });
+test('bare urls are found without trailing punctuation and only as http(s)', async () => {
+  const { findLinks } = await import('../../lib/links.ts');
+  const hrefs = text => findLinks(text).map(l => l.href);
+  assert.deepEqual(hrefs('See https://example.com/a, then www.example.org.'), ['https://example.com/a', 'https://www.example.org']);
+  assert.deepEqual(hrefs('(https://example.com/x) and https://example.com/Foo_(bar)'), ['https://example.com/x', 'https://example.com/Foo_(bar)']);
+  assert.deepEqual(hrefs('javascript:alert(1) ftp://example.com https:// www. mail@www.example.com'), []);
+  const [l] = findLinks('go to https://example.com/a.');
+  assert.equal('go to https://example.com/a.'.slice(l.start, l.end), 'https://example.com/a');
+});
+test('sanitizeHtml links bare urls but never double-links or links inside an existing anchor', async () => {
+  const { sanitizeHtml } = await import('../../lib/sanitizeHtml.ts');
+  const out = document.createElement('div');
+  out.innerHTML = sanitizeHtml('Book <b>https://example.com/b</b> or <a href="https://example.com/c">https://example.com/c</a> <script>https://example.com/s</script>');
+  const links = [...out.querySelectorAll('a')];
+  assert.deepEqual(links.map(a => a.getAttribute('href')), ['https://example.com/b', 'https://example.com/c']);
+  assert.ok(links.every(a => a.target === '_blank' && a.rel === 'noopener noreferrer'));
+  assert.equal(out.querySelector('a a'), null);
+  assert.equal(out.textContent.includes('example.com/s'), false);
+  assert.equal(sanitizeHtml('plain <i>text</i>'), 'plain <i>text</i>');
+});
+test('plain-text task, tour and hotel text render clickable links that do not toggle the task', () => {
+  const calls = [];
+  const item = { id: 'synthetic-task', date: day.date, title: 'Book https://example.com/t', detail: 'Details at www.example.com/d.' };
+  const rich = { ...day, hotels: [{ who: 'all', name: 'Synthetic lodging', address: 'Synthetic address', status: 'needed', detail: 'Info https://example.com/h' }], tourDetails: { summary: 'Synthetic tour', body: 'Tickets https://example.com/tour' } };
+  const view = mount(React.createElement(DayCard, { ...props, day: rich, expanded: true, dayActionItems: [item], onToggleActionItem: id => calls.push(id) }));
+  try {
+    const hrefs = [...view.container.querySelectorAll('.action-text a, .tour-body a, .cmeta a')].map(a => a.getAttribute('href'));
+    assert.ok(['https://example.com/t', 'https://www.example.com/d', 'https://example.com/tour', 'https://example.com/h'].every(h => hrefs.includes(h)), hrefs.join());
+    assert.equal(view.container.querySelector('.action-text a[href="https://www.example.com/d"]').textContent, 'www.example.com/d');
+    act(() => view.container.querySelector('.action-text a').click());
+    assert.deepEqual(calls, []);
+  } finally { view.close(); }
+});
 export { mount, day, props, React, act, assert, test };
