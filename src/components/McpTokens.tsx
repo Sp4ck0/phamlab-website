@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/api";
 import type { Id } from "@convex/dataModel";
@@ -75,6 +76,9 @@ export function McpTokens() {
             <button className="btn" type="button" onClick={() => void copy()}>
               {copied ? "Copied" : "Copy"}
             </button>
+            <Link className="btn" to="/guide">
+              Guide
+            </Link>
           </div>
           <details style={{ marginTop: 10 }}>
             <summary className="sdek" style={{ cursor: "pointer" }}>
