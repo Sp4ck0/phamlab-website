@@ -136,7 +136,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
                 if (expanded.has(id)) expanded.delete(id); else expanded.add(id);
                 return { ...current, expanded };
               });
-            }} onToggle={onToggle} dayActionItems={actionItems.filter(item => item.date === d.date)}
+            }} onToggle={onToggle} dayActionItems={actionItems.filter(item => item.date !== undefined && item.date <= d.date && d.date <= (item.endDate ?? item.date))}
             actionItemsDone={actionItemsDone} onToggleActionItem={onToggleActionItem} />
         ))}
       </div>
