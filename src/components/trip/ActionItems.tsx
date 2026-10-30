@@ -236,7 +236,7 @@ export function ActionItems({
                 {badge.label}
               </span>
             )}
-            <span className="at">{item.title} —</span> <span className="ad">{item.detail}</span>
+            <span className="at">{item.title}{item.detail ? " —" : ""}</span>{item.detail && <> <span className="ad">{item.detail}</span></>}
           </span>
           <div className="row-actions">
             <button type="button" className="icon-btn" aria-label={`Edit ${item.title}`} onClick={() => startEdit(item.id, isDone)}>

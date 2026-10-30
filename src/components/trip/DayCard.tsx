@@ -221,7 +221,7 @@ export function DayCard({
                           {badge.label}
                         </span>
                       )}
-                      <span className="at">{item.title} —</span> <span className="ad">{item.detail}</span>
+                      <span className="at">{item.title}{item.detail ? " —" : ""}</span>{item.detail && <> <span className="ad">{item.detail}</span></>}
                     </span>
                   </div>
                 );
