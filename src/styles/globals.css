@@ -251,6 +251,7 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
   border-radius:999px;cursor:pointer;transition:.16s;
 }
 .btn:hover{color:var(--text-primary);border-color:var(--text-muted)}
+.btn--lg{font-size:14px;padding:11px 22px;color:var(--text-primary)}
 
 /* ── export menu ───────────────────────────────────────── */
 .export-menu{position:relative;display:inline-block}

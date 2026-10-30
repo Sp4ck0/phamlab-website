@@ -76,7 +76,7 @@ export function McpTokens() {
             <button className="btn" type="button" onClick={() => void copy()}>
               {copied ? "Copied" : "Copy"}
             </button>
-            <Link className="btn" to="/guide">
+            <Link className="btn btn--lg" to="/guide">
               Guide
             </Link>
           </div>
