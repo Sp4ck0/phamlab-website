@@ -4,6 +4,7 @@ import { api } from "@convex/api";
 import type { Id } from "@convex/dataModel";
 import { useAccessCode } from "../hooks/useAccessCode";
 import { ChannelIcon } from "./ChannelIcon";
+import { SettingsSection } from "./SettingsSection";
 import { useKanbanBoards } from "../kanban/useKanbanBoards";
 import { BoardNotifyChips } from "../kanban/components/NotifyMenu";
 
@@ -170,15 +171,7 @@ export function NotificationChannels() {
   }
 
   return (
-    <>
-      <div className="setting-row" style={{ flexDirection: "column", alignItems: "stretch" }}>
-        <div>
-          <div className="setting-label">Notifications</div>
-          <div className="sdek">
-            Connect a channel, then choose what to be notified about on each board.
-          </div>
-        </div>
-      </div>
+    <SettingsSection title="Notifications" description="Connect a channel, then choose what to be notified about on each board.">
       {(channels ?? []).map((c) => (
         <ChannelRow key={c._id} channel={c} />
       ))}
@@ -231,6 +224,6 @@ export function NotificationChannels() {
           ))}
         </div>
       )}
-    </>
+    </SettingsSection>
   );
 }

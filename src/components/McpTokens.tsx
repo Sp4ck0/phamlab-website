@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/api";
 import type { Id } from "@convex/dataModel";
 import { useAccessCode } from "../hooks/useAccessCode";
+import { SettingsSection } from "./SettingsSection";
 
 type Connection = {
   _id: Id<"mcp_tokens">;
@@ -61,7 +62,7 @@ export function McpTokens() {
   const access = info.mcpAccess === "write" ? "look up and edit your trips" : "look up your trips (read-only)";
 
   return (
-    <>
+    <SettingsSection title="AI assistants">
       <div className="setting-row" style={{ alignItems: "flex-start" }}>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div className="setting-label">AI assistant access (MCP)</div>
@@ -113,6 +114,6 @@ export function McpTokens() {
           </button>
         </div>
       ))}
-    </>
+    </SettingsSection>
   );
 }

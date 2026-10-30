@@ -136,6 +136,11 @@ a{color:inherit}
 .btn-icon{display:grid;place-items:center;flex:none;padding:8px 10px;margin-left:auto}
 .setting-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;border-top:1px solid var(--gridline)}
 .setting-label{font-size:14px;font-weight:600;color:var(--text-primary)}
+.settings-section{margin-top:32px}
+.settings-section__title{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin:0 0 4px}
+.settings-section__desc{margin-bottom:10px}
+.settings-card{border:1px solid var(--border);border-radius:12px;background:var(--card);padding:0 20px}
+.settings-card>.setting-row:first-child{border-top:0}
 .notif-add{flex-wrap:wrap;justify-content:flex-start}
 .notif-add__target{flex:1 1 240px}
 .notif-add__hint{flex-basis:100%}
