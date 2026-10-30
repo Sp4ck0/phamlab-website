@@ -8,10 +8,11 @@ import { claimActiveTab, isActiveTab, releaseActiveTab } from "../lib/activeTab"
 import { scrollBehavior } from "../lib/flash";
 import { loadFollowAi, subscribeFollowAi } from "../lib/followAi";
 
-// When the AI edits a trip through the MCP, the backend records where to look
-// (mcpFocus.ts). If this device opted in (Settings → Follow AI edits) and this
-// is the tab used most recently, open the trip and hand the day or action item
-// to the page that renders it (DetailedView, ActionItems). Renders nothing.
+// When the AI edits a trip or a board through the MCP, the backend records
+// where to look (mcpFocus.ts). If this device opted in (Settings → Follow AI
+// edits) and this is the tab used most recently, open the trip (or board) and
+// hand the day, action item or card to the page that renders it (DetailedView,
+// ActionItems, KanbanPage). Renders nothing.
 export function FollowAiEdits() {
   const enabled = useSyncExternalStore(subscribeFollowAi, loadFollowAi);
   const { code } = useAccessCode();
@@ -55,6 +56,14 @@ export function FollowAiEdits() {
     if (!focus || nonce === seen.current) return;
     seen.current = nonce;
     if (!isActiveTab()) return;
+
+    // A board or card: open the board; the board page opens the card itself.
+    if (focus.target.kind === "board" || focus.target.kind === "card") {
+      const boardPath = `/kanban/${focus.slug}`;
+      if (pathRef.current !== boardPath) navigate(boardPath);
+      if (focus.target.kind === "card") show(focus);
+      return;
+    }
 
     const tripPath = `/trip/${focus.slug}`;
     const onTrip = pathRef.current === tripPath;
