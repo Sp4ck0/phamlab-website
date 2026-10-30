@@ -4,7 +4,6 @@ import type { ActionItem, Group, LegColor, ResolvedDay, Status } from "../../lib
 import { useAiFocus } from "../../hooks/useAiFocus";
 import { flash, SETTLE_MS } from "../../lib/flash";
 import { reconcileRows } from "../../lib/itineraryState";
-import { mergeFlightsByRoute, statusOf } from "../../lib/tripLogic";
 import { DayNav } from "./DayNav";
 import { DayCard } from "./DayCard";
 import type { DayWeather } from "../../lib/weather";
@@ -16,6 +15,9 @@ interface Props {
   groups: Group[];
   ticks: Record<string, Status>;
   onlyGaps: boolean;
+  // Does this day still have an open booking or unplanned-day task? Undefined
+  // while the tasks load.
+  isGap?: (day: ResolvedDay) => boolean;
   onOnlyGapsChange: (value: boolean) => void;
   filterRef: RefObject<HTMLButtonElement | null>;
   onToggle: (ids: string[], status: Status) => void;
@@ -25,7 +27,7 @@ interface Props {
 }
 
 // Unified itinerary; name retained to keep the detail renderer's consumer small.
-export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps, onOnlyGapsChange, filterRef,
+export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps, isGap, onOnlyGapsChange, filterRef,
   onToggle, actionItems, actionItemsDone, onToggleActionItem }: Props) {
   const prefix = useId();
   const [state, setState] = useState(() => {
@@ -43,10 +45,9 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   const [message, setMessage] = useState("");
   const focusedRow = useRef<string | null>(null);
   const focusedControl = useRef<HTMLElement | null>(null);
-  const visible = state.rows.map(({ day: d }) => !onlyGaps ||
-    mergeFlightsByRoute(d.flights, d.date, ticks).some(g => g.statuses.includes("needed")) ||
-    d.hotels.some(h => !h.carried && statusOf(ticks, h.src, h.status) === "needed") ||
-    (!(d.acts && d.acts.length) && !(d.flights && d.flights.length) && d.tag !== "transit"));
+  // "Only gaps" shows the days the Action Items list still has something open
+  // for. Until the tasks have loaded there is no answer, so nothing is hidden.
+  const visible = state.rows.map(({ day: d }) => !onlyGaps || !isGap || isGap(d));
 
   useLayoutEffect(() => {
     function remember(event: FocusEvent) {
