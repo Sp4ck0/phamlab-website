@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/api";
 import { useAccessCode } from "./useAccessCode";
@@ -35,8 +35,13 @@ export function useTasks(slug: string, today: string) {
     );
   });
 
+  // Booking ticks tapped but not yet confirmed. A booking the itinerary already
+  // marks booked has no task until it's flipped, so there is nothing for the
+  // optimistic update above to change; this shows the flip at once instead.
+  const [pending, setPending] = useState<Record<string, Status>>({});
+
   const tasks = useMemo(() => (result ?? []) as Task[], [result]);
-  const ticks = useMemo(() => ticksFromTasks(tasks), [tasks]);
+  const ticks = useMemo(() => ({ ...ticksFromTasks(tasks), ...pending }), [tasks, pending]);
   const done = useMemo(() => doneItems(tasks), [tasks]);
 
   const setDone = useCallback(
@@ -57,8 +62,20 @@ export function useTasks(slug: string, today: string) {
   // A booking tile's status button: toggle every id in `ids` together (a merged
   // card can stand for more than one underlying booking — see mergeHotelsByName).
   const toggleTick = useCallback(
-    (ids: string[], currentStatus: Status) => setDone(ids.map(bookingKey), currentStatus === "needed"),
-    [setDone]
+    (ids: string[], currentStatus: Status) => {
+      const next: Status = currentStatus === "needed" ? "booked" : "needed";
+      setPending((p) => ({ ...p, ...Object.fromEntries(ids.map((id) => [id, next])) }));
+      // The mutation settles once the server's answer has reached the query, so
+      // the override can go then. Only drop it if a later tap hasn't replaced it.
+      const settle = () =>
+        setPending((p) => {
+          const rest = { ...p };
+          for (const id of ids) if (rest[id] === next) delete rest[id];
+          return rest;
+        });
+      setStateMut({ slug, code, keys: ids.map(bookingKey), done: next === "booked" }).then(settle, settle);
+    },
+    [setStateMut, slug, code]
   );
 
   const toggleActionItem = useCallback(

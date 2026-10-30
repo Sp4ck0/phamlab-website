@@ -39,7 +39,9 @@ export function StarterPromptButton({
 
   const text = label ?? (full ? "Copy full reference" : "Starter prompt");
   return (
-    <>
+    // The confirmation floats under the button instead of sitting beside it, so
+    // it can't push the neighboring button (or wrap on a narrow screen).
+    <span style={{ position: "relative", display: "inline-block" }}>
       <button
         type="button"
         className="btn"
@@ -49,9 +51,13 @@ export function StarterPromptButton({
       >
         <span aria-hidden>🤖</span> {text}
       </button>
-      <span role="status" className="sdek" style={{ marginLeft: 8 }}>
+      <span
+        role="status"
+        className="sdek"
+        style={{ position: "absolute", top: "100%", left: 0, marginTop: 4, whiteSpace: "nowrap", pointerEvents: "none" }}
+      >
         {state === "copied" ? "Copied — paste it into your assistant." : state === "failed" ? "Couldn't copy — try again." : ""}
       </span>
-    </>
+    </span>
   );
 }

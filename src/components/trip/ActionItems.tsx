@@ -5,10 +5,12 @@ import { dueLabel, dueState } from "../../lib/dueDates";
 import { kindLabel, scopeLabel, scopeStart } from "../../lib/tasks";
 import type { ActionItemFields } from "../../hooks/useActionItemEdits";
 import { useAiFocus } from "../../hooks/useAiFocus";
+import { useUndoableDelete } from "../../hooks/useUndoableDelete";
 import { flash, scrollBehavior, SETTLE_MS } from "../../lib/flash";
 import { ActionItemEditor } from "./ActionItemEditor";
 import { DueDateInput } from "./DueDateInput";
 import { TaskRow } from "./TaskRow";
+import { UndoBar } from "./UndoBar";
 
 interface Props {
   // Every task for the trip. Decisions are also listed in the alerts panel.
@@ -36,14 +38,6 @@ interface Row {
   node: ReactNode;
 }
 
-// What's needed to put a just-deleted item back exactly as it was.
-interface Deleted {
-  item: ActionItem;
-  done: boolean;
-  due?: string;
-}
-
-const UNDO_MS = 6000;
 const itemId = (task: Task) => task.key.slice("item:".length);
 
 // Soonest due first; ties (and the common case where everything still has the
@@ -89,13 +83,7 @@ export function ActionItems({
   // "new" = the composer is open; an id = that item's row is being edited.
   const [editing, setEditing] = useState<"new" | string | null>(null);
   const [completedOpen, setCompletedOpen] = useState(false);
-  const [deleted, setDeleted] = useState<Deleted | null>(null);
-
-  useEffect(() => {
-    if (!deleted) return;
-    const t = setTimeout(() => setDeleted(null), UNDO_MS);
-    return () => clearTimeout(t);
-  }, [deleted]);
+  const undoable = useUndoableDelete({ onAddItem, onRemoveItem, onSetDone, onSetDue });
 
   // The AI pointed at an item (mcpFocus.ts): scroll to it and blink it. A done
   // item sits in the collapsed Completed list, so open that first; the item may
@@ -125,18 +113,8 @@ export function ActionItems({
   }
 
   function remove(task: Task, item: ActionItem) {
-    setDeleted({ item, done: task.done, due: task.dueDateIsDefault ? undefined : (task.dueDate ?? undefined) });
     if (editing === item.id) setEditing(null);
-    void onRemoveItem(item.id);
-  }
-
-  async function undo() {
-    if (!deleted) return;
-    const { item, done: wasDone, due } = deleted;
-    setDeleted(null);
-    await onAddItem(item);
-    if (wasDone) onSetDone([`item:${item.id}`], true);
-    if (due) onSetDue(`item:${item.id}`, due);
+    undoable.remove(task, item);
   }
 
   const rowFor = (task: Task): Row => {
@@ -253,14 +231,7 @@ export function ActionItems({
         Bookings still needed and things to nail down — check them off as they're settled. Each has a due date
         (the trip start unless you change it): yellow within a week, red once it's past due.
       </p>
-      {deleted && (
-        <div className="undo-bar" role="status">
-          <span>Deleted “{deleted.item.title}”</span>
-          <button type="button" onClick={() => void undo()}>
-            Undo
-          </button>
-        </div>
-      )}
+      {undoable.deletedTitle && <UndoBar title={undoable.deletedTitle} onUndo={() => void undoable.undo()} />}
       {open.length > 0 || composer ? (
         <div className="action-items">
           {composer}
