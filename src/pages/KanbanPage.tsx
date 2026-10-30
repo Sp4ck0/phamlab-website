@@ -6,14 +6,14 @@ import { move } from "@dnd-kit/helpers";
 import type { Id } from "@convex/dataModel";
 import { PageShell } from "../components/layout/PageShell";
 import { useAccessCode } from "../hooks/useAccessCode";
-import { useKanbanBoard } from "../kanban/useKanbanBoard";
+import { useKanbanBoard, useKanbanCard } from "../kanban/useKanbanBoard";
 import { useRememberTab } from "../hooks/useRememberTab";
 import { Lane } from "../kanban/components/Lane";
 import { CardDrawer } from "../kanban/components/CardDrawer";
 import { NewCardPane } from "../kanban/components/NewCardPane";
 import { NotifyMenu } from "../kanban/components/NotifyMenu";
 import { BOARD_COPY } from "../kanban/types";
-import { boardLanes, laneOf, unreadCards, useDue, viewerSeat } from "../kanban/lib";
+import { boardLanes, laneOf, useDue, viewerSeat } from "../kanban/lib";
 import type { Board, LaneId, NewCardDraft } from "../kanban/types";
 import "../kanban/kanban.css";
 
@@ -66,6 +66,8 @@ export function KanbanPage() {
   useRememberTab(authorized && board ? `/kanban/${boardId}` : null);
 
   const [openId, setOpenId] = useState<string | null>(null);
+  // The board only holds tile summaries; the open card is loaded whole.
+  const openCard = useKanbanCard(boardId as Id<"kanban_boards"> | undefined, openId);
   // The card being written in the new-card pane. Minimizing only hides the
   // pane (`paneOpen`); the draft survives until it's added or discarded.
   const [draft, setDraft] = useState<NewCardDraft | null>(null);
@@ -133,8 +135,7 @@ export function KanbanPage() {
 
   const lanes = dragLanes ?? board.lanes;
   const displayBoard = dragLanes ? { ...board, lanes } : board;
-  const openCard = openId ? (displayBoard.cards[openId] ?? null) : null;
-  const unread = unreadCards(board);
+  const unread = board.unreadOrder;
 
   const startAdd = (lane: LaneId) => {
     setDraft((d) =>
@@ -225,7 +226,7 @@ export function KanbanPage() {
                 {unread.length > 0 && (
                   <button
                     className="nudge nudge--replies"
-                    onClick={() => setOpenId(unread[0].id)}
+                    onClick={() => setOpenId(unread[0])}
                     title="Longest-waiting one first"
                   >
                     {board.type === "pair"

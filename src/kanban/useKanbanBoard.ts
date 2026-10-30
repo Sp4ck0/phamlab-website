@@ -9,14 +9,40 @@ import type { Board, Card, LaneId, QuickAddDraft } from "./types";
 // uploadImages returns plain-string ids; the mutations want branded storage ids.
 type ReplyImages = { id: Id<"_storage">; w: number; h: number }[];
 
+// The open card in full — note, replies, every image — for the drawer. The
+// board itself only carries tile-sized summaries. Null until loaded (the
+// drawer waits rather than show a truncated note it could then overwrite).
+export function useKanbanCard(boardId: Id<"kanban_boards"> | undefined, cardId: string | null): Card | null {
+  const { code } = useAccessCode();
+  const result = useQuery(
+    api.kanban.getCard,
+    code && boardId && cardId ? { code, boardId, cardId: cardId as Id<"kanban_cards"> } : "skip"
+  );
+  return useMemo(() => {
+    if (!result?.authorized || !result.card) return null;
+    const doc = result.card;
+    const last = doc.log[doc.log.length - 1];
+    return {
+      ...doc,
+      id: doc._id,
+      replyCount: doc.log.length,
+      lastReply: last ? { at: last.at, by: last.by, byName: last.byName } : null,
+      noteImageCount: doc.noteImageUrls.length,
+    } as unknown as Card;
+  }, [result]);
+}
+
 // allDone: load every Done card; otherwise only the newest DONE_PREVIEW (the
 // server still lists all the ids, so the lane's count and "show more" work).
 export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined, { allDone = false } = {}) {
   const { code } = useAccessCode();
   const latest = useQuery(
-    api.kanban.getBoard,
+    api.kanban.getBoardView,
     code && boardId ? { code, boardId, settledLimit: allDone ? undefined : DONE_PREVIEW } : "skip"
   );
+  // Unread/new live in their own query, so opening a card (which marks it
+  // read) doesn't reload every tile. Badges fill in once it answers.
+  const unreadResult = useQuery(api.kanban.getBoardUnread, code && boardId ? { code, boardId } : "skip");
   // Expanding or collapsing Done changes the query args, and useQuery reports
   // undefined until the new result arrives. Keep showing the last result for
   // the same board meanwhile so the page doesn't flash back to loading.
@@ -41,9 +67,11 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined, { allDo
     const cards: Record<string, Card> = {};
     // Convex documents carry `_id`, but the ported UI (from a plain
     // localStorage board) expects each card's own `id` field.
+    // These are summaries: no reply thread (see Card.log), so log is empty.
     for (const [id, doc] of Object.entries(result.board.cards as Record<string, Record<string, unknown>>)) {
-      cards[id] = { ...doc, id: doc._id } as unknown as Card;
+      cards[id] = { ...doc, id: doc._id, log: [] } as unknown as Card;
     }
+    const unread = unreadResult?.authorized ? unreadResult : null;
     return {
       version: 1,
       name: result.board.name,
@@ -53,11 +81,12 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined, { allDo
       viewerName: result.viewerName,
       lanes: result.board.lanes,
       laneLabels: result.board.laneLabels,
-      unread: result.unread,
-      fresh: result.fresh,
+      unread: unread?.unread ?? {},
+      fresh: unread?.fresh ?? [],
+      unreadOrder: unread?.unreadOrder ?? [],
       cards,
     };
-  }, [result]);
+  }, [result, unreadResult]);
 
   const isLoading = !!(code && boardId) && result === undefined;
   const authorized = result?.authorized ?? false;

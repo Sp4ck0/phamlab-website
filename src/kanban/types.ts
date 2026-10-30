@@ -46,7 +46,11 @@ export interface Card {
   /** ISO date (yyyy-mm-dd) to check back in. */
   followUp: string | null;
   createdAt: string;
-  /** Free-form running notes, appended over time. */
+  /**
+   * Free-form running notes, appended over time. Empty on the board's card
+   * summaries — the open card (useKanbanCard) carries the real thread; tiles
+   * use replyCount / lastReply.
+   */
   log: {
     id: string;
     at: string;
@@ -55,8 +59,14 @@ export interface Card {
     text: string;
     imageUrls?: KanbanImage[];
   }[];
-  /** Images attached to the longer version. */
+  replyCount: number;
+  lastReply: { at: string; by: PersonId; byName?: string } | null;
+  /**
+   * Images attached to the longer version. A summary carries just the first;
+   * noteImageCount is how many there are in all.
+   */
   noteImageUrls?: KanbanImage[];
+  noteImageCount: number;
 }
 
 /** An uploaded image: pixel size (to reserve its box before it loads) and a signed URL. */
@@ -89,6 +99,8 @@ export interface Board {
   unread: Record<string, number>;
   /** Ids of cards someone else raised that the viewer has never opened. */
   fresh: string[];
+  /** Cards with unread replies, longest-waiting first. */
+  unreadOrder: string[];
 }
 
 export const LANES: { id: LaneId; name: string; blurb: string }[] = [
