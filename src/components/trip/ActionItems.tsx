@@ -1,10 +1,11 @@
 import { useEffect, useState, type ReactNode } from "react";
-import type { ActionItem, Group, Task } from "../../lib/types";
+import { useParams } from "react-router-dom";
+import type { ActionItem, Group, Task, TaskScope } from "../../lib/types";
 import { gapLabel } from "../../lib/tripLogic";
 import { dueLabel, dueState } from "../../lib/dueDates";
-import { kindLabel, scopeLabel, scopeStart } from "../../lib/tasks";
+import { dow, kindLabel, scopeStart } from "../../lib/tasks";
 import type { ActionItemFields } from "../../hooks/useActionItemEdits";
-import { useAiFocus } from "../../hooks/useAiFocus";
+import { useAiFocus, useShowAiFocus } from "../../hooks/useAiFocus";
 import { useUndoableDelete } from "../../hooks/useUndoableDelete";
 import { flash, scrollBehavior, SETTLE_MS } from "../../lib/flash";
 import { ActionItemEditor } from "./ActionItemEditor";
@@ -65,6 +66,24 @@ const TrashIcon = () => (
     <path d="M19 6l-1 14H6L5 6" />
   </svg>
 );
+
+// "Fri Nov 20" or "Fri Nov 20 – Sun Nov 22", each date a link to its day in the
+// itinerary. Reuses the AI-focus path, which opens, scrolls to and flashes a day.
+function ScopeLinks({ scope }: { scope: TaskScope }) {
+  const { slug } = useParams<{ slug: string }>();
+  const show = useShowAiFocus();
+  if (scope.kind === "trip") return <>Whole trip</>;
+  const link = (date: string) => (
+    <button
+      type="button"
+      className="day-link"
+      onClick={() => slug && show({ slug, target: { kind: "day", date }, nonce: `${Date.now()}` })}
+    >
+      {dow(date)}
+    </button>
+  );
+  return scope.kind === "day" ? link(scope.date) : <>{link(scope.start)} – {link(scope.end)}</>;
+}
 
 export function ActionItems({
   tasks,
@@ -161,7 +180,7 @@ export function ActionItems({
           pill={task.kind === "decision" ? "Decision" : undefined}
           lead={task.title}
           body={task.detail}
-          scope={task.scope.kind === "trip" ? undefined : scopeLabel(task.scope)}
+          scope={task.scope.kind === "trip" ? undefined : <ScopeLinks scope={task.scope} />}
           dueState={state}
           due={dueControl}
           actions={
@@ -188,7 +207,7 @@ export function ActionItems({
         badge={badge}
         lead={kindLabel(task) ?? task.title}
         body={task.mode === "hotel" && task.detail ? `${task.title} · ${task.detail}` : task.title}
-        scope={scopeLabel(task.scope)}
+        scope={<ScopeLinks scope={task.scope} />}
         dueState={state}
         due={dueControl}
       />
