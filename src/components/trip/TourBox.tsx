@@ -1,11 +1,12 @@
 import type { TourDetails } from "../../lib/types";
+import { Linkify } from "./Linkify";
 
 export function TourBox({ tourDetails }: { tourDetails: TourDetails }) {
   return (
     <details className="tour-box">
-      <summary>{tourDetails.summary}</summary>
+      <summary><Linkify text={tourDetails.summary} /></summary>
       <div className="tour-body">
-        <p>{tourDetails.body}</p>
+        <p><Linkify text={tourDetails.body} /></p>
       </div>
     </details>
   );
