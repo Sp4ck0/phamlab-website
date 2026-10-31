@@ -1,10 +1,10 @@
 // Ported 1:1 from the original static site's trip.js — the pure logic
 // functions, decoupled from DOM rendering.
-import type { Act, Day, Flight, FlightLeg, Group, Hotel, LegColor, ResolvedDay, Status, TransportMode, Trip, Who } from "./types";
+import type { Act, Day, Flight, FlightLeg, Group, Hotel, LegColor, Place, ResolvedDay, Status, TransportMode, Trip, Who } from "./types";
 
 // Normalizes a legacy plain-string activity and a rich {tag,time,text}
 // activity to the same shape for rendering.
-export function actParts(a: Act): { tag?: string; time?: string; text: string } {
+export function actParts(a: Act): { tag?: string; time?: string; text: string; places?: Place[] } {
   return typeof a === "string" ? { text: a } : a;
 }
 

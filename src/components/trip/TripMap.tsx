@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { MapPointData } from "../../lib/types";
-import { CATEGORY_COLORS, CATEGORY_LABELS } from "../../lib/mapPoints";
+import { CATEGORY_COLORS, CATEGORY_LABELS, googleMapsUrl } from "../../lib/mapPoints";
 import type { WeatherStop } from "../../lib/mapPoints";
 import { fmtShort } from "../../lib/tripLogic";
 import { summarizeStay, temp, weatherIcon, weatherText } from "../../lib/weather";
@@ -46,7 +46,7 @@ export function TripMap({ points, route, weatherStops }: Props) {
   const frame = useRef<number | null>(null);
   // Read at click time so a city pin shows weather that arrived after the pin was built.
   const stopsByAddress = useRef(new Map<string, WeatherStop>());
-  stopsByAddress.current = new Map(weatherStops.map((s) => [s.address, s]));
+  stopsByAddress.current = new Map(weatherStops.map((s) => [s.address ?? "", s]));
   const { tempUnit } = useSettings();
   // Same click-time read for the unit, so toggling it doesn't rebuild every pin.
   const tempUnitRef = useRef(tempUnit);
@@ -99,7 +99,7 @@ export function TripMap({ points, route, weatherStops }: Props) {
         const marker = new google.maps.Marker({
           map,
           position,
-          title: p.label,
+          title: p.name,
           icon: {
             path: google.maps.SymbolPath.CIRCLE,
             scale: 8,
@@ -110,8 +110,10 @@ export function TripMap({ points, route, weatherStops }: Props) {
           },
         });
         marker.addListener("click", () => {
-          const stop = p.category === "city" ? stopsByAddress.current.get(p.address) : undefined;
-          openInfo(map, infoHtml(p.label, CATEGORY_LABELS[p.category] + (p.note ? " · " + p.note : ""), tempUnitRef.current, stop), marker);
+          const stop = p.category === "city" ? stopsByAddress.current.get(p.address ?? "") : undefined;
+          // City dots are just a place on the route; every other pin is a real place worth opening in Google Maps.
+          const link = p.category === "city" ? undefined : googleMapsUrl(p);
+          openInfo(map, infoHtml(p.name, CATEGORY_LABELS[p.category] + (p.note ? " · " + p.note : ""), tempUnitRef.current, stop, link), marker);
         });
         markers.current.push(marker);
         bounds.extend(position);
@@ -235,8 +237,8 @@ export function TripMap({ points, route, weatherStops }: Props) {
       const pill = document.createElement("button");
       pill.type = "button";
       pill.className = `map-weather-pill${s.typical ? " is-typical" : ""}`;
-      pill.setAttribute("aria-label", `${stop.label} weather, ${s.count} ${s.count === 1 ? "day" : "days"}${s.typical ? ", includes historical averages" : ""}`);
-      pill.addEventListener("click", () => openInfo(map, infoHtml(stop.label, "", tempUnit, stop), position, PILL_INFO_OFFSET_PX));
+      pill.setAttribute("aria-label", `${stop.name} weather, ${s.count} ${s.count === 1 ? "day" : "days"}${s.typical ? ", includes historical averages" : ""}`);
+      pill.addEventListener("click", () => openInfo(map, infoHtml(stop.name, "", tempUnit, stop), position, PILL_INFO_OFFSET_PX));
       const overlay = createPillOverlay(position, pill, scheduleDeclutter);
       const entry: PillEntry = {
         el: pill,
@@ -285,8 +287,8 @@ export function TripMap({ points, route, weatherStops }: Props) {
     <>
       <h2 className="section-title">Map</h2>
       <p className="section-sub">
-        Hotels and other spots from this itinerary, joined in travel order, with the weather for each stay. Tap a pin or
-        weather label for details.
+        Where you're staying, planned stops that have an address, and each city on the route, joined in travel order
+        with the weather for each stay. Tap a pin or weather label for details.
       </p>
 
       {status === "error" && (
@@ -319,7 +321,7 @@ export function TripMap({ points, route, weatherStops }: Props) {
 }
 
 // Title, optional subtitle, and (for a city with weather) one line per day.
-function infoHtml(title: string, subtitle: string, unit: TempUnit, stop?: WeatherStop) {
+function infoHtml(title: string, subtitle: string, unit: TempUnit, stop?: WeatherStop, mapsUrl?: string) {
   const rows = (stop?.days ?? [])
     .map(
       (d) =>
@@ -335,7 +337,10 @@ function infoHtml(title: string, subtitle: string, unit: TempUnit, stop?: Weathe
     header,
     body:
       (subtitle ? `<div style="font:400 12px system-ui;color:#52514e">${escapeHtml(subtitle)}</div>` : "") +
-      (rows ? `<div style="margin-top:${subtitle ? 4 : 0}px">${rows}</div>` : ""),
+      (rows ? `<div style="margin-top:${subtitle ? 4 : 0}px">${rows}</div>` : "") +
+      (mapsUrl
+        ? `<div style="margin-top:6px;font:500 12px system-ui"><a href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener noreferrer">Open in Google Maps</a></div>`
+        : ""),
   };
 }
 

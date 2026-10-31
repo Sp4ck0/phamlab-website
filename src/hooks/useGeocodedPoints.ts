@@ -25,12 +25,18 @@ export interface GeocodedPoint extends MapPointData {
   lng: number;
 }
 
+// Cache key and lookup input: a Place ID if there is one, else the address.
+// A point with neither can't be placed.
+function lookupKey(p: MapPointData): string | undefined {
+  return p.placeId ? `pid:${p.placeId}` : p.address;
+}
+
 export function useGeocodedPoints(points: MapPointData[]) {
   const [resolved, setResolved] = useState<GeocodedPoint[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
 
-  const key = points.map((p) => p.address).join("|");
+  const key = points.map((p) => [lookupKey(p), p.name, p.note].join("~")).join("|");
 
   useEffect(() => {
     let cancelled = false;
@@ -51,17 +57,19 @@ export function useGeocodedPoints(points: MapPointData[]) {
 
         for (const p of points) {
           if (cancelled) return;
-          const cached = cache[p.address];
+          const lookup = lookupKey(p);
+          if (!lookup) continue;
+          const cached = cache[lookup];
           if (cached) {
             out.push({ ...p, ...cached });
             continue;
           }
           try {
-            const res = await geocoder.geocode({ address: p.address });
+            const res = await geocoder.geocode(p.placeId ? { placeId: p.placeId } : { address: p.address });
             const loc = res.results[0]?.geometry?.location;
             if (loc) {
               const latLng = { lat: loc.lat(), lng: loc.lng() };
-              cache[p.address] = latLng;
+              cache[lookup] = latLng;
               out.push({ ...p, ...latLng });
             }
           } catch {
