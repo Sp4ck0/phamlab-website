@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { DueState } from "../../lib/dueDates";
-import { Linkify } from "./Linkify";
+import { sanitizeHtml } from "../../lib/sanitizeHtml";
 
 interface Badge {
   label: string;
@@ -56,14 +56,14 @@ export function TaskRow({ domId, rowId, done, onToggle, badge, pill, lead, body,
         )}
         {pill && <span style={{ ...tint(null), ...badgeBase }}>{pill}</span>}
         <span className="at">
-          <Linkify text={lead} />
+          <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(lead) }} />
           {hasRest ? " —" : ""}
         </span>
         {hasRest && (
           <>
             {" "}
             <span className="ad">
-              {body && <Linkify text={body} />}
+              {body && <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(body) }} />}
               {body && scope ? " · " : ""}
               {scope}
             </span>

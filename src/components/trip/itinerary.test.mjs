@@ -306,4 +306,14 @@ test('plain-text task, tour and hotel text render clickable links that do not to
     assert.deepEqual(calls, []);
   } finally { view.close(); }
 });
+test('task text keeps <a> markup as a link with its label and drops unsafe markup', () => {
+  const item = { id: 'synthetic-markup', date: day.date, title: 'Book via <a href="https://example.com/k">Klook</a>', detail: 'See <a href="javascript:alert(1)">bad</a> <script>x</script>' };
+  const view = mount(React.createElement(DayCard, { ...props, day, expanded: true, dayActionItems: [item], onToggleActionItem: () => {} }));
+  try {
+    const link = view.container.querySelector('.action-text a[href="https://example.com/k"]');
+    assert.equal(link.textContent, 'Klook');
+    assert.equal(view.container.querySelector('.action-text a[href^="javascript"]'), null);
+    assert.equal(view.container.querySelector('.action-text').textContent.includes('<a'), false);
+  } finally { view.close(); }
+});
 export { mount, day, props, React, act, assert, test };
