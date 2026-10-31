@@ -41,10 +41,16 @@ export interface Flight {
   layovers?: string[];
 }
 
-export interface Hotel {
-  who: Who;
+// A named place: pinned on the trip map (by placeId if set, else address) and
+// linked to Google Maps.
+export interface Place {
   name: string;
   address?: string;
+  placeId?: string;
+}
+
+export interface Hotel extends Place {
+  who: Who;
   status: Status;
   detail?: string;
 }
@@ -54,7 +60,7 @@ export type Tag = "" | "move" | "transit" | "event" | undefined;
 // An activity is either a plain string (legacy — no tag/time shown) or a
 // richer object with an optional tag pill and time prefix.
 // `endTime` (local HH:MM) is never displayed; it only sets the calendar link's end.
-export type Act = string | { tag?: string; time?: string; endTime?: string; text: string };
+export type Act = string | { tag?: string; time?: string; endTime?: string; text: string; places?: Place[] };
 
 export interface TourDetails {
   summary: string;
@@ -122,12 +128,10 @@ export interface HighlightStat {
   label: string;
 }
 
-export type MapCategory = "hotel" | "restaurant" | "attraction" | "transport" | "city" | "other";
+export type MapCategory = "hotel" | "restaurant" | "attraction" | "transport" | "event" | "city" | "other";
 
-export interface MapPointData {
+export interface MapPointData extends Place {
   id: string;
-  label: string;
-  address: string;
   category: MapCategory;
   note?: string;
 }

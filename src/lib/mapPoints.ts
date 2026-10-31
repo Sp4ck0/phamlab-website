@@ -1,4 +1,5 @@
-import type { MapCategory, MapPointData, ResolvedDay, Trip } from "./types";
+import type { MapCategory, MapPointData, Place, ResolvedDay, Trip } from "./types";
+import { actParts, fmtShort } from "./tripLogic";
 import type { DayWeather } from "./weather";
 
 export const CATEGORY_LABELS: Record<MapCategory, string> = {
@@ -6,6 +7,7 @@ export const CATEGORY_LABELS: Record<MapCategory, string> = {
   restaurant: "Restaurant",
   attraction: "Attraction",
   transport: "Transport",
+  event: "Event",
   city: "City",
   other: "Other",
 };
@@ -15,37 +17,82 @@ export const CATEGORY_COLORS: Record<MapCategory, string> = {
   restaurant: "#eb6834",
   attraction: "#1baf7a",
   transport: "#7c5cd1",
+  event: "#d6336c",
   city: "#0e9594",
   other: "#898781",
 };
 
-// Hotels already carry real addresses in the day data — auto-derive map
-// points from those (deduped by address) rather than requiring them to be
-// re-entered into `trip.mapPoints`. Restaurants/attractions/etc. aren't
-// structured data anywhere else, so they come only from `trip.mapPoints`.
-// Every day also carries a city/country regardless of whether hotel
-// addresses are filled in yet, so fall back to a city-level pin for any
-// city that isn't otherwise represented — this is what gives a trip like
-// Thailand (no precise hotel addresses yet) a usable map at all.
+// What an activity's tag says about the kind of place it happens at; any tag
+// not listed (Event, Venue, Evening, none…) is an "event".
+const ACT_CATEGORY: Record<string, MapCategory> = {
+  Food: "restaurant",
+  Sightsee: "attraction",
+  Nature: "attraction",
+  Activity: "attraction",
+  Trek: "attraction",
+  Boat: "attraction",
+  Sunset: "attraction",
+  Transport: "transport",
+};
+
+// Two pins are the same place if they share a Place ID, else an address.
+function placeKey(p: Place): string | undefined {
+  return p.placeId ? `id:${p.placeId}` : p.address?.trim() ? `addr:${p.address.trim()}` : undefined;
+}
+
+// Link that opens a place in Google Maps. With a Place ID it opens that
+// exact listing; otherwise Google searches the name and address.
+export function googleMapsUrl(p: Place): string {
+  const url = new URL("https://www.google.com/maps/search/");
+  url.searchParams.set("api", "1");
+  url.searchParams.set("query", [p.name, p.address].filter(Boolean).join(", "));
+  if (p.placeId) url.searchParams.set("query_place_id", p.placeId);
+  return url.toString();
+}
+
+// Hotels, activity places and the trip's curated POIs all share the Place
+// shape, so they dedupe on the same key; a second thing at an existing place
+// (an event at the hotel you're staying in) adds a line to that pin's note
+// instead of vanishing. Places with neither a Place ID nor an address can't
+// be pinned. Every day also carries a city/country regardless of whether any
+// place is filled in yet, so fall back to a city-level pin for any city that
+// isn't otherwise represented — this is what gives a trip like Thailand (no
+// precise hotel addresses yet) a usable map at all.
 export function derivePoints(days: ResolvedDay[], mapPoints: Trip["mapPoints"]): MapPointData[] {
   const points: MapPointData[] = [];
-  const seen = new Set<string>();
+  const byKey = new Map<string, MapPointData>();
   const citiesWithPoint = new Set<string>();
+
+  const add = (point: MapPointData, city?: string) => {
+    const key = placeKey(point);
+    if (!key || byKey.has(key)) return false;
+    byKey.set(key, point);
+    points.push(point);
+    if (city) citiesWithPoint.add(city);
+    return true;
+  };
 
   days.forEach((d) => {
     d.hotels.forEach((h) => {
-      if (!h.address || !h.address.trim()) return;
-      if (seen.has(h.address)) return;
-      seen.add(h.address);
-      citiesWithPoint.add(d.city);
-      points.push({ id: `hotel-${h.src}`, label: h.name || "Hotel", address: h.address, category: "hotel" });
+      add({ id: `hotel-${h.src}`, name: h.name || "Hotel", address: h.address, placeId: h.placeId, category: "hotel" }, d.city);
     });
   });
 
-  (mapPoints || []).forEach((p) => {
-    if (seen.has(p.address)) return;
-    seen.add(p.address);
-    points.push(p);
+  (mapPoints || []).forEach((p) => add(p));
+
+  days.forEach((d) => {
+    d.acts.forEach((a, i) => {
+      const act = actParts(a);
+      const text = act.text.replace(/<[^>]*>/g, "").trim();
+      const when = [fmtShort(d.date), act.time].filter(Boolean).join(" ");
+      const line = text ? `${text} · ${when}` : when;
+      (act.places ?? []).forEach((place, j) => {
+        const category = (act.tag && ACT_CATEGORY[act.tag]) || "event";
+        if (add({ ...place, id: `act-${d.date}-${i}-${j}`, category, note: line }, d.city)) return;
+        const existing = byKey.get(placeKey(place) ?? "");
+        if (existing) existing.note = existing.note ? `${existing.note}; ${line}` : line;
+      });
+    });
   });
 
   // Seattle is everyone's home departure/arrival city, not a trip
@@ -59,7 +106,7 @@ export function derivePoints(days: ResolvedDay[], mapPoints: Trip["mapPoints"]):
     ].forEach(({ city, country }) => {
       if (!city || seenCities.has(city) || citiesWithPoint.has(city)) return;
       seenCities.add(city);
-      points.push({ id: `city-${city}`, label: city, address: `${city}, ${country}`, category: "city" });
+      points.push({ id: `city-${city}`, name: city, address: `${city}, ${country}`, category: "city" });
     });
   });
 
@@ -77,8 +124,8 @@ export function deriveRouteAddresses(days: ResolvedDay[]): MapPointData[] {
       ...(d.to ? [{ city: d.to, country: d.toCountry || d.country }] : []),
     ].forEach(({ city, country }) => {
       if (!city || city === "Seattle") return;
-      if (route[route.length - 1]?.label === city) return;
-      route.push({ id: `route-${route.length}`, label: city, address: `${city}, ${country}`, category: "city" });
+      if (route[route.length - 1]?.name === city) return;
+      route.push({ id: `route-${route.length}`, name: city, address: `${city}, ${country}`, category: "city" });
     });
   });
   return route;
@@ -102,7 +149,7 @@ export function deriveWeatherStops(days: ResolvedDay[], weather: Record<string, 
     if (!city || city === "Seattle" || !w) return;
     const key = `${city}|${country}`;
     if (!stops.has(key)) {
-      stops.set(key, { id: `weather-${key}`, label: city, address: `${city}, ${country}`, category: "city", days: [] });
+      stops.set(key, { id: `weather-${key}`, name: city, address: `${city}, ${country}`, category: "city", days: [] });
     }
     stops.get(key)!.days.push({ date: d.date, weather: w });
   });
