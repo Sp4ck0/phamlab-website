@@ -50,6 +50,38 @@ export function googleMapsUrl(p: Place): string {
   return url.toString();
 }
 
+// Turns the first mention of each place's name in an activity's text into its
+// 📍 link, right where it is written. Places whose name isn't in the sentence
+// (an event "at" a venue the text doesn't name) come back in `rest`, for the
+// caller to show as chips after the text. Only plain text is searched, never
+// inside tags or an existing link, and the text keeps its own spelling.
+export function inlinePlaces(text: string, places: Place[] = []): { html: string; rest: Place[] } {
+  let html = text;
+  const rest: Place[] = [];
+  for (const p of places) {
+    const parts = html.split(/(<[^>]*>)/); // odd entries are tags
+    let linkDepth = 0;
+    let done = false;
+    for (let i = 0; i < parts.length && !done; i++) {
+      if (i % 2) {
+        if (/^<a\b/i.test(parts[i])) linkDepth++;
+        else if (/^<\/a\s*>/i.test(parts[i])) linkDepth--;
+        continue;
+      }
+      if (linkDepth > 0 || !p.name) continue;
+      const at = parts[i].toLowerCase().indexOf(p.name.toLowerCase());
+      if (at < 0) continue;
+      const shown = parts[i].slice(at, at + p.name.length);
+      const href = googleMapsUrl(p).replace(/&/g, "&amp;");
+      parts[i] = `${parts[i].slice(0, at)}<a href="${href}" target="_blank" rel="noopener noreferrer">📍 ${shown}</a>${parts[i].slice(at + p.name.length)}`;
+      done = true;
+    }
+    if (done) html = parts.join("");
+    else rest.push(p);
+  }
+  return { html, rest };
+}
+
 // Hotels, activity places and the trip's curated POIs all share the Place
 // shape, so they dedupe on the same key; a second thing at an existing place
 // (an event at the hotel you're staying in) adds a line to that pin's note

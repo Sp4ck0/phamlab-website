@@ -1,5 +1,5 @@
 import type { ActionItem, Group, LegColor, ResolvedDay, Status } from "../../lib/types";
-import { googleMapsUrl } from "../../lib/mapPoints";
+import { googleMapsUrl, inlinePlaces } from "../../lib/mapPoints";
 import { DOW, MON, actParts, fmtShort, gapLabel, mergeFlightsByRoute, mergeHotelsByName, modeLabel } from "../../lib/tripLogic";
 import type { HotelGroup } from "../../lib/tripLogic";
 import { WhoPill } from "./WhoPill";
@@ -175,13 +175,15 @@ export function DayCard({
             <ul className="activity-list">
               {d.acts.map((a, ai) => {
                 const { tag, time, text, places } = actParts(a);
+                // A place named in the sentence is linked in place; the rest follow as chips.
+                const { html, rest } = inlinePlaces(text, places);
                 return (
                   <li className="activity" key={ai}>
                     {tag && <span className="act-tag">{tag}</span>}
                     <span className="activity-text">
                       {time && <span className="activity-time">{time}</span>}
-                      <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(text) }} />
-                      {places?.map((p, pi) => (
+                      <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }} />
+                      {rest.map((p, pi) => (
                         <a key={pi} href={googleMapsUrl(p)} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 8 }}>
                           📍 {p.name}
                         </a>
