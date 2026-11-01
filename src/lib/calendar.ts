@@ -289,13 +289,26 @@ export function stayEndDate(days: ResolvedDay[], from: number, name: string): st
   return null;
 }
 
+/** Day the stay containing `from` began: walk back while the prior day holds the same hotel and it wasn't checked out. */
+export function stayStartIndex(days: ResolvedDay[], from: number, name: string): number {
+  let i = from;
+  while (i > 0 && !days[i].hotels.some((h) => h.name === name && h.checkIn)) {
+    const prev = days[i - 1].hotels.filter((h) => h.name === name);
+    if (!prev.length || prev.some((h) => h.checkOut)) break;
+    i--;
+  }
+  return i;
+}
+
+/** Same whole-stay event (check-in → check-out) from any day of the stay. */
 export function hotelUrl(
   name: string, address: string | undefined, days: ResolvedDay[], dayIndex: number,
 ): string | null {
+  const start = stayStartIndex(days, dayIndex, name);
   const end = stayEndDate(days, dayIndex, name);
-  if (!name || !end || end <= days[dayIndex].date) return null;
+  if (!name || !end || end <= days[start].date) return null;
   return allDayUrl({
-    title: `🏨 ${name}`, startDate: days[dayIndex].date, endDate: end,
-    location: address || name, details: detailsFor(dayIndex),
+    title: `🏨 ${name}`, startDate: days[start].date, endDate: end,
+    location: address || name, details: detailsFor(start),
   });
 }
