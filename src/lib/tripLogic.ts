@@ -112,6 +112,7 @@ export function resolveDays(trip: Pick<Trip, "days">): ResolvedDay[] {
 export interface HotelGroup {
   name: string;
   address?: string;
+  placeId?: string;
   detail?: string;
   who: string[];
   srcs: string[];
@@ -132,10 +133,13 @@ export function mergeHotelsByName(hotels: ResolvedDay["hotels"], ticks: Record<s
       g.srcs.push(h.src);
       g.statuses.push(status);
       g.carriedAll = g.carriedAll && !!h.carried;
+      // The ID may be on a later day's entry of the same hotel, not the first.
+      g.placeId ??= h.placeId;
     } else {
       const g: HotelGroup = {
         name: h.name,
         address: h.address,
+        placeId: h.placeId,
         detail: h.detail,
         who: [...ids],
         srcs: [h.src],

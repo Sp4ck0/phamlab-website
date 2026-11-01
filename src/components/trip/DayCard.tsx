@@ -86,10 +86,10 @@ export function DayCard({
           {nm}
           {g.checkIn && days && <AddToCalendar url={hotelUrl(g.name, g.address, days, dayNumber)} />}
         </div>
-        {g.address && (
+        {(g.address || g.placeId) && (
           <div className="cmeta">
-            <a href={`https://maps.google.com/?q=${encodeURIComponent(g.address)}`} target="_blank" rel="noopener noreferrer">
-              {g.address}
+            <a href={googleMapsUrl({ name: g.name, address: g.address, placeId: g.placeId })} target="_blank" rel="noopener noreferrer">
+              {g.address || "Open in Google Maps"}
             </a>
           </div>
         )}
