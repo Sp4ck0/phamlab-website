@@ -11,6 +11,7 @@ export interface GuideParam {
 
 export interface GuideTool {
   name: string;
+  surface: string;
   title: string;
   write: boolean;
   description: string;
