@@ -8,6 +8,9 @@ import type { GuideData } from "../lib/starterPrompt";
 import { NotFoundOrDenied } from "./NotFoundOrDenied";
 import "../styles/guide.css";
 
+// Order the function tables appear in.
+const SURFACES = ["Trips and itinerary", "Boards", "General"];
+
 // What the site can do and how its AI connection works, in one place. Everything
 // below the intro comes from the backend (convex/guide.ts), generated from the
 // same tools and guide text the connection serves, so it can't drift.
@@ -77,41 +80,65 @@ export function GuidePage() {
             What the AI connection can call. <span className="guide-tag">changes data</span> marks the ones that write;
             the rest only read.
           </p>
-          {data.tools.map((t) => (
-            <details key={t.name} className="guide-tool">
-              <summary>
-                <code>{t.name}</code>
-                {t.write && <span className="guide-tag">changes data</span>}
-                <span className="guide-title">{t.title}</span>
-              </summary>
-              <p>{t.description}</p>
-              {t.params.length > 0 ? (
-                <table>
+          {SURFACES.map((surface) => {
+            const tools = data.tools.filter((t) => t.surface === surface);
+            if (tools.length === 0) return null;
+            return (
+              <div key={surface}>
+                <h4 className="guide-group">
+                  {surface} ({tools.length})
+                </h4>
+                <table className="guide-functions">
                   <thead>
                     <tr>
-                      <th>Parameter</th>
-                      <th>Type</th>
-                      <th>Meaning</th>
+                      <th>Function</th>
+                      <th>What it does</th>
+                      <th>Access</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {t.params.map((p) => (
-                      <tr key={p.name}>
+                    {tools.map((t) => (
+                      <tr key={t.name}>
                         <td>
-                          <code>{p.name}</code>
-                          {p.required && <span className="guide-req"> required</span>}
+                          <code>{t.name}</code>
                         </td>
-                        <td>{p.type}</td>
-                        <td>{p.description}</td>
+                        <td>
+                          {t.description}
+                          {t.params.length > 0 && (
+                            <details className="guide-tool">
+                              <summary>Parameters</summary>
+                              <table>
+                                <thead>
+                                  <tr>
+                                    <th>Parameter</th>
+                                    <th>Type</th>
+                                    <th>Meaning</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {t.params.map((p) => (
+                                    <tr key={p.name}>
+                                      <td>
+                                        <code>{p.name}</code>
+                                        {p.required && <span className="guide-req"> required</span>}
+                                      </td>
+                                      <td>{p.type}</td>
+                                      <td>{p.description}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </details>
+                          )}
+                        </td>
+                        <td>{t.write ? <span className="guide-tag">changes data</span> : "reads"}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              ) : (
-                <p className="sdek">No parameters.</p>
-              )}
-            </details>
-          ))}
+              </div>
+            );
+          })}
         </details>
       </div>
     </PageShell>

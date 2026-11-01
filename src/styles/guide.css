@@ -23,3 +23,8 @@
 .guide-tool table { width: 100%; border-collapse: collapse; margin: 6px 0 12px; font-size: 0.9em; display: block; overflow-x: auto; }
 .guide-tool th, .guide-tool td { text-align: left; vertical-align: top; padding: 6px 10px 6px 0; border-bottom: 1px solid var(--border); }
 .guide-tool th { color: var(--text-muted); font-weight: 600; }
+.guide-group { margin: 18px 0 6px; }
+.guide-functions { width: 100%; border-collapse: collapse; font-size: 0.9em; display: block; overflow-x: auto; }
+.guide-functions > thead th, .guide-functions > tbody > tr > td { text-align: left; vertical-align: top; padding: 8px 10px 8px 0; border-bottom: 1px solid var(--border); }
+.guide-functions > thead th { color: var(--text-muted); font-weight: 600; }
+.guide-functions > tbody > tr > td:last-child { white-space: nowrap; }
