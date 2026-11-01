@@ -90,7 +90,7 @@ export function DayCard({
           ) : (
             nm
           )}
-          {g.checkIn && days && <AddToCalendar url={hotelUrl(g.name, g.address, days, dayNumber)} />}
+          {days && <AddToCalendar url={hotelUrl(g.name, g.address, days, dayNumber)} />}
         </div>
         {/* With a Place ID the link opens the exact listing, so the address text adds nothing. */}
         {g.address && !g.placeId && <div className="cmeta">{g.address}</div>}
