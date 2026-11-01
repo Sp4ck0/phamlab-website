@@ -83,16 +83,17 @@ export function DayCard({
           <WhoPill who={uniqueWho.length === 1 ? uniqueWho[0] : uniqueWho} groups={groups} date={d.date} />
         </div>
         <div className={`cmain ${s === "needed" ? "todo" : ""}`}>
-          {nm}
+          {g.name ? (
+            <a href={googleMapsUrl({ name: g.name, address: g.address, placeId: g.placeId })} target="_blank" rel="noopener noreferrer">
+              📍 {nm}
+            </a>
+          ) : (
+            nm
+          )}
           {g.checkIn && days && <AddToCalendar url={hotelUrl(g.name, g.address, days, dayNumber)} />}
         </div>
-        {(g.address || g.placeId) && (
-          <div className="cmeta">
-            <a href={googleMapsUrl({ name: g.name, address: g.address, placeId: g.placeId })} target="_blank" rel="noopener noreferrer">
-              {g.address || "Open in Google Maps"}
-            </a>
-          </div>
-        )}
+        {/* With a Place ID the link opens the exact listing, so the address text adds nothing. */}
+        {g.address && !g.placeId && <div className="cmeta">{g.address}</div>}
         {g.detail && <div className="cmeta"><Linkify text={g.detail} /></div>}
       </div>
     );
