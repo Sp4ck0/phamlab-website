@@ -13,6 +13,9 @@ import { AddToCalendar } from "./AddToCalendar";
 import { actUrl, hotelUrl, transportUrl } from "../../lib/calendar";
 import { sanitizeHtml } from "../../lib/sanitizeHtml";
 import type { DayWeather } from "../../lib/weather";
+import { useParams } from "react-router-dom";
+import { voteTally } from "../../lib/tasks";
+import { useShowAiFocus } from "../../hooks/useAiFocus";
 
 interface Props {
   day: ResolvedDay;
@@ -28,10 +31,11 @@ interface Props {
   onExpandedChange: () => void;
   onToggle: (ids: string[], status: Status) => void;
   dayActionItems: ActionItem[];
-  // Open considerations that cover this day (day / range scope), shown as a
-  // dashed strip so they read as candidates, not plans.
+  // Considerations that cover this day (day / range scope; open or chosen), shown
+  // as a dashed strip so they read as candidates, not plans.
   dayConsiderations: Task[];
   pendingVotes: Record<string, Vote | null>;
+  onVote: (itemId: string, vote: Vote | null) => void;
   actionItemsDone: Record<string, boolean>;
   onToggleActionItem: (id: string) => void;
 }
@@ -51,9 +55,12 @@ export function DayCard({
   dayActionItems,
   dayConsiderations,
   pendingVotes,
+  onVote,
   actionItemsDone,
   onToggleActionItem,
 }: Props) {
+  const { slug } = useParams<{ slug: string }>();
+  const showFocus = useShowAiFocus();
   const collapsed = !expanded;
   const hotels = d.hotels;
   const flightGroups = mergeFlightsByRoute(d.flights, d.date, ticks);
@@ -215,20 +222,31 @@ export function DayCard({
 
           {dayConsiderations.length > 0 && (
             <div className="day-considering">
-              <span className="consider-pill">Under consideration</span>
+              <span className="consider-pill">{dayConsiderations.some((t) => !t.outcome) ? "Under consideration" : "Decided"}</span>
               <ul>
                 {dayConsiderations.map((t) => {
                   const id = t.key.slice("item:".length);
-                  const votes = t.votes ?? { yes: [], no: [], mine: null };
-                  const pending = pendingVotes[id];
-                  const mine = pending !== undefined ? pending : votes.mine;
-                  const count = (v: Vote) => votes[v].length - (votes.mine === v ? 1 : 0) + (mine === v ? 1 : 0);
+                  const { mine, yes, no } = voteTally(t, pendingVotes[id]);
+                  const pick = (v: Vote) => onVote(id, mine === v ? null : v);
                   return (
-                    <li key={t.key}>
-                      <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(t.title) }} />
-                      <span className="day-considering-votes">
-                        {" "}
-                        👍 {count("yes")} · 👎 {count("no")}
+                    <li key={t.key} data-outcome={t.outcome}>
+                      {/* Jumps to this item's card in the Under consideration list, opening Settled if needed. */}
+                      <button
+                        type="button"
+                        className="day-considering-title"
+                        title="Go to this in the Under consideration list"
+                        onClick={() => slug && showFocus({ slug, target: { kind: "actionItem", id }, nonce: `${Date.now()}` })}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(t.title) }}
+                      />
+                      {t.outcome === "chosen" && <span className="consider-pill day-chosen">Chosen</span>}
+                      <span className="vote-bar" role="group" aria-label={`Vote on ${t.title}`}>
+                        {/* A chosen item is settled: its tally stays but voting is over. */}
+                        <button type="button" className="vote-btn" data-vote="yes" aria-pressed={mine === "yes"} disabled={!!t.outcome} onClick={() => pick("yes")}>
+                          👍 <b>{yes}</b>
+                        </button>
+                        <button type="button" className="vote-btn" data-vote="no" aria-pressed={mine === "no"} disabled={!!t.outcome} onClick={() => pick("no")}>
+                          👎 <b>{no}</b>
+                        </button>
                       </span>
                     </li>
                   );

@@ -519,7 +519,13 @@ details.tour-box[open] summary::after{content:"Hide"}
 /* The same candidates on the day they cover. */
 .day-considering{margin-top:14px;padding:10px 14px;border:1.5px dashed var(--accent-1);border-radius:12px;background:var(--accent-1-tint);font-size:13.5px}
 .day-considering ul{margin:8px 0 0;padding-left:18px}
-.day-considering-votes{color:var(--text-secondary);font-size:12.5px;white-space:nowrap}
+.day-considering ul{list-style:none;padding-left:0}
+.day-considering li{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:4px 0}
+.day-considering-title{font:inherit;font-weight:600;color:var(--text-primary);background:none;border:0;padding:0;cursor:pointer;text-align:left;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
+.day-considering-title:hover{color:var(--accent-1)}
+.day-considering .vote-btn{padding:2px 9px;font-size:12.5px}
+.day-considering .vote-btn:disabled{cursor:default;opacity:.7}
+.day-considering .day-chosen{color:var(--good);border:1px solid var(--good)}
 
 /* ── alerts (needs a decision / not booked yet) ───────────────────────────── */
 .alerts{display:grid;gap:14px;margin:22px 0 8px}
@@ -566,6 +572,10 @@ footer code{background:var(--chip-bg);padding:2px 6px;border-radius:4px;color:va
 .map-legend{display:flex;flex-wrap:wrap;gap:14px;padding:14px 18px;border-top:1px solid var(--gridline)}
 .map-legend-item{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text-secondary)}
 .map-legend-item .dot{width:9px;height:9px;border-radius:50%;flex:none}
+.map-legend-item .ring{width:11px;height:11px;border-radius:50%;flex:none;border:2px dashed var(--accent-1);background:var(--accent-1-tint)}
+.map-legend-toggle{font:inherit;font-size:12.5px;background:none;border:0;padding:0;cursor:pointer}
+.map-legend-toggle[aria-pressed="false"]{opacity:.5;text-decoration:line-through}
+.map-legend-toggle:focus-visible{outline:2px solid var(--accent-1);outline-offset:3px;border-radius:4px}
 
 @media(max-width:780px){
   body{padding-left:0;padding-top:56px}

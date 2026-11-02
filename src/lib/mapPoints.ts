@@ -1,4 +1,4 @@
-import type { MapCategory, MapPointData, Place, ResolvedDay, Trip } from "./types";
+import type { MapCategory, MapPointData, Place, ResolvedDay, Task, Trip } from "./types";
 import { actParts, fmtShort } from "./tripLogic";
 import type { DayWeather } from "./weather";
 
@@ -143,6 +143,33 @@ export function derivePoints(days: ResolvedDay[], mapPoints: Trip["mapPoints"]):
   });
 
   return points;
+}
+
+// Pins for the places of considerations that are open or chosen (dropped ones
+// are gone). A place already pinned for real (`existing`, from derivePoints) or
+// by an earlier consideration is skipped, so a candidate never sits on top of
+// the plan. The id carries the item id (`consider|<itemId>|<n>`) so the map can
+// look up the live vote tally at click time instead of rebuilding its pins.
+export function deriveConsiderationPoints(tasks: Task[], existing: MapPointData[]): MapPointData[] {
+  const seen = new Set(existing.map(placeKey).filter((k): k is string => !!k));
+  const out: MapPointData[] = [];
+  for (const t of tasks) {
+    if (t.kind !== "consider" || t.outcome === "dropped") continue;
+    const itemId = t.key.slice("item:".length);
+    (t.places ?? []).forEach((place, j) => {
+      const key = placeKey(place);
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      out.push({
+        ...place,
+        id: `consider|${itemId}|${j}`,
+        category: "other",
+        note: t.title,
+        candidate: t.outcome === "chosen" ? "chosen" : "open",
+      });
+    });
+  }
+  return out;
 }
 
 // Ordered city waypoints for the map's route line. Mirrors deriveRoute's
