@@ -1,14 +1,15 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { useParams } from "react-router-dom";
-import type { ActionItem, Group, Task, TaskScope } from "../../lib/types";
+import type { ActionItem, Group, Outcome, Task, Vote } from "../../lib/types";
 import { gapLabel } from "../../lib/tripLogic";
 import { dueLabel, dueState } from "../../lib/dueDates";
-import { dow, kindLabel, scopeStart } from "../../lib/tasks";
+import { kindLabel, scopeStart } from "../../lib/tasks";
 import type { ActionItemFields } from "../../hooks/useActionItemEdits";
-import { useAiFocus, useShowAiFocus } from "../../hooks/useAiFocus";
+import { useAiFocus } from "../../hooks/useAiFocus";
 import { useUndoableDelete } from "../../hooks/useUndoableDelete";
 import { flash, scrollBehavior, SETTLE_MS } from "../../lib/flash";
 import { ActionItemEditor } from "./ActionItemEditor";
+import { Considerations } from "./Considerations";
+import { PencilIcon, ScopeLinks, TrashIcon } from "./taskParts";
 import { DueDateInput } from "./DueDateInput";
 import { TaskRow } from "./TaskRow";
 import { UndoBar } from "./UndoBar";
@@ -30,6 +31,10 @@ interface Props {
   onAddItem: (fields: ActionItemFields & { id?: string }) => Promise<unknown>;
   onUpdateItem: (id: string, fields: ActionItemFields) => Promise<unknown>;
   onRemoveItem: (id: string) => Promise<unknown>;
+  // Considerations: voting and settling (see Considerations.tsx).
+  pendingVotes: Record<string, Vote | null>;
+  onVote: (itemId: string, vote: Vote | null) => void;
+  onSetOutcome: (key: string, outcome: Outcome | null) => void;
 }
 
 interface Row {
@@ -52,39 +57,6 @@ function byDueThenDate(a: Row, b: Row) {
   return a.date.localeCompare(b.date);
 }
 
-const PencilIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <path d="M12 20h9" />
-    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-  </svg>
-);
-
-const TrashIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <path d="M3 6h18" />
-    <path d="M8 6V4h8v2" />
-    <path d="M19 6l-1 14H6L5 6" />
-  </svg>
-);
-
-// "Fri Nov 20" or "Fri Nov 20 – Sun Nov 22", each date a link to its day in the
-// itinerary. Reuses the AI-focus path, which opens, scrolls to and flashes a day.
-function ScopeLinks({ scope }: { scope: TaskScope }) {
-  const { slug } = useParams<{ slug: string }>();
-  const show = useShowAiFocus();
-  if (scope.kind === "trip") return <>Whole trip</>;
-  const link = (date: string) => (
-    <button
-      type="button"
-      className="day-link"
-      onClick={() => slug && show({ slug, target: { kind: "day", date }, nonce: `${Date.now()}` })}
-    >
-      {dow(date)}
-    </button>
-  );
-  return scope.kind === "day" ? link(scope.date) : <>{link(scope.start)} – {link(scope.end)}</>;
-}
-
 export function ActionItems({
   tasks,
   items,
@@ -98,10 +70,15 @@ export function ActionItems({
   onAddItem,
   onUpdateItem,
   onRemoveItem,
+  pendingVotes,
+  onVote,
+  onSetOutcome,
 }: Props) {
-  // "new" = the composer is open; an id = that item's row is being edited.
-  const [editing, setEditing] = useState<"new" | string | null>(null);
+  // "new" = the composer is open; "new-consider" = the considerations composer;
+  // an id = that item's row is being edited.
+  const [editing, setEditing] = useState<"new" | "new-consider" | string | null>(null);
   const [completedOpen, setCompletedOpen] = useState(false);
+  const [settledOpen, setSettledOpen] = useState(false);
   const undoable = useUndoableDelete({ onAddItem, onRemoveItem, onSetDone, onSetDue });
 
   // The AI pointed at an item (mcpFocus.ts): scroll to it and blink it. A done
@@ -113,7 +90,7 @@ export function ActionItems({
     const id = focus.target.id;
     const task = tasks.find((t) => t.editable && itemId(t) === id);
     if (!task) return;
-    if (task.done) setCompletedOpen(true);
+    if (task.done) (task.kind === "consider" ? setSettledOpen : setCompletedOpen)(true);
     const t = setTimeout(() => {
       const el = document.getElementById(`ai-row-${id}`);
       if (!el) return;
@@ -133,7 +110,9 @@ export function ActionItems({
 
   function remove(task: Task, item: ActionItem) {
     if (editing === item.id) setEditing(null);
-    undoable.remove(task, item);
+    // A settled consideration comes back open: its votes are gone with it, and
+    // done-without-an-outcome is not a state it can be in.
+    undoable.remove(task.kind === "consider" ? { ...task, done: false } : task, item);
   }
 
   const rowFor = (task: Task): Row => {
@@ -220,7 +199,8 @@ export function ActionItems({
     );
   };
 
-  const rows = tasks.map(rowFor).sort(byDueThenDate);
+  const considerTasks = tasks.filter((t) => t.kind === "consider");
+  const rows = tasks.filter((t) => t.kind !== "consider").map(rowFor).sort(byDueThenDate);
   const open = rows.filter((r) => !r.done);
   const completed = rows.filter((r) => r.done);
   const total = rows.length;
@@ -271,6 +251,23 @@ export function ActionItems({
           <div className="action-items">{completed.map((r) => r.node)}</div>
         </details>
       )}
+      <Considerations
+        tasks={considerTasks}
+        items={items}
+        groups={groups}
+        tripStart={tripStart}
+        tripEnd={tripEnd}
+        editing={editing === "new" ? null : editing}
+        setEditing={setEditing}
+        pendingVotes={pendingVotes}
+        onVote={onVote}
+        onSetOutcome={onSetOutcome}
+        onAddItem={onAddItem}
+        onUpdateItem={onUpdateItem}
+        onRemove={remove}
+        settledOpen={settledOpen}
+        onSettledOpenChange={setSettledOpen}
+      />
     </>
   );
 }

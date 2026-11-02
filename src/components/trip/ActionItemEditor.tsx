@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import type { ActionItem, Group } from "../../lib/types";
+import type { ActionItem, Group, Place } from "../../lib/types";
 import type { ActionItemFields } from "../../hooks/useActionItemEdits";
 
+const MAX_PLACES = 5;
+
 interface Props {
+  // The kind a new item starts as (an existing item keeps its own).
+  defaultKind?: "custom" | "decision" | "consider";
   groups: Group[];
   minDate: string;
   maxDate: string;
@@ -22,10 +26,14 @@ const SCOPES: { id: Scope; label: string }[] = [
 const toIds = (who: ActionItem["who"]) => (who === undefined ? [] : Array.isArray(who) ? who : [who]).filter((id) => id !== "all");
 
 // Inline add/edit row for an Action Item. Enter saves, Escape cancels.
-export function ActionItemEditor({ groups, minDate, maxDate, initial, onSave, onCancel }: Props) {
+export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initial, onSave, onCancel }: Props) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [detail, setDetail] = useState(initial?.detail ?? "");
-  const [kind, setKind] = useState<"custom" | "decision">(initial?.kind ?? "custom");
+  const [kind, setKind] = useState<"custom" | "decision" | "consider">(initial?.kind ?? defaultKind ?? "custom");
+  // A place's Google Place ID is kept only while its name and address are untouched.
+  const [places, setPlaces] = useState<Place[]>(initial?.places ?? []);
+  const editPlace = (i: number, patch: Partial<Place>) =>
+    setPlaces((prev) => prev.map((p, j) => (j === i ? { name: p.name, address: p.address, ...patch } : p)));
   // The scope follows from the fields: no date = whole trip, a date = that day,
   // a date and an end date = a range.
   const [scope, setScope] = useState<Scope>(initial?.endDate ? "range" : initial?.date ? "day" : "trip");
@@ -54,6 +62,16 @@ export function ActionItemEditor({ groups, minDate, maxDate, initial, onSave, on
         date: scope === "trip" ? undefined : date,
         endDate: scope === "range" ? endDate : undefined,
         kind,
+        places:
+          kind === "consider"
+            ? places
+                .filter((p) => p.name.trim())
+                .map((p) => ({
+                  name: p.name.trim(),
+                  ...(p.address?.trim() ? { address: p.address.trim() } : {}),
+                  ...(p.placeId ? { placeId: p.placeId } : {}),
+                }))
+            : undefined,
         who: whoIds.length === 0 ? undefined : whoIds.length === 1 ? whoIds[0] : whoIds,
       });
     } catch {
@@ -77,7 +95,7 @@ export function ActionItemEditor({ groups, minDate, maxDate, initial, onSave, on
         <input
           ref={titleRef}
           className="ai-input"
-          placeholder="What needs doing?"
+          placeholder={kind === "consider" ? "What are we weighing?" : "What needs doing?"}
           aria-label="Title"
           maxLength={120}
           value={title}
@@ -114,12 +132,44 @@ export function ActionItemEditor({ groups, minDate, maxDate, initial, onSave, on
           })}
         </div>
         <div className="ai-who" role="group" aria-label="Kind">
-          {(["custom", "decision"] as const).map((k) => (
+          {(["custom", "decision", "consider"] as const).map((k) => (
             <button key={k} type="button" className="ai-chip" aria-pressed={kind === k} onClick={() => setKind(k)}>
-              {k === "custom" ? "To-do" : "Decision"}
+              {k === "custom" ? "To-do" : k === "decision" ? "Decision" : "Consider"}
             </button>
           ))}
         </div>
+        {kind === "consider" && (
+          <div className="ai-places" role="group" aria-label="Places">
+            {places.map((p, i) => (
+              <div className="ai-place" key={i}>
+                <input
+                  className="ai-input"
+                  placeholder="Place name"
+                  aria-label={`Place ${i + 1} name`}
+                  maxLength={120}
+                  value={p.name}
+                  onChange={(e) => editPlace(i, { name: e.target.value, placeId: undefined })}
+                />
+                <input
+                  className="ai-input"
+                  placeholder="Address, city, country (needed for the map pin)"
+                  aria-label={`Place ${i + 1} address`}
+                  maxLength={300}
+                  value={p.address ?? ""}
+                  onChange={(e) => editPlace(i, { address: e.target.value, placeId: undefined })}
+                />
+                <button type="button" className="ai-btn" onClick={() => setPlaces((prev) => prev.filter((_, j) => j !== i))}>
+                  Remove
+                </button>
+              </div>
+            ))}
+            {places.length < MAX_PLACES && (
+              <button type="button" className="ai-chip" onClick={() => setPlaces((prev) => [...prev, { name: "" }])}>
+                + Add place
+              </button>
+            )}
+          </div>
+        )}
         <div className="ai-who" role="group" aria-label="When">
           {SCOPES.map((s) => (
             <button key={s.id} type="button" className="ai-chip" aria-pressed={scope === s.id} onClick={() => setScope(s.id)}>

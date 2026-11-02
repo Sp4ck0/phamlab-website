@@ -34,7 +34,7 @@ function TripPageEntry() {
   const resolvedDays = useResolvedDays(trip);
   const legColors = assignLegColors(resolvedDays);
   const today = todayISO();
-  const { tasks, loaded, ticks, done, setDone, setDue, toggleTick: toggle, toggleActionItem } = useTasks(slug || "", today);
+  const { tasks, loaded, ticks, done, setDone, setDue, toggleTick: toggle, toggleActionItem, vote, pendingVotes, setOutcome } = useTasks(slug || "", today);
   // "Only gaps" follows the task list, so it can't disagree with Action Items.
   const isGap = useMemo(() => {
     if (!loaded) return undefined;
@@ -100,7 +100,9 @@ function TripPageEntry() {
           onToggle={toggle}
           onOnlyGapsChange={setOnlyGaps}
           filterRef={filterRef}
-          actionItems={trip.actionItems || []}
+          actionItems={(trip.actionItems || []).filter((i) => i.kind !== "consider")}
+          considerations={tasks.filter((t) => t.kind === "consider" && !t.outcome)}
+          pendingVotes={pendingVotes}
           actionItemsDone={done}
           onToggleActionItem={toggleActionItem}
         />
@@ -125,6 +127,9 @@ function TripPageEntry() {
         onAddItem={addItem}
         onUpdateItem={updateItem}
         onRemoveItem={removeItem}
+        pendingVotes={pendingVotes}
+        onVote={vote}
+        onSetOutcome={setOutcome}
       />
 
       <footer>

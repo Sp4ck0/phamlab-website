@@ -92,13 +92,17 @@ export interface ActionItem {
   // Last day when the item covers a range starting at `date`.
   endDate?: string;
   who?: Who;
-  // Absent = "custom" (a to-do).
-  kind?: "custom" | "decision";
+  // Absent = "custom" (a to-do). "consider" is a candidate the group is weighing.
+  kind?: "custom" | "decision" | "consider";
+  // Only on a "consider" item: where it is.
+  places?: Place[];
 }
 
 // One row of the Action Items list, derived by the backend (convex/travel/tasks.ts).
 // `kind` is why it exists, `scope` is when it applies.
-export type TaskKind = "booking" | "plan" | "transport" | "decision" | "custom";
+export type TaskKind = "booking" | "plan" | "transport" | "decision" | "consider" | "custom";
+export type Outcome = "chosen" | "dropped";
+export type Vote = "yes" | "no";
 export type TaskScope =
   | { kind: "trip" }
   | { kind: "day"; date: string }
@@ -119,8 +123,12 @@ export interface Task {
   done: boolean;
   dueDate: string | null;
   dueDateIsDefault: boolean;
-  // Stored items (decision/custom) can be edited and removed.
+  // Stored items (decision/consider/custom) can be edited and removed.
   editable: boolean;
+  // Consider only: where it is, how it was settled, and who voted which way.
+  places?: Place[];
+  outcome?: Outcome;
+  votes?: { yes: string[]; no: string[]; mine: Vote | null };
 }
 
 export interface HighlightStat {

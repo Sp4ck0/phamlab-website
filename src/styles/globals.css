@@ -490,6 +490,37 @@ details.tour-box[open] summary::after{content:"Hide"}
 .day-link:focus-visible{outline:2px solid currentColor;outline-offset:2px;border-radius:3px}
 .action-item.done .at,.action-item.done .ad{text-decoration:line-through;text-decoration-color:var(--text-muted);color:var(--text-muted)}
 
+/* ── considerations: candidates the group is weighing (dashed + tinted = "not decided") ── */
+.considerations{display:grid;gap:10px}
+.consider{background:var(--accent-1-tint);border:1.5px dashed var(--accent-1);border-radius:14px;padding:14px 18px;scroll-margin-top:96px;margin-bottom:10px}
+.considerations .consider{margin-bottom:0}
+.consider[data-outcome="chosen"]{border-style:solid;background:var(--card);border-color:var(--good)}
+.consider[data-outcome="dropped"]{background:var(--card);border-color:var(--gridline);opacity:.7}
+.consider[data-outcome="dropped"] .consider-title{text-decoration:line-through;text-decoration-color:var(--text-muted)}
+.consider-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.consider-pill{display:inline-block;padding:3px 8px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent-1);border:1px dashed var(--accent-1)}
+.consider[data-outcome="chosen"] .consider-pill{color:var(--good);border:1px solid var(--good)}
+.consider[data-outcome="dropped"] .consider-pill{color:var(--text-muted);border:1px solid var(--gridline)}
+.consider-title{font-weight:700;color:var(--text-primary);overflow-wrap:anywhere}
+.consider-detail{margin:6px 0 0;font-size:13.5px;color:var(--text-secondary);overflow-wrap:anywhere}
+.consider-meta{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:12.5px;color:var(--text-secondary)}
+.consider-place{color:var(--accent-1);text-decoration:underline}
+.consider-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
+.consider-actions .row-actions{margin-left:auto}
+.vote-bar{display:flex;gap:6px}
+.vote-btn{font:inherit;font-size:13px;display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--text-primary);cursor:pointer}
+.vote-btn:hover{border-color:var(--text-secondary)}
+.vote-btn[aria-pressed="true"][data-vote="yes"]{background:var(--good);border-color:var(--good);color:#fff}
+.vote-btn[aria-pressed="true"][data-vote="no"]{background:var(--danger);border-color:var(--danger);color:#fff}
+.vote-names{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:8px;font-size:12px;color:var(--text-secondary)}
+.ai-places{display:grid;gap:8px;width:100%}
+.ai-place{display:flex;flex-wrap:wrap;gap:6px}
+.ai-place .ai-input{flex:1 1 180px;min-width:0}
+/* The same candidates on the day they cover. */
+.day-considering{margin-top:14px;padding:10px 14px;border:1.5px dashed var(--accent-1);border-radius:12px;background:var(--accent-1-tint);font-size:13.5px}
+.day-considering ul{margin:8px 0 0;padding-left:18px}
+.day-considering-votes{color:var(--text-secondary);font-size:12.5px;white-space:nowrap}
+
 /* ── alerts (needs a decision / not booked yet) ───────────────────────────── */
 .alerts{display:grid;gap:14px;margin:22px 0 8px}
 .alert{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--danger);border-radius:16px;padding:18px 22px}
