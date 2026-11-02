@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/api";
 import { useAccessCode } from "./useAccessCode";
 import { bookingKey, doneItems, ticksFromTasks } from "../lib/tasks";
-import type { Status, Task } from "../lib/types";
+import type { Outcome, Status, Task, Vote } from "../lib/types";
 
 // A trip's tasks — bookings to make, days to plan, decisions, to-dos — with
 // done-state and due dates shared by everyone with access to the trip and
@@ -25,6 +25,13 @@ export function useTasks(slug: string, today: string) {
       api.tasks.listTasks,
       q,
       current.map((t: Task) => {
+        // Settling a consideration: chosen / dropped closes it, null reopens it.
+        if (a.outcome !== undefined && keys.has(t.key)) {
+          const { outcome: _prev, ...rest } = t;
+          return a.outcome === null
+            ? { ...rest, refsDone: [false], done: false }
+            : { ...rest, outcome: a.outcome, refsDone: [true], done: true };
+        }
         const refsDone = t.refs.map((r: string, i: number) => (a.done !== undefined && keys.has(r) ? a.done : t.refsDone[i]));
         const next = { ...t, refsDone, done: refsDone.every(Boolean) };
         // Clearing an override (null) is left to the server: the default is its to compute.
@@ -78,6 +85,34 @@ export function useTasks(slug: string, today: string) {
     [setStateMut, slug, code]
   );
 
+  // Votes tapped but not yet confirmed (null = a cleared vote). The server's tally
+  // names who voted, which can't be adjusted here without knowing the caller's
+  // name, so the list shows this override on top of it (see Considerations).
+  const voteMut = useMutation(api.votes.setVote);
+  const [pendingVotes, setPendingVotes] = useState<Record<string, Vote | null>>({});
+  const vote = useCallback(
+    (itemId: string, value: Vote | null) => {
+      setPendingVotes((p) => ({ ...p, [itemId]: value }));
+      const settle = () =>
+        setPendingVotes((p) => {
+          if (p[itemId] !== value) return p;
+          const rest = { ...p };
+          delete rest[itemId];
+          return rest;
+        });
+      voteMut({ slug, code, itemId, vote: value }).then(settle, settle);
+    },
+    [voteMut, slug, code]
+  );
+
+  // Choose or drop a consideration (closing it), or reopen it with null.
+  const setOutcome = useCallback(
+    (key: string, outcome: Outcome | null) => {
+      void setStateMut({ slug, code, keys: [key], outcome });
+    },
+    [setStateMut, slug, code]
+  );
+
   const toggleActionItem = useCallback(
     (id: string) => setDone([`item:${id}`], !done[id]),
     [setDone, done]
@@ -86,5 +121,5 @@ export function useTasks(slug: string, today: string) {
   // False until the first answer arrives (the tasks are just empty meanwhile).
   const loaded = result !== undefined;
 
-  return { tasks, loaded, ticks, done, setDone, setDue, toggleTick, toggleActionItem };
+  return { tasks, loaded, ticks, done, setDone, setDue, toggleTick, toggleActionItem, vote, pendingVotes, setOutcome };
 }

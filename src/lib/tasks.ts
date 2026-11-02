@@ -27,6 +27,7 @@ export function kindLabel(t: Task): string | undefined {
   if (t.kind === "plan") return "Plan";
   if (t.kind === "transport") return "Transport";
   if (t.kind === "decision") return "Decision";
+  if (t.kind === "consider") return "Considering";
   return undefined;
 }
 
@@ -71,6 +72,6 @@ export function gapDates(tasks: Task[]): Set<string> {
 // Stored item ids that are done, for the per-day checklists.
 export function doneItems(tasks: Task[]): Record<string, boolean> {
   const out: Record<string, boolean> = {};
-  for (const t of tasks) if (t.editable && t.done) out[t.key.slice("item:".length)] = true;
+  for (const t of tasks) if (t.editable && t.kind !== "consider" && t.done) out[t.key.slice("item:".length)] = true;
   return out;
 }

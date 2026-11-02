@@ -1,4 +1,4 @@
-import type { ActionItem, Group, LegColor, ResolvedDay, Status } from "../../lib/types";
+import type { ActionItem, Group, LegColor, ResolvedDay, Status, Task, Vote } from "../../lib/types";
 import { googleMapsUrl, inlinePlaces } from "../../lib/mapPoints";
 import { DOW, MON, actParts, fmtShort, gapLabel, mergeFlightsByRoute, mergeHotelsByName, modeLabel } from "../../lib/tripLogic";
 import type { HotelGroup } from "../../lib/tripLogic";
@@ -28,6 +28,10 @@ interface Props {
   onExpandedChange: () => void;
   onToggle: (ids: string[], status: Status) => void;
   dayActionItems: ActionItem[];
+  // Open considerations that cover this day (day / range scope), shown as a
+  // dashed strip so they read as candidates, not plans.
+  dayConsiderations: Task[];
+  pendingVotes: Record<string, Vote | null>;
   actionItemsDone: Record<string, boolean>;
   onToggleActionItem: (id: string) => void;
 }
@@ -45,6 +49,8 @@ export function DayCard({
   onExpandedChange,
   onToggle,
   dayActionItems,
+  dayConsiderations,
+  pendingVotes,
   actionItemsDone,
   onToggleActionItem,
 }: Props) {
@@ -204,6 +210,30 @@ export function DayCard({
           {d.callout && (
             <div className="note">
               <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(d.callout) }} />
+            </div>
+          )}
+
+          {dayConsiderations.length > 0 && (
+            <div className="day-considering">
+              <span className="consider-pill">Under consideration</span>
+              <ul>
+                {dayConsiderations.map((t) => {
+                  const id = t.key.slice("item:".length);
+                  const votes = t.votes ?? { yes: [], no: [], mine: null };
+                  const pending = pendingVotes[id];
+                  const mine = pending !== undefined ? pending : votes.mine;
+                  const count = (v: Vote) => votes[v].length - (votes.mine === v ? 1 : 0) + (mine === v ? 1 : 0);
+                  return (
+                    <li key={t.key}>
+                      <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(t.title) }} />
+                      <span className="day-considering-votes">
+                        {" "}
+                        👍 {count("yes")} · 👎 {count("no")}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
           )}
 
