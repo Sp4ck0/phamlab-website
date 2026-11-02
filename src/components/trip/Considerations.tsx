@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { ActionItem, Group, Outcome, Task, Vote } from "../../lib/types";
 import { gapLabel } from "../../lib/tripLogic";
-import { scopeStart } from "../../lib/tasks";
+import { scopeStart, voteTally } from "../../lib/tasks";
 import { googleMapsUrl } from "../../lib/mapPoints";
 import type { ActionItemFields } from "../../hooks/useActionItemEdits";
 import { sanitizeHtml } from "../../lib/sanitizeHtml";
@@ -49,14 +49,6 @@ const badgeStyle = (color: string | null) => ({
   ...(color ? { background: `${color}1a`, color } : { background: "var(--chip-bg)", color: "var(--text-secondary)" }),
 });
 
-// Yes / no counts with the viewer's own tap laid over what the server last said.
-function tally(task: Task, pending: Vote | null | undefined) {
-  const votes = task.votes ?? { yes: [], no: [], mine: null };
-  const mine = pending !== undefined ? pending : votes.mine;
-  const count = (v: Vote) => votes[v].length - (votes.mine === v ? 1 : 0) + (mine === v ? 1 : 0);
-  return { mine, yes: count("yes"), no: count("no"), votes };
-}
-
 // Things the group is still weighing, shown apart from the plan so they can't be
 // mistaken for it: dashed, tinted, no checkbox. Each can be voted yes / no by
 // anyone with access, then marked Chosen or Dropped.
@@ -98,7 +90,7 @@ export function Considerations({
       );
     }
     const badge = task.who !== undefined ? gapLabel(task.who, groups, scopeStart(task.scope) ?? "") : null;
-    const { mine, yes, no, votes } = tally(task, pendingVotes[id]);
+    const { mine, yes, no, votes } = voteTally(task, pendingVotes[id]);
     const settled = task.outcome;
     const pick = (v: Vote) => onVote(id, mine === v ? null : v);
     return (

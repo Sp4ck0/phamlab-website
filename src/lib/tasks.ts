@@ -1,6 +1,15 @@
 // Helpers for the backend's task list (convex/travel/tasks.ts).
-import type { Status, Task, TaskScope } from "./types";
+import type { Status, Task, TaskScope, Vote } from "./types";
 import { fmtDow, modeLabel } from "./tripLogic";
+
+// Yes / no counts for a consideration, with the viewer's own tap (`pending`,
+// null = cleared) laid over what the server last said.
+export function voteTally(task: Task, pending: Vote | null | undefined) {
+  const votes = task.votes ?? { yes: [], no: [], mine: null };
+  const mine = pending !== undefined ? pending : votes.mine;
+  const count = (v: Vote) => votes[v].length - (votes.mine === v ? 1 : 0) + (mine === v ? 1 : 0);
+  return { mine, yes: count("yes"), no: count("no"), votes };
+}
 
 export const dow = (iso: string) => fmtDow(new Date(iso + "T00:00:00"));
 

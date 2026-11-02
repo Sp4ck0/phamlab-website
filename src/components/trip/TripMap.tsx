@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { MapPointData } from "../../lib/types";
+import type { MapPointData, Task } from "../../lib/types";
 import { CATEGORY_COLORS, CATEGORY_LABELS, googleMapsUrl } from "../../lib/mapPoints";
 import type { WeatherStop } from "../../lib/mapPoints";
 import { fmtShort } from "../../lib/tripLogic";
@@ -29,12 +29,33 @@ interface Props {
   points: MapPointData[];
   route: MapPointData[];
   weatherStops: WeatherStop[];
+  // Places of considerations (not in the plan): drawn as rings, with a legend toggle.
+  candidates: MapPointData[];
+  // The considerations behind them, for the vote tally in a pin's popup.
+  considerations: Task[];
 }
 
-export function TripMap({ points, route, weatherStops }: Props) {
+// A dashed hollow ring for an open candidate, a solid one once chosen: the
+// opposite of the filled dots, so it reads as "maybe" at a glance.
+function ringIcon(chosen: boolean): string {
+  const color = chosen ? "#1baf7a" : "#2a78d6";
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 26 26">` +
+    `<circle cx="13" cy="13" r="9.5" fill="${color}" fill-opacity="${chosen ? 0.3 : 0.12}" stroke="${color}" stroke-width="2.5"` +
+    `${chosen ? "" : ' stroke-dasharray="4 3"'}/></svg>`;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+export function TripMap({ points, route, weatherStops, candidates, considerations }: Props) {
   const { points: geocoded, status, error } = useGeocodedPoints(points);
   const { points: geocodedRoute } = useGeocodedPoints(route);
   const { points: geocodedWeather } = useGeocodedPoints(weatherStops);
+  const { points: geocodedCandidates } = useGeocodedPoints(candidates);
+  const [showCandidates, setShowCandidates] = useState(true);
+  const candidateMarkers = useRef<google.maps.Marker[]>([]);
+  // Read at click time, so a vote that lands later shows in the popup without rebuilding the pins.
+  const considerationById = useRef(new Map<string, Task>());
+  considerationById.current = new Map(considerations.map((t) => [t.key.slice("item:".length), t]));
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<google.maps.Map | null>(null);
   // One info window shared by every pin and pill, so opening one closes the last.
@@ -259,6 +280,36 @@ export function TripMap({ points, route, weatherStops }: Props) {
     };
   }, [mapReady, geocodedWeather, weatherStops, tempUnit]);
 
+  // Consideration pins: their own layer, so a vote, a toggle or a new idea never
+  // rebuilds the planned pins or moves the view.
+  useEffect(() => {
+    const map = mapInstance.current;
+    if (!mapReady || !map || !showCandidates) return;
+    const made = geocodedCandidates.map((p) => {
+      const chosen = p.candidate === "chosen";
+      const marker = new google.maps.Marker({
+        map,
+        position: { lat: p.lat, lng: p.lng },
+        title: `${p.name} (${chosen ? "chosen" : "under consideration"})`,
+        icon: { url: ringIcon(chosen), anchor: new google.maps.Point(13, 13), scaledSize: new google.maps.Size(26, 26) },
+        zIndex: 1,
+      });
+      marker.addListener("click", () => {
+        const task = considerationById.current.get(p.id.split("|")[1] ?? "");
+        const live = task?.outcome === "chosen" ? "Chosen" : "Under consideration";
+        const votes = task?.votes ? ` · 👍 ${task.votes.yes.length} · 👎 ${task.votes.no.length}` : "";
+        openInfo(map, infoHtml(p.name, `${live}${task ? `: ${task.title}` : ""}${votes}`, tempUnitRef.current, undefined, googleMapsUrl(p)), marker);
+      });
+      return marker;
+    });
+    candidateMarkers.current = made;
+    return () => {
+      made.forEach((m) => m.setMap(null));
+      candidateMarkers.current = [];
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapReady, geocodedCandidates, showCandidates]);
+
   // Shared by pins and pills: close whatever is open, then show this one.
   function openInfo(
     map: google.maps.Map,
@@ -289,6 +340,7 @@ export function TripMap({ points, route, weatherStops }: Props) {
       <p className="section-sub">
         Where you're staying, planned stops that have an address, and each city on the route, joined in travel order
         with the weather for each stay. Tap a pin or weather label for details.
+        {geocodedCandidates.length > 0 && " Dashed rings are places still under consideration."}
       </p>
 
       {status === "error" && (
@@ -313,6 +365,18 @@ export function TripMap({ points, route, weatherStops }: Props) {
                 </span>
               );
             })}
+            {geocodedCandidates.length > 0 && (
+              <button
+                type="button"
+                className="map-legend-item map-legend-toggle"
+                aria-pressed={showCandidates}
+                title={showCandidates ? "Hide places under consideration" : "Show places under consideration"}
+                onClick={() => setShowCandidates((v) => !v)}
+              >
+                <span className="ring" />
+                Under consideration
+              </button>
+            )}
           </div>
         </div>
       )}

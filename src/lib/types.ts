@@ -142,6 +142,8 @@ export interface MapPointData extends Place {
   id: string;
   category: MapCategory;
   note?: string;
+  // A pin for a consideration (not part of the plan): open, or chosen.
+  candidate?: "open" | "chosen";
 }
 
 export interface Trip {

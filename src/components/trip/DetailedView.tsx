@@ -23,16 +23,17 @@ interface Props {
   filterRef: RefObject<HTMLButtonElement | null>;
   onToggle: (ids: string[], status: Status) => void;
   actionItems: ActionItem[];
-  // Open considerations (candidates), shown on the days they cover.
+  // Considerations (open or chosen), shown on the days they cover.
   considerations: Task[];
   pendingVotes: Record<string, Vote | null>;
+  onVote: (itemId: string, vote: Vote | null) => void;
   actionItemsDone: Record<string, boolean>;
   onToggleActionItem: (id: string) => void;
 }
 
 // Unified itinerary; name retained to keep the detail renderer's consumer small.
 export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps, isGap, onOnlyGapsChange, filterRef,
-  onToggle, actionItems, considerations, pendingVotes, actionItemsDone, onToggleActionItem }: Props) {
+  onToggle, actionItems, considerations, pendingVotes, onVote, actionItemsDone, onToggleActionItem }: Props) {
   const prefix = useId();
   const [state, setState] = useState(() => {
     let serial = 0;
@@ -143,7 +144,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
               });
             }} onToggle={onToggle} dayActionItems={actionItems.filter(item => item.date !== undefined && item.date <= d.date && d.date <= (item.endDate ?? item.date))}
             dayConsiderations={considerations.filter(t => t.scope.kind !== "trip" && coversDay(t.scope, d.date))}
-            pendingVotes={pendingVotes}
+            pendingVotes={pendingVotes} onVote={onVote}
             actionItemsDone={actionItemsDone} onToggleActionItem={onToggleActionItem} />
         ))}
       </div>

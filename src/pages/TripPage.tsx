@@ -16,7 +16,7 @@ import { useTripWeather } from "../hooks/useTripWeather";
 import { todayISO } from "../lib/dueDates";
 import { assignLegColors } from "../lib/tripLogic";
 import { gapDates } from "../lib/tasks";
-import { derivePoints, deriveRouteAddresses, deriveWeatherStops } from "../lib/mapPoints";
+import { deriveConsiderationPoints, derivePoints, deriveRouteAddresses, deriveWeatherStops } from "../lib/mapPoints";
 import { NotFoundOrDenied } from "./NotFoundOrDenied";
 
 export function TripPage() {
@@ -61,6 +61,8 @@ function TripPageEntry() {
     );
   }
 
+  const mapPlanPoints = derivePoints(resolvedDays, trip.mapPoints);
+
   return (
     <PageShell>
       <TripHeader
@@ -101,17 +103,20 @@ function TripPageEntry() {
           onOnlyGapsChange={setOnlyGaps}
           filterRef={filterRef}
           actionItems={(trip.actionItems || []).filter((i) => i.kind !== "consider")}
-          considerations={tasks.filter((t) => t.kind === "consider" && !t.outcome)}
+          considerations={tasks.filter((t) => t.kind === "consider" && t.outcome !== "dropped")}
           pendingVotes={pendingVotes}
+          onVote={vote}
           actionItemsDone={done}
           onToggleActionItem={toggleActionItem}
         />
       </ItineraryStart>
 
       <TripMap
-        points={derivePoints(resolvedDays, trip.mapPoints)}
+        points={mapPlanPoints}
         route={deriveRouteAddresses(resolvedDays)}
         weatherStops={weatherStops}
+        candidates={deriveConsiderationPoints(tasks, mapPlanPoints)}
+        considerations={tasks.filter((t) => t.kind === "consider")}
       />
 
       <ActionItems
