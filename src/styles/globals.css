@@ -710,10 +710,12 @@ body:has(.print-doc){padding:0}
 .action-item:hover .row-actions,.action-item:focus-within .row-actions{opacity:1}
 .icon-btn{display:flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;color:var(--text-muted);background:transparent;border:none;border-radius:6px;cursor:pointer}
 .icon-btn:hover{color:var(--text-primary);background:var(--chip-bg)}
+.act-edit{flex:none;align-self:flex-start;opacity:0;transition:opacity .12s}
+.activity:hover .act-edit,.activity:focus-within .act-edit{opacity:1}
 .undo-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;padding:8px 14px;font-size:13px;color:var(--text-secondary);background:var(--chip-bg);border-radius:10px}
 .undo-bar button{font:inherit;font-size:13px;font-weight:700;color:var(--text-primary);background:none;border:none;cursor:pointer;text-decoration:underline}
 @media (hover:none){
-  .row-actions{opacity:1}
+  .row-actions,.act-edit{opacity:1}
   .icon-btn{width:36px;height:36px}
   .status::after{content:"";position:absolute;inset:-12px}
 }
