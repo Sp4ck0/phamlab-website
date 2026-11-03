@@ -16,7 +16,7 @@ import { useTripWeather } from "../hooks/useTripWeather";
 import { todayISO } from "../lib/dueDates";
 import { assignLegColors } from "../lib/tripLogic";
 import { gapDates } from "../lib/tasks";
-import { deriveConsiderationPoints, derivePoints, deriveRouteAddresses, deriveWeatherStops } from "../lib/mapPoints";
+import { deriveTaskPoints, derivePoints, deriveRouteAddresses, deriveWeatherStops } from "../lib/mapPoints";
 import { NotFoundOrDenied } from "./NotFoundOrDenied";
 
 export function TripPage() {
@@ -115,8 +115,8 @@ function TripPageEntry() {
         points={mapPlanPoints}
         route={deriveRouteAddresses(resolvedDays)}
         weatherStops={weatherStops}
-        candidates={deriveConsiderationPoints(tasks, mapPlanPoints)}
-        considerations={tasks.filter((t) => t.kind === "consider")}
+        candidates={deriveTaskPoints(tasks, mapPlanPoints)}
+        considerations={tasks.filter((t) => !!t.places?.length)}
       />
 
       <ActionItems

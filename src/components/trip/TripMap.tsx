@@ -296,7 +296,10 @@ export function TripMap({ points, route, weatherStops, candidates, consideration
       });
       marker.addListener("click", () => {
         const task = considerationById.current.get(p.id.split("|")[1] ?? "");
-        const live = task?.outcome === "chosen" ? "Chosen" : "Under consideration";
+        const live =
+          task?.kind === "consider"
+            ? task.outcome === "chosen" ? "Chosen" : "Under consideration"
+            : `${task?.kind === "decision" ? "Decision" : "To-do"}${task?.done ? " (done)" : ""}`;
         const votes = task?.votes ? ` · 👍 ${task.votes.yes.length} · 👎 ${task.votes.no.length}` : "";
         openInfo(map, infoHtml(p.name, `${live}${task ? `: ${task.title}` : ""}${votes}`, tempUnitRef.current, undefined, googleMapsUrl(p)), marker);
       });
@@ -340,7 +343,7 @@ export function TripMap({ points, route, weatherStops, candidates, consideration
       <p className="section-sub">
         Where you're staying, planned stops that have an address, and each city on the route, joined in travel order
         with the weather for each stay. Tap a pin or weather label for details.
-        {geocodedCandidates.length > 0 && " Dashed rings are places still under consideration."}
+        {geocodedCandidates.length > 0 && " Dashed rings are places for ideas, to-dos and decisions that aren't settled yet."}
       </p>
 
       {status === "error" && (
@@ -370,11 +373,11 @@ export function TripMap({ points, route, weatherStops, candidates, consideration
                 type="button"
                 className="map-legend-item map-legend-toggle"
                 aria-pressed={showCandidates}
-                title={showCandidates ? "Hide places under consideration" : "Show places under consideration"}
+                title={showCandidates ? "Hide places for ideas and to-dos" : "Show places for ideas and to-dos"}
                 onClick={() => setShowCandidates((v) => !v)}
               >
                 <span className="ring" />
-                Under consideration
+                Ideas &amp; to-dos
               </button>
             )}
           </div>
