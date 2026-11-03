@@ -9,7 +9,7 @@ import { useUndoableDelete } from "../../hooks/useUndoableDelete";
 import { flash, scrollBehavior, SETTLE_MS } from "../../lib/flash";
 import { ActionItemEditor } from "./ActionItemEditor";
 import { Considerations } from "./Considerations";
-import { PencilIcon, ScopeLinks, TrashIcon } from "./taskParts";
+import { PencilIcon, PlaceLinks, ScopeLinks, TrashIcon } from "./taskParts";
 import { DueDateInput } from "./DueDateInput";
 import { TaskRow } from "./TaskRow";
 import { UndoBar } from "./UndoBar";
@@ -159,7 +159,15 @@ export function ActionItems({
           pill={task.kind === "decision" ? "Decision" : undefined}
           lead={task.title}
           body={task.detail}
-          scope={task.scope.kind === "trip" ? undefined : <ScopeLinks scope={task.scope} />}
+          scope={
+            task.scope.kind === "trip" && !task.places?.length ? undefined : (
+              <>
+                {task.scope.kind !== "trip" && <ScopeLinks scope={task.scope} />}
+                {task.scope.kind !== "trip" && !!task.places?.length && " · "}
+                {!!task.places?.length && <PlaceLinks places={task.places} />}
+              </>
+            )
+          }
           dueState={state}
           due={dueControl}
           actions={

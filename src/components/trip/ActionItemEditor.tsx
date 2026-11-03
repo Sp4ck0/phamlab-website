@@ -62,16 +62,13 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
         date: scope === "trip" ? undefined : date,
         endDate: scope === "range" ? endDate : undefined,
         kind,
-        places:
-          kind === "consider"
-            ? places
-                .filter((p) => p.name.trim())
-                .map((p) => ({
-                  name: p.name.trim(),
-                  ...(p.address?.trim() ? { address: p.address.trim() } : {}),
-                  ...(p.placeId ? { placeId: p.placeId } : {}),
-                }))
-            : undefined,
+        places: places
+          .filter((p) => p.name.trim())
+          .map((p) => ({
+            name: p.name.trim(),
+            ...(p.address?.trim() ? { address: p.address.trim() } : {}),
+            ...(p.placeId?.trim() ? { placeId: p.placeId.trim() } : {}),
+          })),
         who: whoIds.length === 0 ? undefined : whoIds.length === 1 ? whoIds[0] : whoIds,
       });
     } catch {
@@ -138,38 +135,45 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
             </button>
           ))}
         </div>
-        {kind === "consider" && (
-          <div className="ai-places" role="group" aria-label="Places">
-            {places.map((p, i) => (
-              <div className="ai-place" key={i}>
-                <input
-                  className="ai-input"
-                  placeholder="Place name"
-                  aria-label={`Place ${i + 1} name`}
-                  maxLength={120}
-                  value={p.name}
-                  onChange={(e) => editPlace(i, { name: e.target.value, placeId: undefined })}
-                />
-                <input
-                  className="ai-input"
-                  placeholder="Address, city, country (needed for the map pin)"
-                  aria-label={`Place ${i + 1} address`}
-                  maxLength={300}
-                  value={p.address ?? ""}
-                  onChange={(e) => editPlace(i, { address: e.target.value, placeId: undefined })}
-                />
-                <button type="button" className="ai-btn" onClick={() => setPlaces((prev) => prev.filter((_, j) => j !== i))}>
-                  Remove
-                </button>
-              </div>
-            ))}
-            {places.length < MAX_PLACES && (
-              <button type="button" className="ai-chip" onClick={() => setPlaces((prev) => [...prev, { name: "" }])}>
-                + Add place
+        {/* Any kind can name a place (a Google Maps link on the row); a consideration also gets a map pin. */}
+        <div className="ai-places" role="group" aria-label="Places">
+          {places.map((p, i) => (
+            <div className="ai-place" key={i}>
+              <input
+                className="ai-input"
+                placeholder="Place name"
+                aria-label={`Place ${i + 1} name`}
+                maxLength={120}
+                value={p.name}
+                onChange={(e) => editPlace(i, { name: e.target.value, placeId: undefined })}
+              />
+              <input
+                className="ai-input"
+                placeholder="Address, city, country (so Google can find it)"
+                aria-label={`Place ${i + 1} address`}
+                maxLength={300}
+                value={p.address ?? ""}
+                onChange={(e) => editPlace(i, { address: e.target.value, placeId: undefined })}
+              />
+              <input
+                className="ai-input"
+                placeholder="Google Place ID (optional, ChIJ…)"
+                aria-label={`Place ${i + 1} Place ID`}
+                maxLength={200}
+                value={p.placeId ?? ""}
+                onChange={(e) => editPlace(i, { placeId: e.target.value })}
+              />
+              <button type="button" className="ai-btn" onClick={() => setPlaces((prev) => prev.filter((_, j) => j !== i))}>
+                Remove
               </button>
-            )}
-          </div>
-        )}
+            </div>
+          ))}
+          {places.length < MAX_PLACES && (
+            <button type="button" className="ai-chip" onClick={() => setPlaces((prev) => [...prev, { name: "" }])}>
+              + Add place
+            </button>
+          )}
+        </div>
         <div className="ai-who" role="group" aria-label="When">
           {SCOPES.map((s) => (
             <button key={s.id} type="button" className="ai-chip" aria-pressed={scope === s.id} onClick={() => setScope(s.id)}>
