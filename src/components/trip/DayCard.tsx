@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ActionItem, Group, LegColor, ResolvedDay, Status, Task, Vote } from "../../lib/types";
 import { googleMapsUrl, inlinePlaces } from "../../lib/mapPoints";
 import { DOW, MON, actParts, fmtShort, gapLabel, mergeFlightsByRoute, mergeHotelsByName, modeLabel } from "../../lib/tripLogic";
@@ -17,6 +18,8 @@ import { useParams } from "react-router-dom";
 import { voteTally } from "../../lib/tasks";
 import { useShowAiFocus } from "../../hooks/useAiFocus";
 import { ShareLinkButton } from "./ShareLinkButton";
+import { ActivityEditor } from "./ActivityEditor";
+import { PencilIcon } from "./taskParts";
 
 interface Props {
   day: ResolvedDay;
@@ -39,6 +42,9 @@ interface Props {
   onVote: (itemId: string, vote: Vote | null) => void;
   actionItemsDone: Record<string, boolean>;
   onToggleActionItem: (id: string) => void;
+  // Saves new text for the activity at `index`; `expected` is the text it had
+  // when the editor opened. The pencil only shows when this is passed.
+  onEditActivity?: (date: string, index: number, expected: string, text: string) => Promise<unknown>;
 }
 
 export function DayCard({
@@ -59,7 +65,9 @@ export function DayCard({
   onVote,
   actionItemsDone,
   onToggleActionItem,
+  onEditActivity,
 }: Props) {
+  const [editingAct, setEditingAct] = useState<number | null>(null);
   const { slug } = useParams<{ slug: string }>();
   const showFocus = useShowAiFocus();
   const collapsed = !expanded;
@@ -192,6 +200,20 @@ export function DayCard({
                 const { tag, time, text, places } = actParts(a);
                 // A place named in the sentence is linked in place; the rest follow as chips.
                 const { html, rest } = inlinePlaces(text, places);
+                if (editingAct === ai && onEditActivity) {
+                  return (
+                    <li className="activity" key={ai}>
+                      <ActivityEditor
+                        initial={text}
+                        onCancel={() => setEditingAct(null)}
+                        onSave={async (next) => {
+                          await onEditActivity(d.date, ai, text, next);
+                          setEditingAct(null);
+                        }}
+                      />
+                    </li>
+                  );
+                }
                 return (
                   <li className="activity" key={ai}>
                     {tag && <span className="act-tag">{tag}</span>}
@@ -204,6 +226,11 @@ export function DayCard({
                         </a>
                       ))}
                     </span>
+                    {onEditActivity && (
+                      <button type="button" className="icon-btn act-edit" aria-label={`Edit activity: ${text}`} onClick={() => setEditingAct(ai)}>
+                        <PencilIcon />
+                      </button>
+                    )}
                     <AddToCalendar url={actUrl(a, d, dayNumber, ai)} />
                   </li>
                 );

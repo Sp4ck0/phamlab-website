@@ -29,11 +29,12 @@ interface Props {
   onVote: (itemId: string, vote: Vote | null) => void;
   actionItemsDone: Record<string, boolean>;
   onToggleActionItem: (id: string) => void;
+  onEditActivity?: (date: string, index: number, expected: string, text: string) => Promise<unknown>;
 }
 
 // Unified itinerary; name retained to keep the detail renderer's consumer small.
 export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps, isGap, onOnlyGapsChange, filterRef,
-  onToggle, actionItems, considerations, pendingVotes, onVote, actionItemsDone, onToggleActionItem }: Props) {
+  onToggle, actionItems, considerations, pendingVotes, onVote, actionItemsDone, onToggleActionItem, onEditActivity }: Props) {
   const prefix = useId();
   const [state, setState] = useState(() => {
     let serial = 0;
@@ -145,7 +146,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
             }} onToggle={onToggle} dayActionItems={actionItems.filter(item => item.date !== undefined && item.date <= d.date && d.date <= (item.endDate ?? item.date))}
             dayConsiderations={considerations.filter(t => t.scope.kind !== "trip" && coversDay(t.scope, d.date))}
             pendingVotes={pendingVotes} onVote={onVote}
-            actionItemsDone={actionItemsDone} onToggleActionItem={onToggleActionItem} />
+            actionItemsDone={actionItemsDone} onToggleActionItem={onToggleActionItem} onEditActivity={onEditActivity} />
         ))}
       </div>
     </>

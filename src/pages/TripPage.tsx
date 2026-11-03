@@ -13,6 +13,7 @@ import { useResolvedDays } from "../hooks/useResolvedDays";
 import { useTasks } from "../hooks/useTasks";
 import { useShareLinkFocus } from "../hooks/useShareLinkFocus";
 import { useActionItemEdits } from "../hooks/useActionItemEdits";
+import { useActivityEdits } from "../hooks/useActivityEdits";
 import { useTripWeather } from "../hooks/useTripWeather";
 import { todayISO } from "../lib/dueDates";
 import { assignLegColors } from "../lib/tripLogic";
@@ -44,6 +45,7 @@ function TripPageEntry() {
     return (day: { date: string }) => dates.has(day.date);
   }, [loaded, tasks]);
   const { addItem, updateItem, removeItem } = useActionItemEdits(slug || "");
+  const { updateActivity } = useActivityEdits(slug || "");
   const weather = useTripWeather(slug);
   const weatherStops = useMemo(() => deriveWeatherStops(resolvedDays, weather), [resolvedDays, weather]);
 
@@ -110,6 +112,7 @@ function TripPageEntry() {
           onVote={vote}
           actionItemsDone={done}
           onToggleActionItem={toggleActionItem}
+          onEditActivity={updateActivity}
         />
       </ItineraryStart>
 
