@@ -112,6 +112,7 @@ export function DayCard({
           <span className="ctype">{ctype}</span>
           <WhoPill who={uniqueWho.length === 1 ? uniqueWho[0] : uniqueWho} groups={groups} date={d.date} />
           <ShareLinkButton param={{ day: d.date, tile: g.srcs[0] }} label={`Share link to ${nm}`} />
+          {days && <AddToCalendar url={hotelUrl(g.name, g.address, days, dayNumber)} />}
         </div>
         <div className={`cmain ${s === "needed" ? "todo" : ""}`}>
           {g.name ? (
@@ -124,7 +125,6 @@ export function DayCard({
           ) : (
             nm
           )}
-          {days && <AddToCalendar url={hotelUrl(g.name, g.address, days, dayNumber)} />}
         </div>
         {/* With a Place ID the link opens the exact listing, so the address text adds nothing. */}
         {g.address && !g.placeId && <div className="cmeta">{g.address}</div>}
@@ -194,10 +194,10 @@ export function DayCard({
                         <span className="ctype">{modeLabel(g.mode)}</span>
                         <WhoPill who={uniqueWho.length === 1 ? uniqueWho[0] : uniqueWho} groups={groups} date={d.date} />
                         <ShareLinkButton param={{ day: d.date, tile: g.ids[0] }} label={`Share link to ${g.route}`} />
+                        <AddToCalendar url={transportUrl(g, d, dayNumber)} />
                       </div>
                       <div className={`cmain ${status === "needed" ? "todo" : ""}`}>
                         {g.route}
-                        <AddToCalendar url={transportUrl(g, d, dayNumber)} />
                       </div>
                       <div className="cmeta"><Linkify text={g.detail || ""} /></div>
                     </div>

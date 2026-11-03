@@ -339,8 +339,9 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 .share-status{position:absolute;top:100%;right:0;margin-top:2px;z-index:5;white-space:nowrap;pointer-events:none;font-size:12px;color:var(--text-secondary);background:var(--card);border:1px solid var(--border);border-radius:6px;padding:0 6px}
 .share-status:empty{display:none}
 .day-heading .icon-btn{opacity:.7}
-/* tile share buttons: on a card, left of the status dot pinned top-right */
-.ctop .share-wrap{margin-left:auto;margin-right:22px}
+/* tile share + calendar buttons: pushed right in the card header, clear of the status dot (the .ctop padding) */
+.ctop .share-wrap{margin-left:auto}
+.ctop a.gcal-btn{margin-left:0}
 .card .icon-btn,.flight-box .icon-btn,.activity .share-btn{opacity:.6;width:24px;height:24px}
 .card .icon-btn:hover,.flight-box .icon-btn:hover,.activity .share-btn:hover,.card .icon-btn:focus-visible,.flight-box .icon-btn:focus-visible,.activity .share-btn:focus-visible{opacity:1}
 .activity .share-wrap{flex:none;align-self:flex-start}
@@ -431,8 +432,8 @@ details.tour-box[open] summary::after{content:"Hide"}
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--r,12px);padding:14px 15px;position:relative;transition:.18s}
 .card:hover{box-shadow:0 4px 12px var(--border);transform:translateY(-1px)}
 .card.miss{border-style:dashed;border-color:var(--danger);background:var(--danger-tint)}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-top:4px}
-.ctop{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:4px}
+.ctop{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;margin-bottom:10px}
 .ctype{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted)}
 .who-pill{
   font-size:10.5px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;
