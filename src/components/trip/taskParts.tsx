@@ -1,7 +1,24 @@
 import { useParams } from "react-router-dom";
-import type { TaskScope } from "../../lib/types";
+import type { Place, TaskScope } from "../../lib/types";
 import { dow } from "../../lib/tasks";
+import { googleMapsUrl } from "../../lib/mapPoints";
 import { useShowAiFocus } from "../../hooks/useAiFocus";
+
+// 📍 links to each place in Google Maps (exact listing when it has a Place ID).
+export function PlaceLinks({ places }: { places: Place[] }) {
+  return (
+    <>
+      {places.map((p, i) => (
+        <span key={i}>
+          {i > 0 && " · "}
+          <a href={googleMapsUrl(p)} target="_blank" rel="noopener noreferrer">
+            📍 {p.name}
+          </a>
+        </span>
+      ))}
+    </>
+  );
+}
 
 export const PencilIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

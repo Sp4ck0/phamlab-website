@@ -5,6 +5,7 @@ import { scopeLabel, scopeStart } from "../../lib/tasks";
 import type { ActionItemFields } from "../../hooks/useActionItemEdits";
 import { useUndoableDelete } from "../../hooks/useUndoableDelete";
 import { ActionItemEditor } from "./ActionItemEditor";
+import { PlaceLinks } from "./taskParts";
 import { UndoBar } from "./UndoBar";
 
 interface Props {
@@ -96,6 +97,12 @@ export function AlertsPanel({
                   {badge && <strong>{badge.label}: </strong>}
                   {textOf(t)}
                   {t.scope.kind !== "trip" && ` · ${scopeLabel(t.scope)}`}
+                  {!!t.places?.length && (
+                    <>
+                      {" · "}
+                      <PlaceLinks places={t.places} />
+                    </>
+                  )}
                 </span>
                 {item && (
                   <span style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
