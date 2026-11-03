@@ -35,6 +35,13 @@ export const TrashIcon = () => (
   </svg>
 );
 
+export const LinkIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M10 13a5 5 0 0 0 7.1 0l3-3a5 5 0 0 0-7.1-7.1l-1.7 1.7" />
+    <path d="M14 11a5 5 0 0 0-7.1 0l-3 3a5 5 0 0 0 7.1 7.1l1.7-1.7" />
+  </svg>
+);
+
 // "Fri Nov 20" or "Fri Nov 20 – Sun Nov 22", each date a link to its day in the
 // itinerary. Reuses the AI-focus path, which opens, scrolls to and flashes a day.
 export function ScopeLinks({ scope }: { scope: TaskScope }) {

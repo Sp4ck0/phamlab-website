@@ -332,7 +332,14 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
   padding:0;margin-bottom:8px;
   border-left:5px solid var(--leg-color,var(--accent-1));scroll-margin-top:66px;
 }
-.day-heading{margin:0;font:inherit}
+.day-heading{margin:0;font:inherit;display:flex;align-items:center;gap:4px;padding-right:8px}
+.day-heading .day-head-btn{flex:1;min-width:0;width:auto}
+/* share link button (ShareLinkButton): the "Link copied" note floats under it */
+.share-wrap{position:relative;display:inline-flex;flex:none}
+.share-status{position:absolute;top:100%;right:0;margin-top:2px;z-index:5;white-space:nowrap;pointer-events:none;font-size:12px;color:var(--text-secondary);background:var(--card);border:1px solid var(--border);border-radius:6px;padding:0 6px}
+.share-status:empty{display:none}
+.day-heading .icon-btn{opacity:.7}
+.day-heading .icon-btn:hover,.day-heading .icon-btn:focus-visible{opacity:1}
 .day-head{display:grid;grid-template-columns:100px minmax(0,1fr) auto;align-items:center;gap:8px 14px;margin:0}
 .day-head-btn{
   width:100%;background:none;border:0;padding:13px 16px;font:inherit;color:inherit;

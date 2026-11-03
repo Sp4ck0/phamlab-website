@@ -11,6 +11,7 @@ import { useTrip } from "../hooks/useTrip";
 import { useRememberTab } from "../hooks/useRememberTab";
 import { useResolvedDays } from "../hooks/useResolvedDays";
 import { useTasks } from "../hooks/useTasks";
+import { useShareLinkFocus } from "../hooks/useShareLinkFocus";
 import { useActionItemEdits } from "../hooks/useActionItemEdits";
 import { useTripWeather } from "../hooks/useTripWeather";
 import { todayISO } from "../lib/dueDates";
@@ -35,6 +36,7 @@ function TripPageEntry() {
   const legColors = assignLegColors(resolvedDays);
   const today = todayISO();
   const { tasks, loaded, ticks, done, setDone, setDue, toggleTick: toggle, toggleActionItem, vote, pendingVotes, setOutcome } = useTasks(slug || "", today);
+  useShareLinkFocus(slug, !!trip && loaded);
   // "Only gaps" follows the task list, so it can't disagree with Action Items.
   const isGap = useMemo(() => {
     if (!loaded) return undefined;
