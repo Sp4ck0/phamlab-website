@@ -5,6 +5,8 @@ export type FocusTarget =
   | { kind: "trip" }
   | { kind: "day"; date: string }
   | { kind: "actionItem"; id: string }
+  // Any task by its key (item:…, booking:…, plan:…); what a shared link points at.
+  | { kind: "task"; key: string }
   | { kind: "board" }
   | { kind: "card"; id: string };
 

@@ -9,6 +9,7 @@ import { useUndoableDelete } from "../../hooks/useUndoableDelete";
 import { flash, scrollBehavior, SETTLE_MS } from "../../lib/flash";
 import { ActionItemEditor } from "./ActionItemEditor";
 import { Considerations } from "./Considerations";
+import { ShareLinkButton } from "./ShareLinkButton";
 import { PencilIcon, PlaceLinks, ScopeLinks, TrashIcon } from "./taskParts";
 import { DueDateInput } from "./DueDateInput";
 import { TaskRow } from "./TaskRow";
@@ -45,6 +46,8 @@ interface Row {
 }
 
 const itemId = (task: Task) => task.key.slice("item:".length);
+// The row's element id: stored items keep the id the AI focus has always used.
+const rowDomId = (task: Task) => (task.editable ? `ai-row-${itemId(task)}` : `task-row-${task.key}`);
 
 // Soonest due first; ties (and the common case where everything still has the
 // default due date) fall back to the task's own date. Whole-trip tasks sort to
@@ -81,18 +84,20 @@ export function ActionItems({
   const [settledOpen, setSettledOpen] = useState(false);
   const undoable = useUndoableDelete({ onAddItem, onRemoveItem, onSetDone, onSetDue });
 
-  // The AI pointed at an item (mcpFocus.ts): scroll to it and blink it. A done
-  // item sits in the collapsed Completed list, so open that first; the item may
-  // also not have arrived yet, so wait for it.
-  const { focus, consume } = useAiFocus("actionItem");
+  // The AI (mcpFocus.ts) or a shared link pointed at a task: scroll to it and
+  // blink it. A done task sits in a collapsed list, so open that first; the task
+  // may also not have arrived yet, so wait for it.
+  const { focus: itemFocus, consume } = useAiFocus("actionItem");
+  const { focus: taskFocus } = useAiFocus("task");
+  const focus = itemFocus ?? taskFocus;
   useEffect(() => {
     if (!focus) return;
-    const id = focus.target.id;
-    const task = tasks.find((t) => t.editable && itemId(t) === id);
+    const key = focus.target.kind === "task" ? focus.target.key : `item:${focus.target.id}`;
+    const task = tasks.find((t) => t.key === key);
     if (!task) return;
     if (task.done) (task.kind === "consider" ? setSettledOpen : setCompletedOpen)(true);
     const t = setTimeout(() => {
-      const el = document.getElementById(`ai-row-${id}`);
+      const el = document.getElementById(rowDomId(task));
       if (!el) return;
       consume(focus.nonce);
       el.scrollIntoView({ block: "center", behavior: scrollBehavior() });
@@ -172,6 +177,7 @@ export function ActionItems({
           due={dueControl}
           actions={
             <>
+              <ShareLinkButton param={{ task: task.key }} label={`Share link to ${task.title}`} />
               <button type="button" className="icon-btn" aria-label={`Edit ${task.title}`} onClick={() => startEdit(item.id, task.done)}>
                 <PencilIcon />
               </button>
@@ -189,6 +195,7 @@ export function ActionItems({
       <TaskRow
         key={task.key}
         domId={`task-${task.key}`}
+        rowId={rowDomId(task)}
         done={task.done}
         onToggle={() => onSetDone(task.refs, !task.done)}
         badge={badge}
@@ -203,6 +210,7 @@ export function ActionItems({
         scope={<ScopeLinks scope={task.scope} />}
         dueState={state}
         due={dueControl}
+        actions={<ShareLinkButton param={{ task: task.key }} label={`Share link to ${kindLabel(task) ?? task.title}`} />}
       />
     );
   };

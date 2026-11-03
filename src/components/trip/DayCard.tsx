@@ -16,6 +16,7 @@ import type { DayWeather } from "../../lib/weather";
 import { useParams } from "react-router-dom";
 import { voteTally } from "../../lib/tasks";
 import { useShowAiFocus } from "../../hooks/useAiFocus";
+import { ShareLinkButton } from "./ShareLinkButton";
 
 interface Props {
   day: ResolvedDay;
@@ -146,6 +147,7 @@ export function DayCard({
         </span>
         {(d.highlight || d.note) && <span className="day-summary">{d.highlight || d.note}</span>}
       </button>
+      <ShareLinkButton param={{ day: d.date }} label={`Share link to Day ${dayNumber}`} />
       </h2>
 
       <div id={`${rowId}-panel`} aria-labelledby={`${rowId}-trigger`} hidden={!expanded}>

@@ -7,6 +7,7 @@ import type { ActionItemFields } from "../../hooks/useActionItemEdits";
 import { sanitizeHtml } from "../../lib/sanitizeHtml";
 import { ActionItemEditor } from "./ActionItemEditor";
 import { PencilIcon, ScopeLinks, TrashIcon } from "./taskParts";
+import { ShareLinkButton } from "./ShareLinkButton";
 
 interface Props {
   // Only the consider tasks.
@@ -133,6 +134,7 @@ export function Considerations({
             </>
           )}
           <span className="row-actions">
+            <ShareLinkButton param={{ task: task.key }} label={`Share link to ${task.title}`} />
             <button type="button" className="icon-btn" aria-label={`Edit ${task.title}`} onClick={() => setEditing(id)}>
               <PencilIcon />
             </button>
