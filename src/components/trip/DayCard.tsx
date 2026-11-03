@@ -19,6 +19,7 @@ import { voteTally } from "../../lib/tasks";
 import { useShowAiFocus } from "../../hooks/useAiFocus";
 import { ShareLinkButton } from "./ShareLinkButton";
 import { ActivityEditor } from "./ActivityEditor";
+import { tileDomId } from "../../lib/tileId";
 import { PencilIcon } from "./taskParts";
 
 interface Props {
@@ -98,11 +99,12 @@ export function DayCard({
             ? "Hotel · check-out"
             : "Hotel · staying";
     return (
-      <div className={`card ${s === "needed" ? "miss" : ""}`} style={g.carriedAll ? { opacity: 0.72 } : undefined} key={key}>
+      <div className={`card ${s === "needed" ? "miss" : ""}`} style={g.carriedAll ? { opacity: 0.72 } : undefined} key={key} id={tileDomId(rowId, g.srcs[0])}>
         <StatusToggle ids={g.srcs} status={s} onToggle={onToggle} />
         <div className="ctop">
           <span className="ctype">{ctype}</span>
           <WhoPill who={uniqueWho.length === 1 ? uniqueWho[0] : uniqueWho} groups={groups} date={d.date} />
+          <ShareLinkButton param={{ day: d.date, tile: g.srcs[0] }} label={`Share link to ${nm}`} />
         </div>
         <div className={`cmain ${s === "needed" ? "todo" : ""}`}>
           {g.name ? (
@@ -164,7 +166,7 @@ export function DayCard({
           {flightGroups
             .filter((g) => g.legs && g.legs.length)
             .map((g, gi) => (
-              <FlightBox key={`fb${gi}`} group={g} onToggle={onToggle} day={d} dayNumber={dayNumber} />
+              <FlightBox key={`fb${gi}`} group={g} onToggle={onToggle} day={d} dayNumber={dayNumber} tileId={tileDomId(rowId, g.ids[0])} />
             ))}
 
           {(checkoutHotels.length > 0 || flightGroups.some((g) => !(g.legs && g.legs.length)) || otherHotels.length > 0) && (
@@ -176,11 +178,12 @@ export function DayCard({
                   const status: Status = g.statuses.includes("needed") ? "needed" : "booked";
                   const uniqueWho = [...new Set(g.who)];
                   return (
-                    <div className={`card ${status === "needed" ? "miss" : ""}`} key={`fc${gi}`}>
+                    <div className={`card ${status === "needed" ? "miss" : ""}`} key={`fc${gi}`} id={tileDomId(rowId, g.ids[0])}>
                       <StatusToggle ids={g.ids} status={status} onToggle={onToggle} />
                       <div className="ctop">
                         <span className="ctype">{modeLabel(g.mode)}</span>
                         <WhoPill who={uniqueWho.length === 1 ? uniqueWho[0] : uniqueWho} groups={groups} date={d.date} />
+                        <ShareLinkButton param={{ day: d.date, tile: g.ids[0] }} label={`Share link to ${g.route}`} />
                       </div>
                       <div className={`cmain ${status === "needed" ? "todo" : ""}`}>
                         {g.route}
@@ -215,7 +218,7 @@ export function DayCard({
                   );
                 }
                 return (
-                  <li className="activity" key={ai}>
+                  <li className="activity" key={ai} id={tileDomId(rowId, `act:${ai}`)}>
                     {tag && <span className="act-tag">{tag}</span>}
                     <span className="activity-text">
                       {time && <span className="activity-time">{time}</span>}
@@ -231,6 +234,7 @@ export function DayCard({
                         <PencilIcon />
                       </button>
                     )}
+                    <ShareLinkButton param={{ day: d.date, tile: `act:${ai}` }} label={`Share link to activity: ${text}`} />
                     <AddToCalendar url={actUrl(a, d, dayNumber, ai)} />
                   </li>
                 );
