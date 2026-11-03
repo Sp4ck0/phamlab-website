@@ -6,7 +6,7 @@ import { googleMapsUrl } from "../../lib/mapPoints";
 import type { ActionItemFields } from "../../hooks/useActionItemEdits";
 import { sanitizeHtml } from "../../lib/sanitizeHtml";
 import { ActionItemEditor } from "./ActionItemEditor";
-import { PencilIcon, ScopeLinks, TrashIcon } from "./taskParts";
+import { PencilIcon, ScopeLinks, ShowOnMap, TrashIcon } from "./taskParts";
 import { ShareLinkButton } from "./ShareLinkButton";
 
 interface Props {
@@ -105,9 +105,12 @@ export function Considerations({
         <div className="consider-meta">
           <span>{<ScopeLinks scope={task.scope} />}</span>
           {task.places?.map((p, i) => (
-            <a key={i} href={googleMapsUrl(p)} target="_blank" rel="noopener noreferrer" className="consider-place">
-              📍 {p.name}
-            </a>
+            <span key={i}>
+              <a href={googleMapsUrl(p)} target="_blank" rel="noopener noreferrer" className="consider-place">
+                📍 {p.name}
+              </a>
+              <ShowOnMap place={p} />
+            </span>
           ))}
         </div>
         <div className="consider-actions">

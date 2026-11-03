@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { MapPointData, Task } from "../../lib/types";
-import { CATEGORY_COLORS, CATEGORY_LABELS, googleMapsUrl } from "../../lib/mapPoints";
+import { CATEGORY_COLORS, CATEGORY_LABELS, MAP_FOCUS_EVENT, googleMapsUrl, placeKey } from "../../lib/mapPoints";
 import type { WeatherStop } from "../../lib/mapPoints";
 import { fmtShort } from "../../lib/tripLogic";
 import { summarizeStay, temp, weatherIcon, weatherText } from "../../lib/weather";
@@ -57,6 +57,17 @@ export function TripMap({ points, route, weatherStops, candidates, consideration
   const considerationById = useRef(new Map<string, Task>());
   considerationById.current = new Map(considerations.map((t) => [t.key.slice("item:".length), t]));
   const mapRef = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  // Pins by place key, so a "show on map" button elsewhere on the page can find its pin.
+  const planPins = useRef(new Map<string, google.maps.Marker>());
+  const candidatePins = useRef(new Map<string, google.maps.Marker>());
+  const candidateKeys = useRef(new Set<string>());
+  candidateKeys.current = new Set(geocodedCandidates.map(placeKey).filter((k): k is string => !!k));
+  // A focus request for a ring whose layer is switched off: served once the rings are drawn.
+  const pendingFocus = useRef<string | null>(null);
+  const focusHandler = useRef<(key: string) => void>(() => {});
+  const [flash, setFlash] = useState(false);
+  const flashTimer = useRef<number | undefined>(undefined);
   const mapInstance = useRef<google.maps.Map | null>(null);
   // One info window shared by every pin and pill, so opening one closes the last.
   const infoWindow = useRef<google.maps.InfoWindow | null>(null);
@@ -72,6 +83,16 @@ export function TripMap({ points, route, weatherStops, candidates, consideration
   // Same click-time read for the unit, so toggling it doesn't rebuild every pin.
   const tempUnitRef = useRef(tempUnit);
   tempUnitRef.current = tempUnit;
+
+  // "Show on map" buttons anywhere on the page announce a place key; the latest handler answers.
+  useEffect(() => {
+    const onFocus = (e: Event) => focusHandler.current((e as CustomEvent<string>).detail);
+    window.addEventListener(MAP_FOCUS_EVENT, onFocus);
+    return () => {
+      window.removeEventListener(MAP_FOCUS_EVENT, onFocus);
+      window.clearTimeout(flashTimer.current);
+    };
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -113,6 +134,7 @@ export function TripMap({ points, route, weatherStops, candidates, consideration
 
       markers.current.forEach((m) => m.setMap(null));
       markers.current = [];
+      planPins.current.clear();
 
       const bounds = new google.maps.LatLngBounds();
       geocoded.forEach((p) => {
@@ -137,6 +159,8 @@ export function TripMap({ points, route, weatherStops, candidates, consideration
           openInfo(map, infoHtml(p.name, CATEGORY_LABELS[p.category] + (p.note ? " · " + p.note : ""), tempUnitRef.current, stop, link), marker);
         });
         markers.current.push(marker);
+        const key = placeKey(p);
+        if (key) planPins.current.set(key, marker);
         bounds.extend(position);
       });
 
@@ -303,15 +327,79 @@ export function TripMap({ points, route, weatherStops, candidates, consideration
         const votes = task?.votes ? ` · 👍 ${task.votes.yes.length} · 👎 ${task.votes.no.length}` : "";
         openInfo(map, infoHtml(p.name, `${live}${task ? `: ${task.title}` : ""}${votes}`, tempUnitRef.current, undefined, googleMapsUrl(p)), marker);
       });
+      const key = placeKey(p);
+      if (key) candidatePins.current.set(key, marker);
       return marker;
     });
     candidateMarkers.current = made;
+    const pins = candidatePins.current;
+    if (pendingFocus.current) {
+      const key = pendingFocus.current;
+      pendingFocus.current = null;
+      focusHandler.current(key);
+    }
     return () => {
       made.forEach((m) => m.setMap(null));
       candidateMarkers.current = [];
+      pins.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady, geocodedCandidates, showCandidates]);
+
+  // Scroll to the map, zoom in on the pin and open its popup, as if it had been tapped.
+  focusHandler.current = (key) => {
+    const wrap = wrapRef.current;
+    const map = mapInstance.current;
+    if (!wrap) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const pin = planPins.current.get(key) ?? candidatePins.current.get(key);
+    // A ring on a hidden layer: turn the layer on, and finish when its pins are drawn.
+    if (!pin && candidateKeys.current.has(key) && !showCandidates) {
+      pendingFocus.current = key;
+      setShowCandidates(true);
+    }
+
+    const reveal = () => {
+      if (!map || !pin) return;
+      const position = pin.getPosition();
+      if (!position) return;
+      let opened = false;
+      const open = () => {
+        if (opened) return;
+        opened = true;
+        google.maps.event.trigger(pin, "click");
+        setFlash(true);
+        window.clearTimeout(flashTimer.current);
+        flashTimer.current = window.setTimeout(() => setFlash(false), 1200);
+        if (!reduced) {
+          pin.setAnimation(google.maps.Animation.BOUNCE);
+          window.setTimeout(() => pin.setAnimation(null), 1400);
+        }
+      };
+      // The map may not move at all (already centered and zoomed), so don't wait on "idle" forever.
+      google.maps.event.addListenerOnce(map, "idle", open);
+      window.setTimeout(open, 900);
+      map.panTo(position);
+      if ((map.getZoom() ?? 0) < 16) map.setZoom(16);
+    };
+
+    const rect = wrap.getBoundingClientRect();
+    if (rect.top >= 0 && rect.bottom <= window.innerHeight) {
+      reveal(); // already fully on screen: no scroll needed
+      return;
+    }
+    wrap.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" });
+    // Zoom once the scroll settles so the movement on the map is actually seen.
+    let done = false;
+    const go = () => {
+      if (done) return;
+      done = true;
+      window.removeEventListener("scrollend", go);
+      reveal();
+    };
+    window.addEventListener("scrollend", go);
+    window.setTimeout(go, reduced ? 0 : 800);
+  };
 
   // Shared by pins and pills: close whatever is open, then show this one.
   function openInfo(
@@ -355,7 +443,7 @@ export function TripMap({ points, route, weatherStops, candidates, consideration
       {status === "loading" && <div className="note">Loading map…</div>}
 
       {status === "ready" && geocoded.length > 0 && (
-        <div className="trip-map-wrap">
+        <div ref={wrapRef} className={`trip-map-wrap${flash ? " is-focused" : ""}`}>
           <div ref={mapRef} className="trip-map" />
           <div className="map-legend">
             {Object.entries(CATEGORY_LABELS).map(([cat, label]) => {

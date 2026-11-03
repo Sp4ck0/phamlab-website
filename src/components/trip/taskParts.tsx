@@ -1,8 +1,18 @@
 import { useParams } from "react-router-dom";
 import type { Place, TaskScope } from "../../lib/types";
 import { dow } from "../../lib/tasks";
-import { googleMapsUrl } from "../../lib/mapPoints";
+import { MAP_FOCUS_ICON, focusOnMap, googleMapsUrl, placeKey } from "../../lib/mapPoints";
 import { useShowAiFocus } from "../../hooks/useAiFocus";
+
+// Icon button after a place's 📍 link: scrolls to the trip map and opens that
+// pin. Renders nothing for a place the map can't pin (no Place ID or address).
+export function ShowOnMap({ place }: { place: Place }) {
+  if (!placeKey(place)) return null;
+  const label = `Show ${place.name} on the trip map`;
+  return (
+    <button type="button" className="map-focus" title={label} aria-label={label} onClick={() => focusOnMap(place)} dangerouslySetInnerHTML={{ __html: MAP_FOCUS_ICON }} />
+  );
+}
 
 // 📍 links to each place in Google Maps (exact listing when it has a Place ID).
 export function PlaceLinks({ places }: { places: Place[] }) {
@@ -14,6 +24,7 @@ export function PlaceLinks({ places }: { places: Place[] }) {
           <a href={googleMapsUrl(p)} target="_blank" rel="noopener noreferrer">
             📍 {p.name}
           </a>
+          <ShowOnMap place={p} />
         </span>
       ))}
     </>
