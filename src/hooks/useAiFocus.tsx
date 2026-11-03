@@ -5,6 +5,8 @@ export type FocusTarget =
   | { kind: "trip" }
   | { kind: "day"; date: string }
   | { kind: "actionItem"; id: string }
+  // One tile (hotel, flight, activity) on a day; see lib/tileId.ts.
+  | { kind: "tile"; date: string; tile: string }
   // Any task by its key (item:…, booking:…, plan:…); what a shared link points at.
   | { kind: "task"; key: string }
   | { kind: "board" }

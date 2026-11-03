@@ -3,24 +3,28 @@ import { StatusToggle } from "./StatusToggle";
 import type { ResolvedDay, Status } from "../../lib/types";
 import { AddToCalendar } from "./AddToCalendar";
 import { legUrl } from "../../lib/calendar";
+import { ShareLinkButton } from "./ShareLinkButton";
 
 interface Props {
   group: FlightGroup;
   onToggle: (ids: string[], status: Status) => void;
   day?: ResolvedDay;
   dayNumber?: number;
+  // Element id, so a shared link can scroll to this box (lib/tileId.ts).
+  tileId?: string;
 }
 
-export function FlightBox({ group, onToggle, day, dayNumber = 0 }: Props) {
+export function FlightBox({ group, onToggle, day, dayNumber = 0, tileId }: Props) {
   const status: Status = group.statuses.includes("needed") ? "needed" : "booked";
   const legs = group.legs || [];
 
   return (
-    <div className="flight-box">
+    <div className="flight-box" id={tileId}>
       <div className="flight-box-head">
         <span className="flight-box-title">{group.title || group.route}</span>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
           {group.price && <span className="flight-box-price">{group.price}</span>}
+          {day && <ShareLinkButton param={{ day: day.date, tile: group.ids[0] }} label={`Share link to ${group.title || group.route}`} />}
           <StatusToggle ids={group.ids} status={status} onToggle={onToggle} style={{ position: "static" }} />
         </span>
       </div>

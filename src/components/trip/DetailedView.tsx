@@ -3,7 +3,8 @@ import type { RefObject } from "react";
 import type { ActionItem, Group, LegColor, ResolvedDay, Status, Task, Vote } from "../../lib/types";
 import { coversDay } from "../../lib/tasks";
 import { useAiFocus } from "../../hooks/useAiFocus";
-import { flash, SETTLE_MS } from "../../lib/flash";
+import { flash, scrollBehavior, SETTLE_MS } from "../../lib/flash";
+import { tileDomId } from "../../lib/tileId";
 import { reconcileRows } from "../../lib/itineraryState";
 import { DayNav } from "./DayNav";
 import { DayCard } from "./DayCard";
@@ -108,19 +109,27 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
     setPending({ id }); // A new intent also makes repeat jumps work.
   }
 
-  // The AI pointed at a day (mcpFocus.ts): open and scroll to it like a nav
-  // jump, then blink it. The day may not have arrived yet, so wait for it.
-  const { focus, consume } = useAiFocus("day");
+  // The AI or a shared link pointed at a day, or at one tile on it: open and
+  // scroll to the day like a nav jump, then blink it (or the tile). The day may
+  // not have arrived yet, so wait for it.
+  const { focus: dayFocus, consume } = useAiFocus("day");
+  const { focus: tileFocus } = useAiFocus("tile");
+  const focus = dayFocus ?? tileFocus;
   useEffect(() => {
     if (!focus) return;
-    const row = state.rows.find(r => r.day.date === focus.target.date);
+    const date = focus.target.date;
+    const tile = focus.target.kind === "tile" ? focus.target.tile : null;
+    const row = state.rows.find(r => r.day.date === date);
     if (!row) return;
     const t = setTimeout(() => {
       consume(focus.nonce);
       jump(row.id);
       setTimeout(() => {
-        const el = document.getElementById(row.id);
-        if (el) flash(el);
+        // A tile that is gone (the booking changed) falls back to the day.
+        const el = document.getElementById(tile ? tileDomId(row.id, tile) : row.id) ?? document.getElementById(row.id);
+        if (!el) return;
+        if (tile && el.id !== row.id) el.scrollIntoView({ block: "center", behavior: scrollBehavior() });
+        flash(el);
       }, 250);
     }, SETTLE_MS);
     return () => clearTimeout(t);
