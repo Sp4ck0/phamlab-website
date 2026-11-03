@@ -46,6 +46,105 @@ function ringIcon(chosen: boolean): string {
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
+// Web Mercator in 0..1 world units, so a camera flight can interpolate between places.
+function toWorld(p: google.maps.LatLngLiteral) {
+  const sin = Math.sin((Math.max(-85, Math.min(85, p.lat)) * Math.PI) / 180);
+  return { x: (p.lng + 180) / 360, y: 0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI) };
+}
+function fromWorld(x: number, y: number): google.maps.LatLngLiteral {
+  const lat = ((2 * Math.atan(Math.exp((0.5 - y) * 2 * Math.PI)) - Math.PI / 2) * 180) / Math.PI;
+  return { lat, lng: ((((x * 360 - 180 + 180) % 360) + 360) % 360) - 180 };
+}
+
+// Smoothly flies the camera to a place, instead of the pan-then-snap-zoom the
+// Maps API does on its own (panTo only animates short hops, setZoom never does).
+// A nearby place gets a gentle glide and zoom; a far one zooms out part-way and
+// back in, so you see where it is relative to where you were (van Wijk & Nuij's
+// "smooth and efficient zooming and panning", as in Mapbox's flyTo). Dragging or
+// scrolling the map takes over; `onDone(false)` then. The returned function
+// stops the flight silently (a newer one is starting).
+function flyTo(
+  map: google.maps.Map,
+  to: google.maps.LatLngLiteral,
+  toZoom: number,
+  onDone: (completed: boolean) => void,
+): () => void {
+  const div = map.getDiv();
+  const z0 = map.getZoom() ?? toZoom;
+  const a = toWorld(map.getCenter()?.toJSON() ?? to);
+  const b = toWorld(to);
+  let dx = b.x - a.x;
+  dx -= Math.round(dx); // the short way round the globe
+  const dy = b.y - a.y;
+  const u1 = Math.hypot(dx, dy) * 256 * 2 ** z0; // distance in pixels at the start zoom
+  const w0 = Math.max(div.clientWidth, div.clientHeight, 1);
+  const w1 = w0 / 2 ** (toZoom - z0);
+  const rho = 1.42;
+  const rho2 = rho * rho;
+
+  // frac: how far along the line to the target; zoomAt: the zoom, both for flight progress s (0..S).
+  let S = Math.abs(toZoom - z0) / 1.2;
+  let frac = (s: number) => (S > 0 ? s / S : 1);
+  let zoomAt = (s: number) => z0 + (toZoom - z0) * frac(s);
+  if (u1 >= 1) {
+    const bb = (i: 0 | 1) => (w1 * w1 - w0 * w0 + (i ? -1 : 1) * rho2 * rho2 * u1 * u1) / (2 * (i ? w1 : w0) * rho2 * u1);
+    const r = (i: 0 | 1) => Math.log(Math.sqrt(bb(i) ** 2 + 1) - bb(i));
+    const r0 = r(0);
+    const total = (r(1) - r0) / rho;
+    if (Number.isFinite(total) && total > 0) {
+      S = total;
+      frac = (s) => (w0 * (Math.cosh(r0) * Math.tanh(r0 + rho * s) - Math.sinh(r0))) / rho2 / u1;
+      zoomAt = (s) => z0 + Math.log2(Math.cosh(r0 + rho * s) / Math.cosh(r0));
+    }
+  }
+  if (u1 < 1 && Math.abs(toZoom - z0) < 0.01) {
+    onDone(true);
+    return () => {};
+  }
+
+  // Raster maps only show in-between zooms when asked to; back to whole zooms afterwards.
+  map.setOptions({ isFractionalZoomEnabled: true });
+  const duration = Math.min(1800, Math.max(700, S * 400));
+  const start = performance.now();
+  let raf = 0;
+  let stopped = false;
+  const listeners: google.maps.MapsEventListener[] = [];
+  const stop = () => {
+    stopped = true;
+    cancelAnimationFrame(raf);
+    listeners.forEach((l) => l.remove());
+    div.removeEventListener("wheel", interrupt);
+    map.setOptions({ isFractionalZoomEnabled: false });
+  };
+  const interrupt = () => {
+    if (stopped) return;
+    stop();
+    onDone(false);
+  };
+  listeners.push(map.addListener("dragstart", interrupt));
+  div.addEventListener("wheel", interrupt, { passive: true });
+
+  const tick = (now: number) => {
+    if (stopped) return;
+    const t = Math.min(1, (now - start) / duration);
+    if (t >= 1) {
+      map.moveCamera({ center: to, zoom: toZoom });
+      stop();
+      onDone(true);
+      return;
+    }
+    const k = t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2; // ease in-out
+    const s = k * S;
+    const f = frac(s);
+    map.moveCamera({ center: fromWorld(a.x + dx * f, a.y + dy * f), zoom: Math.max(2, zoomAt(s)) });
+    raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+  return () => {
+    if (!stopped) stop();
+  };
+}
+
 export function TripMap({ points, route, weatherStops, candidates, considerations }: Props) {
   const { points: geocoded, status, error } = useGeocodedPoints(points);
   const { points: geocodedRoute } = useGeocodedPoints(route);
@@ -68,6 +167,7 @@ export function TripMap({ points, route, weatherStops, candidates, consideration
   const focusHandler = useRef<(key: string) => void>(() => {});
   const [flash, setFlash] = useState(false);
   const flashTimer = useRef<number | undefined>(undefined);
+  const flight = useRef<(() => void) | null>(null); // stops the camera flight in progress
   const mapInstance = useRef<google.maps.Map | null>(null);
   // One info window shared by every pin and pill, so opening one closes the last.
   const infoWindow = useRef<google.maps.InfoWindow | null>(null);
@@ -91,6 +191,7 @@ export function TripMap({ points, route, weatherStops, candidates, consideration
     return () => {
       window.removeEventListener(MAP_FOCUS_EVENT, onFocus);
       window.clearTimeout(flashTimer.current);
+      flight.current?.();
     };
   }, []);
 
@@ -363,10 +464,7 @@ export function TripMap({ points, route, weatherStops, candidates, consideration
       if (!map || !pin) return;
       const position = pin.getPosition();
       if (!position) return;
-      let opened = false;
       const open = () => {
-        if (opened) return;
-        opened = true;
         google.maps.event.trigger(pin, "click");
         setFlash(true);
         window.clearTimeout(flashTimer.current);
@@ -376,11 +474,19 @@ export function TripMap({ points, route, weatherStops, candidates, consideration
           window.setTimeout(() => pin.setAnimation(null), 1400);
         }
       };
-      // The map may not move at all (already centered and zoomed), so don't wait on "idle" forever.
-      google.maps.event.addListenerOnce(map, "idle", open);
-      window.setTimeout(open, 900);
-      map.panTo(position);
-      if ((map.getZoom() ?? 0) < 16) map.setZoom(16);
+      const target = { lat: position.lat(), lng: position.lng() };
+      const targetZoom = Math.max(map.getZoom() ?? 0, 16);
+      flight.current?.();
+      if (reduced) {
+        map.moveCamera({ center: target, zoom: targetZoom });
+        open();
+        return;
+      }
+      // The popup opens when the flight lands; if you grab the map mid-flight, it stays closed.
+      flight.current = flyTo(map, target, targetZoom, (completed) => {
+        flight.current = null;
+        if (completed) open();
+      });
     };
 
     const rect = wrap.getBoundingClientRect();
