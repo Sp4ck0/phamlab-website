@@ -712,7 +712,7 @@ body:has(.print-doc){padding:0}
 .ai-btn-primary{background:var(--good);color:#fff}
 .ai-btn:disabled{opacity:.5;cursor:default}
 .row-actions{flex:none;display:flex;gap:2px;opacity:0;transition:opacity .12s}
-.action-item:hover .row-actions,.action-item:focus-within .row-actions{opacity:1}
+.action-item:hover .row-actions,.action-item:focus-within .row-actions,.consider:hover .row-actions,.consider:focus-within .row-actions{opacity:1}
 .icon-btn{display:flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;color:var(--text-muted);background:transparent;border:none;border-radius:6px;cursor:pointer}
 .icon-btn:hover{color:var(--text-primary);background:var(--chip-bg)}
 .act-edit{flex:none;align-self:flex-start;opacity:0;transition:opacity .12s}
