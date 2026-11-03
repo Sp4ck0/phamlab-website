@@ -47,7 +47,7 @@ const RULES = [
 // the parts of the guide that are easy to get wrong — it is cheap to send.
 export function buildStarterPrompt(data: GuideData, trip?: { slug: string; title: string }): string {
   const itinerary = data.guides[0]?.markdown ?? "";
-  const reference = ["Workflow", "Tasks and action items", "How the Action Items list is built"]
+  const reference = ["Workflow", "Tasks and action items", "Considerations", "How the Action Items list is built"]
     .map((h) => section(itinerary, h))
     .filter(Boolean)
     .join("\n\n");
