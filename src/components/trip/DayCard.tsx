@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { ActionItem, Group, LegColor, ResolvedDay, Status, Task, Vote } from "../../lib/types";
-import { googleMapsUrl, inlinePlaces } from "../../lib/mapPoints";
+import { focusOnMapKey, googleMapsUrl, inlinePlaces } from "../../lib/mapPoints";
 import { DOW, MON, actParts, fmtShort, gapLabel, mergeFlightsByRoute, mergeHotelsByName, modeLabel } from "../../lib/tripLogic";
 import type { HotelGroup } from "../../lib/tripLogic";
 import { WhoPill } from "./WhoPill";
@@ -20,7 +20,14 @@ import { useShowAiFocus } from "../../hooks/useAiFocus";
 import { ShareLinkButton } from "./ShareLinkButton";
 import { ActivityEditor } from "./ActivityEditor";
 import { tileDomId } from "../../lib/tileId";
-import { PencilIcon } from "./taskParts";
+import { PencilIcon, ShowOnMap } from "./taskParts";
+
+// Show-on-map buttons inside an activity's sentence are plain HTML (see inlinePlaces),
+// so one delegated click handler on the activity text finds them.
+function focusInlinePlace(e: React.MouseEvent) {
+  const key = (e.target as HTMLElement).closest<HTMLElement>("button.map-focus[data-map-key]")?.dataset.mapKey;
+  if (key) focusOnMapKey(key);
+}
 
 interface Props {
   day: ResolvedDay;
@@ -108,9 +115,12 @@ export function DayCard({
         </div>
         <div className={`cmain ${s === "needed" ? "todo" : ""}`}>
           {g.name ? (
-            <a href={googleMapsUrl({ name: g.name, address: g.address, placeId: g.placeId })} target="_blank" rel="noopener noreferrer">
-              📍 {nm}
-            </a>
+            <>
+              <a href={googleMapsUrl({ name: g.name, address: g.address, placeId: g.placeId })} target="_blank" rel="noopener noreferrer">
+                📍 {nm}
+              </a>
+              <ShowOnMap place={{ name: g.name, address: g.address, placeId: g.placeId }} />
+            </>
           ) : (
             nm
           )}
@@ -202,7 +212,8 @@ export function DayCard({
               {d.acts.map((a, ai) => {
                 const { tag, time, text, places } = actParts(a);
                 // A place named in the sentence is linked in place; the rest follow as chips.
-                const { html, rest } = inlinePlaces(text, places);
+                // Sanitize first: inlinePlaces adds its own show-on-map buttons, which the sanitizer would strip.
+                const { html, rest } = inlinePlaces(sanitizeHtml(text), places);
                 if (editingAct === ai && onEditActivity) {
                   return (
                     <li className="activity" key={ai}>
@@ -220,13 +231,16 @@ export function DayCard({
                 return (
                   <li className="activity" key={ai} id={tileDomId(rowId, `act:${ai}`)}>
                     {tag && <span className="act-tag">{tag}</span>}
-                    <span className="activity-text">
+                    <span className="activity-text" onClick={focusInlinePlace}>
                       {time && <span className="activity-time">{time}</span>}
-                      <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }} />
+                      <span dangerouslySetInnerHTML={{ __html: html }} />
                       {rest.map((p, pi) => (
-                        <a key={pi} href={googleMapsUrl(p)} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 8 }}>
-                          📍 {p.name}
-                        </a>
+                        <span key={pi} style={{ marginLeft: 8 }}>
+                          <a href={googleMapsUrl(p)} target="_blank" rel="noopener noreferrer">
+                            📍 {p.name}
+                          </a>
+                          <ShowOnMap place={p} />
+                        </span>
                       ))}
                     </span>
                     {onEditActivity && (

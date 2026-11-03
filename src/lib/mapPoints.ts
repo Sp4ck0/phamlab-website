@@ -36,7 +36,7 @@ const ACT_CATEGORY: Record<string, MapCategory> = {
 };
 
 // Two pins are the same place if they share a Place ID, else an address.
-function placeKey(p: Place): string | undefined {
+export function placeKey(p: Place): string | undefined {
   return p.placeId ? `id:${p.placeId}` : p.address?.trim() ? `addr:${p.address.trim()}` : undefined;
 }
 
@@ -50,11 +50,31 @@ export function googleMapsUrl(p: Place): string {
   return url.toString();
 }
 
+// "Show on the trip map": any place button announces the place's key and the
+// one TripMap on the page answers by scrolling to itself and opening the pin.
+export const MAP_FOCUS_EVENT = "trip-map:focus";
+export function focusOnMapKey(key: string) {
+  window.dispatchEvent(new CustomEvent<string>(MAP_FOCUS_EVENT, { detail: key }));
+}
+export function focusOnMap(place: Place) {
+  const key = placeKey(place);
+  if (key) focusOnMapKey(key);
+}
+
+// Crosshair icon for the show-on-map button (also used inside inlinePlaces' HTML).
+export const MAP_FOCUS_ICON =
+  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">' +
+  '<circle cx="12" cy="12" r="6.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>';
+
+const escapeAttr = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+
 // Turns the first mention of each place's name in an activity's text into its
 // 📍 link, right where it is written. Places whose name isn't in the sentence
 // (an event "at" a venue the text doesn't name) come back in `rest`, for the
 // caller to show as chips after the text. Only plain text is searched, never
-// inside tags or an existing link, and the text keeps its own spelling.
+// inside tags or an existing link, and the text keeps its own spelling. The
+// text must already be sanitized: the result adds a show-on-map button after
+// each link (identified by data-map-key), which a sanitizer would strip.
 export function inlinePlaces(text: string, places: Place[] = []): { html: string; rest: Place[] } {
   let html = text;
   const rest: Place[] = [];
@@ -73,7 +93,11 @@ export function inlinePlaces(text: string, places: Place[] = []): { html: string
       if (at < 0) continue;
       const shown = parts[i].slice(at, at + p.name.length);
       const href = googleMapsUrl(p).replace(/&/g, "&amp;");
-      parts[i] = `${parts[i].slice(0, at)}<a href="${href}" target="_blank" rel="noopener noreferrer">📍 ${shown}</a>${parts[i].slice(at + p.name.length)}`;
+      const key = placeKey(p);
+      const button = key
+        ? `<button type="button" class="map-focus" data-map-key="${escapeAttr(key)}" title="Show ${escapeAttr(p.name)} on the trip map" aria-label="Show ${escapeAttr(p.name)} on the trip map">${MAP_FOCUS_ICON}</button>`
+        : "";
+      parts[i] = `${parts[i].slice(0, at)}<a href="${href}" target="_blank" rel="noopener noreferrer">📍 ${shown}</a>${button}${parts[i].slice(at + p.name.length)}`;
       done = true;
     }
     if (done) html = parts.join("");
