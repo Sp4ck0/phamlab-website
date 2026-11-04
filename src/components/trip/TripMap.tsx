@@ -266,7 +266,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
           zoom: 13,
         });
         const info = createInfoCard();
-        mapInstance.current.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(info.el);
+        mapInstance.current.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(info.el);
         infoWindow.current = info;
         mapInstance.current.addListener("click", () => info.close());
         setMapReady(true);
@@ -643,7 +643,7 @@ type InfoCard = { el: HTMLElement; show: (header: HTMLElement, body: string) => 
 function createInfoCard(): InfoCard {
   const el = document.createElement("div");
   el.style.cssText =
-    "display:none;margin:0 0 24px 10px;max-width:min(260px,calc(100% - 80px));padding:10px 12px;background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.3);position:relative";
+    "display:none;margin:0 10px 10px 0;max-width:min(260px,calc(100% - 80px));padding:10px 12px;background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.3);position:relative";
   const head = document.createElement("div");
   head.style.cssText = "padding-right:22px";
   const content = document.createElement("div");
