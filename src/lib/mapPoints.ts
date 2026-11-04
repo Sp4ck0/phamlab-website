@@ -22,6 +22,16 @@ export const CATEGORY_COLORS: Record<MapCategory, string> = {
   other: "#898781",
 };
 
+// Emoji drawn inside a category's map pin. City has none: it stays a plain dot.
+export const CATEGORY_EMOJI: Partial<Record<MapCategory, string>> = {
+  hotel: "🏨",
+  restaurant: "🍽️",
+  attraction: "📸",
+  transport: "✈️",
+  event: "🎟️",
+  other: "📍",
+};
+
 // What an activity's tag says about the kind of place it happens at; any tag
 // not listed (Event, Venue, Evening, none…) is an "event".
 const ACT_CATEGORY: Record<string, MapCategory> = {
