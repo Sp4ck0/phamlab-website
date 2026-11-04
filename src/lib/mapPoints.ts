@@ -203,34 +203,36 @@ export interface JumpTarget {
 // Where a pin's popup can send you, by place key. Looked up by place rather than
 // read off the pin's id, because derivePoints keeps one pin per place: an activity at
 // your hotel or a curated point is that pin, whose id says nothing about the day.
+const nameKey = (name: string) => `name:${name.trim().toLowerCase()}`;
+
 export function deriveJumpTargets(days: ResolvedDay[], tasks: Task[]): Map<string, JumpTarget> {
   const out = new Map<string, JumpTarget>();
-  const slot = (p: Place) => {
-    const key = placeKey(p);
-    if (!key) return undefined;
-    if (!out.has(key)) out.set(key, {});
-    return out.get(key)!;
+  // Filed under the place key and under its name: a pin from a curated point can carry a
+  // different Place ID or address than the day's own entry for the same hotel or venue.
+  const note = (p: Place, field: keyof JumpTarget, value: string) => {
+    const keys = [placeKey(p), p.name?.trim() ? nameKey(p.name) : undefined];
+    for (const k of keys) {
+      if (!k) continue;
+      const t = out.get(k) ?? {};
+      t[field] ??= value;
+      out.set(k, t);
+    }
   };
   days.forEach((d) => {
-    d.hotels.forEach((h) => {
-      const t = slot(h);
-      if (t && !t.day) t.day = d.date;
-    });
-    d.acts.forEach((a) => {
-      (actParts(a).places ?? []).forEach((place) => {
-        const t = slot(place);
-        if (t && !t.day) t.day = d.date;
-      });
-    });
+    d.hotels.forEach((h) => note(h, "day", d.date));
+    d.acts.forEach((a) => (actParts(a).places ?? []).forEach((place) => note(place, "day", d.date)));
   });
   tasks.forEach((task) => {
     if (!task.key.startsWith("item:")) return;
-    (task.places ?? []).forEach((place) => {
-      const t = slot(place);
-      if (t && !t.item) t.item = task.key.slice("item:".length);
-    });
+    (task.places ?? []).forEach((place) => note(place, "item", task.key.slice("item:".length)));
   });
   return out;
+}
+
+// The pin's own place first, then any place of the same name.
+export function jumpTargetFor(targets: Map<string, JumpTarget>, p: Place): JumpTarget | undefined {
+  const key = placeKey(p);
+  return (key ? targets.get(key) : undefined) ?? (p.name?.trim() ? targets.get(nameKey(p.name)) : undefined);
 }
 
 // Ordered city waypoints for the map's route line. Mirrors deriveRoute's

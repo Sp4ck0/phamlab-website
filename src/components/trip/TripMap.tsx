@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useShowAiFocus } from "../../hooks/useAiFocus";
 import type { MapPointData, ResolvedDay, Task } from "../../lib/types";
-import { CATEGORY_COLORS, CATEGORY_LABELS, MAP_FOCUS_EVENT, deriveJumpTargets, googleMapsUrl, placeKey } from "../../lib/mapPoints";
+import { CATEGORY_COLORS, CATEGORY_LABELS, MAP_FOCUS_EVENT, deriveJumpTargets, googleMapsUrl, jumpTargetFor, placeKey } from "../../lib/mapPoints";
 import type { JumpTarget, WeatherStop } from "../../lib/mapPoints";
 import { fmtShort } from "../../lib/tripLogic";
 import { summarizeStay, temp, weatherIcon, weatherText } from "../../lib/weather";
@@ -287,7 +287,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
           const stop = p.category === "city" ? stopsByAddress.current.get(p.address ?? "") : undefined;
           // City dots are just a place on the route; every other pin is a real place worth opening in Google Maps.
           const link = p.category === "city" ? undefined : googleMapsUrl(p);
-          openInfo(map, infoHtml(p.name, CATEGORY_LABELS[p.category] + (p.note ? " · " + p.note : ""), tempUnitRef.current, stop, link, jumpTargets.current.get(placeKey(p) ?? "")), marker);
+          openInfo(map, infoHtml(p.name, CATEGORY_LABELS[p.category] + (p.note ? " · " + p.note : ""), tempUnitRef.current, stop, link, jumpTargetFor(jumpTargets.current, p)), marker);
         });
         markers.current.push(marker);
         const key = placeKey(p);
@@ -456,7 +456,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
             ? task.outcome === "chosen" ? "Chosen" : "Under consideration"
             : `To-do${task?.done ? " (done)" : ""}`;
         const votes = task?.votes ? ` · 👍 ${task.votes.yes.length} · 👎 ${task.votes.no.length}` : "";
-        openInfo(map, infoHtml(p.name, `${live}${task ? `: ${task.title}` : ""}${votes}`, tempUnitRef.current, undefined, googleMapsUrl(p), jumpTargets.current.get(placeKey(p) ?? "")), marker);
+        openInfo(map, infoHtml(p.name, `${live}${task ? `: ${task.title}` : ""}${votes}`, tempUnitRef.current, undefined, googleMapsUrl(p), jumpTargetFor(jumpTargets.current, p)), marker);
       });
       const key = placeKey(p);
       if (key) candidatePins.current.set(key, marker);
