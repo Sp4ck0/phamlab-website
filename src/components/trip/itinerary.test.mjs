@@ -379,3 +379,30 @@ test('a reworded activity diffs in place: old words struck, then new words, then
     assert.ok(item()[0].textContent.includes('Synthetic summer plan'));
   } finally { view.close(); }
 });
+test('an edit is held at its old content until released, skipped, or expired', async () => {
+  const { useRecentChanges } = await import('../../hooks/useRecentChanges.ts');
+  let api;
+  function Probe({ list }) {
+    api = useRecentChanges(list, x => x.id, true);
+    return React.createElement('div', null, list.map(x => api.held(x.id)?.text ?? x.text).join('|'));
+  }
+  const item = (id, text) => ({ id, text });
+  const view = mount(React.createElement(Probe, { list: [item('a', 'one'), item('b', 'bee')] }));
+  const show = list => act(() => view.root.render(React.createElement(Probe, { list })));
+  const text = () => view.container.textContent;
+  try {
+    show([item('a', 'two'), item('b', 'bee'), item('c', 'new')]);
+    assert.equal(text(), 'one|bee|new'); // the edit waits; a new entry shows at once
+    assert.equal(api.peek('a').prev.text, 'one');
+    act(() => api.release('a'));
+    assert.equal(text(), 'two|bee|new');
+    api.skip('a'); // the reader's own edit
+    show([item('a', 'three'), item('b', 'bee'), item('c', 'new')]);
+    assert.equal(text(), 'three|bee|new');
+    show([item('a', 'four'), item('b', 'bee'), item('c', 'new')]);
+    assert.equal(text(), 'three|bee|new');
+    await new Promise(r => setTimeout(r, 2700)); // no focus signal came
+    act(() => {});
+    assert.equal(text(), 'four|bee|new');
+  } finally { view.close(); }
+});

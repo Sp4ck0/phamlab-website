@@ -6,9 +6,10 @@ import { kindLabel, PRIORITY_LABELS, priorityRank, scopeStart } from "../../lib/
 import type { ActionItemFields } from "../../hooks/useActionItemEdits";
 import { useAiFocus } from "../../hooks/useAiFocus";
 import { useRecentChanges } from "../../hooks/useRecentChanges";
+import { useHoldForAi } from "../../hooks/useHoldForAi";
 import { sanitizeHtml } from "../../lib/sanitizeHtml";
 import { useUndoableDelete } from "../../hooks/useUndoableDelete";
-import { flash, scrollBehavior, SETTLE_MS } from "../../lib/flash";
+import { afterScroll, flash, scrollBehavior, SETTLE_MS } from "../../lib/flash";
 import { ActionItemEditor } from "./ActionItemEditor";
 import { Considerations } from "./Considerations";
 import { ShareLinkButton } from "./ShareLinkButton";
@@ -98,7 +99,12 @@ export function ActionItems({
   // When the AI edited the item, show what changed instead of a plain blink: the
   // old wording stays above it, struck through, while the row glows. An item it
   // removed is shown the same way (useRecentChanges remembers the "before").
-  const recent = useRecentChanges(items, (i) => i.id);
+  const recent = useRecentChanges(items, (i) => i.id, useHoldForAi());
+  // The reader's own edit shows at once; only the AI's is held for its focus signal.
+  const updateItem: typeof onUpdateItem = (id, fields) => {
+    recent.skip(id);
+    return onUpdateItem(id, fields);
+  };
   const [diff, setDiff] = useState<{ id: string; prev: ActionItem } | null>(null);
   const [ghost, setGhost] = useState<ActionItem | null>(null);
   useEffect(() => {
@@ -131,13 +137,16 @@ export function ActionItems({
       if (!el) return;
       consume(focus.nonce);
       const change = focus.target.kind === "actionItem" && task.editable && task.kind !== "consider" ? recent.take(itemId(task)) : null;
-      el.scrollIntoView({ block: "center", behavior: scrollBehavior() });
-      setTimeout(() => {
+      // An item the AI edited was held at its old text; once the page has
+      // stopped scrolling, show the new text and play the change from the old.
+      afterScroll(() => {
+        recent.release(itemId(task));
         if (change?.prev && !change.gone) {
           setDiff({ id: itemId(task), prev: change.prev });
-          el.classList.add("chg-row");
+          document.getElementById(rowDomId(task))?.classList.add("chg-row");
         } else flash(el);
-      }, 250);
+      });
+      el.scrollIntoView({ block: "center", behavior: scrollBehavior() });
     }, SETTLE_MS);
     return () => clearTimeout(t);
   }, [focus, tasks, consume, recent]);
@@ -192,13 +201,15 @@ export function ActionItems({
               {...editorProps}
               initial={item}
               onSave={async (fields) => {
-                await onUpdateItem(item.id, fields);
+                await updateItem(item.id, fields);
                 setEditing(null);
               }}
             />
           </div>
         );
       }
+      // Edited by the AI, not shown yet: keep the old wording until the page is pointed at it.
+      const held = task.kind !== "consider" ? recent.held(item.id) : undefined;
       const reworded = diff?.id === item.id && (diff.prev.title !== item.title || diff.prev.detail !== item.detail);
       return row(
         <Fragment key={task.key}>
@@ -210,8 +221,8 @@ export function ActionItems({
           onToggle={() => onSetDone(task.refs, !task.done)}
           badge={badge}
           pill={task.priority ? PRIORITY_LABELS[task.priority] : undefined}
-          lead={task.title}
-          body={task.detail}
+          lead={held ? held.title : task.title}
+          body={held ? held.detail : task.detail}
           leadPrev={reworded ? diff.prev.title : undefined}
           bodyPrev={reworded ? diff.prev.detail ?? "" : undefined}
           scope={
@@ -331,7 +342,7 @@ export function ActionItems({
         onVote={onVote}
         onSetOutcome={onSetOutcome}
         onAddItem={onAddItem}
-        onUpdateItem={onUpdateItem}
+        onUpdateItem={updateItem}
         onRemove={remove}
         settledOpen={settledOpen}
         onSettledOpenChange={setSettledOpen}
