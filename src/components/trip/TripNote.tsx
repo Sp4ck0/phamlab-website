@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useTripNote } from "../../hooks/useTripNote";
 
+// Matches LIMITS.tripNote in the backend's limits.ts.
+const MAX_LENGTH = 20_000;
+
 // A floating button that opens a free-text pad for things that are neither an
 // action item nor an itinerary row. Edits stay a draft in this browser until
 // Save; the note itself is shared with everyone on the trip (and readable by
@@ -74,12 +77,17 @@ export function TripNote({ slug }: { slug: string }) {
         value={note.text}
         onChange={(e) => note.edit(e.target.value)}
         placeholder="Anything to remember that isn't an action item or an itinerary row, e.g. “Keep to 60 days in Schengen.”"
-        maxLength={20000}
+        maxLength={MAX_LENGTH}
         spellCheck
       />
       {note.error ? <p className="trip-note-error">{note.error}</p> : null}
       <footer>
-        <span className="trip-note-status">{note.dirty ? "Unsaved draft" : "Saved"}</span>
+        <span className="trip-note-status">
+          {note.dirty ? "Unsaved draft" : "Saved"} ·{" "}
+          <span className={note.text.length >= MAX_LENGTH * 0.9 ? "trip-note-near-limit" : undefined}>
+            {note.text.length.toLocaleString()}/{MAX_LENGTH.toLocaleString()}
+          </span>
+        </span>
         {note.dirty && !note.conflict ? (
           <button type="button" className="btn" onClick={note.discard}>
             Discard
