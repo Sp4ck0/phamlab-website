@@ -29,7 +29,7 @@ interface PillEntry {
 
 interface Props {
   points: MapPointData[];
-  // For the popup's "See in itinerary" / "See in Action Items" buttons.
+  // For the popup's "See in Itinerary" / "See in Action Items" buttons.
   days: ResolvedDay[];
   route: MapPointData[];
   weatherStops: WeatherStop[];
@@ -186,7 +186,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
   const { tempUnit } = useSettings();
   const { slug } = useParams();
   const showFocus = useShowAiFocus();
-  // The popup's "See in itinerary" / "See in Action Items" buttons are plain HTML inside
+  // The popup's "See in Itinerary" / "See in Action Items" buttons are plain HTML inside
   // the Maps info window, so one capture-phase listener on the map wrapper answers them
   // and hands off to the same focus signal the AI and shared links use.
   // Read at click time, so a task added later still gets its button without rebuilding pins.
@@ -632,7 +632,7 @@ function infoHtml(title: string, subtitle: string, unit: TempUnit, stop?: Weathe
       (mapsUrl
         ? `<div style="margin-top:6px;font:500 12px system-ui"><a style="color:#1a55c8;text-decoration:underline" href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener noreferrer">Open in Google Maps</a></div>`
         : "") +
-      jumpButton("data-jump-day", jump?.day, "See in itinerary") +
+      jumpButton("data-jump-day", jump?.day, "See in Itinerary") +
       jumpButton("data-jump-item", jump?.item, "See in Action Items"),
   };
 }
