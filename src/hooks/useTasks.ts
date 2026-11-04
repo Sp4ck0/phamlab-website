@@ -5,7 +5,7 @@ import { useAccessCode } from "./useAccessCode";
 import { bookingKey, doneItems, ticksFromTasks } from "../lib/tasks";
 import type { Outcome, Status, Task, Vote } from "../lib/types";
 
-// A trip's tasks — bookings to make, days to plan, decisions, to-dos — with
+// A trip's tasks — bookings to make, days to plan, considerations, to-dos — with
 // done-state and due dates shared by everyone with access to the trip and
 // persisted in Convex (tasks.ts). The backend derives the list; `today` is the
 // viewer's local date, so a blank day that's already over isn't a gap. Until the

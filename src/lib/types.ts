@@ -93,14 +93,17 @@ export interface ActionItem {
   endDate?: string;
   who?: Who;
   // Absent = "custom" (a to-do). "consider" is a candidate the group is weighing.
-  kind?: "custom" | "decision" | "consider";
-  // Only on a "consider" item: where it is.
+  kind?: "custom" | "consider";
+  // Absent = no priority (sorts like low). High items are listed at the top of the trip.
+  priority?: Priority;
+  // Where it is: a Maps link on the row, and a map pin for a consideration.
   places?: Place[];
 }
 
 // One row of the Action Items list, derived by the backend (convex/travel/tasks.ts).
 // `kind` is why it exists, `scope` is when it applies.
-export type TaskKind = "booking" | "plan" | "transport" | "decision" | "consider" | "custom";
+export type TaskKind = "booking" | "plan" | "transport" | "consider" | "custom";
+export type Priority = "high" | "medium" | "low";
 export type Outcome = "chosen" | "dropped";
 export type Vote = "yes" | "no";
 export type TaskScope =
@@ -123,8 +126,10 @@ export interface Task {
   done: boolean;
   dueDate: string | null;
   dueDateIsDefault: boolean;
-  // Stored items (decision/consider/custom) can be edited and removed.
+  // Stored items (consider/custom) can be edited and removed.
   editable: boolean;
+  // Stored items only.
+  priority?: Priority;
   // Consider only: where it is, how it was settled, and who voted which way.
   places?: Place[];
   outcome?: Outcome;

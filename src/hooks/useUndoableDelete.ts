@@ -11,9 +11,9 @@ interface Deleted {
 
 const UNDO_MS = 6000;
 
-// Deleting a stored item (to-do or decision) with a few seconds to undo it. The
+// Deleting a stored item (to-do or consideration) with a few seconds to undo it. The
 // item comes back under its original id, so its done-state and due date can be
-// restored too. Used by both the Action Items list and the decisions panel.
+// restored too. Used by both the Action Items list and the High priority panel.
 export function useUndoableDelete({
   onAddItem,
   onRemoveItem,

@@ -16,7 +16,7 @@ import { actUrl, hotelUrl, transportUrl } from "../../lib/calendar";
 import { sanitizeHtml } from "../../lib/sanitizeHtml";
 import type { DayWeather } from "../../lib/weather";
 import { useParams } from "react-router-dom";
-import { voteTally } from "../../lib/tasks";
+import { PRIORITY_LABELS, voteTally } from "../../lib/tasks";
 import { useShowAiFocus } from "../../hooks/useAiFocus";
 import { ShareLinkButton } from "./ShareLinkButton";
 import { ActivityEditor } from "./ActivityEditor";
@@ -358,7 +358,7 @@ export function DayCard({
                   done={!!actionItemsDone[item.id]}
                   onToggle={() => onToggleActionItem(item.id)}
                   badge={item.who ? gapLabel(item.who, groups, item.date || d.date) : null}
-                  pill={item.kind === "decision" ? "Decision" : undefined}
+                  pill={item.priority ? PRIORITY_LABELS[item.priority] : undefined}
                   lead={item.title}
                   body={item.detail}
                   // The day is already obvious; a range is worth spelling out.

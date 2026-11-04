@@ -1,14 +1,15 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
-import type { ActionItem, Group, Place } from "../../lib/types";
+import type { ActionItem, Group, Place, Priority } from "../../lib/types";
 import type { ActionItemFields } from "../../hooks/useActionItemEdits";
 import { fmtShort } from "../../lib/tripLogic";
+import { PRIORITY_LABELS } from "../../lib/tasks";
 import { AutoTextarea } from "./AutoTextarea";
 
 const MAX_PLACES = 5;
 
 interface Props {
   // The kind a new item starts as (an existing item keeps its own).
-  defaultKind?: "custom" | "decision" | "consider";
+  defaultKind?: "custom" | "consider";
   groups: Group[];
   minDate: string;
   maxDate: string;
@@ -23,7 +24,8 @@ const SCOPES: { id: Scope; label: string }[] = [
   { id: "day", label: "One day" },
   { id: "range", label: "Date range" },
 ];
-const KIND_LABELS = { custom: "To-do", decision: "Decision", consider: "Consider" } as const;
+const KIND_LABELS = { custom: "To-do", consider: "Consider" } as const;
+const PRIORITIES: Priority[] = ["high", "medium", "low"];
 
 // "Everyone" is stored as no `who` at all, so only real group ids are chips.
 const toIds = (who: ActionItem["who"]) => (who === undefined ? [] : Array.isArray(who) ? who : [who]).filter((id) => id !== "all");
@@ -44,7 +46,8 @@ function errorText(e: unknown) {
 export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initial, onSave, onCancel }: Props) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [detail, setDetail] = useState(initial?.detail ?? "");
-  const [kind, setKind] = useState<"custom" | "decision" | "consider">(initial?.kind ?? defaultKind ?? "custom");
+  const [kind, setKind] = useState<"custom" | "consider">(initial?.kind ?? defaultKind ?? "custom");
+  const [priority, setPriority] = useState<Priority | undefined>(initial?.priority);
   // A place's Google Place ID is kept only while its name and address are untouched.
   const [places, setPlaces] = useState<Place[]>(initial?.places ?? []);
   const editPlace = (i: number, patch: Partial<Place>) =>
@@ -87,6 +90,7 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
         date: scope === "trip" ? undefined : date,
         endDate: scope === "range" ? endDate : undefined,
         kind,
+        priority,
         places: places
           .filter((p) => p.name.trim())
           .map((p) => ({
@@ -123,6 +127,7 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
   const summary = [
     whoIds.length === 0 ? "Everyone" : whoIds.map((id) => groups.find((g) => g.id === id)?.name ?? id).join(", "),
     KIND_LABELS[kind],
+    ...(priority ? [`${PRIORITY_LABELS[priority]} priority`] : []),
     when,
     ...(placeNames.length === 0 ? [] : [placeNames.length === 1 ? placeNames[0] : `${placeNames.length} places`]),
   ].join(" · ");
@@ -203,9 +208,22 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
           <div className="ai-row">
             <span className="ai-label">Kind</span>
             <div className="ai-who" role="group" aria-label="Kind">
-              {(["custom", "decision", "consider"] as const).map((k) => (
+              {(["custom", "consider"] as const).map((k) => (
                 <button key={k} type="button" className="ai-chip" aria-pressed={kind === k} onClick={() => setKind(k)}>
                   {KIND_LABELS[k]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="ai-row">
+            <span className="ai-label">Priority</span>
+            <div className="ai-who" role="group" aria-label="Priority">
+              <button type="button" className="ai-chip" aria-pressed={priority === undefined} onClick={() => setPriority(undefined)}>
+                None
+              </button>
+              {PRIORITIES.map((p) => (
+                <button key={p} type="button" className="ai-chip" aria-pressed={priority === p} onClick={() => setPriority(p)}>
+                  {PRIORITY_LABELS[p]}
                 </button>
               ))}
             </div>

@@ -41,7 +41,7 @@ test('only-gaps dates come from open booking, plan and transport tasks, one per 
     task('transport', ['transport:2040-01-07|t|Synthetic A → Synthetic B'], [false]), // a move with nothing entered
     task('transport', ['transport:2040-01-08|t|Synthetic B → Synthetic C'], [true]), // dismissed
     task('custom', ['item:synthetic'], [false]), // a to-do is not a gap
-    task('decision', ['item:synthetic-decision'], [false]),
+    { ...task('custom', ['item:synthetic-urgent'], [false]), priority: 'high' }, // a high-priority to-do is not a gap either
   ]);
   assert.deepEqual([...dates].sort(), ['2040-01-03', '2040-01-05', '2040-01-07']);
 });

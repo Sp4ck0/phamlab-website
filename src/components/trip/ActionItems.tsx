@@ -1,8 +1,8 @@
 import { Fragment, useEffect, useState, type ReactNode } from "react";
-import type { ActionItem, Group, Outcome, Task, Vote } from "../../lib/types";
+import type { ActionItem, Group, Outcome, Priority, Task, Vote } from "../../lib/types";
 import { gapLabel } from "../../lib/tripLogic";
 import { dueLabel, dueState } from "../../lib/dueDates";
-import { kindLabel, scopeStart } from "../../lib/tasks";
+import { kindLabel, PRIORITY_LABELS, priorityRank, scopeStart } from "../../lib/tasks";
 import type { ActionItemFields } from "../../hooks/useActionItemEdits";
 import { useAiFocus } from "../../hooks/useAiFocus";
 import { useRecentChanges } from "../../hooks/useRecentChanges";
@@ -18,7 +18,7 @@ import { TaskRow } from "./TaskRow";
 import { UndoBar } from "./UndoBar";
 
 interface Props {
-  // Every task for the trip. Decisions are also listed in the alerts panel.
+  // Every task for the trip. High-priority ones are also listed in the panel at the top.
   tasks: Task[];
   // The stored items behind the editable tasks, for editing and undoing a delete.
   items: ActionItem[];
@@ -41,6 +41,7 @@ interface Props {
 }
 
 interface Row {
+  priority?: Priority;
   date?: string;
   due: string;
   done: boolean;
@@ -51,10 +52,12 @@ const itemId = (task: Task) => task.key.slice("item:".length);
 // The row's element id: stored items keep the id the AI focus has always used.
 const rowDomId = (task: Task) => (task.editable ? `ai-row-${itemId(task)}` : `task-row-${task.key}`);
 
-// Soonest due first; ties (and the common case where everything still has the
+// High priority first, then medium, then low or none; within each, soonest due first; ties (and the common case where everything still has the
 // default due date) fall back to the task's own date. Whole-trip tasks sort to
 // the end, after everything with a date.
-function byDueThenDate(a: Row, b: Row) {
+function byPriorityDueDate(a: Row, b: Row) {
+  const byPriority = priorityRank(a.priority) - priorityRank(b.priority);
+  if (byPriority) return byPriority;
   if (a.due !== b.due) return a.due.localeCompare(b.due);
   if (!a.date && !b.date) return 0;
   if (!a.date) return 1;
@@ -177,7 +180,7 @@ export function ActionItems({
         />
       </div>
     );
-    const row = (node: ReactNode): Row => ({ date: start, due, done: task.done, node });
+    const row = (node: ReactNode): Row => ({ priority: task.priority, date: start, due, done: task.done, node });
     const badge = task.who !== undefined ? gapLabel(task.who, groups, start ?? "") : null;
 
     const item = task.editable ? items.find((i) => i.id === itemId(task)) : undefined;
@@ -207,7 +210,7 @@ export function ActionItems({
           done={task.done}
           onToggle={() => onSetDone(task.refs, !task.done)}
           badge={badge}
-          pill={task.kind === "decision" ? "Decision" : undefined}
+          pill={task.priority ? PRIORITY_LABELS[task.priority] : undefined}
           lead={task.title}
           body={task.detail}
           scope={
@@ -263,7 +266,7 @@ export function ActionItems({
   };
 
   const considerTasks = tasks.filter((t) => t.kind === "consider");
-  const rows = tasks.filter((t) => t.kind !== "consider").map(rowFor).sort(byDueThenDate);
+  const rows = tasks.filter((t) => t.kind !== "consider").map(rowFor).sort(byPriorityDueDate);
   const open = rows.filter((r) => !r.done);
   const completed = rows.filter((r) => r.done);
   const total = rows.length;

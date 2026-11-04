@@ -1,5 +1,5 @@
 // Helpers for the backend's task list (convex/travel/tasks.ts).
-import type { Status, Task, TaskScope, Vote } from "./types";
+import type { Priority, Status, Task, TaskScope, Vote } from "./types";
 import { fmtDow, modeLabel } from "./tripLogic";
 
 // Yes / no counts for a consideration, with the viewer's own tap (`pending`,
@@ -35,10 +35,13 @@ export function kindLabel(t: Task): string | undefined {
   if (t.kind === "booking") return t.mode === "hotel" ? "Hotel" : modeLabel(t.mode);
   if (t.kind === "plan") return "Plan";
   if (t.kind === "transport") return "Transport";
-  if (t.kind === "decision") return "Decision";
   if (t.kind === "consider") return "Considering";
   return undefined;
 }
+
+// High first, then medium, then low or none (which sort together).
+export const priorityRank = (p: Priority | undefined) => (p === "high" ? 0 : p === "medium" ? 1 : 2);
+export const PRIORITY_LABELS: Record<Priority, string> = { high: "High", medium: "Medium", low: "Low" };
 
 const BOOKING = "booking:";
 

@@ -454,7 +454,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
         const live =
           task?.kind === "consider"
             ? task.outcome === "chosen" ? "Chosen" : "Under consideration"
-            : `${task?.kind === "decision" ? "Decision" : "To-do"}${task?.done ? " (done)" : ""}`;
+            : `To-do${task?.done ? " (done)" : ""}`;
         const votes = task?.votes ? ` · 👍 ${task.votes.yes.length} · 👎 ${task.votes.no.length}` : "";
         openInfo(map, infoHtml(p.name, `${live}${task ? `: ${task.title}` : ""}${votes}`, tempUnitRef.current, undefined, googleMapsUrl(p), jumpTargets.current.get(placeKey(p) ?? "")), marker);
       });
@@ -567,7 +567,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
       <p className="section-sub">
         Where you're staying, planned stops that have an address, and each city on the route, joined in travel order
         with the weather for each stay. Tap a pin or weather label for details.
-        {geocodedCandidates.length > 0 && " Dashed rings are places for ideas, to-dos and decisions that aren't settled yet."}
+        {geocodedCandidates.length > 0 && " Dashed rings are places for ideas and to-dos that aren't settled yet."}
       </p>
 
       {status === "error" && (

@@ -567,7 +567,7 @@ details.tour-box[open] summary::after{content:"Hide"}
 .day-considering .vote-btn:disabled{cursor:default;opacity:.7}
 .day-considering .day-chosen{color:var(--good);border:1px solid var(--good)}
 
-/* ── alerts (needs a decision / not booked yet) ───────────────────────────── */
+/* ── alerts (high priority / not booked yet) ───────────────────────────── */
 .alerts{display:grid;gap:14px;margin:22px 0 8px}
 .alert{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--danger);border-radius:16px;padding:18px 22px}
 .alert.warn{border-left-color:var(--accent-transit)}
