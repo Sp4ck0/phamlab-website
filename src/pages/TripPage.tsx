@@ -118,6 +118,7 @@ function TripPageEntry() {
 
       <TripMap
         points={mapPlanPoints}
+        days={resolvedDays}
         route={deriveRouteAddresses(resolvedDays)}
         weatherStops={weatherStops}
         candidates={deriveTaskPoints(tasks, mapPlanPoints)}
