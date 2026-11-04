@@ -5,7 +5,7 @@ import { scopeLabel, scopeStart } from "../../lib/tasks";
 import type { ActionItemFields } from "../../hooks/useActionItemEdits";
 import { useUndoableDelete } from "../../hooks/useUndoableDelete";
 import { ActionItemEditor } from "./ActionItemEditor";
-import { PlaceLinks } from "./taskParts";
+import { PencilIcon, PlaceLinks, TrashIcon } from "./taskParts";
 import { UndoBar } from "./UndoBar";
 
 interface Props {
@@ -120,10 +120,10 @@ export function AlertsPanel({
                 {item && (
                   <span style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
                     <button type="button" className="icon-btn" aria-label={`Edit ${t.title}`} onClick={() => setEditing(id)}>
-                      Edit
+                      <PencilIcon />
                     </button>
                     <button type="button" className="icon-btn" aria-label={`Delete ${t.title}`} onClick={() => undoable.remove(t, item)}>
-                      Delete
+                      <TrashIcon />
                     </button>
                   </span>
                 )}
