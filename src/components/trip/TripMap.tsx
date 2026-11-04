@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useShowAiFocus } from "../../hooks/useAiFocus";
 import type { MapPointData, ResolvedDay, Task } from "../../lib/types";
-import { CATEGORY_COLORS, CATEGORY_LABELS, MAP_FOCUS_EVENT, deriveJumpTargets, googleMapsUrl, jumpTargetFor, placeKey } from "../../lib/mapPoints";
+import { CATEGORY_COLORS, CATEGORY_EMOJI, CATEGORY_LABELS, MAP_FOCUS_EVENT, deriveJumpTargets, googleMapsUrl, jumpTargetFor, placeKey } from "../../lib/mapPoints";
 import type { JumpTarget, WeatherStop } from "../../lib/mapPoints";
 import { fmtShort } from "../../lib/tripLogic";
 import { summarizeStay, temp, weatherIcon, weatherText } from "../../lib/weather";
@@ -48,6 +48,15 @@ function ringIcon(chosen: boolean): string {
     `<circle cx="13" cy="13" r="9.5" fill="${color}" fill-opacity="${chosen ? 0.3 : 0.12}" stroke="${color}" stroke-width="2.5"` +
     `${chosen ? "" : ' stroke-dasharray="4 3"'}/></svg>`;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+// A category's pin: its emoji on a white-rimmed disc in the category color.
+function emojiIcon(emoji: string, color: string): google.maps.Icon {
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">` +
+    `<circle cx="15" cy="15" r="13" fill="${color}" stroke="#fff" stroke-width="2"/>` +
+    `<text x="15" y="15" font-size="15" text-anchor="middle" dominant-baseline="central">${emoji}</text></svg>`;
+  return { url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`, anchor: new google.maps.Point(15, 15), scaledSize: new google.maps.Size(30, 30) };
 }
 
 // Web Mercator in 0..1 world units, so a camera flight can interpolate between places.
@@ -274,14 +283,16 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
           map,
           position,
           title: p.name,
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 8,
-            fillColor: CATEGORY_COLORS[p.category],
-            fillOpacity: 1,
-            strokeColor: "#ffffff",
-            strokeWeight: 2,
-          },
+          icon: CATEGORY_EMOJI[p.category]
+            ? emojiIcon(CATEGORY_EMOJI[p.category]!, CATEGORY_COLORS[p.category])
+            : {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 8,
+                fillColor: CATEGORY_COLORS[p.category],
+                fillOpacity: 1,
+                strokeColor: "#ffffff",
+                strokeWeight: 2,
+              },
         });
         marker.addListener("click", () => {
           const stop = p.category === "city" ? stopsByAddress.current.get(p.address ?? "") : undefined;
@@ -588,7 +599,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
               return (
                 <span className="map-legend-item" key={cat}>
                   <span className="dot" style={{ background: CATEGORY_COLORS[cat as keyof typeof CATEGORY_COLORS] }} />
-                  {label}
+                  {CATEGORY_EMOJI[cat as keyof typeof CATEGORY_EMOJI] ?? ""} {label}
                 </span>
               );
             })}
