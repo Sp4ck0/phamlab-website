@@ -1,8 +1,9 @@
-import { useState } from "react";
-import type { ActionItem, Group, LegColor, ResolvedDay, Status, Task, Vote } from "../../lib/types";
+import { useState, type ReactNode } from "react";
+import type { Act, ActionItem, Group, LegColor, ResolvedDay, Status, Task, Vote } from "../../lib/types";
+import { changeClass, diffLines, type Change, type ChangeState } from "../../lib/changeDiff";
 import { focusOnMapKey, googleMapsUrl, inlinePlaces } from "../../lib/mapPoints";
 import { DOW, MON, actParts, fmtShort, gapLabel, mergeFlightsByRoute, mergeHotelsByName, modeLabel } from "../../lib/tripLogic";
-import type { HotelGroup } from "../../lib/tripLogic";
+import type { FlightGroup, HotelGroup } from "../../lib/tripLogic";
 import { WhoPill } from "./WhoPill";
 import { StatusToggle } from "./StatusToggle";
 import { FlightBox } from "./FlightBox";
@@ -29,8 +30,29 @@ function focusInlinePlace(e: React.MouseEvent) {
   if (key) focusOnMapKey(key);
 }
 
+// What a line is, for telling an edited line from an untouched one (not its
+// ids or ticks, which change without the content changing).
+const actKey = (a: Act) => JSON.stringify(a);
+const flightKey = (g: FlightGroup) => JSON.stringify([g.mode, g.route, g.title, g.price, g.detail, g.legs, g.layovers]);
+const hotelKey = (g: HotelGroup) => JSON.stringify([g.name, g.address, g.placeId, g.detail, g.checkIn, g.checkOut]);
+const unchanged = <T,>(items: T[]): Change<T>[] => items.map((item) => ({ item, state: "same" }));
+
+// A line that changed gets a wrapper to animate (new: glow; gone: a struck-through
+// ghost of what it was, inert); an untouched one renders bare.
+function mark(state: ChangeState, key: string, node: ReactNode) {
+  if (state === "same") return node;
+  const ghost = state === "gone" ? { inert: true, "aria-hidden": true } : {};
+  return (
+    <div key={key} className={changeClass(state).trim()} {...ghost}>
+      {node}
+    </div>
+  );
+}
+
 interface Props {
   day: ResolvedDay;
+  // How this day looked before an AI edit, to show what changed (see useRecentChanges).
+  changedFrom?: ResolvedDay;
   // Whole resolved trip, to find a hotel's check-out date for its calendar link.
   days?: ResolvedDay[];
   dayNumber: number;
@@ -57,6 +79,7 @@ interface Props {
 
 export function DayCard({
   day: d,
+  changedFrom: old,
   days,
   dayNumber,
   legColor,
@@ -89,11 +112,24 @@ export function DayCard({
   // (e.g. a drive/transfer day with no Flight entry keeps both hotels on
   // one row).
   const hasFlights = flightGroups.length > 0;
-  const checkoutHotels = hasFlights ? hotelGroups.filter((g) => g.checkOut && !g.checkIn) : [];
-  const otherHotels = hasFlights ? hotelGroups.filter((g) => !(g.checkOut && !g.checkIn)) : hotelGroups;
+  // After an AI edit each list is merged with how it was before: what changed is
+  // marked new, and what was removed (or reworded) stays as a ghost for a moment.
+  const flightChanges = old ? diffLines(mergeFlightsByRoute(old.flights, old.date, ticks), flightGroups, flightKey) : unchanged(flightGroups);
+  const hotelChanges = old ? diffLines(mergeHotelsByName(old.hotels, ticks), hotelGroups, hotelKey) : unchanged(hotelGroups);
+  const isCheckout = (g: HotelGroup) => hasFlights && g.checkOut && !g.checkIn;
+  const checkoutHotels = hotelChanges.filter((c) => isCheckout(c.item));
+  const otherHotels = hotelChanges.filter((c) => !isCheckout(c.item));
+  const legFlights = flightChanges.filter((c) => c.item.legs && c.item.legs.length);
+  const plainFlights = flightChanges.filter((c) => !(c.item.legs && c.item.legs.length));
+  const actChanges = old ? diffLines(old.acts ?? [], d.acts ?? [], actKey) : unchanged(d.acts ?? []);
+  // Edit buttons, share links and ids use an activity's real index; a ghost has none.
+  let actIndex = 0;
+  const actRows = actChanges.map((c) => ({ ...c, ai: c.state === "gone" ? -1 : actIndex++ }));
+  const summaryChanged = !!old && (old.highlight || old.note) !== (d.highlight || d.note);
   const noPlan = !(d.acts && d.acts.length) && !(d.flights && d.flights.length) && d.tag !== "transit";
 
-  const renderHotelCard = (g: HotelGroup, key: string | number) => {
+  // A ghost (a removed hotel) has no id, so it can't clash with its replacement's.
+  const renderHotelCard = ({ item: g, state }: Change<HotelGroup>, key: string | number) => {
     const s: Status = g.statuses.includes("needed") ? "needed" : "booked";
     const nm = g.name || "Hotel not chosen";
     const uniqueWho = [...new Set(g.who)];
@@ -105,8 +141,8 @@ export function DayCard({
           : g.checkOut
             ? "Hotel · check-out"
             : "Hotel · staying";
-    return (
-      <div className={`card ${s === "needed" ? "miss" : ""}`} style={g.carriedAll ? { opacity: 0.72 } : undefined} key={key} id={tileDomId(rowId, g.srcs[0])}>
+    return mark(state, `h${key}`, (
+      <div className={`card ${s === "needed" ? "miss" : ""}`} style={g.carriedAll ? { opacity: 0.72 } : undefined} key={key} id={state === "gone" ? undefined : tileDomId(rowId, g.srcs[0])}>
         <StatusToggle ids={g.srcs} status={s} onToggle={onToggle} />
         <div className="ctop">
           <span className="ctype">{ctype}</span>
@@ -130,7 +166,7 @@ export function DayCard({
         {g.address && !g.placeId && <div className="cmeta">{g.address}</div>}
         {g.detail && <div className="cmeta"><Linkify text={g.detail} /></div>}
       </div>
-    );
+    ));
   };
 
   return (
@@ -165,7 +201,7 @@ export function DayCard({
             <path d="M3.5 5.25L7 8.75l3.5-3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </span>
-        {(d.highlight || d.note) && <span className="day-summary">{d.highlight || d.note}</span>}
+        {(d.highlight || d.note) && <span className={`day-summary${summaryChanged ? " chg-new" : ""}`}>{d.highlight || d.note}</span>}
       </button>
       <ShareLinkButton param={{ day: d.date }} label={`Share link to Day ${dayNumber}`} />
       </h2>
@@ -173,22 +209,21 @@ export function DayCard({
       <div id={`${rowId}-panel`} aria-labelledby={`${rowId}-trigger`} hidden={!expanded}>
       {!collapsed && (
         <>
-          {flightGroups
-            .filter((g) => g.legs && g.legs.length)
-            .map((g, gi) => (
-              <FlightBox key={`fb${gi}`} group={g} onToggle={onToggle} day={d} dayNumber={dayNumber} tileId={tileDomId(rowId, g.ids[0])} />
-            ))}
+          {legFlights.map(({ item: g, state }, gi) =>
+            mark(state, `fbm${gi}`, (
+              <FlightBox key={`fb${gi}`} group={g} onToggle={onToggle} day={d} dayNumber={dayNumber} tileId={state === "gone" ? undefined : tileDomId(rowId, g.ids[0])} />
+            ))
+          )}
 
-          {(checkoutHotels.length > 0 || flightGroups.some((g) => !(g.legs && g.legs.length)) || otherHotels.length > 0) && (
+          {(checkoutHotels.length > 0 || plainFlights.length > 0 || otherHotels.length > 0) && (
             <div className="cards" style={{ marginBottom: 14 }}>
-              {checkoutHotels.map((g, gi) => renderHotelCard(g, `co${gi}`))}
-              {flightGroups
-                .filter((g) => !(g.legs && g.legs.length))
-                .map((g, gi) => {
+              {checkoutHotels.map((c, gi) => renderHotelCard(c, `co${gi}`))}
+              {plainFlights
+                .map(({ item: g, state }, gi) => {
                   const status: Status = g.statuses.includes("needed") ? "needed" : "booked";
                   const uniqueWho = [...new Set(g.who)];
-                  return (
-                    <div className={`card ${status === "needed" ? "miss" : ""}`} key={`fc${gi}`} id={tileDomId(rowId, g.ids[0])}>
+                  return mark(state, `fcm${gi}`, (
+                    <div className={`card ${status === "needed" ? "miss" : ""}`} key={`fc${gi}`} id={state === "gone" ? undefined : tileDomId(rowId, g.ids[0])}>
                       <StatusToggle ids={g.ids} status={status} onToggle={onToggle} />
                       <div className="ctop">
                         <span className="ctype">{modeLabel(g.mode)}</span>
@@ -201,16 +236,28 @@ export function DayCard({
                       </div>
                       <div className="cmeta"><Linkify text={g.detail || ""} /></div>
                     </div>
-                  );
+                  ));
                 })}
-              {otherHotels.map((g, gi) => renderHotelCard(g, gi))}
+              {otherHotels.map((c, gi) => renderHotelCard(c, gi))}
             </div>
           )}
 
-          {d.acts && d.acts.length > 0 ? (
+          {actRows.length > 0 ? (
             <ul className="activity-list">
-              {d.acts.map((a, ai) => {
+              {actRows.map(({ item: a, state, ai }, ri) => {
                 const { tag, time, text, places } = actParts(a);
+                if (state === "gone") {
+                  // What it said before the edit: struck through, then folded away.
+                  return (
+                    <li className="activity chg-gone" key={`gone${ri}`} inert aria-hidden="true">
+                      {tag && <span className="act-tag">{tag}</span>}
+                      <span className="activity-text">
+                        {time && <span className="activity-time">{time}</span>}
+                        <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(text) }} />
+                      </span>
+                    </li>
+                  );
+                }
                 // A place named in the sentence is linked in place; the rest follow as chips.
                 // Sanitize first: inlinePlaces adds its own show-on-map buttons, which the sanitizer would strip.
                 const { html, rest } = inlinePlaces(sanitizeHtml(text), places);
@@ -229,7 +276,7 @@ export function DayCard({
                   );
                 }
                 return (
-                  <li className="activity" key={ai} id={tileDomId(rowId, `act:${ai}`)}>
+                  <li className={`activity${changeClass(state)}`} key={ai} id={tileDomId(rowId, `act:${ai}`)}>
                     {tag && <span className="act-tag">{tag}</span>}
                     <span className="activity-text" onClick={focusInlinePlace}>
                       {time && <span className="activity-time">{time}</span>}
@@ -262,7 +309,7 @@ export function DayCard({
 
           {d.tourDetails && <TourBox tourDetails={d.tourDetails} />}
           {d.callout && (
-            <div className="note">
+            <div className={`note${old && old.callout !== d.callout ? " chg-new" : ""}`}>
               <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(d.callout) }} />
             </div>
           )}

@@ -1,10 +1,12 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
 import type { ActionItem, Group, Outcome, Task, Vote } from "../../lib/types";
 import { gapLabel } from "../../lib/tripLogic";
 import { dueLabel, dueState } from "../../lib/dueDates";
 import { kindLabel, scopeStart } from "../../lib/tasks";
 import type { ActionItemFields } from "../../hooks/useActionItemEdits";
 import { useAiFocus } from "../../hooks/useAiFocus";
+import { useRecentChanges } from "../../hooks/useRecentChanges";
+import { sanitizeHtml } from "../../lib/sanitizeHtml";
 import { useUndoableDelete } from "../../hooks/useUndoableDelete";
 import { flash, scrollBehavior, SETTLE_MS } from "../../lib/flash";
 import { ActionItemEditor } from "./ActionItemEditor";
@@ -90,21 +92,62 @@ export function ActionItems({
   const { focus: itemFocus, consume } = useAiFocus("actionItem");
   const { focus: taskFocus } = useAiFocus("task");
   const focus = itemFocus ?? taskFocus;
+  // When the AI edited the item, show what changed instead of a plain blink: the
+  // old wording stays above it, struck through, while the row glows. An item it
+  // removed is shown the same way (useRecentChanges remembers the "before").
+  const recent = useRecentChanges(items, (i) => i.id);
+  const [diff, setDiff] = useState<{ id: string; prev: ActionItem } | null>(null);
+  const [ghost, setGhost] = useState<ActionItem | null>(null);
+  useEffect(() => {
+    if (!diff && !ghost) return;
+    if (ghost) document.getElementById("removed-item")?.scrollIntoView({ block: "center", behavior: scrollBehavior() });
+    const t = setTimeout(() => {
+      if (diff) document.getElementById(`ai-row-${diff.id}`)?.classList.remove("chg-new");
+      setDiff(null);
+      setGhost(null);
+    }, 4200);
+    return () => clearTimeout(t);
+  }, [diff, ghost]);
   useEffect(() => {
     if (!focus) return;
     const key = focus.target.kind === "task" ? focus.target.key : `item:${focus.target.id}`;
     const task = tasks.find((t) => t.key === key);
-    if (!task) return;
+    if (!task) {
+      const removed = focus.target.kind === "actionItem" ? focus.target.id : null;
+      if (!removed || !recent.peek(removed)?.gone) return;
+      const t = setTimeout(() => {
+        consume(focus.nonce);
+        const prev = recent.take(removed)?.prev;
+        if (prev) setGhost(prev);
+      }, SETTLE_MS);
+      return () => clearTimeout(t);
+    }
     if (task.done) (task.kind === "consider" ? setSettledOpen : setCompletedOpen)(true);
     const t = setTimeout(() => {
       const el = document.getElementById(rowDomId(task));
       if (!el) return;
       consume(focus.nonce);
+      const change = focus.target.kind === "actionItem" && task.editable && task.kind !== "consider" ? recent.take(itemId(task)) : null;
       el.scrollIntoView({ block: "center", behavior: scrollBehavior() });
-      setTimeout(() => flash(el), 250);
+      setTimeout(() => {
+        if (change?.prev && !change.gone) {
+          setDiff({ id: itemId(task), prev: change.prev });
+          el.classList.add("chg-new");
+        } else flash(el);
+      }, 250);
     }, SETTLE_MS);
     return () => clearTimeout(t);
-  }, [focus, tasks, consume]);
+  }, [focus, tasks, consume, recent]);
+
+  // What an item said before the AI changed it: struck through, then folded away.
+  const ghostRow = (prev: ActionItem, id?: string) => (
+    <div className="action-item chg-gone" id={id} inert aria-hidden="true">
+      <div>
+        <b dangerouslySetInnerHTML={{ __html: sanitizeHtml(prev.title) }} />{" "}
+        <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(prev.detail ?? "") }} />
+      </div>
+    </div>
+  );
 
   const editorProps = { groups, minDate: tripStart, maxDate: tripEnd, onCancel: () => setEditing(null) };
 
@@ -153,7 +196,10 @@ export function ActionItems({
           </div>
         );
       }
+      const reworded = diff?.id === item.id && (diff.prev.title !== item.title || diff.prev.detail !== item.detail);
       return row(
+        <Fragment key={task.key}>
+        {reworded && ghostRow(diff.prev)}
         <TaskRow
           key={task.key}
           domId={`ai-${item.id}`}
@@ -187,6 +233,7 @@ export function ActionItems({
             </>
           }
         />
+        </Fragment>
       );
     }
 
@@ -253,9 +300,10 @@ export function ActionItems({
         (the trip start unless you change it): yellow within a week, red once it's past due.
       </p>
       {undoable.deletedTitle && <UndoBar title={undoable.deletedTitle} onUndo={() => void undoable.undo()} />}
-      {open.length > 0 || composer ? (
+      {open.length > 0 || composer || ghost ? (
         <div className="action-items">
           {composer}
+          {ghost && ghostRow(ghost, "removed-item")}
           {open.map((r) => r.node)}
         </div>
       ) : (
