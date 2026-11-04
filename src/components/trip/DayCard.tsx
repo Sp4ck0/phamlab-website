@@ -17,6 +17,7 @@ import { sanitizeHtml } from "../../lib/sanitizeHtml";
 import type { DayWeather } from "../../lib/weather";
 import { useParams } from "react-router-dom";
 import { PRIORITY_LABELS, voteTally } from "../../lib/tasks";
+import type { DayGaps } from "../../lib/tasks";
 import { useShowAiFocus } from "../../hooks/useAiFocus";
 import { ShareLinkButton } from "./ShareLinkButton";
 import { ActivityEditor } from "./ActivityEditor";
@@ -62,6 +63,9 @@ interface Props {
   ticks: Record<string, Status>;
   rowId: string;
   expanded: boolean;
+  // Only gaps: show just what is still open, each with the reason it is listed.
+  gapsOnly?: boolean;
+  gaps?: DayGaps;
   onExpandedChange: () => void;
   onToggle: (ids: string[], status: Status) => void;
   dayActionItems: ActionItem[];
@@ -88,6 +92,8 @@ export function DayCard({
   ticks,
   rowId,
   expanded,
+  gapsOnly = false,
+  gaps,
   onExpandedChange,
   onToggle,
   dayActionItems,
@@ -117,10 +123,13 @@ export function DayCard({
   const flightChanges = old ? diffLines(mergeFlightsByRoute(old.flights, old.date, ticks), flightGroups, flightKey) : unchanged(flightGroups);
   const hotelChanges = old ? diffLines(mergeHotelsByName(old.hotels, ticks), hotelGroups, hotelKey) : unchanged(hotelGroups);
   const isCheckout = (g: HotelGroup) => hasFlights && g.checkOut && !g.checkIn;
-  const checkoutHotels = hotelChanges.filter((c) => isCheckout(c.item));
-  const otherHotels = hotelChanges.filter((c) => !isCheckout(c.item));
-  const legFlights = flightChanges.filter((c) => c.item.legs && c.item.legs.length);
-  const plainFlights = flightChanges.filter((c) => !(c.item.legs && c.item.legs.length));
+  // Under Only gaps, a booked tile is not a gap.
+  const open = (g: { statuses: Status[] }) => !gapsOnly || g.statuses.includes("needed");
+  const checkoutHotels = hotelChanges.filter((c) => open(c.item) && isCheckout(c.item));
+  const otherHotels = hotelChanges.filter((c) => open(c.item) && !isCheckout(c.item));
+  const legFlights = flightChanges.filter((c) => open(c.item) && c.item.legs && c.item.legs.length);
+  const plainFlights = flightChanges.filter((c) => open(c.item) && !(c.item.legs && c.item.legs.length));
+  const transportGaps = gapsOnly ? gaps?.transport ?? [] : [];
   const actChanges = old ? diffLines(old.acts ?? [], d.acts ?? [], actKey) : unchanged(d.acts ?? []);
   // Edit buttons, share links and ids use an activity's real index; a ghost has none.
   let actIndex = 0;
@@ -146,6 +155,7 @@ export function DayCard({
         <StatusToggle ids={g.srcs} status={s} onToggle={onToggle} />
         <div className="ctop">
           <span className="ctype">{ctype}</span>
+          {gapsOnly && <span className="gap-reason">{g.name ? "Not booked" : "Not chosen"}</span>}
           <WhoPill who={uniqueWho.length === 1 ? uniqueWho[0] : uniqueWho} groups={groups} date={d.date} />
           <ShareLinkButton param={{ day: d.date, tile: g.srcs[0] }} label={`Share link to ${nm}`} />
           {days && <AddToCalendar url={hotelUrl(g.name, g.address, days, dayNumber)} />}
@@ -171,7 +181,7 @@ export function DayCard({
 
   return (
     <section
-      className="day-card"
+      className={`day-card${gapsOnly ? " gaps-only" : ""}`}
       id={rowId}
       style={{ ["--leg-color" as string]: legColor.color, ["--leg-tint" as string]: legColor.tint }}
     >
@@ -211,11 +221,11 @@ export function DayCard({
         <>
           {legFlights.map(({ item: g, state }, gi) =>
             mark(state, `fbm${gi}`, (
-              <FlightBox key={`fb${gi}`} group={g} onToggle={onToggle} day={d} dayNumber={dayNumber} tileId={state === "gone" ? undefined : tileDomId(rowId, g.ids[0])} />
+              <FlightBox key={`fb${gi}`} group={g} onToggle={onToggle} day={d} dayNumber={dayNumber} tileId={state === "gone" ? undefined : tileDomId(rowId, g.ids[0])} gapReason={gapsOnly ? "Not booked" : undefined} />
             ))
           )}
 
-          {(checkoutHotels.length > 0 || plainFlights.length > 0 || otherHotels.length > 0) && (
+          {(checkoutHotels.length > 0 || plainFlights.length > 0 || otherHotels.length > 0 || transportGaps.length > 0) && (
             <div className="cards" style={{ marginBottom: 14 }}>
               {checkoutHotels.map((c, gi) => renderHotelCard(c, `co${gi}`))}
               {plainFlights
@@ -227,6 +237,7 @@ export function DayCard({
                       <StatusToggle ids={g.ids} status={status} onToggle={onToggle} />
                       <div className="ctop">
                         <span className="ctype">{modeLabel(g.mode)}</span>
+                        {gapsOnly && <span className="gap-reason">Not booked</span>}
                         <WhoPill who={uniqueWho.length === 1 ? uniqueWho[0] : uniqueWho} groups={groups} date={d.date} />
                         <ShareLinkButton param={{ day: d.date, tile: g.ids[0] }} label={`Share link to ${g.route}`} />
                         <AddToCalendar url={transportUrl(g, d, dayNumber)} />
@@ -239,10 +250,22 @@ export function DayCard({
                   ));
                 })}
               {otherHotels.map((c, gi) => renderHotelCard(c, gi))}
+              {transportGaps.map((t) => (
+                <div className="card miss" key={t.key}>
+                  <div className="ctop">
+                    <span className="ctype">Transport</span>
+                    <span className="gap-reason">None entered</span>
+                  </div>
+                  <div className="cmain todo">{t.title}</div>
+                  <div className="cmeta">Add it to the itinerary, or dismiss it in Action Items.</div>
+                </div>
+              ))}
             </div>
           )}
 
-          {actRows.length > 0 ? (
+          {gapsOnly ? (
+            gaps?.plan && <p className="day-subtitle"><span className="gap-reason">Nothing planned</span></p>
+          ) : actRows.length > 0 ? (
             <ul className="activity-list">
               {actRows.map(({ item: a, state, ai }, ri) => {
                 const { tag, time, text, places } = actParts(a);
@@ -307,14 +330,14 @@ export function DayCard({
             </p>
           ) : null}
 
-          {d.tourDetails && <TourBox tourDetails={d.tourDetails} />}
-          {d.callout && (
+          {!gapsOnly && d.tourDetails && <TourBox tourDetails={d.tourDetails} />}
+          {!gapsOnly && d.callout && (
             <div className={`note${old && old.callout !== d.callout ? " chg-new" : ""}`}>
               <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(d.callout) }} />
             </div>
           )}
 
-          {dayConsiderations.length > 0 && (
+          {!gapsOnly && dayConsiderations.length > 0 && (
             <div className="day-considering">
               <span className="consider-pill">{dayConsiderations.some((t) => !t.outcome) ? "Under consideration" : "Decided"}</span>
               <ul>
@@ -349,7 +372,7 @@ export function DayCard({
             </div>
           )}
 
-          {dayActionItems.length > 0 && (
+          {!gapsOnly && dayActionItems.length > 0 && (
             <div className="action-items" style={{ marginTop: 14 }}>
               {dayActionItems.map((item) => (
                 <TaskRow

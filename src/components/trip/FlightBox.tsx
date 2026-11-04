@@ -12,9 +12,11 @@ interface Props {
   dayNumber?: number;
   // Element id, so a shared link can scroll to this box (lib/tileId.ts).
   tileId?: string;
+  // Under Only gaps: why this box is listed.
+  gapReason?: string;
 }
 
-export function FlightBox({ group, onToggle, day, dayNumber = 0, tileId }: Props) {
+export function FlightBox({ group, onToggle, day, dayNumber = 0, tileId, gapReason }: Props) {
   const status: Status = group.statuses.includes("needed") ? "needed" : "booked";
   const legs = group.legs || [];
 
@@ -22,6 +24,7 @@ export function FlightBox({ group, onToggle, day, dayNumber = 0, tileId }: Props
     <div className="flight-box" id={tileId}>
       <div className="flight-box-head">
         <span className="flight-box-title">{group.title || group.route}</span>
+        {gapReason && <span className="gap-reason">{gapReason}</span>}
         <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
           {group.price && <span className="flight-box-price">{group.price}</span>}
           {day && <ShareLinkButton param={{ day: day.date, tile: group.ids[0] }} label={`Share link to ${group.title || group.route}`} />}

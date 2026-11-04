@@ -81,6 +81,29 @@ export function gapDates(tasks: Task[]): Set<string> {
   return out;
 }
 
+// The gaps a day card can't see from its own tiles, per date: whether it is still
+// blank and needs a plan, and which moves have no transport entered. (An unbooked
+// hotel or flight already shows on its tile as "needed".)
+export interface DayGaps {
+  plan: boolean;
+  transport: Task[];
+}
+
+export function dayGaps(tasks: Task[]): Record<string, DayGaps> {
+  const out: Record<string, DayGaps> = {};
+  for (const t of tasks) {
+    if (t.kind !== "plan" && t.kind !== "transport") continue;
+    t.refs.forEach((ref, i) => {
+      if (t.refsDone[i]) return;
+      const start = ref.indexOf(":") + 1;
+      const gaps = (out[ref.slice(start, start + 10)] ??= { plan: false, transport: [] });
+      if (t.kind === "plan") gaps.plan = true;
+      else if (!gaps.transport.includes(t)) gaps.transport.push(t);
+    });
+  }
+  return out;
+}
+
 // Stored item ids that are done, for the per-day checklists.
 export function doneItems(tasks: Task[]): Record<string, boolean> {
   const out: Record<string, boolean> = {};

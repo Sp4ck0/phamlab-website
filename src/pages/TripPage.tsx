@@ -17,7 +17,7 @@ import { useActivityEdits } from "../hooks/useActivityEdits";
 import { useTripWeather } from "../hooks/useTripWeather";
 import { todayISO } from "../lib/dueDates";
 import { assignLegColors } from "../lib/tripLogic";
-import { gapDates } from "../lib/tasks";
+import { dayGaps, gapDates } from "../lib/tasks";
 import { deriveTaskPoints, derivePoints, deriveRouteAddresses, deriveWeatherStops } from "../lib/mapPoints";
 import { NotFoundOrDenied } from "./NotFoundOrDenied";
 
@@ -44,6 +44,7 @@ function TripPageEntry() {
     const dates = gapDates(tasks);
     return (day: { date: string }) => dates.has(day.date);
   }, [loaded, tasks]);
+  const gapsByDate = useMemo(() => dayGaps(tasks), [tasks]);
   const { addItem, updateItem, removeItem } = useActionItemEdits(slug || "");
   const { updateActivity } = useActivityEdits(slug || "");
   const weather = useTripWeather(slug);
@@ -103,6 +104,7 @@ function TripPageEntry() {
           ticks={ticks}
           onlyGaps={onlyGaps}
           isGap={isGap}
+          dayGaps={gapsByDate}
           onToggle={toggle}
           onOnlyGapsChange={setOnlyGaps}
           filterRef={filterRef}
