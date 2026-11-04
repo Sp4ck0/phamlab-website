@@ -183,7 +183,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
   const flight = useRef<(() => void) | null>(null); // stops the camera flight in progress
   const mapInstance = useRef<google.maps.Map | null>(null);
   // One info window shared by every pin and pill, so opening one closes the last.
-  const infoWindow = useRef<google.maps.InfoWindow | null>(null);
+  const infoWindow = useRef<InfoCard | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const markers = useRef<google.maps.Marker[]>([]);
   const weatherOverlays = useRef<google.maps.OverlayView[]>([]);
@@ -265,7 +265,8 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
         mapInstance.current = new google.maps.Map(mapRef.current, {
           zoom: 13,
         });
-        const info = new google.maps.InfoWindow();
+        const info = createInfoCard();
+        mapInstance.current.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(info.el);
         infoWindow.current = info;
         mapInstance.current.addListener("click", () => info.close());
         setMapReady(true);
@@ -548,26 +549,14 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
     window.setTimeout(go, reduced ? 0 : 800);
   };
 
-  // Shared by pins and pills: close whatever is open, then show this one.
+  // Shared by pins and pills: show this one's card in the map's bottom-left corner.
   function openInfo(
-    map: google.maps.Map,
+    _map: google.maps.Map,
     { header, body }: { header: HTMLElement; body: string },
-    at: google.maps.Marker | google.maps.LatLngLiteral,
-    liftPx = 0,
+    _at?: google.maps.Marker | google.maps.LatLngLiteral,
+    _liftPx = 0,
   ) {
-    const info = infoWindow.current;
-    if (!info) return;
-    info.close();
-    // The title goes in the header row (shared with the close button) instead
-    // of the body, which otherwise leaves an empty strip above it.
-    info.setHeaderContent(header);
-    info.setContent(body);
-    info.setOptions({ pixelOffset: new google.maps.Size(0, -liftPx) });
-    if (at instanceof google.maps.Marker) info.open({ map, anchor: at });
-    else {
-      info.setPosition(at);
-      info.open({ map });
-    }
+    infoWindow.current?.show(header, body);
   }
 
   if (points.length === 0) return null;
@@ -645,6 +634,38 @@ function infoHtml(title: string, subtitle: string, unit: TempUnit, stop?: Weathe
         : "") +
       jumpButton("data-jump-day", jump?.day, "See in Itinerary") +
       jumpButton("data-jump-item", jump?.item, "See in Action Items"),
+  };
+}
+
+// The details card for a clicked pin: a map control pinned bottom-left, so it
+// never covers the pins themselves.
+type InfoCard = { el: HTMLElement; show: (header: HTMLElement, body: string) => void; close: () => void };
+function createInfoCard(): InfoCard {
+  const el = document.createElement("div");
+  el.style.cssText =
+    "display:none;margin:0 10px 10px 0;max-width:min(260px,calc(100% - 80px));padding:10px 12px;background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.3);position:relative";
+  const head = document.createElement("div");
+  head.style.cssText = "padding-right:22px";
+  const content = document.createElement("div");
+  const x = document.createElement("button");
+  x.type = "button";
+  x.textContent = "×";
+  x.setAttribute("aria-label", "Close");
+  x.style.cssText = "all:unset;cursor:pointer;position:absolute;top:6px;right:10px;font:400 18px/1 system-ui;color:#52514e";
+  x.addEventListener("click", () => close());
+  el.append(head, content, x);
+  google.maps.OverlayView.preventMapHitsAndGesturesFrom(el);
+  function close() {
+    el.style.display = "none";
+  }
+  return {
+    el,
+    close,
+    show(header, body) {
+      head.replaceChildren(header);
+      content.innerHTML = body;
+      el.style.display = "block";
+    },
   };
 }
 
