@@ -1,8 +1,10 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import type { ActionItem, Group, LegColor, ResolvedDay, Status, Task, Vote } from "../../lib/types";
 import { coversDay } from "../../lib/tasks";
 import { useAiFocus } from "../../hooks/useAiFocus";
+import { useRecentChanges } from "../../hooks/useRecentChanges";
+import { DOW, MON } from "../../lib/tripLogic";
 import { flash, scrollBehavior, SETTLE_MS } from "../../lib/flash";
 import { tileDomId } from "../../lib/tileId";
 import { reconcileRows } from "../../lib/itineraryState";
@@ -112,30 +114,65 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   // The AI or a shared link pointed at a day, or at one tile on it: open and
   // scroll to the day like a nav jump, then blink it (or the tile). The day may
   // not have arrived yet, so wait for it.
+  //
+  // When the AI edited the day, show what changed instead of a plain blink: the
+  // day is rendered against its previous version for a few seconds (DayCard's
+  // changedFrom), and a day it removed is shown as a ghost where it was.
   const { focus: dayFocus, consume } = useAiFocus("day");
   const { focus: tileFocus } = useAiFocus("tile");
   const focus = dayFocus ?? tileFocus;
+  const recent = useRecentChanges(days, d => d.date);
+  const [diff, setDiff] = useState<{ date: string; prev: ResolvedDay } | null>(null);
+  const [ghost, setGhost] = useState<ResolvedDay | null>(null);
+  useEffect(() => {
+    if (!diff && !ghost) return;
+    if (ghost) document.getElementById("removed-day")?.scrollIntoView({ block: "center", behavior: scrollBehavior() });
+    const t = setTimeout(() => { setDiff(null); setGhost(null); }, 4200);
+    return () => clearTimeout(t);
+  }, [diff, ghost]);
   useEffect(() => {
     if (!focus) return;
     const date = focus.target.date;
     const tile = focus.target.kind === "tile" ? focus.target.tile : null;
     const row = state.rows.find(r => r.day.date === date);
-    if (!row) return;
+    if (!row && !recent.peek(date)?.gone) return;
     const t = setTimeout(() => {
       consume(focus.nonce);
+      const change = recent.take(date);
+      if (!row) {
+        if (change?.prev) setGhost(change.prev);
+        return;
+      }
       jump(row.id);
       setTimeout(() => {
         // A tile that is gone (the booking changed) falls back to the day.
         const el = document.getElementById(tile ? tileDomId(row.id, tile) : row.id) ?? document.getElementById(row.id);
         if (!el) return;
         if (tile && el.id !== row.id) el.scrollIntoView({ block: "center", behavior: scrollBehavior() });
-        flash(el);
+        if (!tile && change?.prev && !change.gone) setDiff({ date, prev: change.prev });
+        else flash(el);
       }, 250);
     }, SETTLE_MS);
     return () => clearTimeout(t);
     // jump is recreated every render and only reads this render's state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focus, state.rows, consume]);
+
+  // The removed day, where it sat among the rest.
+  const ghostAt = ghost ? state.rows.findIndex(r => r.day.date > ghost.date) : -1;
+  const ghostDay = ghost && (
+    <section key="removed-day" id="removed-day" className="day-card chg-gone" inert aria-hidden="true">
+      <h2 className="day-heading">
+        <span className="day-head">
+          <span className="day-title-group">
+            <span className="day-num">Removed</span>
+            <span className="day-date">{DOW[ghost._d.getDay()]}, {MON[ghost._d.getMonth()]} {ghost._d.getDate()}</span>
+          </span>
+          {(ghost.highlight || ghost.note) && <span className="day-summary">{ghost.highlight || ghost.note}</span>}
+        </span>
+      </h2>
+    </section>
+  );
   return (
     <>
       <DayNav rows={state.rows} onJump={jump} />
@@ -145,7 +182,9 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
       ) : null}
       <div className="timeline">
         {state.rows.map(({ id, day: d }, i) => visible[i] && (
-          <DayCard key={id} rowId={id} day={d} days={days} dayNumber={i} legColor={legColors[i]} weather={weather[d.date]}
+          <Fragment key={id}>
+          {ghostAt === i && ghostDay}
+          <DayCard rowId={id} day={d} changedFrom={diff?.date === d.date ? diff.prev : undefined} days={days} dayNumber={i} legColor={legColors[i]} weather={weather[d.date]}
             groups={groups} ticks={ticks} expanded={state.expanded.has(id)} onExpandedChange={() => {
               setState(current => {
                 const expanded = new Set(current.expanded);
@@ -156,7 +195,9 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
             dayConsiderations={considerations.filter(t => t.scope.kind !== "trip" && coversDay(t.scope, d.date))}
             pendingVotes={pendingVotes} onVote={onVote}
             actionItemsDone={actionItemsDone} onToggleActionItem={onToggleActionItem} onEditActivity={onEditActivity} />
+          </Fragment>
         ))}
+        {ghostAt === -1 && ghostDay}
       </div>
     </>
   );
