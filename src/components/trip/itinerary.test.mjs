@@ -14,7 +14,7 @@ globalThis.document = dom.window.document;
 globalThis.HTMLElement = dom.window.HTMLElement;
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const day = { date: '2040-01-02', city: 'Synthetic stop', leg: 'synthetic', _d: new Date(2040, 0, 2), flights: [], hotels: [], acts: ['Synthetic activity'] };
-const props = { day, dayNumber: 0, legColor: { color: '#333', tint: '#eee', label: 'Synthetic leg' }, groups: [], ticks: {}, onlyGaps: false, onToggle() {}, dayActionItems: [], actionItemsDone: {}, onToggleActionItem() {}, rowId: 'synthetic-row', expanded: false, onExpandedChange() {} };
+const props = { day, dayNumber: 0, legColor: { color: '#333', tint: '#eee', label: 'Synthetic leg' }, groups: [], ticks: {}, onlyGaps: false, onToggle() {}, dayActionItems: [], dayConsiderations: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {}, rowId: 'synthetic-row', expanded: false, onExpandedChange() {} };
 // sanitizeHtml parses callouts/activities with these, so the page's DOM globals come from jsdom.
 for (const name of ['DOMParser', 'Node', 'Element', 'NodeFilter', 'Text', 'Comment', 'DocumentFragment', 'Event', 'KeyboardEvent', 'MouseEvent', 'FocusEvent']) globalThis[name] = dom.window[name];
 const { AiFocusProvider } = await import('../../hooks/useAiFocus.tsx');
@@ -87,7 +87,7 @@ test('unified list independently toggles duplicate occurrences and jumps reveal 
     const filterRef = React.useRef(null);
     return React.createElement(React.Fragment, null,
       React.createElement('button', { ref: filterRef, 'data-filter': '', onClick: () => setOnlyGaps(!onlyGaps) }, 'Only gaps'),
-      React.createElement(DetailedView, { days, legColors: [props.legColor, props.legColor], weather: {}, groups: [], ticks: {}, onlyGaps, isGap: d => !d.acts.length, onOnlyGapsChange: setOnlyGaps, filterRef, onToggle() {}, onJump() {}, actionItems: [], actionItemsDone: {}, onToggleActionItem() {} }));
+      React.createElement(DetailedView, { days, legColors: [props.legColor, props.legColor], weather: {}, groups: [], ticks: {}, onlyGaps, isGap: d => !d.acts.length, onOnlyGapsChange: setOnlyGaps, filterRef, onToggle() {}, onJump() {}, actionItems: [], considerations: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} }));
   }
   const view = mount(React.createElement(Harness));
   try {
@@ -189,11 +189,12 @@ test('live gaps removal returns focus to filter while retaining hidden disclosur
     const filterRef = React.useRef(null);
     return React.createElement(React.Fragment, null,
       React.createElement('button', { ref: filterRef, 'data-filter': '', onClick: () => setOnlyGaps(!onlyGaps) }, 'Only gaps'),
-      React.createElement(DetailedView, { days, legColors: [props.legColor], weather: {}, groups: [], ticks, onlyGaps, isGap: d => d.flights.length > 0 && Object.keys(ticks).length === 0, onOnlyGapsChange: setOnlyGaps, filterRef, onToggle(ids) { setTicks(Object.fromEntries(ids.map(id => [id, 'booked']))); }, actionItems: [], actionItemsDone: {}, onToggleActionItem() {} }));
+      React.createElement(DetailedView, { days, legColors: [props.legColor], weather: {}, groups: [], ticks, onlyGaps, isGap: d => d.flights.length > 0 && Object.keys(ticks).length === 0, onOnlyGapsChange: setOnlyGaps, filterRef, onToggle(ids) { setTicks(Object.fromEntries(ids.map(id => [id, 'booked']))); }, actionItems: [], considerations: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} }));
   }
   const view = mount(React.createElement(Harness));
   try {
-    act(() => view.container.querySelector('button[aria-expanded]').click());
+    // Under Only gaps the day opens on its own.
+    assert.equal(view.container.querySelector('button[aria-expanded]').getAttribute('aria-expanded'), 'true');
     const status = view.container.querySelector('.status');
     status.focus();
     act(() => status.click());
@@ -201,12 +202,13 @@ test('live gaps removal returns focus to filter while retaining hidden disclosur
     assert.equal(document.activeElement, view.container.querySelector('[data-filter]'));
     assert.ok(view.container.textContent.includes('No days match Only gaps'));
     act(() => view.container.querySelector('.itinerary-empty button').click());
-    assert.equal(view.container.querySelector('button[aria-expanded]').getAttribute('aria-expanded'), 'true');
+    // The normal view keeps its own choices; the day wasn't opened by hand there.
+    assert.equal(view.container.querySelector('button[aria-expanded]').getAttribute('aria-expanded'), 'false');
   } finally { view.close(); }
 });
 test('reactive full payload updates preserve unique occurrences but reset ambiguous identical duplicates', async () => {
   const { DetailedView } = await import('./DetailedView.tsx');
-  const shared = { days: [day, day, { ...day, date: '2040-01-03' }], legColors: [props.legColor, props.legColor, props.legColor], weather: {}, groups: [], ticks: {}, onlyGaps: false, onOnlyGapsChange() {}, filterRef: { current: null }, onToggle() {}, actionItems: [], actionItemsDone: {}, onToggleActionItem() {} };
+  const shared = { days: [day, day, { ...day, date: '2040-01-03' }], legColors: [props.legColor, props.legColor, props.legColor], weather: {}, groups: [], ticks: {}, onlyGaps: false, onOnlyGapsChange() {}, filterRef: { current: null }, onToggle() {}, actionItems: [], considerations: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} };
   const view = mount(React.createElement(DetailedView, shared));
   try {
     act(() => { for (const b of view.container.querySelectorAll('button[aria-expanded]')) b.click(); });
@@ -220,7 +222,7 @@ test('reactive full payload updates preserve unique occurrences but reset ambigu
 test('live removal of a focused inner control falls back to the filter even when its day remains', async () => {
   const { DetailedView } = await import('./DetailedView.tsx');
   const filter = document.createElement('button'); document.body.append(filter);
-  const shared = { days: [{ ...day, acts: ['<a href="https://example.com/synthetic">Synthetic link</a>'] }], legColors: [props.legColor], weather: {}, groups: [], ticks: {}, onlyGaps: false, onOnlyGapsChange() {}, filterRef: { current: filter }, onToggle() {}, actionItems: [], actionItemsDone: {}, onToggleActionItem() {} };
+  const shared = { days: [{ ...day, acts: ['<a href="https://example.com/synthetic">Synthetic link</a>'] }], legColors: [props.legColor], weather: {}, groups: [], ticks: {}, onlyGaps: false, onOnlyGapsChange() {}, filterRef: { current: filter }, onToggle() {}, actionItems: [], considerations: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} };
   const view = mount(React.createElement(DetailedView, shared));
   try {
     act(() => view.container.querySelector('button[aria-expanded]').click());
@@ -259,7 +261,7 @@ test('latest jump wins and a removed pending occurrence never scrolls to a survi
   function Harness() {
     const [days, setDays] = React.useState([day, { ...day, date: '2040-01-03' }]);
     updateDays = setDays;
-    return React.createElement(DetailedView, { days, legColors: [props.legColor, props.legColor], weather: {}, groups: [], ticks: {}, onlyGaps: false, onOnlyGapsChange() {}, filterRef: { current: null }, onToggle() {}, actionItems: [], actionItemsDone: {}, onToggleActionItem() {} });
+    return React.createElement(DetailedView, { days, legColors: [props.legColor, props.legColor], weather: {}, groups: [], ticks: {}, onlyGaps: false, onOnlyGapsChange() {}, filterRef: { current: null }, onToggle() {}, actionItems: [], considerations: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} });
   }
   const view = mount(React.createElement(Harness));
   try {
@@ -317,3 +319,36 @@ test('task text keeps <a> markup as a link with its label and drops unsafe marku
   } finally { view.close(); }
 });
 export { mount, day, props, React, act, assert, test };
+
+test('Only gaps opens each day and shows just the open items, each with why it is listed', async () => {
+  const { DetailedView } = await import('./DetailedView.tsx');
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const open = { who: 'all', name: 'Synthetic open lodging', address: 'Synthetic address', status: 'needed' };
+  const booked = { who: 'all', name: 'Synthetic booked lodging', address: 'Synthetic address', status: 'booked' };
+  const days = resolveDays({ days: [{ ...day, hotels: [open, booked], flights: [], callout: 'Synthetic callout', acts: ['Synthetic activity'] }, { ...day, date: '2040-01-03', hotels: [], flights: [], acts: [] }] });
+  const gaps = { '2040-01-03': { plan: true, transport: [{ key: 'transport:2040-01-03|t|A → B', title: 'Synthetic A → Synthetic B' }] } };
+  function Harness() {
+    const [onlyGaps, setOnlyGaps] = React.useState(true);
+    const filterRef = React.useRef(null);
+    return React.createElement(React.Fragment, null,
+      React.createElement('button', { ref: filterRef, 'data-filter': '', onClick: () => setOnlyGaps(!onlyGaps) }, 'Only gaps'),
+      React.createElement(DetailedView, { days, legColors: [props.legColor, props.legColor], weather: {}, groups: [], ticks: {}, onlyGaps, isGap: () => true, dayGaps: gaps, onOnlyGapsChange: setOnlyGaps, filterRef, onToggle() {}, actionItems: [], considerations: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} }));
+  }
+  const view = mount(React.createElement(Harness));
+  const triggers = () => [...view.container.querySelectorAll('button[aria-expanded]')];
+  try {
+    assert.deepEqual(triggers().map(b => b.getAttribute('aria-expanded')), ['true', 'true']);
+    const text = view.container.textContent;
+    assert.ok(text.includes('Synthetic open lodging') && text.includes('Not booked'));
+    assert.ok(!text.includes('Synthetic booked lodging') && !text.includes('Synthetic activity') && !text.includes('Synthetic callout'));
+    assert.ok(text.includes('Nothing planned') && text.includes('None entered') && text.includes('Synthetic A → Synthetic B'));
+    // A day can still be closed by hand; turning the filter off and on opens it again.
+    act(() => triggers()[0].click());
+    assert.equal(triggers()[0].getAttribute('aria-expanded'), 'false');
+    act(() => view.container.querySelector('[data-filter]').click());
+    assert.equal(triggers()[0].getAttribute('aria-expanded'), 'false'); // normal view: nothing was opened by hand
+    assert.ok(view.container.textContent.includes('Synthetic booked lodging') === false);
+    act(() => view.container.querySelector('[data-filter]').click());
+    assert.equal(triggers()[0].getAttribute('aria-expanded'), 'true');
+  } finally { view.close(); }
+});

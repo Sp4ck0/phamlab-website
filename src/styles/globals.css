@@ -432,6 +432,9 @@ details.tour-box[open] summary::after{content:"Hide"}
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--r,12px);padding:14px 15px;position:relative;transition:.18s}
 .card:hover{box-shadow:0 4px 12px var(--border);transform:translateY(-1px)}
 .card.miss{border-style:dashed;border-color:var(--danger);background:var(--danger-tint)}
+/* Only gaps: the reason a tile is listed, and a heavier border so it stands out. */
+.gap-reason{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--danger)}
+.day-card.gaps-only .card.miss{border-width:2px}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:4px}
 .ctop{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;margin-bottom:10px}
 .ctype{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted)}

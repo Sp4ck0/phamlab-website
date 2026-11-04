@@ -2,6 +2,7 @@ import { Fragment, useEffect, useId, useLayoutEffect, useRef, useState } from "r
 import type { RefObject } from "react";
 import type { ActionItem, Group, LegColor, ResolvedDay, Status, Task, Vote } from "../../lib/types";
 import { coversDay } from "../../lib/tasks";
+import type { DayGaps } from "../../lib/tasks";
 import { useAiFocus } from "../../hooks/useAiFocus";
 import { useRecentChanges } from "../../hooks/useRecentChanges";
 import { DOW, MON } from "../../lib/tripLogic";
@@ -22,6 +23,8 @@ interface Props {
   // Does this day still have an open booking or unplanned-day task? Undefined
   // while the tasks load.
   isGap?: (day: ResolvedDay) => boolean;
+  // Per date: a blank day to plan, moves with no transport. Shown under Only gaps.
+  dayGaps?: Record<string, DayGaps>;
   onOnlyGapsChange: (value: boolean) => void;
   filterRef: RefObject<HTMLButtonElement | null>;
   onToggle: (ids: string[], status: Status) => void;
@@ -36,7 +39,7 @@ interface Props {
 }
 
 // Unified itinerary; name retained to keep the detail renderer's consumer small.
-export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps, isGap, onOnlyGapsChange, filterRef,
+export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps, isGap, dayGaps, onOnlyGapsChange, filterRef,
   onToggle, actionItems, considerations, pendingVotes, onVote, actionItemsDone, onToggleActionItem, onEditActivity }: Props) {
   const prefix = useId();
   const [state, setState] = useState(() => {
@@ -57,6 +60,17 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   // "Only gaps" shows the days the Action Items list still has something open
   // for. Until the tasks have loaded there is no answer, so nothing is hidden.
   const visible = state.rows.map(({ day: d }) => !onlyGaps || !isGap || isGap(d));
+  // Under Only gaps every day opens on its own (the gaps are the point); the
+  // reader's own open/closed choices are kept separately for the normal view.
+  const gapsView = onlyGaps && !!isGap;
+  const [gapsCollapsed, setGapsCollapsed] = useState<Set<string>>(new Set());
+  const [gapsViewSeen, setGapsViewSeen] = useState(gapsView);
+  if (gapsViewSeen !== gapsView) {
+    setGapsViewSeen(gapsView);
+    setGapsCollapsed(new Set());
+  }
+  const isOpen = (id: string) => (gapsView ? !gapsCollapsed.has(id) : state.expanded.has(id));
+  const pendingOpen = !!pending && isOpen(pending.id);
 
   useLayoutEffect(() => {
     function remember(event: FocusEvent) {
@@ -87,14 +101,14 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
       return;
     }
     const trigger = target && document.getElementById(`${target.id}-trigger`);
-    if (trigger && state.expanded.has(pending.id)) {
+    if (trigger && pendingOpen) {
       trigger.focus({ preventScroll: true });
       trigger.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
     } else {
       setMessage("That day is no longer available. Choose a day from the navigation.");
     }
     setPending(null);
-  }, [state, onlyGaps, ticks, pending, filterRef, visible, onOnlyGapsChange]);
+  }, [state, onlyGaps, ticks, pending, pendingOpen, filterRef, visible, onOnlyGapsChange]);
 
   function jump(id: string) {
     const index = state.rows.findIndex(row => row.id === id);
@@ -108,6 +122,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
       setMessage("Showing all days to reveal the selected day.");
     } else setMessage("");
     setState(current => ({ ...current, expanded: new Set([...current.expanded, id]) }));
+    setGapsCollapsed(current => { const next = new Set(current); next.delete(id); return next; });
     setPending({ id }); // A new intent also makes repeat jumps work.
   }
 
@@ -185,7 +200,15 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
           <Fragment key={id}>
           {ghostAt === i && ghostDay}
           <DayCard rowId={id} day={d} changedFrom={diff?.date === d.date ? diff.prev : undefined} days={days} dayNumber={i} legColor={legColors[i]} weather={weather[d.date]}
-            groups={groups} ticks={ticks} expanded={state.expanded.has(id)} onExpandedChange={() => {
+            groups={groups} ticks={ticks} expanded={isOpen(id)} gapsOnly={gapsView} gaps={dayGaps?.[d.date]} onExpandedChange={() => {
+              if (gapsView) {
+                setGapsCollapsed(current => {
+                  const next = new Set(current);
+                  if (next.has(id)) next.delete(id); else next.add(id);
+                  return next;
+                });
+                return;
+              }
               setState(current => {
                 const expanded = new Set(current.expanded);
                 if (expanded.has(id)) expanded.delete(id); else expanded.add(id);
