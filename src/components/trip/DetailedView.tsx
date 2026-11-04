@@ -1,12 +1,13 @@
-import { Fragment, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 import type { ActionItem, Group, LegColor, ResolvedDay, Status, Task, Vote } from "../../lib/types";
 import { coversDay } from "../../lib/tasks";
 import type { DayGaps } from "../../lib/tasks";
 import { useAiFocus } from "../../hooks/useAiFocus";
 import { useRecentChanges } from "../../hooks/useRecentChanges";
+import { useHoldForAi } from "../../hooks/useHoldForAi";
 import { DOW, MON } from "../../lib/tripLogic";
-import { flash, scrollBehavior, SETTLE_MS } from "../../lib/flash";
+import { afterScroll, flash, scrollBehavior, SETTLE_MS } from "../../lib/flash";
 import { tileDomId } from "../../lib/tileId";
 import { reconcileRows } from "../../lib/itineraryState";
 import { DayNav } from "./DayNav";
@@ -42,16 +43,23 @@ interface Props {
 export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps, isGap, dayGaps, onOnlyGapsChange, filterRef,
   onToggle, actionItems, considerations, pendingVotes, onVote, actionItemsDone, onToggleActionItem, onEditActivity }: Props) {
   const prefix = useId();
+  // A day the AI just edited keeps showing its old content until the page is
+  // pointed at it (see useRecentChanges), so the change can be played from the old text.
+  const recent = useRecentChanges(days, d => d.date, useHoldForAi());
+  const heldVersion = recent.version();
+  const shown = useMemo(() => days.map(d => recent.held(d.date) ?? d),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [days, heldVersion, recent]);
   const [state, setState] = useState(() => {
     let serial = 0;
-    const rows = reconcileRows([], days, () => `${prefix}-day-${++serial}`);
-    return { days, rows, serial, expanded: new Set<string>() };
+    const rows = reconcileRows([], shown, () => `${prefix}-day-${++serial}`);
+    return { days: shown, rows, serial, expanded: new Set<string>() };
   });
-  if (state.days !== days) {
+  if (state.days !== shown) {
     let serial = state.serial;
-    const rows = reconcileRows(state.rows, days, () => `${prefix}-day-${++serial}`);
+    const rows = reconcileRows(state.rows, shown, () => `${prefix}-day-${++serial}`);
     const retained = new Set(rows.map(row => row.id));
-    setState({ days, rows, serial, expanded: new Set([...state.expanded].filter(id => retained.has(id))) });
+    setState({ days: shown, rows, serial, expanded: new Set([...state.expanded].filter(id => retained.has(id))) });
   }
   const [pending, setPending] = useState<{ id: string } | null>(null);
   const [message, setMessage] = useState("");
@@ -136,7 +144,6 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   const { focus: dayFocus, consume } = useAiFocus("day");
   const { focus: tileFocus } = useAiFocus("tile");
   const focus = dayFocus ?? tileFocus;
-  const recent = useRecentChanges(days, d => d.date);
   const [diff, setDiff] = useState<{ date: string; prev: ResolvedDay } | null>(null);
   const [ghost, setGhost] = useState<ResolvedDay | null>(null);
   useEffect(() => {
@@ -158,15 +165,18 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
         if (change?.prev) setGhost(change.prev);
         return;
       }
-      jump(row.id);
-      setTimeout(() => {
+      // Once the page has stopped scrolling, show the new content and play the
+      // change from the old (the day was held at its old content until now).
+      afterScroll(() => {
+        recent.release(date);
         // A tile that is gone (the booking changed) falls back to the day.
         const el = document.getElementById(tile ? tileDomId(row.id, tile) : row.id) ?? document.getElementById(row.id);
         if (!el) return;
         if (tile && el.id !== row.id) el.scrollIntoView({ block: "center", behavior: scrollBehavior() });
         if (!tile && change?.prev && !change.gone) setDiff({ date, prev: change.prev });
         else flash(el);
-      }, 250);
+      });
+      jump(row.id);
     }, SETTLE_MS);
     return () => clearTimeout(t);
     // jump is recreated every render and only reads this render's state.
@@ -174,6 +184,11 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   }, [focus, state.rows, consume]);
 
   // The removed day, where it sat among the rest.
+  // The reader's own edit shows at once; only the AI's is held for its focus signal.
+  const editActivity: typeof onEditActivity = onEditActivity && ((date, ...rest) => {
+    recent.skip(date);
+    return onEditActivity(date, ...rest);
+  });
   const ghostAt = ghost ? state.rows.findIndex(r => r.day.date > ghost.date) : -1;
   const ghostDay = ghost && (
     <section key="removed-day" id="removed-day" className="day-card chg-gone" inert aria-hidden="true">
@@ -217,7 +232,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
             }} onToggle={onToggle} dayActionItems={actionItems.filter(item => item.date !== undefined && item.date <= d.date && d.date <= (item.endDate ?? item.date))}
             dayConsiderations={considerations.filter(t => t.scope.kind !== "trip" && coversDay(t.scope, d.date))}
             pendingVotes={pendingVotes} onVote={onVote}
-            actionItemsDone={actionItemsDone} onToggleActionItem={onToggleActionItem} onEditActivity={onEditActivity} />
+            actionItemsDone={actionItemsDone} onToggleActionItem={onToggleActionItem} onEditActivity={editActivity} />
           </Fragment>
         ))}
         {ghostAt === -1 && ghostDay}
