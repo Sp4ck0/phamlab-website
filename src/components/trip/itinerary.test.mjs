@@ -369,11 +369,13 @@ test('a reworded activity diffs in place: old words struck, then new words, then
   try {
     const item = () => view.container.querySelectorAll('.activity');
     assert.equal(item().length, 1); // no separate ghost row for the old wording
-    assert.equal(item()[0].querySelector('.chg-del')?.textContent, 'winter');
-    assert.equal(item()[0].querySelector('.chg-ins'), null);
+    const on = sel => item()[0].querySelector(sel).parentElement.dataset.on;
+    // both texts are laid out all along (so the row never resizes); one is shown
+    assert.equal(item()[0].querySelector('.chg-del').textContent, 'Synthetic winter plan');
+    assert.equal(item()[0].querySelector('.chg-ins').textContent, 'Synthetic summer plan');
+    assert.deepEqual([on('.chg-del'), on('.chg-ins')], ['true', 'false']);
     await wait(1200);
-    assert.equal(item()[0].querySelector('.chg-ins')?.textContent, 'summer');
-    assert.equal(item()[0].querySelector('.chg-del'), null);
+    assert.deepEqual([on('.chg-del'), on('.chg-ins')], ['false', 'true']);
     await wait(1800);
     assert.equal(item()[0].querySelector('.chg-ins'), null);
     assert.ok(item()[0].textContent.includes('Synthetic summer plan'));
