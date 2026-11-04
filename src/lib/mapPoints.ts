@@ -89,15 +89,17 @@ export function inlinePlaces(text: string, places: Place[] = []): { html: string
         continue;
       }
       if (linkDepth > 0 || !p.name) continue;
-      const at = parts[i].toLowerCase().indexOf(p.name.toLowerCase());
+      // The text is HTML, where the name's & < > are entities ("aesthetic &amp; spa").
+      const name = p.name.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const at = parts[i].toLowerCase().indexOf(name.toLowerCase());
       if (at < 0) continue;
-      const shown = parts[i].slice(at, at + p.name.length);
+      const shown = parts[i].slice(at, at + name.length);
       const href = googleMapsUrl(p).replace(/&/g, "&amp;");
       const key = placeKey(p);
       const button = key
         ? `<button type="button" class="map-focus" data-map-key="${escapeAttr(key)}" title="Show ${escapeAttr(p.name)} on the trip map" aria-label="Show ${escapeAttr(p.name)} on the trip map">${MAP_FOCUS_ICON}</button>`
         : "";
-      parts[i] = `${parts[i].slice(0, at)}<a href="${href}" target="_blank" rel="noopener noreferrer">📍 ${shown}</a>${button}${parts[i].slice(at + p.name.length)}`;
+      parts[i] = `${parts[i].slice(0, at)}<a href="${href}" target="_blank" rel="noopener noreferrer">📍 ${shown}</a>${button}${parts[i].slice(at + name.length)}`;
       done = true;
     }
     if (done) html = parts.join("");
