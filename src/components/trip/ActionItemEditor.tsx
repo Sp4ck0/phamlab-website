@@ -24,7 +24,7 @@ const SCOPES: { id: Scope; label: string }[] = [
   { id: "day", label: "One day" },
   { id: "range", label: "Date range" },
 ];
-const KIND_LABELS = { custom: "To-do", consider: "Consider" } as const;
+const KIND_LABELS = { custom: "TO-DO", consider: "Consider" } as const;
 const PRIORITIES: Priority[] = ["high", "medium", "low"];
 
 // "Everyone" is stored as no `who` at all, so only real group ids are chips.
