@@ -6,6 +6,7 @@ import { AlertsPanel } from "../components/trip/AlertsPanel";
 import { DetailedView } from "../components/trip/DetailedView";
 import { ActionItems } from "../components/trip/ActionItems";
 import { TripMap } from "../components/trip/TripMap";
+import { TripNote } from "../components/trip/TripNote";
 import { ItineraryStart, TripEntryBoundary } from "../components/trip/TripEntryBoundary";
 import { useTrip } from "../hooks/useTrip";
 import { useRememberTab } from "../hooks/useRememberTab";
@@ -149,6 +150,8 @@ function TripPageEntry() {
         Trip content is stored in Convex — ask to have a change made rather than editing code. Check-offs are saved
         for everyone with access to this trip.
       </footer>
+
+      <TripNote slug={slug || ""} />
     </PageShell>
   );
 }

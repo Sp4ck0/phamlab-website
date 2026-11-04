@@ -776,3 +776,24 @@ textarea.ai-input{display:block;width:100%;resize:none;overflow:hidden;line-heig
 .boot-spinner{width:28px;height:28px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--accent-1);animation:boot-spin .8s linear infinite}
 @keyframes boot-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.boot-spinner{animation-duration:2.4s}}
+
+/* Trip notes (TripNote.tsx): floating button that opens a draft-then-save pad */
+.trip-note-fab{position:fixed;right:20px;bottom:20px;z-index:25;width:48px;height:48px;border-radius:50%;border:1px solid var(--border);background:var(--card);box-shadow:0 4px 14px rgba(0,0,0,.18);font-size:20px;cursor:pointer;display:grid;place-items:center}
+.trip-note-fab:hover{border-color:var(--text-muted)}
+.trip-note-dot{position:absolute;top:4px;right:4px;width:11px;height:11px;border-radius:50%;background:var(--accent-2);border:2px solid var(--card)}
+.trip-note{position:fixed;right:20px;bottom:20px;z-index:25;width:min(380px,calc(100vw - 32px));max-height:calc(100vh - 40px);display:flex;flex-direction:column;gap:8px;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.22)}
+.trip-note header{display:flex;align-items:center;justify-content:space-between}
+.trip-note-close{font:inherit;background:none;border:none;color:var(--text-muted);cursor:pointer;padding:4px 6px}
+.trip-note-close:hover{color:var(--text-primary)}
+.trip-note-blurb{margin:0;font-size:12px;line-height:1.4;color:var(--text-secondary)}
+.trip-note textarea{font:inherit;font-size:14px;line-height:1.45;min-height:200px;flex:1;resize:vertical;padding:8px 10px;color:var(--text-primary);background:var(--page);border:1px solid var(--border);border-radius:10px}
+.trip-note textarea:focus{outline:2px solid var(--accent-1);outline-offset:-1px}
+.trip-note footer{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.trip-note-status{margin-right:auto;font-size:12px;color:var(--text-muted)}
+.trip-note-save:not(:disabled){background:var(--accent-1);border-color:var(--accent-1);color:#fff}
+.trip-note-save:disabled{opacity:.5;cursor:default}
+.trip-note-conflict{font-size:12px;line-height:1.4;padding:8px 10px;border-radius:10px;background:var(--accent-transit-tint);color:var(--text-primary)}
+.trip-note-conflict pre{margin:6px 0 0;white-space:pre-wrap;max-height:120px;overflow:auto;font:inherit;color:var(--text-secondary)}
+.trip-note-actions{display:flex;gap:8px;margin-top:8px}
+.trip-note-error{margin:0;font-size:12px;color:var(--danger)}
+@media print{.trip-note-fab,.trip-note{display:none}}
