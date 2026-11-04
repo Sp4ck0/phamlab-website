@@ -130,6 +130,9 @@ export function DayCard({
   const legFlights = flightChanges.filter((c) => open(c.item) && c.item.legs && c.item.legs.length);
   const plainFlights = flightChanges.filter((c) => open(c.item) && !(c.item.legs && c.item.legs.length));
   const transportGaps = gapsOnly ? gaps?.transport ?? [] : [];
+  // Under Only gaps, a to-do or consideration that is done or settled is not a gap.
+  const shownConsiderations = gapsOnly ? dayConsiderations.filter((t) => !t.done) : dayConsiderations;
+  const shownActionItems = gapsOnly ? dayActionItems.filter((item) => !actionItemsDone[item.id]) : dayActionItems;
   const actChanges = old ? diffLines(old.acts ?? [], d.acts ?? [], actKey) : unchanged(d.acts ?? []);
   // Edit buttons, share links and ids use an activity's real index; a ghost has none.
   let actIndex = 0;
@@ -337,11 +340,11 @@ export function DayCard({
             </div>
           )}
 
-          {!gapsOnly && dayConsiderations.length > 0 && (
+          {shownConsiderations.length > 0 && (
             <div className="day-considering">
-              <span className="consider-pill">{dayConsiderations.some((t) => !t.outcome) ? "Under consideration" : "Decided"}</span>
+              <span className="consider-pill">{shownConsiderations.some((t) => !t.outcome) ? "Under consideration" : "Decided"}</span>
               <ul>
-                {dayConsiderations.map((t) => {
+                {shownConsiderations.map((t) => {
                   const id = t.key.slice("item:".length);
                   const { mine, yes, no } = voteTally(t, pendingVotes[id]);
                   const pick = (v: Vote) => onVote(id, mine === v ? null : v);
@@ -372,9 +375,9 @@ export function DayCard({
             </div>
           )}
 
-          {!gapsOnly && dayActionItems.length > 0 && (
+          {shownActionItems.length > 0 && (
             <div className="action-items" style={{ marginTop: 14 }}>
-              {dayActionItems.map((item) => (
+              {shownActionItems.map((item) => (
                 <TaskRow
                   key={item.id}
                   domId={`${rowId}-ai-${item.id}`}
