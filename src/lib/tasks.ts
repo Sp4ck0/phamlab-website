@@ -64,14 +64,26 @@ export function ticksFromTasks(tasks: Task[]): Record<string, Status> {
 }
 
 // Dates that still have something open: a hotel/transport still to book, a
-// blank day still to plan, or a move with no transport entered. Each ref's key
-// carries its own date right after the prefix (`booking:2040-01-02|…`), so a stay
-// or run of blank days that merged into one task still marks only the
-// nights/days that are actually open.
+// blank day still to plan, a move with no transport entered, or an open
+// decision / consideration / to-do tied to a day or date range (it marks each
+// date it covers; a whole-trip item would mark every day, so it marks none).
+// Each ref's key carries its own date right after the prefix
+// (`booking:2040-01-02|…`), so a stay or run of blank days that merged into one
+// task still marks only the nights/days that are actually open.
 export function gapDates(tasks: Task[]): Set<string> {
   const out = new Set<string>();
   for (const t of tasks) {
-    if (t.kind !== "booking" && t.kind !== "plan" && t.kind !== "transport") continue;
+    if (t.kind !== "booking" && t.kind !== "plan" && t.kind !== "transport") {
+      const start = scopeStart(t.scope);
+      const end = scopeEnd(t.scope);
+      if (t.done || !start || !end) continue;
+      for (let d = new Date(start + "T00:00:00Z"); ; d.setUTCDate(d.getUTCDate() + 1)) {
+        const iso = d.toISOString().slice(0, 10);
+        if (iso > end) break;
+        out.add(iso);
+      }
+      continue;
+    }
     t.refs.forEach((ref, i) => {
       if (t.refsDone[i]) return;
       const start = ref.indexOf(":") + 1;

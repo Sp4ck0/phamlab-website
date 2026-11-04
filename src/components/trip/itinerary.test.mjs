@@ -30,7 +30,7 @@ function mount(element) {
   act(() => root.render(wrap(element)));
   return { container, root: { render: (next) => root.render(wrap(next)), unmount: () => root.unmount() }, close() { act(() => root.unmount()); container.remove(); } };
 }
-test('only-gaps dates come from open booking, plan and transport tasks, one per open night or day', async () => {
+test('only-gaps dates come from open booking, plan and transport tasks (one per open night or day) and open items tied to a day or range', async () => {
   const { gapDates, kindLabel } = await import('../../lib/tasks.ts');
   assert.equal(kindLabel({ kind: 'transport', scope: { kind: 'day', date: '2040-01-07' } }), 'Transport');
   const task = (kind, refs, refsDone) => ({ kind, refs, refsDone });
@@ -40,10 +40,12 @@ test('only-gaps dates come from open booking, plan and transport tasks, one per 
     task('plan', ['plan:2040-01-06|p|Synthetic'], [true]), // dismissed
     task('transport', ['transport:2040-01-07|t|Synthetic A → Synthetic B'], [false]), // a move with nothing entered
     task('transport', ['transport:2040-01-08|t|Synthetic B → Synthetic C'], [true]), // dismissed
-    task('custom', ['item:synthetic'], [false]), // a to-do is not a gap
-    { ...task('custom', ['item:synthetic-urgent'], [false]), priority: 'high' }, // a high-priority to-do is not a gap either
+    { ...task('custom', ['item:synthetic'], [false]), done: false, scope: { kind: 'trip' } }, // a whole-trip to-do marks no day
+    { ...task('custom', ['item:synthetic-day'], [false]), done: false, scope: { kind: 'day', date: '2040-01-09' } }, // an open to-do on a day
+    { ...task('custom', ['item:synthetic-done'], [true]), done: true, scope: { kind: 'day', date: '2040-01-10' } }, // done: not a gap
+    { ...task('consider', ['item:synthetic-range'], [false]), done: false, scope: { kind: 'range', start: '2040-01-11', end: '2040-01-12' } }, // an open consideration covers its whole range
   ]);
-  assert.deepEqual([...dates].sort(), ['2040-01-03', '2040-01-05', '2040-01-07']);
+  assert.deepEqual([...dates].sort(), ['2040-01-03', '2040-01-05', '2040-01-07', '2040-01-09', '2040-01-11', '2040-01-12']);
 });
 test('controlled closed day exposes an associated empty panel, not detail descendants', () => {
   const view = mount(React.createElement(DayCard, props));
