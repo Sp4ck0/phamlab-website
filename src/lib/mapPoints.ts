@@ -195,6 +195,44 @@ export function deriveTaskPoints(tasks: Task[], existing: MapPointData[]): MapPo
   return out;
 }
 
+export interface JumpTarget {
+  day?: string; // first day the place appears on (hotel stay or activity)
+  item?: string; // first action item that mentions it
+}
+
+// Where a pin's popup can send you, by place key. Looked up by place rather than
+// read off the pin's id, because derivePoints keeps one pin per place: an activity at
+// your hotel or a curated point is that pin, whose id says nothing about the day.
+export function deriveJumpTargets(days: ResolvedDay[], tasks: Task[]): Map<string, JumpTarget> {
+  const out = new Map<string, JumpTarget>();
+  const slot = (p: Place) => {
+    const key = placeKey(p);
+    if (!key) return undefined;
+    if (!out.has(key)) out.set(key, {});
+    return out.get(key)!;
+  };
+  days.forEach((d) => {
+    d.hotels.forEach((h) => {
+      const t = slot(h);
+      if (t && !t.day) t.day = d.date;
+    });
+    d.acts.forEach((a) => {
+      (actParts(a).places ?? []).forEach((place) => {
+        const t = slot(place);
+        if (t && !t.day) t.day = d.date;
+      });
+    });
+  });
+  tasks.forEach((task) => {
+    if (!task.key.startsWith("item:")) return;
+    (task.places ?? []).forEach((place) => {
+      const t = slot(place);
+      if (t && !t.item) t.item = task.key.slice("item:".length);
+    });
+  });
+  return out;
+}
+
 // Ordered city waypoints for the map's route line. Mirrors deriveRoute's
 // walk (city, then `to`) and the home-city exclusion in derivePoints; only
 // consecutive repeats are collapsed so a revisit (A → B → A) still draws.

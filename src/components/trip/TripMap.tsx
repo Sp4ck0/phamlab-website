@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useShowAiFocus } from "../../hooks/useAiFocus";
-import type { MapPointData, Task } from "../../lib/types";
-import { CATEGORY_COLORS, CATEGORY_LABELS, MAP_FOCUS_EVENT, googleMapsUrl, placeKey } from "../../lib/mapPoints";
-import type { WeatherStop } from "../../lib/mapPoints";
+import type { MapPointData, ResolvedDay, Task } from "../../lib/types";
+import { CATEGORY_COLORS, CATEGORY_LABELS, MAP_FOCUS_EVENT, deriveJumpTargets, googleMapsUrl, placeKey } from "../../lib/mapPoints";
+import type { JumpTarget, WeatherStop } from "../../lib/mapPoints";
 import { fmtShort } from "../../lib/tripLogic";
 import { summarizeStay, temp, weatherIcon, weatherText } from "../../lib/weather";
 import { useGeocodedPoints } from "../../hooks/useGeocodedPoints";
@@ -29,6 +29,8 @@ interface PillEntry {
 
 interface Props {
   points: MapPointData[];
+  // For the popup's "See in itinerary" / "See in Action Items" buttons.
+  days: ResolvedDay[];
   route: MapPointData[];
   weatherStops: WeatherStop[];
   // Places of considerations (not in the plan): drawn as rings, with a legend toggle.
@@ -147,7 +149,7 @@ function flyTo(
   };
 }
 
-export function TripMap({ points, route, weatherStops, candidates, considerations }: Props) {
+export function TripMap({ points, days, route, weatherStops, candidates, considerations }: Props) {
   const { points: geocoded, status, error } = useGeocodedPoints(points);
   const { points: geocodedRoute } = useGeocodedPoints(route);
   const { points: geocodedWeather } = useGeocodedPoints(weatherStops);
@@ -187,6 +189,9 @@ export function TripMap({ points, route, weatherStops, candidates, consideration
   // The popup's "See in itinerary" / "See in Action Items" buttons are plain HTML inside
   // the Maps info window, so one capture-phase listener on the map wrapper answers them
   // and hands off to the same focus signal the AI and shared links use.
+  // Read at click time, so a task added later still gets its button without rebuilding pins.
+  const jumpTargets = useRef(new Map<string, JumpTarget>());
+  jumpTargets.current = deriveJumpTargets(days, considerations);
   const jumpRef = useRef<(day?: string, item?: string) => void>(() => {});
   jumpRef.current = (day, item) => {
     if (!slug) return;
@@ -282,7 +287,7 @@ export function TripMap({ points, route, weatherStops, candidates, consideration
           const stop = p.category === "city" ? stopsByAddress.current.get(p.address ?? "") : undefined;
           // City dots are just a place on the route; every other pin is a real place worth opening in Google Maps.
           const link = p.category === "city" ? undefined : googleMapsUrl(p);
-          openInfo(map, infoHtml(p.name, CATEGORY_LABELS[p.category] + (p.note ? " · " + p.note : ""), tempUnitRef.current, stop, link, { day: /^act-(\d{4}-\d{2}-\d{2})-/.exec(p.id)?.[1] }), marker);
+          openInfo(map, infoHtml(p.name, CATEGORY_LABELS[p.category] + (p.note ? " · " + p.note : ""), tempUnitRef.current, stop, link, jumpTargets.current.get(placeKey(p) ?? "")), marker);
         });
         markers.current.push(marker);
         const key = placeKey(p);
@@ -451,7 +456,7 @@ export function TripMap({ points, route, weatherStops, candidates, consideration
             ? task.outcome === "chosen" ? "Chosen" : "Under consideration"
             : `${task?.kind === "decision" ? "Decision" : "To-do"}${task?.done ? " (done)" : ""}`;
         const votes = task?.votes ? ` · 👍 ${task.votes.yes.length} · 👎 ${task.votes.no.length}` : "";
-        openInfo(map, infoHtml(p.name, `${live}${task ? `: ${task.title}` : ""}${votes}`, tempUnitRef.current, undefined, googleMapsUrl(p), { item: p.id.split("|")[1] }), marker);
+        openInfo(map, infoHtml(p.name, `${live}${task ? `: ${task.title}` : ""}${votes}`, tempUnitRef.current, undefined, googleMapsUrl(p), jumpTargets.current.get(placeKey(p) ?? "")), marker);
       });
       const key = placeKey(p);
       if (key) candidatePins.current.set(key, marker);
@@ -627,10 +632,15 @@ function infoHtml(title: string, subtitle: string, unit: TempUnit, stop?: Weathe
       (mapsUrl
         ? `<div style="margin-top:6px;font:500 12px system-ui"><a style="color:#1a55c8;text-decoration:underline" href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener noreferrer">Open in Google Maps</a></div>`
         : "") +
-      (jump?.day || jump?.item
-        ? `<div style="margin-top:6px"><button type="button" ${jump.day ? `data-jump-day="${escapeHtml(jump.day)}"` : `data-jump-item="${escapeHtml(jump.item!)}"`} style="all:unset;cursor:pointer;font:500 12px system-ui;color:#1a55c8;text-decoration:underline">${jump.day ? "See in itinerary" : "See in Action Items"}</button></div>`
-        : ""),
+      jumpButton("data-jump-day", jump?.day, "See in itinerary") +
+      jumpButton("data-jump-item", jump?.item, "See in Action Items"),
   };
+}
+
+function jumpButton(attr: string, value: string | undefined, label: string) {
+  return value
+    ? `<div style="margin-top:6px"><button type="button" ${attr}="${escapeHtml(value)}" style="all:unset;cursor:pointer;font:500 12px system-ui;color:#1a55c8;text-decoration:underline">${label}</button></div>`
+    : "";
 }
 
 // A real DOM element on the map (not a marker label), so it can receive clicks
