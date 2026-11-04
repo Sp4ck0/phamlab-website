@@ -51,12 +51,35 @@ function ringIcon(chosen: boolean): string {
 }
 
 // A category's pin: its emoji on a white-rimmed disc in the category color.
+// Drawn on a canvas and centered from the glyph's measured bounds: SVG text
+// baselines (dominant-baseline) are not honored consistently on iOS Safari.
+const emojiIcons = new Map<string, google.maps.Icon>();
 function emojiIcon(emoji: string, color: string): google.maps.Icon {
-  const svg =
-    `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">` +
-    `<circle cx="15" cy="15" r="13" fill="${color}" stroke="#fff" stroke-width="2"/>` +
-    `<text x="15" y="15" font-size="15" text-anchor="middle" dominant-baseline="central">${emoji}</text></svg>`;
-  return { url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`, anchor: new google.maps.Point(15, 15), scaledSize: new google.maps.Size(30, 30) };
+  const key = emoji + color;
+  const cached = emojiIcons.get(key);
+  if (cached) return cached;
+  const size = 30;
+  const scale = 3;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size * scale;
+  const ctx = canvas.getContext("2d")!;
+  ctx.scale(scale, scale);
+  ctx.beginPath();
+  ctx.arc(size / 2, size / 2, 13, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#fff";
+  ctx.stroke();
+  ctx.font = "15px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+  const m = ctx.measureText(emoji);
+  const y = size / 2 + (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
+  ctx.fillText(emoji, size / 2, y);
+  const icon = { url: canvas.toDataURL("image/png"), anchor: new google.maps.Point(size / 2, size / 2), scaledSize: new google.maps.Size(size, size) };
+  emojiIcons.set(key, icon);
+  return icon;
 }
 
 // Web Mercator in 0..1 world units, so a camera flight can interpolate between places.
