@@ -600,7 +600,7 @@ function infoHtml(title: string, subtitle: string, unit: TempUnit, stop?: Weathe
       (subtitle ? `<div style="font:400 12px system-ui;color:#52514e">${escapeHtml(subtitle)}</div>` : "") +
       (rows ? `<div style="margin-top:${subtitle ? 4 : 0}px">${rows}</div>` : "") +
       (mapsUrl
-        ? `<div style="margin-top:6px;font:500 12px system-ui"><a href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener noreferrer">Open in Google Maps</a></div>`
+        ? `<div style="margin-top:6px;font:500 12px system-ui"><a style="color:#1a55c8;text-decoration:underline" href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener noreferrer">Open in Google Maps</a></div>`
         : ""),
   };
 }
