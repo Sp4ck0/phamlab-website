@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { DueState } from "../../lib/dueDates";
 import { sanitizeHtml } from "../../lib/sanitizeHtml";
+import { InlineDiff } from "./InlineDiff";
 
 interface Badge {
   label: string;
@@ -22,6 +23,9 @@ interface Props {
   lead: string;
   // Muted text after the lead: the route/city, or the item's detail.
   body?: string;
+  // Their wording before an AI edit; when set, the change is shown word by word.
+  leadPrev?: string;
+  bodyPrev?: string;
   // When it applies ("Fri Nov 20 – Sun Nov 22"); left out for whole-trip items.
   scope?: ReactNode;
   // Edit / delete buttons.
@@ -37,7 +41,7 @@ const badgeBase = { display: "inline-block", padding: "3px 7px", borderRadius: 6
 // the checkbox toggles it; the text is a plain span so it can be selected and
 // copied without marking the task complete. Shared by the Action Items list and
 // the per-day checklists.
-export function TaskRow({ domId, rowId, done, onToggle, badge, pill, lead, body, scope, actions, due, dueState }: Props) {
+export function TaskRow({ domId, rowId, done, onToggle, badge, pill, lead, body, leadPrev, bodyPrev, scope, actions, due, dueState }: Props) {
   const hasRest = !!(body || scope);
   const tint = (color: string | null) =>
     color ? { background: `${color}1a`, color } : { background: "var(--chip-bg)", color: "var(--text-secondary)" };
@@ -56,14 +60,26 @@ export function TaskRow({ domId, rowId, done, onToggle, badge, pill, lead, body,
         )}
         {pill && <span style={{ ...tint(null), ...badgeBase }}>{pill}</span>}
         <span className="at">
-          <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(lead) }} />
+          {leadPrev !== undefined ? (
+            <InlineDiff prev={sanitizeHtml(leadPrev)} next={sanitizeHtml(lead)}>
+              <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(lead) }} />
+            </InlineDiff>
+          ) : (
+            <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(lead) }} />
+          )}
           {hasRest ? " —" : ""}
         </span>
         {hasRest && (
           <>
             {" "}
             <span className="ad">
-              {body && <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(body) }} />}
+              {body && (bodyPrev !== undefined ? (
+                <InlineDiff prev={sanitizeHtml(bodyPrev)} next={sanitizeHtml(body)}>
+                  <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(body) }} />
+                </InlineDiff>
+              ) : (
+                <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(body) }} />
+              ))}
               {body && scope ? " · " : ""}
               {scope}
             </span>

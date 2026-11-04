@@ -354,3 +354,28 @@ test('Only gaps opens each day and shows just the open items, each with why it i
     assert.equal(triggers()[0].getAttribute('aria-expanded'), 'true');
   } finally { view.close(); }
 });
+test('word diff marks only the words that changed', async () => {
+  const { diffWords, plainText } = await import('../../lib/wordDiff.ts');
+  const parts = diffWords('Winter gear list. Josh: Large Thermals?', 'Summer gear list. Tony: Swim shorts.');
+  const of = state => parts.filter(p => p.state === state).map(p => p.item).join('');
+  assert.ok(of('gone').includes('Winter') && of('new').includes('Summer'));
+  assert.ok(of('same').includes('gear') && !of('gone').includes('gear'));
+  assert.equal(plainText('Visit <a href="https://example.com">the <b>market</b></a>'), 'Visit the market');
+});
+test('a reworded activity diffs in place: old words struck, then new words, then the normal line', async () => {
+  const act = text => ({ ...day, acts: [text] });
+  const view = mount(React.createElement(DayCard, { ...props, expanded: true, day: act('Synthetic summer plan'), changedFrom: act('Synthetic winter plan') }));
+  const wait = async ms => { await new Promise(r => setTimeout(r, ms)); act(() => {}); };
+  try {
+    const item = () => view.container.querySelectorAll('.activity');
+    assert.equal(item().length, 1); // no separate ghost row for the old wording
+    assert.equal(item()[0].querySelector('.chg-del')?.textContent, 'winter');
+    assert.equal(item()[0].querySelector('.chg-ins'), null);
+    await wait(1200);
+    assert.equal(item()[0].querySelector('.chg-ins')?.textContent, 'summer');
+    assert.equal(item()[0].querySelector('.chg-del'), null);
+    await wait(1800);
+    assert.equal(item()[0].querySelector('.chg-ins'), null);
+    assert.ok(item()[0].textContent.includes('Synthetic summer plan'));
+  } finally { view.close(); }
+});
