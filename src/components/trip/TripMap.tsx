@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
+import { useShowAiFocus } from "../../hooks/useAiFocus";
 import type { MapPointData, Task } from "../../lib/types";
 import { CATEGORY_COLORS, CATEGORY_LABELS, MAP_FOCUS_EVENT, googleMapsUrl, placeKey } from "../../lib/mapPoints";
 import type { WeatherStop } from "../../lib/mapPoints";
@@ -180,6 +182,29 @@ export function TripMap({ points, route, weatherStops, candidates, consideration
   const stopsByAddress = useRef(new Map<string, WeatherStop>());
   stopsByAddress.current = new Map(weatherStops.map((s) => [s.address ?? "", s]));
   const { tempUnit } = useSettings();
+  const { slug } = useParams();
+  const showFocus = useShowAiFocus();
+  // The popup's "See in itinerary" / "See in Action Items" buttons are plain HTML inside
+  // the Maps info window, so one capture-phase listener on the map wrapper answers them
+  // and hands off to the same focus signal the AI and shared links use.
+  const jumpRef = useRef<(day?: string, item?: string) => void>(() => {});
+  jumpRef.current = (day, item) => {
+    if (!slug) return;
+    const target = day ? ({ kind: "day", date: day } as const) : item ? ({ kind: "actionItem", id: item } as const) : null;
+    if (target) showFocus({ slug, target, nonce: `map-${Date.now()}` });
+  };
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const onClick = (e: MouseEvent) => {
+      const btn = (e.target as Element | null)?.closest<HTMLElement>("[data-jump-day],[data-jump-item]");
+      if (!btn) return;
+      infoWindow.current?.close();
+      jumpRef.current(btn.dataset.jumpDay, btn.dataset.jumpItem);
+    };
+    wrap.addEventListener("click", onClick, true);
+    return () => wrap.removeEventListener("click", onClick, true);
+  }, [status, geocoded.length > 0]);
   // Same click-time read for the unit, so toggling it doesn't rebuild every pin.
   const tempUnitRef = useRef(tempUnit);
   tempUnitRef.current = tempUnit;
@@ -257,7 +282,7 @@ export function TripMap({ points, route, weatherStops, candidates, consideration
           const stop = p.category === "city" ? stopsByAddress.current.get(p.address ?? "") : undefined;
           // City dots are just a place on the route; every other pin is a real place worth opening in Google Maps.
           const link = p.category === "city" ? undefined : googleMapsUrl(p);
-          openInfo(map, infoHtml(p.name, CATEGORY_LABELS[p.category] + (p.note ? " · " + p.note : ""), tempUnitRef.current, stop, link), marker);
+          openInfo(map, infoHtml(p.name, CATEGORY_LABELS[p.category] + (p.note ? " · " + p.note : ""), tempUnitRef.current, stop, link, { day: /^act-(\d{4}-\d{2}-\d{2})-/.exec(p.id)?.[1] }), marker);
         });
         markers.current.push(marker);
         const key = placeKey(p);
@@ -426,7 +451,7 @@ export function TripMap({ points, route, weatherStops, candidates, consideration
             ? task.outcome === "chosen" ? "Chosen" : "Under consideration"
             : `${task?.kind === "decision" ? "Decision" : "To-do"}${task?.done ? " (done)" : ""}`;
         const votes = task?.votes ? ` · 👍 ${task.votes.yes.length} · 👎 ${task.votes.no.length}` : "";
-        openInfo(map, infoHtml(p.name, `${live}${task ? `: ${task.title}` : ""}${votes}`, tempUnitRef.current, undefined, googleMapsUrl(p)), marker);
+        openInfo(map, infoHtml(p.name, `${live}${task ? `: ${task.title}` : ""}${votes}`, tempUnitRef.current, undefined, googleMapsUrl(p), { item: p.id.split("|")[1] }), marker);
       });
       const key = placeKey(p);
       if (key) candidatePins.current.set(key, marker);
@@ -582,7 +607,7 @@ export function TripMap({ points, route, weatherStops, candidates, consideration
 }
 
 // Title, optional subtitle, and (for a city with weather) one line per day.
-function infoHtml(title: string, subtitle: string, unit: TempUnit, stop?: WeatherStop, mapsUrl?: string) {
+function infoHtml(title: string, subtitle: string, unit: TempUnit, stop?: WeatherStop, mapsUrl?: string, jump?: { day?: string; item?: string }) {
   const rows = (stop?.days ?? [])
     .map(
       (d) =>
@@ -601,6 +626,9 @@ function infoHtml(title: string, subtitle: string, unit: TempUnit, stop?: Weathe
       (rows ? `<div style="margin-top:${subtitle ? 4 : 0}px">${rows}</div>` : "") +
       (mapsUrl
         ? `<div style="margin-top:6px;font:500 12px system-ui"><a style="color:#1a55c8;text-decoration:underline" href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener noreferrer">Open in Google Maps</a></div>`
+        : "") +
+      (jump?.day || jump?.item
+        ? `<div style="margin-top:6px"><button type="button" ${jump.day ? `data-jump-day="${escapeHtml(jump.day)}"` : `data-jump-item="${escapeHtml(jump.item!)}"`} style="all:unset;cursor:pointer;font:500 12px system-ui;color:#1a55c8;text-decoration:underline">${jump.day ? "See in itinerary" : "See in Action Items"}</button></div>`
         : ""),
   };
 }
