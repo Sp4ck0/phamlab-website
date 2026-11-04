@@ -9,7 +9,7 @@ import { PlaceLinks } from "./taskParts";
 import { UndoBar } from "./UndoBar";
 
 interface Props {
-  // Every task for the trip; only the decisions are listed here.
+  // Every task for the trip; only the high-priority stored items are listed here.
   tasks: Task[];
   items: ActionItem[];
   groups: Group[];
@@ -22,7 +22,7 @@ interface Props {
   onRemoveItem: (id: string) => Promise<unknown>;
 }
 
-// A long decision is stored as a shortened title plus the whole text as detail
+// A long item is stored as a shortened title plus the whole text as detail
 // (see admin:migrateTaskState): then the detail alone says it all.
 function textOf(task: Task) {
   const { title, detail } = task;
@@ -30,8 +30,10 @@ function textOf(task: Task) {
   return detail.startsWith(title.replace(/…$/, "")) ? detail : `${title} — ${detail}`;
 }
 
-// "Needs a decision": the trip's decision tasks, open ones counted. Ticking one
-// settles it (it stays listed, struck through, so it can be reopened).
+// "High priority": the trip's high-priority to-dos and open considerations, open
+// ones counted. Ticking a to-do finishes it (it stays listed, struck through, so
+// it can be reopened). A consideration has no tick; it is settled in its own
+// section, so here it only links there.
 export function AlertsPanel({
   tasks,
   items,
@@ -46,24 +48,24 @@ export function AlertsPanel({
 }: Props) {
   const [editing, setEditing] = useState<string | null>(null);
   const undoable = useUndoableDelete({ onAddItem, onRemoveItem, onSetDone, onSetDue });
-  const decisions = tasks.filter((t) => t.kind === "decision");
-  // Deleting the last decision must not take the panel, and its Undo, with it.
-  if (decisions.length === 0 && !undoable.deletedTitle) return null;
+  const urgent = tasks.filter((t) => t.editable && t.priority === "high" && !(t.kind === "consider" && t.outcome));
+  // Deleting the last one must not take the panel, and its Undo, with it.
+  if (urgent.length === 0 && !undoable.deletedTitle) return null;
 
-  const open = decisions.filter((t) => !t.done).length;
+  const open = urgent.filter((t) => !t.done).length;
   const undoBar = undoable.deletedTitle && <UndoBar title={undoable.deletedTitle} onUndo={() => void undoable.undo()} />;
 
-  if (decisions.length === 0) return <div className="alerts">{undoBar}</div>;
+  if (urgent.length === 0) return <div className="alerts">{undoBar}</div>;
 
   return (
     <div className="alerts">
       <div className="alert">
         <h3>
-          Needs a decision <span className="n">{open}</span>
+          High priority <span className="n">{open}</span>
         </h3>
         {undoBar}
         <ul style={{ listStyle: "none", paddingLeft: 0 }}>
-          {decisions.map((t) => {
+          {urgent.map((t) => {
             const id = t.key.slice("item:".length);
             const item = items.find((i) => i.id === id);
             if (editing === id && item) {
@@ -86,14 +88,25 @@ export function AlertsPanel({
             const badge = t.who !== undefined ? gapLabel(t.who, groups, scopeStart(t.scope) ?? "") : null;
             return (
               <li key={t.key} style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
-                <input
-                  type="checkbox"
-                  id={`decision-${id}`}
-                  aria-labelledby={`decision-${id}-text`}
-                  checked={t.done}
-                  onChange={() => onSetDone(t.refs, !t.done)}
-                />
-                <span id={`decision-${id}-text`} style={t.done ? { textDecoration: "line-through", opacity: 0.6 } : undefined}>
+                {t.kind === "consider" ? (
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    aria-label={`Go to ${t.title} under consideration`}
+                    onClick={() => document.getElementById(`ai-row-${id}`)?.scrollIntoView({ block: "center", behavior: "smooth" })}
+                  >
+                    Considering ↓
+                  </button>
+                ) : (
+                  <input
+                    type="checkbox"
+                    id={`priority-${id}`}
+                    aria-labelledby={`priority-${id}-text`}
+                    checked={t.done}
+                    onChange={() => onSetDone(t.refs, !t.done)}
+                  />
+                )}
+                <span id={`priority-${id}-text`} style={t.done ? { textDecoration: "line-through", opacity: 0.6 } : undefined}>
                   {badge && <strong>{badge.label}: </strong>}
                   {textOf(t)}
                   {t.scope.kind !== "trip" && ` · ${scopeLabel(t.scope)}`}

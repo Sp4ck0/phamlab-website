@@ -172,8 +172,8 @@ export function derivePoints(days: ResolvedDay[], mapPoints: Trip["mapPoints"]):
 }
 
 // Pins for the places on action items that aren't part of the plan itself:
-// considerations, to-dos and decisions. Open ones are dashed rings; a chosen
-// consideration or a finished to-do/decision is a solid ring; a dropped
+// considerations and to-dos. Open ones are dashed rings; a chosen
+// consideration or a finished to-do is a solid ring; a dropped
 // consideration is gone. A place already pinned for real (`existing`, from
 // derivePoints) or by an earlier item is skipped, so a ring never sits on top of
 // the plan. The id carries the item id (`task|<itemId>|<n>`) so the map can look

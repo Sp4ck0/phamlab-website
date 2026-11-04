@@ -16,7 +16,7 @@ interface Props {
   onToggle: () => void;
   // Who it's for; null shows no badge.
   badge: Badge | null;
-  // Small pill before the text, e.g. "Decision".
+  // Small pill before the text, e.g. "High".
   pill?: string;
   // Bold lead: what is being booked, or the item's own title.
   lead: string;

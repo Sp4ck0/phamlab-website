@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { ActionItem, Group, Outcome, Task, Vote } from "../../lib/types";
 import { gapLabel } from "../../lib/tripLogic";
-import { scopeStart, voteTally } from "../../lib/tasks";
+import { PRIORITY_LABELS, priorityRank, scopeStart, voteTally } from "../../lib/tasks";
 import { googleMapsUrl } from "../../lib/mapPoints";
 import type { ActionItemFields } from "../../hooks/useActionItemEdits";
 import { sanitizeHtml } from "../../lib/sanitizeHtml";
@@ -31,8 +31,10 @@ interface Props {
 
 const itemId = (task: Task) => task.key.slice("item:".length);
 
-// Soonest first; whole-trip candidates last.
+// High priority first; then soonest first, whole-trip candidates last.
 function byDate(a: Task, b: Task) {
+  const byPriority = priorityRank(a.priority) - priorityRank(b.priority);
+  if (byPriority) return byPriority;
   const x = scopeStart(a.scope);
   const y = scopeStart(b.scope);
   if (x && y) return x.localeCompare(y) || a.title.localeCompare(b.title);
@@ -98,6 +100,7 @@ export function Considerations({
       <div className="consider" data-outcome={settled} key={task.key} id={`ai-row-${id}`}>
         <div className="consider-head">
           <span className="consider-pill">{settled === "chosen" ? "Chosen" : settled === "dropped" ? "Dropped" : "Considering"}</span>
+          {task.priority && <span style={badgeStyle(null)}>{PRIORITY_LABELS[task.priority]}</span>}
           {badge && <span style={badgeStyle(badge.color)}>{badge.label}</span>}
           <span className="consider-title" dangerouslySetInnerHTML={{ __html: sanitizeHtml(task.title) }} />
         </div>
