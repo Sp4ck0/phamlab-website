@@ -105,7 +105,7 @@ export function ActionItems({
     if (!diff && !ghost) return;
     if (ghost) document.getElementById("removed-item")?.scrollIntoView({ block: "center", behavior: scrollBehavior() });
     const t = setTimeout(() => {
-      if (diff) document.getElementById(`ai-row-${diff.id}`)?.classList.remove("chg-new");
+      if (diff) document.getElementById(`ai-row-${diff.id}`)?.classList.remove("chg-row");
       setDiff(null);
       setGhost(null);
     }, 4200);
@@ -135,7 +135,7 @@ export function ActionItems({
       setTimeout(() => {
         if (change?.prev && !change.gone) {
           setDiff({ id: itemId(task), prev: change.prev });
-          el.classList.add("chg-new");
+          el.classList.add("chg-row");
         } else flash(el);
       }, 250);
     }, SETTLE_MS);
@@ -202,7 +202,6 @@ export function ActionItems({
       const reworded = diff?.id === item.id && (diff.prev.title !== item.title || diff.prev.detail !== item.detail);
       return row(
         <Fragment key={task.key}>
-        {reworded && ghostRow(diff.prev)}
         <TaskRow
           key={task.key}
           domId={`ai-${item.id}`}
@@ -213,6 +212,8 @@ export function ActionItems({
           pill={task.priority ? PRIORITY_LABELS[task.priority] : undefined}
           lead={task.title}
           body={task.detail}
+          leadPrev={reworded ? diff.prev.title : undefined}
+          bodyPrev={reworded ? diff.prev.detail ?? "" : undefined}
           scope={
             task.scope.kind === "trip" && !task.places?.length ? undefined : (
               <>

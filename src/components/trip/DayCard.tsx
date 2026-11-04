@@ -23,6 +23,7 @@ import { ShareLinkButton } from "./ShareLinkButton";
 import { ActivityEditor } from "./ActivityEditor";
 import { tileDomId } from "../../lib/tileId";
 import { PencilIcon, ShowOnMap } from "./taskParts";
+import { InlineDiff } from "./InlineDiff";
 
 // Show-on-map buttons inside an activity's sentence are plain HTML (see inlinePlaces),
 // so one delegated click handler on the activity text finds them.
@@ -48,6 +49,25 @@ function mark(state: ChangeState, key: string, node: ReactNode) {
       {node}
     </div>
   );
+}
+
+// An edited line comes out of diffLines as old rows ("gone") then new rows. Pair
+// them in order so the new row can show the old wording's words in place
+// (InlineDiff) instead of a separate struck-through ghost above it.
+function pairRewrites<T>(changes: Change<T>[]): (Change<T> & { prev?: T })[] {
+  const out: (Change<T> & { prev?: T })[] = [];
+  for (let i = 0; i < changes.length; ) {
+    if (changes[i].state !== "gone") { out.push(changes[i++]); continue; }
+    let g = i;
+    while (g < changes.length && changes[g].state === "gone") g++;
+    let n = g;
+    while (n < changes.length && changes[n].state === "new") n++;
+    const k = Math.min(g - i, n - g);
+    out.push(...changes.slice(i, g - k));
+    for (let j = 0; j < n - g; j++) out.push(j < k ? { ...changes[g + j], prev: changes[g - k + j].item } : changes[g + j]);
+    i = n;
+  }
+  return out;
 }
 
 interface Props {
@@ -136,7 +156,7 @@ export function DayCard({
   const actChanges = old ? diffLines(old.acts ?? [], d.acts ?? [], actKey) : unchanged(d.acts ?? []);
   // Edit buttons, share links and ids use an activity's real index; a ghost has none.
   let actIndex = 0;
-  const actRows = actChanges.map((c) => ({ ...c, ai: c.state === "gone" ? -1 : actIndex++ }));
+  const actRows = pairRewrites(actChanges).map((c) => ({ ...c, ai: c.state === "gone" ? -1 : actIndex++ }));
   const summaryChanged = !!old && (old.highlight || old.note) !== (d.highlight || d.note);
   const noPlan = !(d.acts && d.acts.length) && !(d.flights && d.flights.length) && d.tag !== "transit";
 
@@ -214,7 +234,15 @@ export function DayCard({
             <path d="M3.5 5.25L7 8.75l3.5-3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </span>
-        {(d.highlight || d.note) && <span className={`day-summary${summaryChanged ? " chg-new" : ""}`}>{d.highlight || d.note}</span>}
+        {(d.highlight || d.note) && (
+          summaryChanged && old && (old.highlight || old.note) ? (
+            <span className="day-summary">
+              <InlineDiff prev={old.highlight || old.note || ""} next={d.highlight || d.note || ""}>{d.highlight || d.note}</InlineDiff>
+            </span>
+          ) : (
+            <span className={`day-summary${summaryChanged ? " chg-new" : ""}`}>{d.highlight || d.note}</span>
+          )
+        )}
       </button>
       <ShareLinkButton param={{ day: d.date }} label={`Share link to Day ${dayNumber}`} />
       </h2>
@@ -270,7 +298,7 @@ export function DayCard({
             gaps?.plan && <p className="day-subtitle"><span className="gap-reason">Nothing planned</span></p>
           ) : actRows.length > 0 ? (
             <ul className="activity-list">
-              {actRows.map(({ item: a, state, ai }, ri) => {
+              {actRows.map(({ item: a, state, ai, prev }, ri) => {
                 const { tag, time, text, places } = actParts(a);
                 if (state === "gone") {
                   // What it said before the edit: struck through, then folded away.
@@ -302,11 +330,17 @@ export function DayCard({
                   );
                 }
                 return (
-                  <li className={`activity${changeClass(state)}`} key={ai} id={tileDomId(rowId, `act:${ai}`)}>
+                  <li className={`activity${prev ? " chg-row" : changeClass(state)}`} key={ai} id={tileDomId(rowId, `act:${ai}`)}>
                     {tag && <span className="act-tag">{tag}</span>}
                     <span className="activity-text" onClick={focusInlinePlace}>
                       {time && <span className="activity-time">{time}</span>}
-                      <span dangerouslySetInnerHTML={{ __html: html }} />
+                      {prev ? (
+                        <InlineDiff prev={sanitizeHtml(actParts(prev).text)} next={sanitizeHtml(text)}>
+                          <span dangerouslySetInnerHTML={{ __html: html }} />
+                        </InlineDiff>
+                      ) : (
+                        <span dangerouslySetInnerHTML={{ __html: html }} />
+                      )}
                       {rest.map((p, pi) => (
                         <span key={pi} style={{ marginLeft: 8 }}>
                           <a href={googleMapsUrl(p)} target="_blank" rel="noopener noreferrer">
@@ -335,8 +369,14 @@ export function DayCard({
 
           {!gapsOnly && d.tourDetails && <TourBox tourDetails={d.tourDetails} />}
           {!gapsOnly && d.callout && (
-            <div className={`note${old && old.callout !== d.callout ? " chg-new" : ""}`}>
-              <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(d.callout) }} />
+            <div className={`note${old && !old.callout && old.callout !== d.callout ? " chg-new" : ""}`}>
+              {old?.callout && old.callout !== d.callout ? (
+                <InlineDiff prev={sanitizeHtml(old.callout)} next={sanitizeHtml(d.callout)}>
+                  <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(d.callout) }} />
+                </InlineDiff>
+              ) : (
+                <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(d.callout) }} />
+              )}
             </div>
           )}
 
