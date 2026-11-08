@@ -120,10 +120,12 @@ export function timedUrl(a: TimedArgs): string | null {
   return link({ title: a.title, dates: `${fmtWall(s)}/${fmtWall(e)}`, tz: a.tz, location: a.location, details: a.details });
 }
 
-/** All-day span; `endDate` is the (exclusive) check-out date. */
+/** All-day span; `endDate` is the last day shown (inclusive). Google's own end is exclusive, so +1 day. */
 export function allDayUrl(a: { title: string; startDate: string; endDate: string; location?: string; details?: string }) {
   const d = (s: string) => s.replace(/-/g, "");
-  return link({ title: a.title, dates: `${d(a.startDate)}/${d(a.endDate)}`, location: a.location, details: a.details });
+  const [y, mo, day] = a.endDate.split("-").map(Number);
+  const end = new Date(Date.UTC(y, mo - 1, day + 1)).toISOString().slice(0, 10);
+  return link({ title: a.title, dates: `${d(a.startDate)}/${d(end)}`, location: a.location, details: a.details });
 }
 
 // ---- titles ---------------------------------------------------------------
