@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAction, useQuery } from "convex/react";
+import { ConvexError } from "convex/values";
 import { api } from "@convex/api";
 import { PageShell } from "../components/layout/PageShell";
 import { useAccessCode } from "../hooks/useAccessCode";
@@ -121,7 +122,12 @@ function AccentCheck({ code }: { code: string }) {
           const audio = await toWav16k(blob);
           setResult(await detectAccent({ code, audio }));
         } catch (err) {
-          setError(err instanceof Error ? err.message : "Couldn't analyze that recording.");
+          // Production redacts plain Error messages; ConvexError carries ours.
+          setError(
+            err instanceof ConvexError && typeof err.data === "string"
+              ? err.data
+              : "Couldn't analyze that recording. Try again."
+          );
         } finally {
           setAnalyzing(false);
         }
