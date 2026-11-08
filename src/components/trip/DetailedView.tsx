@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
+import { useSearchParams } from "react-router-dom";
 import type { ActionItem, Group, LegColor, ResolvedDay, Status, Task, Vote } from "../../lib/types";
 import { coversDay } from "../../lib/tasks";
 import type { DayGaps } from "../../lib/tasks";
@@ -15,6 +16,8 @@ import { DayCard } from "./DayCard";
 import type { DayWeather } from "../../lib/weather";
 
 interface Props {
+  // Local date (YYYY-MM-DD). The trip opens on this day when it is one of the trip's days.
+  today: string;
   days: ResolvedDay[];
   legColors: LegColor[];
   weather: Record<string, DayWeather>;
@@ -40,7 +43,7 @@ interface Props {
 }
 
 // Unified itinerary; name retained to keep the detail renderer's consumer small.
-export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps, isGap, dayGaps, onOnlyGapsChange, filterRef,
+export function DetailedView({ today, days, legColors, weather, groups, ticks, onlyGaps, isGap, dayGaps, onOnlyGapsChange, filterRef,
   onToggle, actionItems, considerations, pendingVotes, onVote, actionItemsDone, onToggleActionItem, onEditActivity }: Props) {
   const prefix = useId();
   // A day the AI just edited keeps showing its old content until the page is
@@ -183,6 +186,28 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focus, state.rows, consume]);
 
+  // Opening a trip that is under way lands on today: expand it and scroll it
+  // in, once per mount. A shared link or AI pointer wins, and so does the reader
+  // (any input before the timer fires cancels it).
+  const [params] = useSearchParams();
+  const todayRow = state.rows.find(r => r.day.date === today);
+  const autoDone = useRef(false);
+  const jumpRef = useRef(jump);
+  jumpRef.current = jump;
+  const hasPointer = params.has("day") || params.has("tile") || !!focus;
+  useEffect(() => {
+    if (autoDone.current || !todayRow || hasPointer) return;
+    const id = todayRow.id;
+    const t = setTimeout(() => { autoDone.current = true; jumpRef.current(id); }, SETTLE_MS + 100);
+    const cancel = () => { autoDone.current = true; clearTimeout(t); };
+    const events = ["pointerdown", "wheel", "touchstart", "keydown"] as const;
+    events.forEach(event => window.addEventListener(event, cancel, { passive: true }));
+    return () => {
+      clearTimeout(t);
+      events.forEach(event => window.removeEventListener(event, cancel));
+    };
+  }, [todayRow?.id, hasPointer]);
+
   // The removed day, where it sat among the rest.
   // The reader's own edit shows at once; only the AI's is held for its focus signal.
   const editActivity: typeof onEditActivity = onEditActivity && ((date, ...rest) => {
@@ -205,7 +230,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   );
   return (
     <>
-      <DayNav rows={state.rows} onJump={jump} />
+      <DayNav rows={state.rows} todayId={todayRow?.id} onJump={jump} />
       <p role="status" className="itinerary-status">{message}</p>
       {days.length === 0 ? <p>No itinerary days yet.</p> : !visible.some(Boolean) ? (
         <div className="itinerary-empty"><p>No days match Only gaps.</p><button type="button" className="btn" onClick={() => onOnlyGapsChange(false)}>Show all days</button></div>
@@ -214,7 +239,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
         {state.rows.map(({ id, day: d }, i) => visible[i] && (
           <Fragment key={id}>
           {ghostAt === i && ghostDay}
-          <DayCard rowId={id} day={d} changedFrom={diff?.date === d.date ? diff.prev : undefined} days={days} dayNumber={i} legColor={legColors[i]} weather={weather[d.date]}
+          <DayCard rowId={id} day={d} isToday={d.date === today} changedFrom={diff?.date === d.date ? diff.prev : undefined} days={days} dayNumber={i} legColor={legColors[i]} weather={weather[d.date]}
             groups={groups} ticks={ticks} expanded={isOpen(id)} gapsOnly={gapsView} gaps={dayGaps?.[d.date]} onExpandedChange={() => {
               if (gapsView) {
                 setGapsCollapsed(current => {
