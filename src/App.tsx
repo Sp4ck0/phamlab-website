@@ -12,6 +12,7 @@ import { OAuthAuthorizePage } from "./pages/OAuthAuthorizePage";
 import { KanbanBoardsPage } from "./pages/KanbanBoardsPage";
 import { KanbanPage } from "./pages/KanbanPage";
 import { DatingSimulatorPage } from "./pages/DatingSimulatorPage";
+import { AccentCheckPage } from "./pages/AccentCheckPage";
 import { useAccessibleTrips } from "./hooks/useAccessibleTrips";
 import { useAccessCode } from "./hooks/useAccessCode";
 import { useKanbanBoards } from "./kanban/useKanbanBoards";
@@ -49,7 +50,7 @@ function Home() {
   const tabs = [
     ...(trips ?? []).map((t) => `/trip/${t.slug}`),
     ...boards.map((b) => `/kanban/${b._id}`),
-    ...(isDatingCode ? ["/dating-simulator"] : []),
+    ...(isDatingCode ? ["/dating-simulator", "/accent-check"] : []),
     ...(isManagementCode ? ["/manage"] : []),
   ];
   // Only a path that exactly matches a currently accessible tab is used, so a
@@ -79,6 +80,7 @@ export default function App() {
       <Route path="/guide" element={<GuidePage />} />
       <Route path="/oauth/authorize" element={<OAuthAuthorizePage />} />
       <Route path="/dating-simulator" element={<DatingSimulatorPage />} />
+      <Route path="/accent-check" element={<AccentCheckPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
     </AiFocusProvider>
