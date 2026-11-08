@@ -82,6 +82,7 @@ interface Props {
   groups: Group[];
   ticks: Record<string, Status>;
   rowId: string;
+  isToday?: boolean;
   expanded: boolean;
   // Only gaps: show just what is still open, each with the reason it is listed.
   gapsOnly?: boolean;
@@ -111,6 +112,7 @@ export function DayCard({
   groups,
   ticks,
   rowId,
+  isToday = false,
   expanded,
   gapsOnly = false,
   gaps,
@@ -204,7 +206,7 @@ export function DayCard({
 
   return (
     <section
-      className={`day-card${gapsOnly ? " gaps-only" : ""}`}
+      className={`day-card${gapsOnly ? " gaps-only" : ""}${isToday ? " day-card--today" : ""}`}
       id={rowId}
       style={{ ["--leg-color" as string]: legColor.color, ["--leg-tint" as string]: legColor.tint }}
     >
@@ -217,6 +219,7 @@ export function DayCard({
           </span>
         </span>
         <span className="day-head-right">
+          {isToday && <span className="today-badge">Today</span>}
           <WeatherBadge weather={weather} />
           <span className="leg-badge">
             <span className="dot" />

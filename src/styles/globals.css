@@ -324,6 +324,12 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
   font-family:inherit;cursor:pointer;min-height:36px;
 }
 .daynav button .d{color:var(--text-muted);font-weight:600}
+.daynav button.daynav-today{background:var(--accent-1);border-color:var(--accent-1);color:#fff}
+.today-badge{
+  font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;
+  background:var(--accent-1);color:#fff;
+}
+.day-card--today{box-shadow:0 0 0 2px var(--accent-1)}
 
 /* ── detailed timeline / day cards ───────────────────────────── */
 .timeline{margin-top:12px;position:relative}
