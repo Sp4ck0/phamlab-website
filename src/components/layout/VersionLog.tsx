@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useVersionLog } from "../../hooks/useVersionLog";
+import { useEffect, useRef, useState } from "react";
+import { useMarkVersionLogSeen, useVersionLog, useVersionLogUnseen } from "../../hooks/useVersionLog";
 
 const AREA: Record<string, { emoji: string; label: string }> = {
   board: { emoji: "📝", label: "Board" },
@@ -13,6 +13,26 @@ const AREA: Record<string, { emoji: string; label: string }> = {
 export function VersionLog({ onClose }: { onClose: () => void }) {
   const { entries, isLoading } = useVersionLog();
   const [filter, setFilter] = useState<string>("all");
+  const unseen = useVersionLogUnseen();
+  const markSeen = useMarkVersionLogSeen();
+
+  // Entries newer than this were unseen when the panel opened. Frozen so the
+  // "New" chips stay put after opening clears the badge.
+  const [seenAtOnOpen, setSeenAtOnOpen] = useState<number | null>(null);
+  useEffect(() => {
+    if (seenAtOnOpen === null && unseen) setSeenAtOnOpen(unseen.seenAt);
+  }, [unseen, seenAtOnOpen]);
+
+  // Opening the panel counts as seeing everything it shows.
+  const marked = useRef(0);
+  useEffect(() => {
+    if (seenAtOnOpen === null || !entries?.length) return;
+    const newest = Math.max(...entries.map((e) => e._creationTime));
+    if (newest > marked.current) {
+      marked.current = newest;
+      markSeen(newest);
+    }
+  }, [seenAtOnOpen, entries, markSeen]);
 
   // Only offer areas this viewer actually has entries for.
   const counts = new Map<string, number>();
@@ -73,6 +93,7 @@ export function VersionLog({ onClose }: { onClose: () => void }) {
                     {area.emoji} {area.label}
                   </span>
                   <span>{e.version}</span>
+                  {seenAtOnOpen !== null && e._creationTime > seenAtOnOpen && <span className="vlog-new">New</span>}
                 </div>
                 <h3>{e.title}</h3>
                 {e.notes && <p>{e.notes}</p>}

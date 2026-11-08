@@ -132,6 +132,8 @@ a{color:inherit}
 }
 .navfooter{display:flex;flex-direction:column;gap:8px;margin-top:auto;padding-top:14px;border-top:1px solid var(--gridline)}
 .navfooter .btn{width:100%;justify-content:center;display:flex}
+.navfooter .btn .navbadge{margin-left:8px;align-self:center}
+.vlog-new{background:var(--accent-1);color:#fff;border-radius:999px;padding:1px 7px;font-size:10.5px;font-weight:700}
 .navfooter a.btn{text-decoration:none;align-items:center}
 .btn-icon{display:grid;place-items:center;flex:none;padding:8px 10px;margin-left:auto}
 .setting-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;border-top:1px solid var(--gridline)}

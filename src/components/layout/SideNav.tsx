@@ -7,6 +7,7 @@ import { useAccessCode } from "../../hooks/useAccessCode";
 import { useTheme } from "../../hooks/useTheme";
 import { useKanbanBoardUnread } from "../../kanban/useKanbanBoards";
 import { flagEmoji, navCountdown, navMonthLabel } from "../../lib/tripLogic";
+import { useVersionLogUnseen } from "../../hooks/useVersionLog";
 import { VersionLog } from "./VersionLog";
 import { ThemeIcon } from "./ThemeIcon";
 
@@ -21,6 +22,7 @@ export function SideNav() {
   const { isDark, toggle: toggleTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [showLog, setShowLog] = useState(false);
+  const unseen = useVersionLogUnseen();
 
   // Close the mobile drawer whenever the route changes (link tap, back/forward).
   useEffect(() => {
@@ -182,6 +184,11 @@ export function SideNav() {
         <div className="navfooter">
           <button className="btn" onClick={() => setShowLog(true)}>
             What's new
+            {!!unseen?.count && (
+              <span className="navbadge" title="Entries you haven't seen">
+                {unseen.count}
+              </span>
+            )}
           </button>
           <Link className="btn" to="/settings">
             Settings
