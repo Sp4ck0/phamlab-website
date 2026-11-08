@@ -159,6 +159,16 @@ export function SideNav() {
                   <span className="navname">Dating Simulator</span>
                 </span>
               </Link>
+              <Link
+                className="navitem"
+                data-active={location.pathname === "/accent-check" ? "true" : undefined}
+                to="/accent-check"
+              >
+                <span className="navicon">🗣️</span>
+                <span className="navtext">
+                  <span className="navname">Accent Check</span>
+                </span>
+              </Link>
             </div>
           </div>
         )}
