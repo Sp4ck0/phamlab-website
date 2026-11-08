@@ -362,6 +362,17 @@ test('word diff marks only the words that changed', async () => {
   assert.ok(of('same').includes('gear') && !of('gone').includes('gear'));
   assert.equal(plainText('Visit <a href="https://example.com">the <b>market</b></a>'), 'Visit the market');
 });
+test('word runs mark only the changed phrases on each side', async () => {
+  const { diffRuns } = await import('../../lib/wordDiff.ts');
+  const before = 'Consider a fairly relaxed afternoon walking tour through central Oslo. We could explore the waterfront and stop for pastries before dinner.';
+  const after = 'Consider a leisurely afternoon walking tour through historic Oslo. We could explore the sculpture park and stop for pastries before dinner.';
+  const marked = side => diffRuns(before, after, side).filter(r => r.changed).map(r => r.text);
+  assert.deepEqual(marked('old'), ['fairly relaxed', 'central', 'waterfront']);
+  assert.deepEqual(marked('new'), ['leisurely', 'historic', 'sculpture park']);
+  assert.equal(diffRuns(before, after, 'old').map(r => r.text).join(''), before); // runs rebuild the whole text
+  assert.equal(diffRuns(before, after, 'new').map(r => r.text).join(''), after);
+  assert.ok(diffRuns('same text', 'same text', 'new').every(r => !r.changed));
+});
 test('a reworded activity diffs in place: old words struck, then new words, then the normal line', async () => {
   const act = text => ({ ...day, acts: [text] });
   const view = mount(React.createElement(DayCard, { ...props, expanded: true, day: act('Synthetic summer plan'), changedFrom: act('Synthetic winter plan') }));
@@ -371,8 +382,10 @@ test('a reworded activity diffs in place: old words struck, then new words, then
     assert.equal(item().length, 1); // no separate ghost row for the old wording
     const on = sel => item()[0].querySelector(sel).parentElement.dataset.on;
     // both texts are laid out all along (so the row never resizes); one is shown
-    assert.equal(item()[0].querySelector('.chg-del').textContent, 'Synthetic winter plan');
-    assert.equal(item()[0].querySelector('.chg-ins').textContent, 'Synthetic summer plan');
+    assert.equal(item()[0].querySelector('.chg-del').textContent, 'winter'); // only the changed word is marked
+    assert.equal(item()[0].querySelector('.chg-ins').textContent, 'summer');
+    assert.equal(item()[0].querySelector('.chg-del').parentElement.textContent, 'Synthetic winter plan'); // the whole line is laid out
+    assert.equal(item()[0].querySelector('.chg-ins').parentElement.textContent, 'Synthetic summer plan');
     assert.deepEqual([on('.chg-del'), on('.chg-ins')], ['true', 'false']);
     await wait(1200);
     assert.deepEqual([on('.chg-del'), on('.chg-ins')], ['false', 'true']);
