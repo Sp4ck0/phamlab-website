@@ -54,7 +54,7 @@ async function toWav16k(blob: Blob): Promise<ArrayBuffer> {
 
 export function AccentCheckPage() {
   const { code } = useAccessCode();
-  const isAuthorized = useQuery(api.dating.checkDatingAccess, code ? { code } : "skip");
+  const isAuthorized = useQuery(api.dating.checkAccentAccess, code ? { code } : "skip");
   useRememberTab(isAuthorized ? "/accent-check" : null);
 
   if (code && isAuthorized === undefined) {

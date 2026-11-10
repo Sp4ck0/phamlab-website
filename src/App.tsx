@@ -40,17 +40,19 @@ function Home() {
   const { isLoading: authLoading } = useConvexAuth();
   const { boards, isLoading: boardsLoading } = useKanbanBoards();
   const isDatingCode = useQuery(api.dating.checkDatingAccess, code ? { code } : "skip");
+  const isAccentCode = useQuery(api.dating.checkAccentAccess, code ? { code } : "skip");
   const isManagementCode = useQuery(api.management.checkManagementAccess, code ? { code } : "skip");
 
   // Queries skipped for lack of a code stay undefined forever, so only wait on
   // them when a code exists. Unknown is never treated as "no access".
   if (authLoading || tripsLoading || boardsLoading) return <BootSpinner />;
-  if (code && (isDatingCode === undefined || isManagementCode === undefined)) return <BootSpinner />;
+  if (code && (isDatingCode === undefined || isAccentCode === undefined || isManagementCode === undefined)) return <BootSpinner />;
 
   const tabs = [
     ...(trips ?? []).map((t) => `/trip/${t.slug}`),
     ...boards.map((b) => `/kanban/${b._id}`),
-    ...(isDatingCode ? ["/dating-simulator", "/accent-check"] : []),
+    ...(isDatingCode ? ["/dating-simulator"] : []),
+    ...(isAccentCode ? ["/accent-check"] : []),
     ...(isManagementCode ? ["/manage"] : []),
   ];
   // Only a path that exactly matches a currently accessible tab is used, so a
