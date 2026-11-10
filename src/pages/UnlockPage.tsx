@@ -41,6 +41,8 @@ export function UnlockPage() {
       navigate(`/trip/${result.trips[0].slug}`);
     } else if (result.hasDatingAccess) {
       navigate("/dating-simulator");
+    } else if (result.hasAccentAccess) {
+      navigate("/accent-check");
     } else if (result.hasBoards) {
       navigate("/kanban");
     }

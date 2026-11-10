@@ -25,6 +25,7 @@ interface CodeRow {
   tripIds: string[];
   boardIds: string[];
   datingAccess: boolean;
+  accentAccess: boolean;
   mcpAccess: "read" | "write" | null;
 }
 
@@ -231,7 +232,7 @@ function WhoHasAccess({
   const upsert = useMutation(api.management.upsertAccessCode);
   const [busy, setBusy] = useState(false);
 
-  async function toggleDating(row: CodeRow) {
+  async function toggleFlag(row: CodeRow, flag: "datingAccess" | "accentAccess") {
     setBusy(true);
     try {
       await upsert({
@@ -240,7 +241,8 @@ function WhoHasAccess({
         targetCode: row.code,
         tripIds: row.tripIds as any,
         boardIds: row.boardIds as any,
-        datingAccess: !row.datingAccess,
+        datingAccess: flag === "datingAccess" ? !row.datingAccess : row.datingAccess,
+        accentAccess: flag === "accentAccess" ? !row.accentAccess : row.accentAccess,
         name: row.name,
         active: row.active,
       });
@@ -351,12 +353,12 @@ function WhoHasAccess({
             {renderRows(boards.map((b) => ({ id: b._id, label: b.name })), "boardIds")}
             <tr>
               <th colSpan={codes.length + 1} className="ctype" style={{ ...cellStyle, textAlign: "left" }}>
-                Dating Simulator
+                Practice
               </th>
             </tr>
             <tr>
-              <th scope="row" style={{ ...cellStyle, textAlign: "left", fontWeight: 500 }}>
-                Enabled
+              <th scope="row" style={{ ...cellStyle, textAlign: "left", fontWeight: 500, whiteSpace: "nowrap", position: "sticky", left: 0, background: "var(--card)" }}>
+                Dating Simulator
               </th>
               {codes.map((c) => (
                 <td key={c._id} style={{ ...cellStyle, textAlign: "center", opacity: c.active ? 1 : 0.5 }}>
@@ -367,9 +369,29 @@ function WhoHasAccess({
                     aria-label={`${c.name}: Dating Simulator`}
                     disabled={busy}
                     style={{ minWidth: 32, justifyContent: "center" }}
-                    onClick={() => toggleDating(c)}
+                    onClick={() => toggleFlag(c, "datingAccess")}
                   >
                     {c.datingAccess ? "✓" : "–"}
+                  </button>
+                </td>
+              ))}
+            </tr>
+            <tr>
+              <th scope="row" style={{ ...cellStyle, textAlign: "left", fontWeight: 500, whiteSpace: "nowrap", position: "sticky", left: 0, background: "var(--card)" }}>
+                Accent Check
+              </th>
+              {codes.map((c) => (
+                <td key={c._id} style={{ ...cellStyle, textAlign: "center", opacity: c.active ? 1 : 0.5 }}>
+                  <button
+                    type="button"
+                    className="chip"
+                    aria-pressed={c.accentAccess}
+                    aria-label={`${c.name}: Accent Check`}
+                    disabled={busy}
+                    style={{ minWidth: 32, justifyContent: "center" }}
+                    onClick={() => toggleFlag(c, "accentAccess")}
+                  >
+                    {c.accentAccess ? "✓" : "–"}
                   </button>
                 </td>
               ))}

@@ -18,6 +18,7 @@ export function SideNav() {
   const { code } = useAccessCode();
   const isManagementCode = useQuery(api.management.checkManagementAccess, code ? { code } : "skip");
   const isDatingCode = useQuery(api.dating.checkDatingAccess, code ? { code } : "skip");
+  const isAccentCode = useQuery(api.dating.checkAccentAccess, code ? { code } : "skip");
   const { boards } = useKanbanBoardUnread();
   const { isDark, toggle: toggleTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
@@ -145,30 +146,34 @@ export function SideNav() {
           </div>
         )}
 
-        {isDatingCode && (
+        {(isDatingCode || isAccentCode) && (
           <div className="navgroup">
             <div className="navsection">Practice</div>
             <div className="navlist">
-              <Link
-                className="navitem"
-                data-active={location.pathname === "/dating-simulator" ? "true" : undefined}
-                to="/dating-simulator"
-              >
-                <span className="navicon">💬</span>
-                <span className="navtext">
-                  <span className="navname">Dating Simulator</span>
-                </span>
-              </Link>
-              <Link
-                className="navitem"
-                data-active={location.pathname === "/accent-check" ? "true" : undefined}
-                to="/accent-check"
-              >
-                <span className="navicon">🗣️</span>
-                <span className="navtext">
-                  <span className="navname">Accent Check</span>
-                </span>
-              </Link>
+              {isDatingCode && (
+                <Link
+                  className="navitem"
+                  data-active={location.pathname === "/dating-simulator" ? "true" : undefined}
+                  to="/dating-simulator"
+                >
+                  <span className="navicon">💬</span>
+                  <span className="navtext">
+                    <span className="navname">Dating Simulator</span>
+                  </span>
+                </Link>
+              )}
+              {isAccentCode && (
+                <Link
+                  className="navitem"
+                  data-active={location.pathname === "/accent-check" ? "true" : undefined}
+                  to="/accent-check"
+                >
+                  <span className="navicon">🗣️</span>
+                  <span className="navtext">
+                    <span className="navname">Accent Check</span>
+                  </span>
+                </Link>
+              )}
             </div>
           </div>
         )}
