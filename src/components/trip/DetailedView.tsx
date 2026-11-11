@@ -95,9 +95,16 @@ export function DetailedView({ today, days, legColors, weather, groups, ticks, o
   useLayoutEffect(() => {
     if (focusedRow.current && (!focusedControl.current?.isConnected || focusedControl.current.closest("[hidden]") ||
       !state.rows.some((row, i) => row.id === focusedRow.current && visible[i]))) {
-      // The header filter can be above a tall day; allow native focus scrolling
-      // so the recovery destination is visible, unlike an ordinary row toggle.
-      filterRef.current?.focus();
+      const rowStillShown = state.rows.some((row, i) => row.id === focusedRow.current && visible[i]);
+      const rowTrigger = rowStillShown ? document.getElementById(`${focusedRow.current}-trigger`) : null;
+      if (rowTrigger && !rowTrigger.closest("[hidden]")) {
+        // The day is still on screen (e.g. an inline edit closed): keep the page where it is.
+        rowTrigger.focus({ preventScroll: true });
+      } else {
+        // The header filter can be above a tall day; allow native focus scrolling
+        // so the recovery destination is visible, unlike an ordinary row toggle.
+        filterRef.current?.focus();
+      }
       focusedRow.current = null;
       focusedControl.current = null;
     }
