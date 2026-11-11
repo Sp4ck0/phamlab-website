@@ -276,6 +276,20 @@ export function fmtShort(iso: string) {
   return `${MON[d.getMonth()]} ${d.getDate()}`;
 }
 
+// "Feb 6 – Mar 27, 2027" from the itinerary's own first/last day, so the header
+// can't drift from the rows. Falls back to the stored label when there are no days.
+export function dateRangeFromDays(days: { date: string }[], fallback: string) {
+  if (days.length === 0) return fallback;
+  const dates = days.map((d) => d.date).sort();
+  const first = dates[0];
+  const last = dates[dates.length - 1];
+  const year = (iso: string) => iso.slice(0, 4);
+  if (first === last) return `${fmtShort(first)}, ${year(first)}`;
+  return year(first) === year(last)
+    ? `${fmtShort(first)} – ${fmtShort(last)}, ${year(last)}`
+    : `${fmtShort(first)}, ${year(first)} – ${fmtShort(last)}, ${year(last)}`;
+}
+
 export function fmtDow(d: Date) {
   return `${DOW[d.getDay()]} ${MON[d.getMonth()]} ${d.getDate()}`;
 }

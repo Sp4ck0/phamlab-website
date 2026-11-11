@@ -1,7 +1,7 @@
 // Format-neutral itinerary built from the sanitized getTripExport data, so the
 // print view, Markdown and clipboard HTML all share one layout (hotel
 // carry-forward, who-tags, "to be arranged" wording) and can't drift apart.
-import { DOW, MON, deriveRoute, flagEmoji, fmtShort } from "./tripLogic";
+import { DOW, MON, dateRangeFromDays, deriveRoute, flagEmoji, fmtShort } from "./tripLogic";
 import type { TripExport, TripExportHotel, Who } from "./types";
 
 export interface ItineraryItem {
@@ -173,7 +173,7 @@ export function buildItinerary(data: TripExport, rangeArg?: Partial<DateRange> |
     kicker: data.kicker,
     dates: range
       ? `${range.from === range.to ? fmtShort(range.from) : `${fmtShort(range.from)} – ${fmtShort(range.to)}`} · ${days.length} of ${allDays.length} days`
-      : `${data.dateRangeLabel} · ${days.length} days`,
+      : `${dateRangeFromDays(days, data.dateRangeLabel)} · ${days.length} days`,
     intro: data.sdek,
     route: deriveRoute(
       days.map((d) => ({ city: d.city, to: d.to })),

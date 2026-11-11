@@ -1,7 +1,7 @@
 import { useParams } from "react-router-dom";
 import type { RefObject } from "react";
 import type { Day, Group, HighlightStat } from "../../lib/types";
-import { assignLegColors, deriveRoute, renderCountdown } from "../../lib/tripLogic";
+import { assignLegColors, dateRangeFromDays, deriveRoute, renderCountdown } from "../../lib/tripLogic";
 import { ExportMenu } from "./ExportMenu";
 import { RouteStepper } from "./RouteStepper";
 import { Roster } from "./Roster";
@@ -46,7 +46,7 @@ export function TripHeader({
       <p className="eyebrow">{kicker}</p>
       <h1>{title}</h1>
       <p className="subdate">
-        {dateRangeLabel} · {days.length} days
+        {dateRangeFromDays(days, dateRangeLabel)} · {days.length} days
       </p>
 
       <RouteStepper stops={route} />
