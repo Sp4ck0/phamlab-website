@@ -353,7 +353,7 @@ function WhoHasAccess({
             {renderRows(boards.map((b) => ({ id: b._id, label: b.name })), "boardIds")}
             <tr>
               <th colSpan={codes.length + 1} className="ctype" style={{ ...cellStyle, textAlign: "left" }}>
-                Practice
+                Experimental
               </th>
             </tr>
             <tr>

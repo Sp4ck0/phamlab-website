@@ -148,7 +148,7 @@ export function SideNav() {
 
         {(isDatingCode || isAccentCode) && (
           <div className="navgroup">
-            <div className="navsection">Practice</div>
+            <div className="navsection">Experimental</div>
             <div className="navlist">
               {isDatingCode && (
                 <Link
