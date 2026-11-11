@@ -5,7 +5,7 @@ import { useAccessCode } from "./useAccessCode";
 export interface VersionLogEntry {
   _id: string;
   _creationTime: number;
-  area: "board" | "trips" | "dating" | "manage" | "general" | "other";
+  area: "board" | "trips" | "dating" | "accent" | "manage" | "general" | "other";
   version: string;
   title: string;
   notes?: string;
