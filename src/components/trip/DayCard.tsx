@@ -145,12 +145,11 @@ export function DayCard({
   const flightChanges = old ? diffLines(mergeFlightsByRoute(old.flights, old.date, ticks), flightGroups, flightKey) : unchanged(flightGroups);
   const hotelChanges = old ? diffLines(mergeHotelsByName(old.hotels, ticks), hotelGroups, hotelKey) : unchanged(hotelGroups);
   const isCheckout = (g: HotelGroup) => hasFlights && g.checkOut && !g.checkIn;
-  // Under Only gaps, a booked tile is not a gap.
-  const open = (g: { statuses: Status[] }) => !gapsOnly || g.statuses.includes("needed");
-  const checkoutHotels = hotelChanges.filter((c) => open(c.item) && isCheckout(c.item));
-  const otherHotels = hotelChanges.filter((c) => open(c.item) && !isCheckout(c.item));
-  const legFlights = flightChanges.filter((c) => open(c.item) && c.item.legs && c.item.legs.length);
-  const plainFlights = flightChanges.filter((c) => open(c.item) && !(c.item.legs && c.item.legs.length));
+  // Under Only gaps, booked hotels and transport still show as context for planning; only open ones are labelled.
+  const checkoutHotels = hotelChanges.filter((c) => isCheckout(c.item));
+  const otherHotels = hotelChanges.filter((c) => !isCheckout(c.item));
+  const legFlights = flightChanges.filter((c) => c.item.legs && c.item.legs.length);
+  const plainFlights = flightChanges.filter((c) => !(c.item.legs && c.item.legs.length));
   const transportGaps = gapsOnly ? gaps?.transport ?? [] : [];
   // Under Only gaps, a to-do or consideration that is done or settled is not a gap.
   const shownConsiderations = gapsOnly ? dayConsiderations.filter((t) => !t.done) : dayConsiderations;
@@ -180,7 +179,7 @@ export function DayCard({
         <StatusToggle ids={g.srcs} status={s} onToggle={onToggle} />
         <div className="ctop">
           <span className="ctype">{ctype}</span>
-          {gapsOnly && <span className="gap-reason">{g.name ? "Not booked" : "Not chosen"}</span>}
+          {gapsOnly && s === "needed" && <span className="gap-reason">{g.name ? "Not booked" : "Not chosen"}</span>}
           <WhoPill who={uniqueWho.length === 1 ? uniqueWho[0] : uniqueWho} groups={groups} date={d.date} />
           <ShareLinkButton param={{ day: d.date, tile: g.srcs[0] }} label={`Share link to ${nm}`} />
           {days && <AddToCalendar url={hotelUrl(g.name, g.address, days, dayNumber)} />}
@@ -255,7 +254,7 @@ export function DayCard({
         <>
           {legFlights.map(({ item: g, state }, gi) =>
             mark(state, `fbm${gi}`, (
-              <FlightBox key={`fb${gi}`} group={g} onToggle={onToggle} day={d} dayNumber={dayNumber} tileId={state === "gone" ? undefined : tileDomId(rowId, g.ids[0])} gapReason={gapsOnly ? "Not booked" : undefined} />
+              <FlightBox key={`fb${gi}`} group={g} onToggle={onToggle} day={d} dayNumber={dayNumber} tileId={state === "gone" ? undefined : tileDomId(rowId, g.ids[0])} gapReason={gapsOnly && g.statuses.includes("needed") ? "Not booked" : undefined} />
             ))
           )}
 
@@ -271,7 +270,7 @@ export function DayCard({
                       <StatusToggle ids={g.ids} status={status} onToggle={onToggle} />
                       <div className="ctop">
                         <span className="ctype">{modeLabel(g.mode)}</span>
-                        {gapsOnly && <span className="gap-reason">Not booked</span>}
+                        {gapsOnly && status === "needed" && <span className="gap-reason">Not booked</span>}
                         <WhoPill who={uniqueWho.length === 1 ? uniqueWho[0] : uniqueWho} groups={groups} date={d.date} />
                         <ShareLinkButton param={{ day: d.date, tile: g.ids[0] }} label={`Share link to ${g.route}`} />
                         <AddToCalendar url={transportUrl(g, d, dayNumber)} />
