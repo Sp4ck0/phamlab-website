@@ -1,14 +1,23 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useMarkVersionLogSeen, useVersionLog, useVersionLogUnseen } from "../../hooks/useVersionLog";
 
 const AREA: Record<string, { emoji: string; label: string }> = {
   board: { emoji: "📝", label: "Board" },
   trips: { emoji: "🧳", label: "Trips" },
   dating: { emoji: "💬", label: "Dating Simulator" },
+  accent: { emoji: "🎙️", label: "Accent Check" },
   manage: { emoji: "🛠️", label: "Manage Access" },
   general: { emoji: "✨", label: "General" },
   other: { emoji: "•", label: "Other" },
 };
+
+// "2026-08-20" -> month heading + short day. Parsed by hand: new Date() on a
+// bare date is UTC and can land on the previous day in local time.
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+function parseDate(date: string) {
+  const [y, m, d] = date.split("-").map(Number);
+  return { month: `${MONTHS[m - 1] ?? ""} ${y}`, day: `${(MONTHS[m - 1] ?? "").slice(0, 3)} ${d}` };
+}
 
 export function VersionLog({ onClose }: { onClose: () => void }) {
   const { entries, isLoading } = useVersionLog();
@@ -84,29 +93,37 @@ export function VersionLog({ onClose }: { onClose: () => void }) {
         <div className="vlog-list">
           {isLoading && <p className="vlog-empty">Loading…</p>}
           {entries && entries.length === 0 && <p className="vlog-empty">Nothing here yet.</p>}
-          {shown?.map((e) => {
+          {shown?.map((e, i) => {
             const area = AREA[e.area] ?? AREA.other;
+            const { month, day } = parseDate(e.date);
+            const newMonth = i === 0 || parseDate(shown[i - 1].date).month !== month;
             return (
-              <article key={e._id} className="vlog-entry">
+              <Fragment key={e._id}>
+                {newMonth && <h4 className="vlog-month">{month}</h4>}
+              <article className="vlog-entry">
                 <div className="vlog-meta">
                   <span className="vlog-chip">
                     {area.emoji} {area.label}
                   </span>
-                  <span>{e.version}</span>
+                  <span>{day}</span>
                   {seenAtOnOpen !== null && e._creationTime > seenAtOnOpen && <span className="vlog-new">New</span>}
                 </div>
                 <h3>{e.title}</h3>
                 {e.notes && <p>{e.notes}</p>}
                 {e.links.length > 0 && (
-                  <div className="vlog-links">
-                    {e.links.map((l) => (
-                      <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer">
-                        {l.label} ↗
-                      </a>
-                    ))}
-                  </div>
+                  <details className="vlog-details">
+                    <summary>Details</summary>
+                    <div className="vlog-links">
+                      {e.links.map((l) => (
+                        <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer">
+                          {l.label} ↗
+                        </a>
+                      ))}
+                    </div>
+                  </details>
                 )}
               </article>
+              </Fragment>
             );
           })}
         </div>
