@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import type { Act, ActionItem, Group, LegColor, ResolvedDay, Status, Task, Vote } from "../../lib/types";
+import type { Act, ActionItem, Group, LegColor, Place, ResolvedDay, Status, Task, Vote } from "../../lib/types";
 import { changeClass, diffLines, type Change, type ChangeState } from "../../lib/changeDiff";
 import { focusOnMapKey, googleMapsUrl, inlinePlaces } from "../../lib/mapPoints";
 import { DOW, MON, actParts, fmtShort, gapLabel, mergeFlightsByRoute, mergeHotelsByName, modeLabel } from "../../lib/tripLogic";
@@ -97,9 +97,9 @@ interface Props {
   onVote: (itemId: string, vote: Vote | null) => void;
   actionItemsDone: Record<string, boolean>;
   onToggleActionItem: (id: string) => void;
-  // Saves new text for the activity at `index`; `expected` is the text it had
+  // Saves new text and places for the activity at `index`; `expected` is the text it had
   // when the editor opened. The pencil only shows when this is passed.
-  onEditActivity?: (date: string, index: number, expected: string, text: string) => Promise<unknown>;
+  onEditActivity?: (date: string, index: number, expected: string, text: string, places: Place[]) => Promise<unknown>;
 }
 
 export function DayCard({
@@ -348,9 +348,10 @@ export function DayCard({
                     <li className="activity" key={ai}>
                       <ActivityEditor
                         initial={text}
+                        initialPlaces={places}
                         onCancel={() => setEditingAct(null)}
-                        onSave={async (next) => {
-                          await onEditActivity(d.date, ai, text, next);
+                        onSave={async (next, nextPlaces) => {
+                          await onEditActivity(d.date, ai, text, next, nextPlaces);
                           setEditingAct(null);
                         }}
                       />

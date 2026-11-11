@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { useSearchParams } from "react-router-dom";
-import type { ActionItem, Group, LegColor, ResolvedDay, Status, Task, Vote } from "../../lib/types";
+import type { ActionItem, Group, LegColor, Place, ResolvedDay, Status, Task, Vote } from "../../lib/types";
 import { coversDay } from "../../lib/tasks";
 import type { DayGaps } from "../../lib/tasks";
 import { useAiFocus } from "../../hooks/useAiFocus";
@@ -39,7 +39,7 @@ interface Props {
   onVote: (itemId: string, vote: Vote | null) => void;
   actionItemsDone: Record<string, boolean>;
   onToggleActionItem: (id: string) => void;
-  onEditActivity?: (date: string, index: number, expected: string, text: string) => Promise<unknown>;
+  onEditActivity?: (date: string, index: number, expected: string, text: string, places: Place[]) => Promise<unknown>;
 }
 
 // Unified itinerary; name retained to keep the detail renderer's consumer small.

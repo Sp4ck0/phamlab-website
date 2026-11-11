@@ -1,15 +1,19 @@
 import { useEffect, useRef, useState } from "react";
+import type { Place } from "../../lib/types";
+import { PlacesEditor, cleanPlaces } from "./PlacesEditor";
 
 interface Props {
   initial: string;
-  onSave: (text: string) => Promise<unknown>;
+  initialPlaces?: Place[];
+  onSave: (text: string, places: Place[]) => Promise<unknown>;
   onCancel: () => void;
 }
 
-// Inline editor for one activity's text. Opens with the cursor at the end so
-// appending a note ("— Dec 5 sold out") is just type and save.
-export function ActivityEditor({ initial, onSave, onCancel }: Props) {
+// Inline editor for one activity's text and places. Opens with the cursor at
+// the end so appending a note ("— Dec 5 sold out") is just type and save.
+export function ActivityEditor({ initial, initialPlaces, onSave, onCancel }: Props) {
   const [text, setText] = useState(initial);
+  const [places, setPlaces] = useState<Place[]>(initialPlaces ?? []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -34,7 +38,7 @@ export function ActivityEditor({ initial, onSave, onCancel }: Props) {
     setSaving(true);
     setError("");
     try {
-      await onSave(text);
+      await onSave(text, cleanPlaces(places));
     } catch (e) {
       // Convex wraps server errors; the useful part is the last line.
       const msg = e instanceof Error ? e.message.split("\n").pop() ?? "" : "";
@@ -67,6 +71,7 @@ export function ActivityEditor({ initial, onSave, onCancel }: Props) {
         value={text}
         onChange={(e) => setText(e.target.value)}
       />
+      <PlacesEditor places={places} setPlaces={setPlaces} />
       <div className="ai-editor-actions">
         {error && <span className="ai-error">{error}</span>}
         <button type="button" className="ai-btn" onClick={onCancel}>

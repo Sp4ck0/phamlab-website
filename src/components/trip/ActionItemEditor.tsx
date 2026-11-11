@@ -4,8 +4,7 @@ import type { ActionItemFields } from "../../hooks/useActionItemEdits";
 import { fmtShort } from "../../lib/tripLogic";
 import { PRIORITY_LABELS } from "../../lib/tasks";
 import { AutoTextarea } from "./AutoTextarea";
-
-const MAX_PLACES = 5;
+import { PlacesEditor, cleanPlaces } from "./PlacesEditor";
 
 interface Props {
   // The kind a new item starts as (an existing item keeps its own).
@@ -48,10 +47,7 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
   const [detail, setDetail] = useState(initial?.detail ?? "");
   const [kind, setKind] = useState<"custom" | "consider">(initial?.kind ?? defaultKind ?? "custom");
   const [priority, setPriority] = useState<Priority | undefined>(initial?.priority);
-  // A place's Google Place ID is kept only while its name and address are untouched.
   const [places, setPlaces] = useState<Place[]>(initial?.places ?? []);
-  const editPlace = (i: number, patch: Partial<Place>) =>
-    setPlaces((prev) => prev.map((p, j) => (j === i ? { name: p.name, address: p.address, ...patch } : p)));
   // The scope follows from the fields: no date = whole trip, a date = that day,
   // a date and an end date = a range.
   const [scope, setScope] = useState<Scope>(initial?.endDate ? "range" : initial?.date ? "day" : "trip");
@@ -91,13 +87,7 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
         endDate: scope === "range" ? endDate : undefined,
         kind,
         priority,
-        places: places
-          .filter((p) => p.name.trim())
-          .map((p) => ({
-            name: p.name.trim(),
-            ...(p.address?.trim() ? { address: p.address.trim() } : {}),
-            ...(p.placeId?.trim() ? { placeId: p.placeId.trim() } : {}),
-          })),
+        places: cleanPlaces(places),
         who: whoIds.length === 0 ? undefined : whoIds.length === 1 ? whoIds[0] : whoIds,
       });
     } catch (e) {
@@ -231,52 +221,7 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
           {/* Any kind can name a place (a Google Maps link on the row); a consideration also gets a map pin. */}
           <div className="ai-row">
             <span className="ai-label">Places</span>
-            <div className="ai-places" role="group" aria-label="Places">
-              {places.map((p, i) => (
-                <div className="ai-place" key={i}>
-                  <label className="ai-field">
-                    <span className="ai-label">Name</span>
-                    <input
-                      className="ai-input"
-                      aria-label={`Place ${i + 1} name`}
-                      maxLength={120}
-                      value={p.name}
-                      onChange={(e) => editPlace(i, { name: e.target.value, placeId: undefined })}
-                    />
-                  </label>
-                  <label className="ai-field">
-                    <span className="ai-label">Address</span>
-                    <input
-                      className="ai-input"
-                      placeholder="Address, city, country (so Google can find it)"
-                      aria-label={`Place ${i + 1} address`}
-                      maxLength={300}
-                      value={p.address ?? ""}
-                      onChange={(e) => editPlace(i, { address: e.target.value, placeId: undefined })}
-                    />
-                  </label>
-                  <button type="button" className="ai-btn" onClick={() => setPlaces((prev) => prev.filter((_, j) => j !== i))}>
-                    Remove
-                  </button>
-                  <details className="ai-placeid">
-                    <summary>Google Place ID{p.placeId ? " ✓" : ""}</summary>
-                    <input
-                      className="ai-input"
-                      placeholder="Optional, ChIJ…"
-                      aria-label={`Place ${i + 1} Place ID`}
-                      maxLength={200}
-                      value={p.placeId ?? ""}
-                      onChange={(e) => editPlace(i, { placeId: e.target.value })}
-                    />
-                  </details>
-                </div>
-              ))}
-              {places.length < MAX_PLACES && (
-                <button type="button" className="ai-chip" onClick={() => setPlaces((prev) => [...prev, { name: "" }])}>
-                  + Add place
-                </button>
-              )}
-            </div>
+            <PlacesEditor places={places} setPlaces={setPlaces} />
           </div>
           <div className="ai-row">
             <span className="ai-label">When</span>
