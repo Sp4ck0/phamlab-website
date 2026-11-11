@@ -323,11 +323,12 @@ test('task text keeps <a> markup as a link with its label and drops unsafe marku
 export { mount, day, props, React, act, assert, test };
 
 test('Only gaps opens each day and shows just the open items, each with why it is listed', async () => {
+  const { MemoryRouter } = await import('react-router-dom');
   const { DetailedView } = await import('./DetailedView.tsx');
   const { resolveDays } = await import('../../lib/tripLogic.ts');
   const open = { who: 'all', name: 'Synthetic open lodging', address: 'Synthetic address', status: 'needed' };
   const booked = { who: 'all', name: 'Synthetic booked lodging', address: 'Synthetic address', status: 'booked' };
-  const days = resolveDays({ days: [{ ...day, hotels: [open, booked], flights: [], callout: 'Synthetic callout', acts: ['Synthetic activity'] }, { ...day, date: '2040-01-03', hotels: [], flights: [], acts: [] }] });
+  const days = resolveDays({ days: [{ ...day, hotels: [open, booked], flights: [{ who: 'all', route: 'Synthetic booked route', status: 'booked', mode: 'train' }], callout: 'Synthetic callout', acts: ['Synthetic activity'] }, { ...day, date: '2040-01-03', hotels: [], flights: [], acts: [] }] });
   const gaps = { '2040-01-03': { plan: true, transport: [{ key: 'transport:2040-01-03|t|A → B', title: 'Synthetic A → Synthetic B' }] } };
   function Harness() {
     const [onlyGaps, setOnlyGaps] = React.useState(true);
@@ -336,20 +337,24 @@ test('Only gaps opens each day and shows just the open items, each with why it i
       React.createElement('button', { ref: filterRef, 'data-filter': '', onClick: () => setOnlyGaps(!onlyGaps) }, 'Only gaps'),
       React.createElement(DetailedView, { days, legColors: [props.legColor, props.legColor], weather: {}, groups: [], ticks: {}, onlyGaps, isGap: () => true, dayGaps: gaps, onOnlyGapsChange: setOnlyGaps, filterRef, onToggle() {}, actionItems: [], considerations: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} }));
   }
-  const view = mount(React.createElement(Harness));
+  const view = mount(React.createElement(MemoryRouter, null, React.createElement(Harness)));
   const triggers = () => [...view.container.querySelectorAll('button[aria-expanded]')];
   try {
     assert.deepEqual(triggers().map(b => b.getAttribute('aria-expanded')), ['true', 'true']);
     const text = view.container.textContent;
     assert.ok(text.includes('Synthetic open lodging') && text.includes('Not booked'));
-    assert.ok(!text.includes('Synthetic booked lodging') && !text.includes('Synthetic activity') && !text.includes('Synthetic callout'));
+    // Booked hotels and transport stay as planning context, without the "Not booked" label.
+    const cardWith = (t) => [...view.container.querySelectorAll('.card')].find(c => c.textContent.includes(t));
+    assert.ok(cardWith('Synthetic booked lodging') && !cardWith('Synthetic booked lodging').textContent.includes('Not booked'));
+    assert.ok(cardWith('Synthetic booked route') && !cardWith('Synthetic booked route').textContent.includes('Not booked'));
+    assert.ok(cardWith('Synthetic open lodging').textContent.includes('Not booked'));
+    assert.ok(!text.includes('Synthetic activity') && !text.includes('Synthetic callout'));
     assert.ok(text.includes('Nothing planned') && text.includes('None entered') && text.includes('Synthetic A → Synthetic B'));
     // A day can still be closed by hand; turning the filter off and on opens it again.
     act(() => triggers()[0].click());
     assert.equal(triggers()[0].getAttribute('aria-expanded'), 'false');
     act(() => view.container.querySelector('[data-filter]').click());
     assert.equal(triggers()[0].getAttribute('aria-expanded'), 'false'); // normal view: nothing was opened by hand
-    assert.ok(view.container.textContent.includes('Synthetic booked lodging') === false);
     act(() => view.container.querySelector('[data-filter]').click());
     assert.equal(triggers()[0].getAttribute('aria-expanded'), 'true');
   } finally { view.close(); }
