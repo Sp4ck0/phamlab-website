@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import type { Act, ActionItem, Group, LegColor, ResolvedDay, Status, Task, Vote } from "../../lib/types";
 import { changeClass, diffLines, type Change, type ChangeState } from "../../lib/changeDiff";
 import { focusOnMapKey, googleMapsUrl, inlinePlaces } from "../../lib/mapPoints";
@@ -130,6 +130,33 @@ export function DayCard({
   const { slug } = useParams<{ slug: string }>();
   const showFocus = useShowAiFocus();
   const collapsed = !expanded;
+  // A collapsed panel is hidden="until-found": still in the page, so Ctrl+F finds its text.
+  // The browser fires beforematch on it just before revealing a match; open the day to keep it shown.
+  const panelRef = useRef<HTMLDivElement>(null);
+  const expandedRef = useRef(expanded);
+  const onExpandedChangeRef = useRef(onExpandedChange);
+  expandedRef.current = expanded;
+  onExpandedChangeRef.current = onExpandedChange;
+  // React 19 renders hidden="until-found" as a plain hidden, so set it on the element itself.
+  useLayoutEffect(() => {
+    const panel = panelRef.current;
+    if (!panel) return;
+    if (expanded) panel.removeAttribute("hidden");
+    else panel.setAttribute("hidden", "until-found");
+  }, [expanded]);
+  // The body stays mounted while collapsed; don't reopen it mid-edit.
+  useEffect(() => {
+    if (!expanded) setEditingAct(null);
+  }, [expanded]);
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!panel) return;
+    const reveal = () => {
+      if (!expandedRef.current) onExpandedChangeRef.current();
+    };
+    panel.addEventListener("beforematch", reveal);
+    return () => panel.removeEventListener("beforematch", reveal);
+  }, []);
   const hotels = d.hotels;
   const flightGroups = mergeFlightsByRoute(d.flights, d.date, ticks);
   const hotelGroups = mergeHotelsByName(hotels, ticks);
@@ -249,8 +276,7 @@ export function DayCard({
       <ShareLinkButton param={{ day: d.date }} label={`Share link to Day ${dayNumber}`} />
       </h2>
 
-      <div id={`${rowId}-panel`} aria-labelledby={`${rowId}-trigger`} hidden={!expanded}>
-      {!collapsed && (
+      <div ref={panelRef} id={`${rowId}-panel`} aria-labelledby={`${rowId}-trigger`}>
         <>
           {legFlights.map(({ item: g, state }, gi) =>
             mark(state, `fbm${gi}`, (
@@ -436,7 +462,6 @@ export function DayCard({
             </div>
           )}
         </>
-      )}
       </div>
     </section>
   );
