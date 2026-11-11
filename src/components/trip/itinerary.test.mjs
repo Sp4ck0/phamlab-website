@@ -47,14 +47,23 @@ test('only-gaps dates come from open booking, plan and transport tasks (one per 
   ]);
   assert.deepEqual([...dates].sort(), ['2040-01-03', '2040-01-05', '2040-01-07', '2040-01-09', '2040-01-11', '2040-01-12']);
 });
-test('controlled closed day exposes an associated empty panel, not detail descendants', () => {
-  const view = mount(React.createElement(DayCard, props));
+test('controlled closed day keeps its panel findable (until-found) and opens itself when the browser matches in it', () => {
+  const calls = [];
+  const view = mount(React.createElement(DayCard, { ...props, onExpandedChange: () => calls.push('toggle') }));
   try {
     const trigger = view.container.querySelector('button');
     assert.equal(trigger.getAttribute('aria-expanded'), 'false');
     const panel = document.getElementById(trigger.getAttribute('aria-controls'));
     assert.ok(panel);
-    assert.equal(view.container.textContent.includes('Synthetic activity'), false);
+    assert.equal(panel.getAttribute('hidden'), 'until-found');
+    assert.ok(panel.textContent.includes('Synthetic activity'));
+    panel.dispatchEvent(new window.Event('beforematch'));
+    assert.deepEqual(calls, ['toggle']);
+    // Once open, a match inside it must not toggle it closed again.
+    act(() => view.root.render(React.createElement(DayCard, { ...props, expanded: true, onExpandedChange: () => calls.push('toggle') })));
+    assert.equal(panel.hasAttribute('hidden'), false);
+    panel.dispatchEvent(new window.Event('beforematch'));
+    assert.deepEqual(calls, ['toggle']);
   } finally { view.close(); }
 });
 test('full-array occurrence reconciliation retains only unambiguous choices without dropping duplicates', async () => {
@@ -175,9 +184,9 @@ test('identical day task labels are occurrence-safe and nested controls never to
     details.open = true;
     assert.equal(view.container.querySelectorAll('button[aria-expanded=true]').length, 2);
     act(() => view.root.render(React.createElement(DayCard, { ...props, day: rich, expanded: false })));
-    assert.equal(view.container.querySelector('details'), null);
+    // Collapsed content stays mounted (hidden until found) so Ctrl+F can match it.
+    assert.ok(view.container.querySelector('details'));
     act(() => view.root.render(React.createElement(DayCard, { ...props, day: rich, expanded: true })));
-    assert.equal(view.container.querySelector('details').open, false);
     assert.equal(view.container.querySelector('.day-summary').textContent, 'Synthetic note');
   } finally { view.close(); }
 });
