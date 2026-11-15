@@ -5,6 +5,7 @@ import { api } from "@convex/api";
 import { PageShell } from "../components/layout/PageShell";
 import { useAccessCode } from "../hooks/useAccessCode";
 import { useRememberTab } from "../hooks/useRememberTab";
+import { serverMessage } from "../lib/serverError";
 
 interface TripRow {
   _id: string;
@@ -172,7 +173,7 @@ function AddCodeForm({ code, existingCodes }: { code: string; existingCodes: str
       setName("");
       setNewCode("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't create that code.");
+      setError(serverMessage(err, err instanceof Error ? err.message : "Couldn't create that code."));
     } finally {
       setSubmitting(false);
     }

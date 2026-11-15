@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/api";
 import type { Id } from "@convex/dataModel";
 import { useAccessCode } from "../hooks/useAccessCode";
+import { serverMessage } from "../lib/serverError";
 import { ChannelIcon } from "./ChannelIcon";
 import { SettingsSection } from "./SettingsSection";
 import { useKanbanBoards } from "../kanban/useKanbanBoards";
@@ -56,9 +57,11 @@ const TYPE_COPY: Record<
 
 function errorText(e: unknown) {
   const msg = e instanceof Error ? e.message : "";
-  // Convex wraps server errors; keep just the message we threw.
+  // Production redacts the text of a plain Error, so the backend throws a
+  // ConvexError for what people should read (serverMessage). The regex still
+  // covers a dev deployment, which shows plain Errors.
   const m = msg.match(/Uncaught Error: (.*?)(?: at |\n|$)/);
-  return m?.[1] ?? "Something went wrong";
+  return serverMessage(e, m?.[1] ?? "Something went wrong");
 }
 
 function ChannelRow({ channel }: { channel: Channel }) {
