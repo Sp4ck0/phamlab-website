@@ -30,3 +30,6 @@ src/_generated
 
 # Claude Code session worktrees (nested checkouts of this repo)
 .claude-worktrees
+
+# Claude Code's own directory: session worktrees, settings, local state
+.claude/
