@@ -5,6 +5,7 @@ import { api } from "@convex/api";
 import { PageShell } from "../components/layout/PageShell";
 import { useAccessCode } from "../hooks/useAccessCode";
 import { useRememberTab } from "../hooks/useRememberTab";
+import { serverMessage } from "../lib/serverError";
 
 interface PersonaRow {
   id: string;
@@ -167,7 +168,7 @@ function PersonaSelect({
       const { reply } = await chat({ code, personaId: p.id, history: [] });
       onSelect(p, reply);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't start the conversation.");
+      setError(serverMessage(err, err instanceof Error ? err.message : "Couldn't start the conversation."));
       setStarting(null);
     }
   }
@@ -283,7 +284,7 @@ function ChatScreen({
       const { reply } = await chat({ code, personaId: persona.id, history: next });
       onMessagesChange([...next, { role: "assistant", content: reply }]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "They didn't reply — try again.");
+      setError(serverMessage(err, err instanceof Error ? err.message : "They didn't reply — try again."));
     } finally {
       setSending(false);
       requestAnimationFrame(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight }));
@@ -314,7 +315,7 @@ function ChatScreen({
           const { text } = await transcribe({ code, audio: buf });
           if (text) await sendMessage(text);
         } catch (err) {
-          setError(err instanceof Error ? err.message : "Couldn't transcribe that.");
+          setError(serverMessage(err, err instanceof Error ? err.message : "Couldn't transcribe that."));
         } finally {
           setTranscribing(false);
         }
@@ -339,7 +340,7 @@ function ChatScreen({
       const result = await generateReport({ code, personaId: persona.id, transcript: messages });
       onReport(result as CoachingReport);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't generate the report.");
+      setError(serverMessage(err, err instanceof Error ? err.message : "Couldn't generate the report."));
       setGrading(false);
     }
   }
@@ -453,7 +454,7 @@ function ReportView({
         const result = await generateRubricReport({ code, personaId: persona.id, transcript });
         setRubricReport(result as RubricReport);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Couldn't generate the rubric report.");
+        setError(serverMessage(err, err instanceof Error ? err.message : "Couldn't generate the rubric report."));
       } finally {
         setLoadingTab(null);
       }
@@ -464,7 +465,7 @@ function ReportView({
         const result = await generateFlagsReport({ code, personaId: persona.id, transcript });
         setFlagsReport(result as FlagsReport);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Couldn't generate the flags report.");
+        setError(serverMessage(err, err instanceof Error ? err.message : "Couldn't generate the flags report."));
       } finally {
         setLoadingTab(null);
       }
