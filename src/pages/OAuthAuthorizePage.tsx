@@ -4,12 +4,15 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/api";
 import { PageShell } from "../components/layout/PageShell";
 import { useAccessCode } from "../hooks/useAccessCode";
+import { serverMessage } from "../lib/serverError";
 
 function errorText(e: unknown) {
   const msg = e instanceof Error ? e.message : "";
-  // Convex wraps server errors; keep just the message we threw.
+  // Production redacts the text of a plain Error, so the backend throws a
+  // ConvexError for what people should read (serverMessage). The regex still
+  // covers a dev deployment, which shows plain Errors.
   const m = msg.match(/Uncaught Error: (.*?)(?: at |\n|$)/);
-  return m?.[1] ?? "Something went wrong";
+  return serverMessage(e, m?.[1] ?? "Something went wrong");
 }
 
 // Where an AI app (ChatGPT, Claude, …) sends someone to approve its connection.
