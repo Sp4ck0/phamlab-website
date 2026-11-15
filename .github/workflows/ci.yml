@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout phamlab-website
+        uses: actions/checkout@v4
+        with:
+          path: phamlab-website
+
+      # The site imports the backend's generated API through a relative symlink
+      # (src/_generated -> ../../phamlab/convex/_generated), so the private
+      # backend is checked out as a sibling, exactly as deploy.yml does.
+      - name: Checkout phamlab (backend)
+        uses: actions/checkout@v4
+        with:
+          repository: Sp4ck0/phamlab
+          token: ${{ secrets.PHAMLAB_BACKEND_TOKEN }}
+          path: phamlab
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install phamlab-website dependencies
+        working-directory: phamlab-website
+        run: npm ci
+
+      # The symlinked _generated/api.js imports "convex/server" from its real
+      # location, so the backend needs its own node_modules too.
+      - name: Install phamlab dependencies
+        working-directory: phamlab
+        run: npm ci
+
+      - name: Recreate _generated symlink
+        working-directory: phamlab-website
+        run: |
+          rm -rf src/_generated
+          ln -s ../../phamlab/convex/_generated src/_generated
+
+      - name: Typecheck
+        working-directory: phamlab-website
+        run: npx tsc -b
+
+      - name: Lint
+        working-directory: phamlab-website
+        run: npm run lint
