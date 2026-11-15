@@ -3,6 +3,7 @@ import type { ActionItem, Group, Place, Priority } from "../../lib/types";
 import type { ActionItemFields } from "../../hooks/useActionItemEdits";
 import { fmtShort } from "../../lib/tripLogic";
 import { PRIORITY_LABELS } from "../../lib/tasks";
+import { serverMessage } from "../../lib/serverError";
 import { AutoTextarea } from "./AutoTextarea";
 import { PlacesEditor, cleanPlaces } from "./PlacesEditor";
 
@@ -33,10 +34,11 @@ const toIds = (who: ActionItem["who"]) => (who === undefined ? [] : Array.isArra
 // hold a line break), so Enter saves and a pasted newline becomes a space.
 const oneLine = (s: string) => s.replace(/\s*\n\s*/g, " ");
 
-// Convex wraps server errors; the useful part is the last line.
+// A ConvexError carries what the backend meant to say (production hides plain
+// Errors); otherwise Convex wraps server errors and the useful part is the last line.
 function errorText(e: unknown) {
   const last = e instanceof Error ? (e.message.split("\n").pop() ?? "") : "";
-  return last.replace(/^(Uncaught )?Error:\s*/, "") || "Couldn't save — try again.";
+  return serverMessage(e, last.replace(/^(Uncaught )?Error:\s*/, "") || "Couldn't save — try again.");
 }
 
 // Inline add/edit row for an Action Item. Title and details are always shown;

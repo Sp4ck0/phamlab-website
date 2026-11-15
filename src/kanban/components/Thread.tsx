@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Board, Card } from '../types';
 import { dayLabel, isMine, pastedImages, replyAuthor, viewerSeat } from '../lib';
+import { serverMessage } from '../../lib/serverError';
 import { ImageGallery } from './ImageGallery';
 import { ImagePicker } from './ImagePicker';
 
@@ -80,7 +81,7 @@ export function Thread({ card, board, raisedBy, onReply, onRemoveReply, onRead }
       setDraft('');
       setFiles([]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't send that");
+      setError(serverMessage(e, e instanceof Error ? e.message : "Couldn't send that"));
     } finally {
       setSending(false);
     }

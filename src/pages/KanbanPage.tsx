@@ -6,6 +6,7 @@ import { move } from "@dnd-kit/helpers";
 import type { Id } from "@convex/dataModel";
 import { PageShell } from "../components/layout/PageShell";
 import { useAccessCode } from "../hooks/useAccessCode";
+import { serverMessage } from "../lib/serverError";
 import { useKanbanBoard, useKanbanCard } from "../kanban/useKanbanBoard";
 import { useRememberTab } from "../hooks/useRememberTab";
 import { useAiCardFocus } from "../hooks/useAiFocus";
@@ -166,7 +167,7 @@ export function KanbanPage() {
       setDraft(null);
       setPaneOpen(false);
     } catch (e) {
-      setSubmitError(e instanceof Error ? e.message : "Couldn't add that card");
+      setSubmitError(serverMessage(e, e instanceof Error ? e.message : "Couldn't add that card"));
     } finally {
       setSubmitting(false);
     }

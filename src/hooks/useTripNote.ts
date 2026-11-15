@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/api";
 import { useAccessCode } from "./useAccessCode";
+import { serverMessage } from "../lib/serverError";
 
 // A trip's open note (notes.ts), shared by everyone with access to the trip.
 // Typing never touches the server: edits live as a draft in this browser's
@@ -79,7 +80,7 @@ export function useTripNote(slug: string) {
       // On a conflict the reactive query delivers their version, which flips
       // `conflict` on; nothing was written.
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't save");
+      setError(serverMessage(e, e instanceof Error ? e.message : "Couldn't save"));
     } finally {
       setSaving(false);
     }

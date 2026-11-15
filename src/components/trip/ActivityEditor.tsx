@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Place } from "../../lib/types";
+import { serverMessage } from "../../lib/serverError";
 import { PlacesEditor, cleanPlaces } from "./PlacesEditor";
 
 interface Props {
@@ -40,9 +41,10 @@ export function ActivityEditor({ initial, initialPlaces, onSave, onCancel }: Pro
     try {
       await onSave(text, cleanPlaces(places));
     } catch (e) {
-      // Convex wraps server errors; the useful part is the last line.
+      // A ConvexError carries what the backend meant to say; otherwise Convex
+      // wraps server errors and the useful part is the last line.
       const msg = e instanceof Error ? e.message.split("\n").pop() ?? "" : "";
-      setError(msg.replace(/^(Uncaught )?Error:\s*/, "") || "Couldn't save — try again.");
+      setError(serverMessage(e, msg.replace(/^(Uncaught )?Error:\s*/, "") || "Couldn't save — try again."));
       setSaving(false);
     }
   }
