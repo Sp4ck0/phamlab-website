@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import type { Board, Card, Kind, LaneId, PersonId } from '../types';
 import { BOARD_COPY, PEOPLE } from '../types';
 import { boardLanes, pastedImages, uid } from '../lib';
+import { serverMessage } from '../../lib/serverError';
 import { ImageGallery } from './ImageGallery';
 import { ImagePicker } from './ImagePicker';
 import { Thread } from './Thread';
@@ -106,7 +107,7 @@ export function CardDrawer({
     try {
       await onAddNoteImages(card.id, files);
     } catch (e) {
-      setNoteError(e instanceof Error ? e.message : "Couldn't add that image");
+      setNoteError(serverMessage(e, e instanceof Error ? e.message : "Couldn't add that image"));
     } finally {
       setNoteBusy(false);
     }
