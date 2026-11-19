@@ -69,12 +69,15 @@ export function ticksFromTasks(tasks: Task[]): Record<string, Status> {
 // blank day still to plan, a move with no transport entered, or an open
 // decision / consideration / to-do tied to a day or date range (it marks each
 // date it covers; a whole-trip item would mark every day, so it marks none).
+// A free-cancellation `deadline` is information, not something missing, so it
+// marks nothing (it stays in the task list).
 // Each ref's key carries its own date right after the prefix
 // (`booking:2040-01-02|…`), so a stay or run of blank days that merged into one
 // task still marks only the nights/days that are actually open.
 export function gapDates(tasks: Task[]): Set<string> {
   const out = new Set<string>();
   for (const t of tasks) {
+    if (t.kind === "deadline") continue;
     if (t.kind !== "booking" && t.kind !== "plan" && t.kind !== "transport" && t.kind !== "details") {
       const start = scopeStart(t.scope);
       const end = scopeEnd(t.scope);
