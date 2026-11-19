@@ -53,6 +53,7 @@ export function HotelCard({ g, status: s, stay, gapAfter, groups, date, days, da
       <div className="ctop">
         <span className="ctype">{ctype}</span>
         {g.tentative && <span className="maybe-pill">Maybe</span>}
+        {s === "needed" && !g.tentative && !gapsOnly && <span className="tx-state open">Not booked</span>}
         {gapsOnly && s === "needed" && !g.tentative && <span className="gap-reason">{g.name ? "Not booked" : "Not chosen"}</span>}
         <WhoPill who={uniqueWho.length === 1 ? uniqueWho[0] : uniqueWho} groups={groups} date={date} />
         <ShareLinkButton param={{ day: date, tile: g.srcs[0] }} label={`Share link to ${nm}`} />

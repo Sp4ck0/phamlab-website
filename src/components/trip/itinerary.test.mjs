@@ -332,6 +332,8 @@ test('hotel tiles show their stay facts and a tap-to-reveal confirmation; a not-
     assert.equal(undecided.querySelector('.cmain a'), null); // no pin or map link for a place that isn't chosen
     assert.equal(undecided.querySelector('.cmeta').textContent, 'Synthetic area'); // the city sits under the title
     assert.equal(undecided.querySelector('.tbd-label').textContent, 'To be decided');
+    assert.equal(undecided.querySelector('.tx-state.open').textContent, 'Not booked'); // amber state text, like the proposal
+    assert.ok(undecided.classList.contains('miss')); // the dashed amber tile
     assert.deepEqual([...undecided.querySelectorAll('.tbd-chip')].map((c) => c.textContent), ['hotel', 'check-in time', 'check-out time']);
     const search = undecided.querySelector('.tile-links a');
     assert.equal(search.textContent, 'Search hotels here');

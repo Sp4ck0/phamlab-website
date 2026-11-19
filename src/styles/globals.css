@@ -512,9 +512,9 @@ details.tour-box[open] summary::after{content:"Hide"}
 /* simple single-leg flight card (used when a flight has no `legs`) */
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--r,12px);padding:14px 15px;position:relative;transition:.18s}
 .card:hover{box-shadow:0 4px 12px var(--border);transform:translateY(-1px)}
-.card.miss{border-style:dashed;border-color:var(--danger);background:var(--danger-tint)}
+.card.miss{border-style:dashed;border-left-style:solid;border-color:var(--warn);background:var(--accent-transit-tint)}
 /* Only gaps: the reason a tile is listed, and a heavier border so it stands out. */
-.gap-reason{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--danger)}
+.gap-reason{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--warn)}
 .day-card.gaps-only .card.miss{border-width:2px}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:4px}
 .ctop{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;margin-bottom:10px}
@@ -524,7 +524,7 @@ details.tour-box[open] summary::after{content:"Hide"}
   padding:3px 7px;border-radius:6px;margin-left:auto;max-width:60%;text-align:right;
 }
 .cmain{font-size:15px;font-weight:600;color:var(--text-primary);line-height:1.35;margin-bottom:5px}
-.cmain.todo{color:var(--danger);font-style:italic;font-weight:500}
+.cmain.todo{color:var(--warn);font-style:italic;font-weight:500}
 /* Hotel name link: same look as the inline links in .activity-text. */
 .cmain a:not(.gcal-btn){color:var(--accent-1);text-decoration:underline}
 .cmeta{font-size:12.5px;color:var(--text-secondary);line-height:1.5}
@@ -892,7 +892,7 @@ textarea.ai-input{display:block;width:100%;resize:none;overflow:hidden;line-heig
 /* train / ferry / bus header, platform line, and the "next up" ring */
 .tx-state{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
 .tx-state.ok{color:var(--good)}
-.tx-state.open{color:var(--danger)}
+.tx-state.open{color:var(--warn)}
 .tx-title{font-size:16px;font-weight:700;margin:2px 0 8px}
 .seg-terminal{font-size:12px;font-weight:600;color:var(--text-muted)}
 .next-up{box-shadow:0 0 0 2px var(--accent-1)}
