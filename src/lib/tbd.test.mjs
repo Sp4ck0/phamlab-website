@@ -26,7 +26,7 @@ for (const [name, flight, expected] of cases) {
 }
 
 test('a not-booked hotel is undecided until it has an address or place id', () => {
-  assert.deepEqual(missingHotelFields({}), ['hotel']);
-  assert.deepEqual(missingHotelFields({ address: 'Synthetic street' }), []);
-  assert.deepEqual(missingHotelFields({ placeId: 'synthetic-id' }), []);
+  assert.deepEqual(missingHotelFields({}), ['hotel', 'check-in time', 'check-out time']);
+  assert.deepEqual(missingHotelFields({ address: 'Synthetic street', checkInTime: '15:00' }), ['check-out time']);
+  assert.deepEqual(missingHotelFields({ placeId: 'synthetic-id', checkInTime: '15:00', checkOutTime: '11:00' }), []);
 });

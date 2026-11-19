@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { resolveDays } from './tripLogic.ts';
-import { budgetText, cancelStatus, fmtMoney, gapMinutes, phoneHref, priceText, stayInfo } from './stay.ts';
+import { budgetChips, cancelStatus, hotelSearchUrl, fmtMoney, gapMinutes, phoneHref, priceText, stayInfo } from './stay.ts';
 
 const day = (date, hotels) => ({ date, city: 'Synthetic city', country: 'JP', flights: [], hotels, acts: ['x'], highlight: 'x' });
 const H = (name, extra = {}) => ({ who: 'all', name, address: 'Synthetic street', status: 'booked', ...extra });
@@ -67,9 +67,16 @@ test('a phone becomes a tel: link without its spaces and punctuation', () => {
   assert.equal(phoneHref('(212) 555-0100'), 'tel:2125550100');
 });
 
-test('budget: the target as given, with the other basis when the length is known, never guessed otherwise', () => {
-  assert.equal(budgetText({ amount: 400, currency: 'USD', per: 'night' }, 4), 'Budget ≈ $400.00 / night · ≈ $1,600.00 for 4 nights');
-  assert.equal(budgetText({ amount: 400, currency: 'USD', per: 'night' }, undefined), 'Budget ≈ $400.00 / night');
-  assert.equal(budgetText({ amount: 1600, currency: 'USD', per: 'stay' }, 4), 'Budget ≈ $1,600.00 for the stay · ≈ $400 / night');
-  assert.equal(budgetText({ amount: 400, currency: 'USD' }, 4), 'Budget ≈ $400.00'); // basis unknown: not multiplied or divided
+test('budget: the target as given, then the other basis as its own chip when the length is known, never guessed otherwise', () => {
+  assert.deepEqual(budgetChips({ amount: 400, currency: 'USD', per: 'night' }, 4), ['Budget ≈ $400.00 / night', '≈ $1,600.00 for 4 nights']);
+  assert.deepEqual(budgetChips({ amount: 400, currency: 'USD', per: 'night' }, undefined), ['Budget ≈ $400.00 / night']);
+  assert.deepEqual(budgetChips({ amount: 1600, currency: 'USD', per: 'stay' }, 4), ['Budget ≈ $1,600.00 for the stay', '≈ $400 / night']);
+  assert.deepEqual(budgetChips({ amount: 400, currency: 'USD' }, 4), ['Budget ≈ $400.00']); // basis unknown: not multiplied or divided
+});
+
+test('the hotel search link carries the area and the dates', () => {
+  const u = new URL(hotelSearchUrl('Synthetic City', '2040-01-02', '2040-01-05'));
+  assert.equal(u.origin + u.pathname, 'https://www.google.com/travel/search');
+  assert.equal(u.searchParams.get('q'), 'Hotels in Synthetic City 2040-01-02 to 2040-01-05');
+  assert.equal(new URL(hotelSearchUrl('Synthetic City')).searchParams.get('q'), 'Hotels in Synthetic City');
 });
