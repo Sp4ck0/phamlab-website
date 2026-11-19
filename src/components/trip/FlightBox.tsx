@@ -5,6 +5,9 @@ import { AIRLINES, airlineLogoUrl, legAirline } from "../../lib/airlines";
 import { AddToCalendar } from "./AddToCalendar";
 import { legUrl } from "../../lib/calendar";
 import { ShareLinkButton } from "./ShareLinkButton";
+import { ConfirmationChip } from "./ConfirmationChip";
+import { SegmentRow } from "./SegmentRow";
+import { fmtDuration, layoverMin } from "../../lib/segments";
 
 interface Props {
   group: FlightGroup;
@@ -37,7 +40,9 @@ function AirlineChip({ leg }: { leg: FlightLeg }) {
 
 export function FlightBox({ group, onToggle, day, dayNumber = 0, tileId, gapReason }: Props) {
   const status: Status = group.statuses.includes("needed") ? "needed" : "booked";
-  const legs = group.legs || [];
+  const segments = group.segments || [];
+  // Structured segments replace the legacy legs/layovers/detail text.
+  const legs = segments.length ? [] : group.legs || [];
 
   return (
     <div className="flight-box" id={tileId}>
@@ -46,10 +51,21 @@ export function FlightBox({ group, onToggle, day, dayNumber = 0, tileId, gapReas
         {gapReason && <span className="gap-reason">{gapReason}</span>}
         <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
           {group.price && <span className="flight-box-price">{group.price}</span>}
+          {group.confirmation && <ConfirmationChip code={group.confirmation} />}
           {day && <ShareLinkButton param={{ day: day.date, tile: group.ids[0] }} label={`Share link to ${group.title || group.route}`} />}
           <StatusToggle ids={group.ids} status={status} onToggle={onToggle} style={{ position: "static" }} />
         </span>
       </div>
+      {segments.map((seg, i) => {
+        const wait = i > 0 ? layoverMin(segments[i - 1], seg) : null;
+        return (
+          <div key={i}>
+            {wait !== null && <div className="fl-layover">{fmtDuration(wait)} layover · {seg.from}</div>}
+            <SegmentRow seg={seg} mode={group.mode} day={day} dayNumber={dayNumber} first={i === 0} last={i === segments.length - 1} />
+          </div>
+        );
+      })}
+      {segments.length > 0 && group.detail && <div className="fl-meta">{group.detail}</div>}
       {legs.map((leg, i) => (
         <div key={i}>
           <div className="flight-leg">

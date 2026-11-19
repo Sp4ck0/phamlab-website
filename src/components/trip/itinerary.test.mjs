@@ -264,10 +264,10 @@ test('existing rich transport lodging activity and task detail capabilities rema
     assert.equal(days[1].hotels[0].carried, true);
   } finally { view.close(); }
 });
-test('flight legs show an airline logo chip from the airline code or the flight number in meta', async () => {
+test('legacy flight legs show an airline logo chip from the flight number in meta', async () => {
   const { resolveDays } = await import('../../lib/tripLogic.ts');
   const legs = [
-    { route: 'Synthetic leg A', time: 'Synthetic time', airline: 'JL' },
+    { route: 'Synthetic leg A', time: 'Synthetic time', meta: 'JL5 · Synthetic meta' },
     { route: 'Synthetic leg B', time: 'Synthetic time', meta: 'UA 837 · Synthetic meta' },
     { route: 'Synthetic leg C', time: 'Synthetic time', meta: 'Synthetic meta' },
     { route: 'Synthetic leg D', time: 'Synthetic time', meta: 'Synthetic Air CI 21 · Airbus A350 · 13h' },
@@ -282,6 +282,29 @@ test('flight legs show an airline logo chip from the airline code or the flight 
       'https://www.gstatic.com/flights/airline_logos/70px/UA.png',
       'https://www.gstatic.com/flights/airline_logos/70px/CI.png',
     ]);
+  } finally { view.close(); }
+});
+test('structured segments render as boarding-pass rows with a computed layover and a tap-to-reveal confirmation', async () => {
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const segments = [
+    { from: 'SEA', to: 'TPE', depart: '2040-01-02T00:10', arrive: '2040-01-03T05:20', airline: 'CI', number: '21', aircraft: 'Synthetic jet', cabin: 'Synthetic cabin' },
+    { from: 'TPE', to: 'BKK', depart: '2040-01-03T07:00', arrive: '2040-01-03T09:50', airline: 'CI', number: '833' },
+  ];
+  const flight = { who: 'all', route: 'Synthetic route', title: 'Synthetic multi-segment', status: 'booked', segments, confirmation: 'SYNTH1' };
+  const days = resolveDays({ days: [{ ...day, flights: [flight] }] });
+  const view = mount(React.createElement(DayCard, { ...props, day: days[0], expanded: true, onToggle() {} }));
+  try {
+    const box = view.container.querySelector('.flight-box');
+    assert.equal(box.querySelectorAll('.seg').length, 2);
+    assert.deepEqual([...box.querySelectorAll('.seg-time')].map(t => t.textContent), ['12:10 AM', '5:20 AM+1', '7:00 AM', '9:50 AM']);
+    assert.deepEqual([...box.querySelectorAll('.seg-dur')].map(t => t.textContent), ['13h 10m', '3h 50m']);
+    assert.equal(box.querySelector('.fl-layover').textContent, '1h 40m layover · TPE');
+    assert.equal(box.querySelector('.fl-airline').getAttribute('src'), 'https://www.gstatic.com/flights/airline_logos/70px/CI.png');
+    assert.ok(box.textContent.includes('Synthetic jet') && box.textContent.includes('Synthetic cabin'));
+    // The booking reference is not on screen until tapped.
+    assert.ok(!box.textContent.includes('SYNTH1'));
+    act(() => box.querySelector('.conf-chip').click());
+    assert.ok(box.querySelector('.conf-chip').textContent.includes('SYNTH1'));
   } finally { view.close(); }
 });
 test('latest jump wins and a removed pending occurrence never scrolls to a surviving date match', async () => {
