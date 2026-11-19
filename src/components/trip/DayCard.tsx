@@ -7,6 +7,9 @@ import type { FlightGroup, HotelGroup } from "../../lib/tripLogic";
 import { WhoPill } from "./WhoPill";
 import { StatusToggle } from "./StatusToggle";
 import { FlightBox } from "./FlightBox";
+import { HotelFacts } from "./HotelFacts";
+import { TbdLine } from "./TbdLine";
+import { missingHotelFields, missingTransportFields } from "../../lib/tbd";
 import { TaskRow } from "./TaskRow";
 import { TourBox } from "./TourBox";
 import { Linkify } from "./Linkify";
@@ -179,6 +182,12 @@ export function DayCard({
   const legFlights = flightChanges.filter((c) => isRich(c.item));
   const plainFlights = flightChanges.filter((c) => !isRich(c.item));
   const transportGaps = gapsOnly ? gaps?.transport ?? [] : [];
+  // Under Only gaps, a booked transport tile that still lacks a required field says so
+  // (its `details` task, until it is dismissed). A merged tile matches any of its rows.
+  const missingDetails = (g: FlightGroup) =>
+    gapsOnly && (gaps?.details ?? []).some((t) => g.ids.some((id) => t.key === `details:${id}`));
+  const flightGapReason = (g: FlightGroup) =>
+    gapsOnly && g.statuses.includes("needed") ? "Not booked" : missingDetails(g) ? "Missing details" : undefined;
   // Under Only gaps, a to-do or consideration that is done or settled is not a gap.
   const shownConsiderations = gapsOnly ? dayConsiderations.filter((t) => !t.done) : dayConsiderations;
   const shownActionItems = gapsOnly ? dayActionItems.filter((item) => !actionItemsDone[item.id]) : dayActionItems;
@@ -226,7 +235,9 @@ export function DayCard({
         </div>
         {/* With a Place ID the link opens the exact listing, so the address text adds nothing. */}
         {g.address && !g.placeId && <div className="cmeta">{g.address}</div>}
+        <HotelFacts g={g} />
         {g.detail && <div className="cmeta"><Linkify text={g.detail} /></div>}
+        {s === "needed" && <TbdLine fields={missingHotelFields(g)} area={g.area} />}
       </div>
     ));
   };
@@ -281,7 +292,7 @@ export function DayCard({
         <>
           {legFlights.map(({ item: g, state }, gi) =>
             mark(state, `fbm${gi}`, (
-              <FlightBox key={`fb${gi}`} group={g} onToggle={onToggle} day={d} dayNumber={dayNumber} tileId={state === "gone" ? undefined : tileDomId(rowId, g.ids[0])} gapReason={gapsOnly && g.statuses.includes("needed") ? "Not booked" : undefined} />
+              <FlightBox key={`fb${gi}`} group={g} onToggle={onToggle} day={d} dayNumber={dayNumber} tileId={state === "gone" ? undefined : tileDomId(rowId, g.ids[0])} gapReason={flightGapReason(g)} />
             ))
           )}
 
@@ -297,7 +308,7 @@ export function DayCard({
                       <StatusToggle ids={g.ids} status={status} onToggle={onToggle} />
                       <div className="ctop">
                         <span className="ctype">{modeLabel(g.mode)}</span>
-                        {gapsOnly && status === "needed" && <span className="gap-reason">Not booked</span>}
+                        {flightGapReason(g) && <span className="gap-reason">{flightGapReason(g)}</span>}
                         <WhoPill who={uniqueWho.length === 1 ? uniqueWho[0] : uniqueWho} groups={groups} date={d.date} />
                         <ShareLinkButton param={{ day: d.date, tile: g.ids[0] }} label={`Share link to ${g.route}`} />
                         <AddToCalendar url={transportUrl(g, d, dayNumber)} />
@@ -306,6 +317,7 @@ export function DayCard({
                         {g.route}
                       </div>
                       <div className="cmeta"><Linkify text={g.detail || ""} /></div>
+                      {status === "needed" && <TbdLine fields={missingTransportFields(g)} />}
                     </div>
                   ));
                 })}

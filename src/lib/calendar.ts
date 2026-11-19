@@ -348,13 +348,28 @@ export function stayStartIndex(days: ResolvedDay[], from: number, name: string):
   return i;
 }
 
-/** Same whole-stay event (check-in → check-out) from any day of the stay. */
+/**
+ * Same whole-stay event (check-in → check-out) from any day of the stay: timed
+ * (in the hotel city's zone) when the stay has both times, else all-day.
+ */
 export function hotelUrl(
   name: string, address: string | undefined, days: ResolvedDay[], dayIndex: number,
 ): string | null {
   const start = stayStartIndex(days, dayIndex, name);
   const end = stayEndDate(days, dayIndex, name);
   if (!name || !end || end <= days[start].date) return null;
+  const stay = days[start].hotels.find((h) => h.name === name);
+  if (stay?.checkInTime && stay.checkOutTime) {
+    const tz = zoneFor(days[start].city, days[start].country);
+    const [ih, im] = stay.checkInTime.split(":").map(Number);
+    const [oh, om] = stay.checkOutTime.split(":").map(Number);
+    const timed = timedUrl({
+      title: `🏨 ${name}`, date: days[start].date, start: { h: ih, m: im }, tz,
+      end: { h: oh, m: om }, endDayOffset: Math.round((Date.parse(end) - Date.parse(days[start].date)) / 864e5), endTz: tz,
+      defaultMinutes: 60, location: address || name, details: detailsFor(start),
+    });
+    if (timed) return timed; // no known zone: fall back to the all-day event
+  }
   return allDayUrl({
     title: `🏨 ${name}`, startDate: days[start].date, endDate: end,
     location: address || name, details: detailsFor(start),

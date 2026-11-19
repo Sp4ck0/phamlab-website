@@ -2,7 +2,7 @@
 // print view, Markdown and clipboard HTML all share one layout (hotel
 // carry-forward, who-tags, "to be arranged" wording) and can't drift apart.
 import { DOW, MON, dateRangeFromDays, deriveRoute, flagEmoji, fmtShort } from "./tripLogic";
-import { fmtDuration, layoverMin, segmentLine } from "./segments";
+import { fmtDuration, fmtHm, layoverMin, segmentLine } from "./segments";
 import type { TripExport, TripExportHotel, Who } from "./types";
 
 export interface ItineraryItem {
@@ -144,10 +144,19 @@ export function buildItinerary(data: TripExport, rangeArg?: Partial<DateRange> |
     const stay = carried.map((h): ItineraryItem => {
       const who = whoTag(h.who, groups);
       if (h.tba) return { main: "Hotel — to be arranged", who, tba: true };
+      // Times and room only on the days the hotel is entered, not repeated on every carried night.
+      const facts = staying
+        ? []
+        : [
+            h.checkInTime && `Check-in from ${fmtHm(h.checkInTime)}`,
+            h.checkOutTime && `Check-out by ${fmtHm(h.checkOutTime)}`,
+            h.room,
+          ].filter((x): x is string => !!x);
+      const lines = [...facts, ...(h.detail ? [h.detail] : [])];
       return {
         main: staying ? `Staying at ${h.name}` : (h.name ?? ""),
         sub: h.address,
-        lines: h.detail ? [h.detail] : undefined,
+        lines: lines.length ? lines : undefined,
         who,
       };
     });

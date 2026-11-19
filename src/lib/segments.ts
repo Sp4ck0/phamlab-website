@@ -49,6 +49,12 @@ export function fmtClock(dt: string): string {
   return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
 }
 
+/** "3:00 PM" from a bare local "15:00" (a hotel's check-in/out time). */
+export function fmtHm(hm: string): string {
+  const [h, m] = hm.split(":").map(Number);
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+}
+
 /** "Wed, Nov 4" from "2026-11-04" or a datetime. */
 export function fmtDate(dt: string): string {
   const d = new Date(`${dateOf(dt)}T00:00:00Z`);

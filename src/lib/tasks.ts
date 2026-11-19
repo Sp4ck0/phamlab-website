@@ -35,6 +35,7 @@ export function kindLabel(t: Task): string | undefined {
   if (t.kind === "booking") return t.mode === "hotel" ? "Hotel" : modeLabel(t.mode);
   if (t.kind === "plan") return "Plan";
   if (t.kind === "transport") return "Transport";
+  if (t.kind === "details") return "Missing details";
   if (t.kind === "consider") return "Considering";
   return undefined;
 }
@@ -73,7 +74,7 @@ export function ticksFromTasks(tasks: Task[]): Record<string, Status> {
 export function gapDates(tasks: Task[]): Set<string> {
   const out = new Set<string>();
   for (const t of tasks) {
-    if (t.kind !== "booking" && t.kind !== "plan" && t.kind !== "transport") {
+    if (t.kind !== "booking" && t.kind !== "plan" && t.kind !== "transport" && t.kind !== "details") {
       const start = scopeStart(t.scope);
       const end = scopeEnd(t.scope);
       if (t.done || !start || !end) continue;
@@ -94,22 +95,25 @@ export function gapDates(tasks: Task[]): Set<string> {
 }
 
 // The gaps a day card can't see from its own tiles, per date: whether it is still
-// blank and needs a plan, and which moves have no transport entered. (An unbooked
-// hotel or flight already shows on its tile as "needed".)
+// blank and needs a plan, which moves have no transport entered, and which booked
+// transport tiles still lack a required field (`details`, matched to its tile by
+// key). (An unbooked hotel or flight already shows on its tile as "needed".)
 export interface DayGaps {
   plan: boolean;
   transport: Task[];
+  details: Task[];
 }
 
 export function dayGaps(tasks: Task[]): Record<string, DayGaps> {
   const out: Record<string, DayGaps> = {};
   for (const t of tasks) {
-    if (t.kind !== "plan" && t.kind !== "transport") continue;
+    if (t.kind !== "plan" && t.kind !== "transport" && t.kind !== "details") continue;
     t.refs.forEach((ref, i) => {
       if (t.refsDone[i]) return;
       const start = ref.indexOf(":") + 1;
-      const gaps = (out[ref.slice(start, start + 10)] ??= { plan: false, transport: [] });
+      const gaps = (out[ref.slice(start, start + 10)] ??= { plan: false, transport: [], details: [] });
       if (t.kind === "plan") gaps.plan = true;
+      else if (t.kind === "details") gaps.details.push(t);
       else if (!gaps.transport.includes(t)) gaps.transport.push(t);
     });
   }

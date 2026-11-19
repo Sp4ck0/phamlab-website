@@ -1,6 +1,6 @@
 // Ported 1:1 from the original static site's trip.js — the pure logic
 // functions, decoupled from DOM rendering.
-import type { Act, Day, Flight, FlightLeg, Group, Hotel, LegColor, Place, ResolvedDay, Segment, Status, TransportMode, Trip, Who } from "./types";
+import type { Act, Day, Flight, FlightLeg, Group, Hotel, HotelPrice, LegColor, Place, ResolvedDay, Segment, Status, TransportMode, Trip, Who } from "./types";
 
 // Normalizes a legacy plain-string activity and a rich {tag,time,text}
 // activity to the same shape for rendering.
@@ -101,6 +101,29 @@ export function resolveDays(trip: Pick<Trip, "days">): ResolvedDay[] {
     }));
   });
 
+  // A stay's facts (times, room, price, confirmation, area) may sit on any one of
+  // its entries; a carried day copies the whole entry, and a transition day has
+  // its own. Give every entry of a contiguous run of the same hotel the first
+  // value found in the run, so the tile never depends on which day it was typed on.
+  const STAY_FACTS = ["checkInTime", "checkOutTime", "room", "price", "confirmation", "area"] as const;
+  days.forEach((d, di) => {
+    d.hotels = d.hotels.map((h) => {
+      if (!h.name) return h;
+      let lo = di, hi = di;
+      while (lo > 0 && namesByDay[lo - 1].has(h.name)) lo--;
+      while (hi < days.length - 1 && namesByDay[hi + 1].has(h.name)) hi++;
+      const filled = { ...h };
+      for (const k of STAY_FACTS) {
+        if (filled[k] !== undefined) continue;
+        for (let i = lo; i <= hi && filled[k] === undefined; i++) {
+          const same = days[i].hotels.find((x) => x.name === h.name && x[k] !== undefined);
+          if (same) (filled as Record<string, unknown>)[k] = same[k];
+        }
+      }
+      return filled;
+    });
+  });
+
   return days;
 }
 
@@ -114,6 +137,12 @@ export interface HotelGroup {
   address?: string;
   placeId?: string;
   detail?: string;
+  checkInTime?: string;
+  checkOutTime?: string;
+  room?: string;
+  price?: HotelPrice;
+  confirmation?: string;
+  area?: string;
   who: string[];
   srcs: string[];
   statuses: Status[];
@@ -135,12 +164,19 @@ export function mergeHotelsByName(hotels: ResolvedDay["hotels"], ticks: Record<s
       g.carriedAll = g.carriedAll && !!h.carried;
       // The ID may be on a later day's entry of the same hotel, not the first.
       g.placeId ??= h.placeId;
+      g.confirmation ??= h.confirmation;
     } else {
       const g: HotelGroup = {
         name: h.name,
         address: h.address,
         placeId: h.placeId,
         detail: h.detail,
+        checkInTime: h.checkInTime,
+        checkOutTime: h.checkOutTime,
+        room: h.room,
+        price: h.price,
+        confirmation: h.confirmation,
+        area: h.area,
         who: [...ids],
         srcs: [h.src],
         statuses: [status],

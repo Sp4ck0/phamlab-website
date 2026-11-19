@@ -263,7 +263,7 @@ export function ActionItems({
         badge={badge}
         lead={kindLabel(task) ?? task.title}
         body={
-          task.mode === "hotel" && task.detail
+          (task.mode === "hotel" || task.kind === "details") && task.detail
             ? `${task.title} · ${task.detail}`
             : task.kind === "transport"
               ? `${task.title} · nothing entered yet`
