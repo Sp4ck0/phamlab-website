@@ -425,7 +425,9 @@ test('a hotel tile shows the whole stay on every night: both times, nights, a do
   try {
     const strip = view.container.querySelector('.stay-strip');
     assert.equal(strip.querySelectorAll('.stay-dot.on').length, 4); // the whole stay is done
-    assert.equal(strip.querySelector('.stay-hot').textContent.startsWith('Out'), true); // check-out is the one that matters today
+    assert.equal(strip.querySelector('.stay-hot'), null); // no blue date: the ringed dot already says where you are
+    assert.ok(!/\bIn\b|\bOut\b/.test(strip.querySelector('.stay-lbl').textContent)); // the dates alone, left is in and right is out
+    assert.ok(strip.querySelector('.stay-dot.now'));
   } finally { view.close(); }
 });
 test('a hotel tile shows the cancellation deadline in its colour, a Call link, and a budget only while unbooked', async () => {
