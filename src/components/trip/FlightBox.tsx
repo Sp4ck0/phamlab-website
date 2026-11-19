@@ -96,7 +96,6 @@ export function FlightBox({ group, groups, onToggle, day, dayNumber = 0, tileId,
           </div>
         );
       })}
-      {(segments.length > 0 || derived) && group.detail && <div className="fl-meta">{group.detail}</div>}
       {legs.map((leg, i) => (
         <div key={i}>
           <div className="flight-leg">
@@ -120,6 +119,8 @@ export function FlightBox({ group, groups, onToggle, day, dayNumber = 0, tileId,
           {search && <a href={search} target="_blank" rel="noopener noreferrer">Search this route</a>}
         </div>
       )}
+      {/* The free-form note goes last: the hops, what is open and the links come first. */}
+      {(segments.length > 0 || derived) && group.detail && <div className="fl-meta">{group.detail}</div>}
     </div>
   );
 }
