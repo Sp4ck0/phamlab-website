@@ -38,10 +38,17 @@ export function airlineLogoUrl(code: string): string {
 }
 
 // A leg's airline: its `airline` code, else the carrier prefix of a flight
-// number in `meta` ("UA 837 · 787-9") so legs written before the field existed
-// still get a logo. Requires a letter, so "12 345" is not read as a code.
+// number in `meta`, so legs written before the field existed still get a logo.
+// Matches "UA837" or "UA 837" at the start ("UA 837 · 787-9"), or "CI 21" with
+// a space anywhere ("China Airlines CI 21 · Airbus A350"). Needing the space
+// away from the start keeps aircraft types like "A350" or "A321neo" from
+// matching. Requires a letter, so "12 345" is not read as a code.
+const CODE = "([A-Z][A-Z0-9]|[A-Z0-9][A-Z])";
+const LEADING = new RegExp(`^${CODE}\\s?\\d{1,4}\\b`);
+const ANYWHERE = new RegExp(`\\b${CODE}\\s\\d{1,4}\\b`);
+
 export function legAirline(leg: Pick<FlightLeg, "airline" | "meta">): string | undefined {
   const given = leg.airline?.trim().toUpperCase();
   if (given) return given;
-  return leg.meta?.match(/^([A-Z][A-Z0-9]|[A-Z0-9][A-Z])\s?\d{1,4}\b/)?.[1];
+  return (leg.meta?.match(LEADING) ?? leg.meta?.match(ANYWHERE))?.[1];
 }
