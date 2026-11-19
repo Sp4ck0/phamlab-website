@@ -25,10 +25,14 @@ export interface FlightLeg {
 }
 
 // One hop of a transport booking. depart/arrive are local wall-clock at
-// from/to, "YYYY-MM-DDTHH:MM" (see convex/travel/validators.ts).
+// from/to, "YYYY-MM-DDTHH:MM", or just the day "YYYY-MM-DD" while the time isn't
+// known (see convex/travel/validators.ts). A hop that isn't planned yet is still
+// a hop: an unset from/to is a place not decided, and `window` is "any day in
+// this range".
 export interface Segment {
-  from: string;
-  to: string;
+  from?: string;
+  to?: string;
+  window?: { from: string; to: string };
   // This hop's own mode when a booking mixes them (a ferry then a flight);
   // absent means the booking's mode.
   mode?: TransportMode;
@@ -54,6 +58,8 @@ export interface Flight {
   mode?: TransportMode;
   detail?: string;
   status: Status;
+  // "Maybe": it may not be needed at all. Shown as Maybe, never a booking task.
+  tentative?: boolean;
   // Rich multi-leg presentation — when `legs` is present the flight
   // renders as a flight-box; otherwise it falls back to a simple card.
   title?: string;
@@ -84,6 +90,8 @@ export interface HotelPrice {
 export interface Hotel extends Place {
   who: Who;
   status: Status;
+  // "Maybe": it may not be needed at all. Shown as Maybe, never a booking task.
+  tentative?: boolean;
   // What has no field of its own (phone, door code, cancellation terms).
   detail?: string;
   // Per-stay facts. They may sit on any entry of a stay; resolveDays fills them across it.

@@ -143,6 +143,7 @@ export interface HotelGroup {
   price?: HotelPrice;
   confirmation?: string;
   area?: string;
+  tentative?: boolean; // maybe: only if every merged entry is
   who: string[];
   srcs: string[];
   statuses: Status[];
@@ -165,6 +166,7 @@ export function mergeHotelsByName(hotels: ResolvedDay["hotels"], ticks: Record<s
       // The ID may be on a later day's entry of the same hotel, not the first.
       g.placeId ??= h.placeId;
       g.confirmation ??= h.confirmation;
+      g.tentative = g.tentative && !!h.tentative;
     } else {
       const g: HotelGroup = {
         name: h.name,
@@ -177,6 +179,7 @@ export function mergeHotelsByName(hotels: ResolvedDay["hotels"], ticks: Record<s
         price: h.price,
         confirmation: h.confirmation,
         area: h.area,
+        tentative: h.tentative,
         who: [...ids],
         srcs: [h.src],
         statuses: [status],
@@ -208,6 +211,7 @@ export interface FlightGroup {
   layovers?: string[];
   segments?: Segment[];
   confirmation?: string;
+  tentative?: boolean; // maybe: only if every merged row is
   who: string[];
   ids: string[];
   statuses: Status[];
@@ -236,6 +240,7 @@ export function mergeFlightsByRoute(
       g.who.push(...ids);
       g.ids.push(id);
       g.statuses.push(status);
+      g.tentative = g.tentative && !!f.tentative;
     } else {
       const g: FlightGroup = {
         mode: f.mode,
@@ -247,6 +252,7 @@ export function mergeFlightsByRoute(
         layovers: f.layovers,
         segments: f.segments,
         confirmation: f.confirmation,
+        tentative: f.tentative,
         who: [...ids],
         ids: [id],
         statuses: [status],
