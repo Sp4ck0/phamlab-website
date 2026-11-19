@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import { createRequire } from 'node:module';
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-const require = createRequire(process.env.ITINERARY_TEST_DEPS + '/package.json');
+const require = createRequire(import.meta.url);
 const { JSDOM } = require('jsdom');
 const { DayCard } = await import('./DayCard.tsx');
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost' });
@@ -23,7 +23,9 @@ const { Ctx: SettingsCtx } = await import('../../hooks/useSettings.tsx');
 // them (plain settings values: the real provider needs a Convex client). Wrapping `root`
 // too keeps the tests' own `view.root.render(...)` calls inside them.
 const settings = { theme: undefined, tempUnit: 'F', setTheme() {}, setTempUnit() {} };
-const wrap = (element) => React.createElement(AiFocusProvider, null, React.createElement(SettingsCtx.Provider, { value: settings }, element));
+// DetailedView reads the URL (useSearchParams), so it needs a Router too; tests that bring their own MemoryRouter keep it (routers can't nest).
+const { MemoryRouter: DefaultRouter } = await import('react-router-dom');
+const wrap = (element) => React.createElement(AiFocusProvider, null, React.createElement(SettingsCtx.Provider, { value: settings }, element.type === DefaultRouter ? element : React.createElement(DefaultRouter, null, element)));
 function mount(element) {
   const container = document.createElement('div'); document.body.append(container);
   const root = createRoot(container);
@@ -230,7 +232,7 @@ test('reactive full payload updates preserve unique occurrences but reset ambigu
     assert.equal(view.container.querySelectorAll('nav button').length, 3);
   } finally { view.close(); }
 });
-test('live removal of a focused inner control falls back to the filter even when its day remains', async () => {
+test('live removal of a focused inner control keeps focus on its day header while the day remains', async () => {
   const { DetailedView } = await import('./DetailedView.tsx');
   const filter = document.createElement('button'); document.body.append(filter);
   const shared = { days: [{ ...day, acts: ['<a href="https://example.com/synthetic">Synthetic link</a>'] }], legColors: [props.legColor], weather: {}, groups: [], ticks: {}, onlyGaps: false, onOnlyGapsChange() {}, filterRef: { current: filter }, onToggle() {}, actionItems: [], considerations: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} };
@@ -239,7 +241,9 @@ test('live removal of a focused inner control falls back to the filter even when
     act(() => view.container.querySelector('button[aria-expanded]').click());
     view.container.querySelector('.activity a').focus();
     act(() => view.root.render(React.createElement(DetailedView, { ...shared, days: [day] })));
-    assert.equal(document.activeElement, filter);
+    // The day is still shown, so focus lands on its header rather than the filter (#174).
+    // Compare booleans: a failed assert.equal on jsdom elements inspects the whole DOM.
+    assert.ok(document.activeElement === view.container.querySelector('button[aria-expanded]'));
     assert.equal(view.container.querySelector('button[aria-expanded]').getAttribute('aria-expanded'), 'true');
   } finally { view.close(); filter.remove(); }
 });
@@ -256,7 +260,7 @@ test('existing rich transport lodging activity and task detail capabilities rema
       // Rich flight title replaces its aggregate route, as in the existing renderer.
       if (text !== 'Synthetic rich route') assert.ok(view.container.textContent.includes(text), text);
     }
-    assert.ok(view.container.querySelector('a[href^="https://maps.google.com/"]'));
+    assert.ok(view.container.querySelector('a[href^="https://www.google.com/maps/"]'));
     act(() => view.container.querySelector('.flight-box .status').click());
     assert.deepEqual(calls[0], [[flightId(day.date, richFlight)], 'needed']);
     assert.equal(view.container.querySelector('button[aria-expanded]').getAttribute('aria-expanded'), 'true');
