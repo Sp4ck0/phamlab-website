@@ -2,7 +2,7 @@ import { useState } from "react";
 import { googleMapsUrl } from "../../lib/mapPoints";
 import { hotelUrl } from "../../lib/calendar";
 import { fmtDate, fmtDuration, fmtHm } from "../../lib/segments";
-import type { StayInfo } from "../../lib/stay";
+import { phoneHref, type StayInfo } from "../../lib/stay";
 import { missingHotelFields } from "../../lib/tbd";
 import type { HotelGroup } from "../../lib/tripLogic";
 import type { Group, ResolvedDay, Status } from "../../lib/types";
@@ -34,7 +34,7 @@ export interface HotelCardProps {
 }
 
 // The full hotel tile. The name keeps its pin and map link; the stay strip shows
-// both check-in and check-out on every night of the stay; Directions sits beside
+// both check-in and check-out on every night of the stay; the Call link sits beside
 // "show on map".
 export function HotelCard({ g, status: s, stay, gapAfter, groups, date, days, dayNumber, tileId, gapsOnly, onToggle, onCollapse }: HotelCardProps) {
   const nm = g.name || "Hotel not chosen";
@@ -60,6 +60,7 @@ export function HotelCard({ g, status: s, stay, gapAfter, groups, date, days, da
               📍 {nm}
             </a>
             <ShowOnMap place={place} />
+            {g.phone && <a className="stay-dir" href={phoneHref(g.phone)} title={g.phone}>Call</a>}
           </>
         ) : (
           nm
@@ -73,7 +74,7 @@ export function HotelCard({ g, status: s, stay, gapAfter, groups, date, days, da
           {fmtDuration(gapAfter.minutes)} between check-out at 📍 {gapAfter.name}{gapAfter.checkOutTime ? ` (${fmtHm(gapAfter.checkOutTime)})` : ""} and check-in here
         </div>
       )}
-      <HotelFacts g={g} stay={stay} />
+      <HotelFacts g={g} stay={stay} status={s} />
       {g.detail && <div className="cmeta"><Linkify text={g.detail} /></div>}
       {s === "needed" && <TbdLine fields={missingHotelFields(g)} area={g.area} />}
       {onCollapse && (

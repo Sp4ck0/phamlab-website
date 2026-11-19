@@ -99,6 +99,10 @@ export interface Hotel extends Place {
   checkOutTime?: string; // local "HH:MM"
   room?: string;
   price?: HotelPrice;
+  // The last moment you can cancel for free, local to the hotel: "YYYY-MM-DDTHH:MM", or a day alone (end of that day).
+  freeCancelUntil?: string;
+  phone?: string; // for a Call link; never exported
+  budget?: HotelPrice; // a target while the stay isn't booked yet
   confirmation?: string; // behind a tap; never exported
   area?: string; // where a not-yet-chosen hotel will be; the name stays as typed (it is the identity)
 }

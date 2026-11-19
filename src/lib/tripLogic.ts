@@ -105,7 +105,7 @@ export function resolveDays(trip: Pick<Trip, "days">): ResolvedDay[] {
   // its entries; a carried day copies the whole entry, and a transition day has
   // its own. Give every entry of a contiguous run of the same hotel the first
   // value found in the run, so the tile never depends on which day it was typed on.
-  const STAY_FACTS = ["checkInTime", "checkOutTime", "room", "price", "confirmation", "area"] as const;
+  const STAY_FACTS = ["checkInTime", "checkOutTime", "room", "price", "freeCancelUntil", "phone", "budget", "confirmation", "area"] as const;
   days.forEach((d, di) => {
     d.hotels = d.hotels.map((h) => {
       if (!h.name) return h;
@@ -141,6 +141,9 @@ export interface HotelGroup {
   checkOutTime?: string;
   room?: string;
   price?: HotelPrice;
+  freeCancelUntil?: string;
+  phone?: string;
+  budget?: HotelPrice;
   confirmation?: string;
   area?: string;
   tentative?: boolean; // maybe: only if every merged entry is
@@ -177,6 +180,9 @@ export function mergeHotelsByName(hotels: ResolvedDay["hotels"], ticks: Record<s
         checkOutTime: h.checkOutTime,
         room: h.room,
         price: h.price,
+        freeCancelUntil: h.freeCancelUntil,
+        phone: h.phone,
+        budget: h.budget,
         confirmation: h.confirmation,
         area: h.area,
         tentative: h.tentative,

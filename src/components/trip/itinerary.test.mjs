@@ -417,6 +417,35 @@ test('a hotel tile shows the whole stay on every night: both times, nights, a do
     assert.equal(strip.querySelector('.stay-hot').textContent.startsWith('Out'), true); // check-out is the one that matters today
   } finally { view.close(); }
 });
+test('a hotel tile shows the cancellation deadline in its colour, a Call link, and a budget only while unbooked', async () => {
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const when = (offsetHours) => { const d = new Date(Date.now() + offsetHours * 36e5); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
+  const render = (hotel) => {
+    const days = resolveDays({ days: [{ ...day, date: '2040-01-02', hotels: [hotel] }, { ...day, date: '2040-01-04', hotels: [hotel] }] });
+    return mount(React.createElement(DayCard, { ...props, day: days[0], days, dayNumber: 0, expanded: true, onToggle() {} }));
+  };
+  const base = { who: 'all', name: 'Synthetic Hotel', address: 'Synthetic street', status: 'booked', phone: '+00 111 222 3333' };
+  const chip = (view) => view.container.querySelector('.seg-chip[class*="cx-"]');
+  let view = render({ ...base, freeCancelUntil: when(24 * 10) });
+  try {
+    assert.ok(chip(view).classList.contains('cx-ok') && /Free cancel until .*\(\d+ days\)/.test(chip(view).textContent));
+    const call = view.container.querySelector('a.stay-dir[href^="tel:"]');
+    assert.equal(call.getAttribute('href'), 'tel:+001112223333');
+    assert.equal(call.textContent, 'Call');
+  } finally { view.close(); }
+  view = render({ ...base, freeCancelUntil: when(30) });
+  try { assert.ok(chip(view).classList.contains('cx-soon') && chip(view).textContent.startsWith('⚠ Free cancel ends in 2 days')); } finally { view.close(); }
+  view = render({ ...base, freeCancelUntil: when(-24) });
+  try { assert.ok(chip(view).classList.contains('cx-ended') && chip(view).textContent === 'Cancellation window ended'); } finally { view.close(); }
+  // No Call link without a phone; the budget shows only while the stay is not booked.
+  view = render({ ...base, phone: undefined, status: 'needed', budget: { amount: 400, currency: 'USD', per: 'night' } });
+  try {
+    assert.ok(!view.container.querySelector('a[href^="tel:"]'));
+    assert.ok(view.container.textContent.includes('Budget ≈ $400.00 / night · ≈ $800.00 for 2 nights'));
+  } finally { view.close(); }
+  view = render({ ...base, budget: { amount: 400, currency: 'USD', per: 'night' } });
+  try { assert.ok(!view.container.textContent.includes('Budget')); } finally { view.close(); }
+});
 test('a middle night of a booked stay is one slim line that opens to the full tile and closes again', async () => {
   const { resolveDays } = await import('../../lib/tripLogic.ts');
   const stay = (extra = {}) => ({ who: 'all', name: 'Synthetic Hotel', address: 'Synthetic street', status: 'booked', ...extra });
