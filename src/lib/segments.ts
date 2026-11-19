@@ -10,13 +10,20 @@ const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const dateOf = (dt: string) => dt.split("T")[0];
 const wallMs = (dt: string) => Date.parse(`${dt}:00Z`); // wall-clock as if UTC; only for same-zone diffs
 
-/** Minutes in the air/on the move: from both zones when known, else the stated `durationMin`. */
+/**
+ * Minutes in the air/on the move: from both airports' zones when known, else (for
+ * a ferry, train or bus, which starts and ends in one place) the wall-clock gap,
+ * else the stated `durationMin`.
+ */
 export function durationMin(s: Segment): number | null {
   if (s.depart && s.arrive) {
     const dz = airportZone(s.from);
     const az = airportZone(s.to);
     if (dz && az) {
       const mins = Math.round((localToUtcMs(s.arrive, az) - localToUtcMs(s.depart, dz)) / 60000);
+      if (mins > 0) return mins;
+    } else if (s.mode && s.mode !== "flight") {
+      const mins = Math.round((wallMs(s.arrive) - wallMs(s.depart)) / 60000);
       if (mins > 0) return mins;
     }
   }

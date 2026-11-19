@@ -312,8 +312,9 @@ export function segmentUrl(
     end = { h: ah, m: am };
     endDayOffset = Math.round((Date.parse(adate) - Date.parse(date)) / 864e5);
   }
-  const m0 = mode || "flight";
-  const num = seg.airline && seg.number ? `${seg.airline} ${seg.number}` : "";
+  const m0 = seg.mode || mode || "flight";
+  // "CI 21", else the operator ("Seatran") for a ferry or train
+  const num = seg.airline && seg.number ? `${seg.airline} ${seg.number}` : seg.carrier || "";
   return timedUrl({
     title: `${MODE_EMOJI[m0]} ${num ? `${num}: ` : ""}${seg.from} → ${seg.to}`, date, start: { h, m }, tz: depTz,
     end: arrTz ? end : undefined, endDayOffset, endTz: arrTz, defaultMinutes: 60,

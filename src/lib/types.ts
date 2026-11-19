@@ -29,6 +29,9 @@ export interface FlightLeg {
 export interface Segment {
   from: string;
   to: string;
+  // This hop's own mode when a booking mixes them (a ferry then a flight);
+  // absent means the booking's mode.
+  mode?: TransportMode;
   depart?: string;
   arrive?: string;
   airline?: string;

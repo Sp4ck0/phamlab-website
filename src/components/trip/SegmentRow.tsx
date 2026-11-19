@@ -16,7 +16,7 @@ interface Props {
 // One hop as a boarding-pass row: who flies it on top, then departure ▸ arrival
 // with the duration between.
 export function SegmentRow({ seg, mode, day, dayNumber = 0, first, last }: Props) {
-  const m = mode || "flight";
+  const m = seg.mode || mode || "flight";
   const name = (seg.airline && AIRLINES[seg.airline]?.name) || seg.carrier || seg.airline || "";
   const label = segmentLabel(seg);
   // No carrier at all (a ferry, a train): say what it is rather than leave the line empty.
