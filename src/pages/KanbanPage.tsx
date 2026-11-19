@@ -64,6 +64,8 @@ export function KanbanPage() {
     addNoteImages,
     removeNoteImage,
     markRead,
+    actionError,
+    clearActionError,
   } = useKanbanBoard(boardId as Id<"kanban_boards"> | undefined, { allDone });
   useRememberTab(authorized && board ? `/kanban/${boardId}` : null);
 
@@ -252,6 +254,15 @@ export function KanbanPage() {
                 )}
               </div>
             </header>
+
+            {actionError && (
+              <p className="board__error" role="alert">
+                {actionError}{" "}
+                <button type="button" onClick={clearActionError}>
+                  Dismiss
+                </button>
+              </p>
+            )}
 
             <main className="board">
               {boardLanes(board).map((l) => (

@@ -62,4 +62,20 @@
   background: var(--accent-1-tint);
   border-color: var(--accent-1);
 }
+/* A failed edit that has no form of its own to show the reason in. */
+.board__error {
+  margin: 0;
+  padding: 8px 16px;
+  font-size: 13px;
+  color: var(--rust);
+}
+.board__error button {
+  margin-left: 8px;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}
 }
