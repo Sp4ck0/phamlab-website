@@ -2,7 +2,7 @@ import { useState } from "react";
 import { googleMapsUrl } from "../../lib/mapPoints";
 import { hotelUrl } from "../../lib/calendar";
 import { fmtDate, fmtDuration, fmtHm } from "../../lib/segments";
-import { directionsUrl, phoneHref, type StayInfo } from "../../lib/stay";
+import { phoneHref, type StayInfo } from "../../lib/stay";
 import { missingHotelFields } from "../../lib/tbd";
 import type { HotelGroup } from "../../lib/tripLogic";
 import type { Group, ResolvedDay, Status } from "../../lib/types";
@@ -34,7 +34,7 @@ export interface HotelCardProps {
 }
 
 // The full hotel tile. The name keeps its pin and map link; the stay strip shows
-// both check-in and check-out on every night of the stay; Directions sits beside
+// both check-in and check-out on every night of the stay; the Call link sits beside
 // "show on map".
 export function HotelCard({ g, status: s, stay, gapAfter, groups, date, days, dayNumber, tileId, gapsOnly, onToggle, onCollapse }: HotelCardProps) {
   const nm = g.name || "Hotel not chosen";
@@ -52,7 +52,6 @@ export function HotelCard({ g, status: s, stay, gapAfter, groups, date, days, da
         <WhoPill who={uniqueWho.length === 1 ? uniqueWho[0] : uniqueWho} groups={groups} date={date} />
         <ShareLinkButton param={{ day: date, tile: g.srcs[0] }} label={`Share link to ${nm}`} />
         {days && <AddToCalendar url={hotelUrl(g.name, g.address, days, dayNumber)} />}
-        {onCollapse && <button type="button" className="stay-collapse" onClick={onCollapse} aria-label={`Collapse ${nm}`} title="Collapse">▴</button>}
       </div>
       <div className={`cmain ${s === "needed" && !g.tentative ? "todo" : ""}`}>
         {g.name ? (
@@ -61,7 +60,6 @@ export function HotelCard({ g, status: s, stay, gapAfter, groups, date, days, da
               📍 {nm}
             </a>
             <ShowOnMap place={place} />
-            <a className="stay-dir" href={directionsUrl(place)} target="_blank" rel="noopener noreferrer">Directions</a>
             {g.phone && <a className="stay-dir" href={phoneHref(g.phone)} title={g.phone}>Call</a>}
           </>
         ) : (
@@ -79,6 +77,9 @@ export function HotelCard({ g, status: s, stay, gapAfter, groups, date, days, da
       <HotelFacts g={g} stay={stay} status={s} />
       {g.detail && <div className="cmeta"><Linkify text={g.detail} /></div>}
       {s === "needed" && <TbdLine fields={missingHotelFields(g)} area={g.area} />}
+      {onCollapse && (
+        <button type="button" className="stay-collapse" onClick={onCollapse} aria-label={`Collapse ${nm}`}>Show less ▴</button>
+      )}
     </div>
   );
 }
@@ -98,7 +99,7 @@ export function HotelSlim(props: HotelCardProps) {
           · night {stay.night} of {stay.nights} · out {fmtDate(stay.checkOut)}{g.checkOutTime ? ` · ${fmtHm(g.checkOutTime)}` : ""}
         </span>
       )}
-      <span className="stay-slim-chev" aria-hidden="true">▸</span>
+      <span className="stay-slim-chev" aria-hidden="true">Show ▾</span>
     </button>
   );
 }

@@ -407,7 +407,8 @@ test('a hotel tile shows the whole stay on every night: both times, nights, a do
     assert.equal(strip.querySelectorAll('.stay-dot.now').length, 1);
     assert.ok(card.textContent.includes('$900.00 total · $300 / night'));
     assert.ok(!card.textContent.includes('Check-in from')); // the strip says it; not repeated
-    assert.ok(card.querySelector('a.stay-dir').getAttribute('href').startsWith('https://www.google.com/maps/dir/'));
+    assert.equal(card.querySelector('a.stay-dir'), null); // no Directions button
+    assert.equal(card.querySelector('.stay-collapse'), null); // a full tile that was never slim has nothing to collapse
   } finally { view.close(); }
   view = render(3);
   try {
@@ -461,7 +462,10 @@ test('a middle night of a booked stay is one slim line that opens to the full ti
     assert.equal(view.container.querySelector('.card'), null);
     act(() => slim.click());
     assert.ok(view.container.querySelector('.card .stay-strip') && !view.container.querySelector('button.stay-slim'));
-    act(() => view.container.querySelector('.stay-collapse').click());
+    const collapse = view.container.querySelector('.stay-collapse');
+    assert.equal(collapse.textContent, 'Show less ▴');
+    assert.equal(collapse.closest('.ctop'), null); // not in the top row, so it can't shift the share and calendar buttons
+    act(() => collapse.click());
     assert.ok(view.container.querySelector('button.stay-slim') && !view.container.querySelector('.card'));
   } finally { view.close(); }
   // The check-in day and an unbooked stay are never slimmed.
