@@ -52,10 +52,10 @@ test('the stay is a timed calendar event when both times are known, else all-day
   assert.equal(new URL(hotelUrl('Synthetic Hotel', 'Synthetic street', noTimes, 0)).searchParams.get('dates'), '20400102/20400105');
 });
 
-test('hotel times are shown in the site\'s 12-hour style', () => {
-  assert.equal(fmtHm('15:00'), '3:00 PM');
-  assert.equal(fmtHm('00:05'), '12:05 AM');
-  assert.equal(fmtHm('12:30'), '12:30 PM');
+test('hotel times are shown in 24-hour time', () => {
+  assert.equal(fmtHm('15:00'), '15:00');
+  assert.equal(fmtHm('00:05'), '00:05');
+  assert.equal(fmtHm('9:30'), '09:30'); // zero-padded so columns of times line up
 });
 
 test('a "Missing details" task marks its day as a gap until it is dismissed, and lists on its tile', () => {
