@@ -1,8 +1,9 @@
 import { fmtDate, fmtHm } from "../../lib/segments";
 import type { StayInfo } from "../../lib/stay";
 
-// Where this night sits in the stay: check-in and check-out (with their times when
-// known) on every tile of it, a dot per night, and the number of nights. Long stays
+// Where this night sits in the stay: check-in (left) and check-out (right) dates, with
+// their times when known, on every tile of it, a dot per night (the ringed one is
+// tonight), and the number of nights. Long stays
 // draw a bar instead of a dot per night.
 export function StayStrip({ stay, checkInTime, checkOutTime }: { stay: StayInfo; checkInTime?: string; checkOutTime?: string }) {
   // 0 = the check-in day ... nights = the check-out day
@@ -23,9 +24,9 @@ export function StayStrip({ stay, checkInTime, checkOutTime }: { stay: StayInfo;
         )}
       </div>
       <div className="stay-lbl">
-        <span className={stay.isCheckInDay ? "stay-hot" : undefined}>In <b>{fmtDate(stay.checkIn)}{checkInTime ? ` · ${fmtHm(checkInTime)}` : ""}</b></span>
+        <b>{fmtDate(stay.checkIn)}{checkInTime ? ` · ${fmtHm(checkInTime)}` : ""}</b>
         <span>{stay.nights} {stay.nights === 1 ? "night" : "nights"}</span>
-        <span className={stay.isCheckOutDay ? "stay-hot" : undefined}>Out <b>{fmtDate(stay.checkOut)}{checkOutTime ? ` · ${fmtHm(checkOutTime)}` : ""}</b></span>
+        <b>{fmtDate(stay.checkOut)}{checkOutTime ? ` · ${fmtHm(checkOutTime)}` : ""}</b>
       </div>
     </div>
   );
