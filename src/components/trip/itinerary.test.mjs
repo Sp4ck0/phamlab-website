@@ -685,3 +685,90 @@ test('an edit is held at its old content until released, skipped, or expired', a
     assert.equal(text(), 'four|bee|new');
   } finally { view.close(); }
 });
+
+test('a booked train, ferry or bus has a mode and state header, the operator as title, seat, platform and a ticket link', async () => {
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const seg = { from: 'Synthetic City South', to: 'Synthetic Town East', carrier: 'Synthetic Rail', number: 'G123', depart: '2040-01-02T11:25', arrive: '2040-01-02T12:27', fromTerminal: '4', seat: 'Coach 5 · 12A' };
+  const row = { who: 'all', route: 'Synthetic City → Synthetic Town', mode: 'train', status: 'booked', confirmation: 'SYNTH1', ticketUrl: 'https://example.com/ticket', segments: [seg] };
+  const days = resolveDays({ days: [{ ...day, flights: [row], hotels: [] }] });
+  const view = mount(React.createElement(DayCard, { ...props, day: days[0], days, expanded: true }));
+  try {
+    const box = view.container.querySelector('.flight-box');
+    assert.equal(box.querySelector('.ctype').textContent, '🚆 Train');
+    assert.equal(box.querySelector('.tx-state').textContent, '✓ Booked');
+    assert.equal(box.querySelector('.tx-title'), null); // the operator in the row is the title
+    assert.ok(box.querySelector('.seg-carrier').textContent.includes('Synthetic Rail'));
+    assert.equal(box.querySelector('.seg-terminal').textContent, 'Platform 4');
+    assert.ok([...box.querySelectorAll('.seg-chip')].some((c) => c.textContent === 'Coach 5 · 12A'));
+    const ticket = box.querySelector('.tile-links a');
+    assert.equal(ticket.textContent, 'Ticket');
+    assert.equal(ticket.getAttribute('href'), 'https://example.com/ticket');
+    assert.equal(box.querySelector('.tile-links button'), null); // booked: nothing to book
+  } finally { view.close(); }
+  // Only an https ticket link is ever rendered.
+  const bad = resolveDays({ days: [{ ...day, flights: [{ ...row, ticketUrl: 'javascript:alert(1)' }], hotels: [] }] });
+  const view2 = mount(React.createElement(DayCard, { ...props, day: bad[0], days: bad, expanded: true }));
+  try { assert.equal(view2.container.querySelector('.tile-links'), null); } finally { view2.close(); }
+});
+
+test('an unbooked train shows its route as the title, a route search and Mark as booked; the flight tile is unchanged', async () => {
+  const { resolveDays, flightId } = await import('../../lib/tripLogic.ts');
+  const open = { who: 'all', route: 'Synthetic City → Synthetic Town', mode: 'train', status: 'needed' };
+  const flight = { who: 'all', route: 'Synthetic F → Synthetic G', status: 'booked', title: 'Synthetic flight title' };
+  const days = resolveDays({ days: [{ ...day, flights: [open, flight], hotels: [] }] });
+  const calls = [];
+  const view = mount(React.createElement(DayCard, { ...props, day: days[0], days, expanded: true, onToggle: (...a) => calls.push(a) }));
+  try {
+    const [train, plane] = view.container.querySelectorAll('.flight-box');
+    assert.equal(train.querySelector('.tx-state').textContent, 'Not booked');
+    assert.equal(train.querySelector('.tx-title').textContent, 'Synthetic City → Synthetic Town');
+    const [search, mark] = [train.querySelector('.tile-links a'), train.querySelector('.tile-links button')];
+    assert.equal(search.textContent, 'Search this route');
+    assert.equal(new URL(search.href).searchParams.get('travelmode'), 'transit');
+    assert.equal(mark.textContent, 'Mark as booked');
+    act(() => mark.click());
+    assert.deepEqual(calls[0], [[flightId(day.date, open)], 'booked']);
+    // A flight keeps its own header: no mode pill or state text, and no booking links.
+    assert.equal(plane.querySelector('.ctype'), null);
+    assert.equal(plane.querySelector('.tx-state'), null);
+    assert.equal(plane.querySelector('.tile-links'), null);
+  } finally { view.close(); }
+});
+
+test('while the trip is under way the next departure and the next check-in say how long is left, on their own tile only', async () => {
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const p = (n) => String(n).padStart(2, '0');
+  const local = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
+  const plus = (iso, n) => local(Date.parse(`${iso.slice(0, 10)}T12:00:00`) + n * 864e5).slice(0, 10);
+  const depart = local(Date.now() + 2 * 36e5);
+  const date = depart.slice(0, 10);
+  const mk = (route, at) => ({ who: 'all', route, mode: 'ferry', status: 'booked', segments: [{ from: 'Synthetic P', to: 'Synthetic Q', carrier: 'Synthetic Ferries', depart: at, arrive: at }] });
+  const days = resolveDays({ days: [
+    { ...day, date: plus(date, -1), hotels: [] },
+    { ...day, date, flights: [mk('Synthetic soon', depart), mk('Synthetic later', local(Date.now() + 30 * 36e5))], hotels: [] },
+    { ...day, date: plus(date, 2), hotels: [] },
+  ] });
+  const view = mount(React.createElement(DayCard, { ...props, day: days[1], days, dayNumber: 1, expanded: true }));
+  try {
+    const [soon, later] = view.container.querySelectorAll('.flight-box');
+    assert.match(soon.querySelector('.next-up-line').textContent, /^Departs in (1 h 5\d min|2 h)$/);
+    assert.ok(soon.classList.contains('next-up'));
+    assert.equal(later.querySelector('.next-up-line'), null);
+  } finally { view.close(); }
+});
+
+test('a chosen hotel shows its area under the name; a deadline task has its own label and marks its day as a gap', async () => {
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const { gapDates, kindLabel } = await import('../../lib/tasks.ts');
+  const days = resolveDays({ days: [{ ...day, date: '2040-01-02', hotels: [{ who: 'all', name: 'Synthetic Hotel', address: 'Synthetic street', status: 'booked', area: 'Synthetic District' }] }] });
+  const view = mount(React.createElement(DayCard, { ...props, day: days[0], days, expanded: true }));
+  try {
+    const card = [...view.container.querySelectorAll('.card')].find((c) => c.textContent.includes('Synthetic Hotel'));
+    assert.ok([...card.querySelectorAll('.cmeta')].some((m) => m.textContent === 'Synthetic District'));
+  } finally { view.close(); }
+  const task = { kind: 'deadline', mode: 'hotel', key: 'deadline:2040-01-02|h|Synthetic|all', refs: ['deadline:2040-01-02|h|Synthetic|all'], refsDone: [false], done: false, scope: { kind: 'day', date: '2040-01-04' } };
+  assert.equal(kindLabel(task), 'Free cancellation');
+  assert.deepEqual([...gapDates([task])], ['2040-01-04']); // the day the deadline falls on, not the check-in day
+  assert.deepEqual([...gapDates([{ ...task, done: true, refsDone: [true] }])], []);
+});
+

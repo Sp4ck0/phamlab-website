@@ -4,7 +4,7 @@
 // be only partly planned: a day with no time ("YYYY-MM-DD"), a flexible window,
 // or a place not decided yet (unset from/to).
 import { airportZone, localToUtcMs } from "./calendar";
-import type { Segment } from "./types";
+import type { Segment, TransportMode } from "./types";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -130,4 +130,23 @@ export function derivedSegments(route: string): Segment[] {
   const places = routePlaces(route);
   if (places.length < 2) return [{}];
   return places.slice(1).map((to, i) => ({ from: places[i], to }));
+}
+
+/**
+ * A platform, pier or stop as a labelled line: a bare "4" or "2B" becomes "Platform 4"
+ * (train), "Pier 2B" (ferry) or "Stop 4" (bus); anything already worded stays as written.
+ */
+export function terminalText(mode: TransportMode, terminal: string): string {
+  if (!/^\d+[A-Za-z]?$/.test(terminal.trim())) return terminal;
+  return `${{ train: "Platform", ferry: "Pier", bus: "Stop", flight: "Terminal" }[mode]} ${terminal.trim()}`;
+}
+
+/** Google Maps public-transit directions between two places: the "search this route" link for a move not booked yet. */
+export function routeSearchUrl(from: string, to: string): string {
+  const url = new URL("https://www.google.com/maps/dir/");
+  url.searchParams.set("api", "1");
+  url.searchParams.set("origin", from);
+  url.searchParams.set("destination", to);
+  url.searchParams.set("travelmode", "transit");
+  return url.toString();
 }
