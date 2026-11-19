@@ -4,18 +4,14 @@ import { changeClass, diffLines, type Change, type ChangeState } from "../../lib
 import { focusOnMapKey, googleMapsUrl, inlinePlaces } from "../../lib/mapPoints";
 import { DOW, MON, actParts, fmtShort, gapLabel, mergeFlightsByRoute, mergeHotelsByName } from "../../lib/tripLogic";
 import type { FlightGroup, HotelGroup } from "../../lib/tripLogic";
-import { WhoPill } from "./WhoPill";
-import { StatusToggle } from "./StatusToggle";
 import { FlightBox } from "./FlightBox";
-import { HotelFacts } from "./HotelFacts";
-import { TbdLine } from "./TbdLine";
-import { missingHotelFields } from "../../lib/tbd";
+import { HotelCard, HotelSlim } from "./HotelCard";
+import { gapMinutes, stayInfo } from "../../lib/stay";
 import { TaskRow } from "./TaskRow";
 import { TourBox } from "./TourBox";
-import { Linkify } from "./Linkify";
 import { WeatherBadge } from "./WeatherBadge";
 import { AddToCalendar } from "./AddToCalendar";
-import { actUrl, hotelUrl } from "../../lib/calendar";
+import { actUrl } from "../../lib/calendar";
 import { sanitizeHtml } from "../../lib/sanitizeHtml";
 import type { DayWeather } from "../../lib/weather";
 import { useParams } from "react-router-dom";
@@ -199,46 +195,18 @@ export function DayCard({
   // A ghost (a removed hotel) has no id, so it can't clash with its replacement's.
   const renderHotelCard = ({ item: g, state }: Change<HotelGroup>, key: string | number) => {
     const s: Status = g.statuses.includes("needed") ? "needed" : "booked";
-    const nm = g.name || "Hotel not chosen";
-    const uniqueWho = [...new Set(g.who)];
-    const ctype =
-      g.checkIn && g.checkOut
-        ? "Hotel"
-        : g.checkIn
-          ? "Hotel · check-in"
-          : g.checkOut
-            ? "Hotel · check-out"
-            : "Hotel · staying";
-    return mark(state, `h${key}`, (
-      <div className={`card ${s === "needed" && !g.tentative ? "miss" : ""}`} style={g.carriedAll ? { opacity: 0.72 } : undefined} key={key} id={state === "gone" ? undefined : tileDomId(rowId, g.srcs[0])}>
-        <StatusToggle ids={g.srcs} status={s} onToggle={onToggle} />
-        <div className="ctop">
-          <span className="ctype">{ctype}</span>
-          {g.tentative && <span className="maybe-pill">Maybe</span>}
-          {gapsOnly && s === "needed" && !g.tentative && <span className="gap-reason">{g.name ? "Not booked" : "Not chosen"}</span>}
-          <WhoPill who={uniqueWho.length === 1 ? uniqueWho[0] : uniqueWho} groups={groups} date={d.date} />
-          <ShareLinkButton param={{ day: d.date, tile: g.srcs[0] }} label={`Share link to ${nm}`} />
-          {days && <AddToCalendar url={hotelUrl(g.name, g.address, days, dayNumber)} />}
-        </div>
-        <div className={`cmain ${s === "needed" && !g.tentative ? "todo" : ""}`}>
-          {g.name ? (
-            <>
-              <a href={googleMapsUrl({ name: g.name, address: g.address, placeId: g.placeId })} target="_blank" rel="noopener noreferrer">
-                📍 {nm}
-              </a>
-              <ShowOnMap place={{ name: g.name, address: g.address, placeId: g.placeId }} />
-            </>
-          ) : (
-            nm
-          )}
-        </div>
-        {/* With a Place ID the link opens the exact listing, so the address text adds nothing. */}
-        {g.address && !g.placeId && <div className="cmeta">{g.address}</div>}
-        <HotelFacts g={g} />
-        {g.detail && <div className="cmeta"><Linkify text={g.detail} /></div>}
-        {s === "needed" && <TbdLine fields={missingHotelFields(g)} area={g.area} />}
-      </div>
-    ));
+    const stay = days ? stayInfo(days, dayNumber, g.name) : null;
+    // Moving hotels today: how long between leaving the other one and getting into this one.
+    const leaving = g.checkIn ? hotelGroups.find((o) => o !== g && o.checkOut && !o.checkIn && o.name !== g.name) : undefined;
+    const wait = leaving ? gapMinutes(leaving.checkOutTime, g.checkInTime) : null;
+    const gapAfter = leaving && wait !== null ? { name: leaving.name, minutes: wait, checkOutTime: leaving.checkOutTime } : undefined;
+    const props = {
+      g, status: s, stay, gapAfter, groups, date: d.date, days, dayNumber, gapsOnly, onToggle,
+      tileId: state === "gone" ? undefined : tileDomId(rowId, g.srcs[0]),
+    };
+    // A middle night of a booked stay is one slim line, not a full card repeated every night.
+    const slim = state === "same" && s === "booked" && !g.tentative && g.carriedAll && !g.checkIn && !g.checkOut && !!stay;
+    return mark(state, `h${key}`, slim ? <HotelSlim key={key} {...props} /> : <HotelCard key={key} {...props} />);
   };
 
   return (

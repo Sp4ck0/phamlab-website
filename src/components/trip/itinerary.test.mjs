@@ -385,6 +385,76 @@ test('a hop not planned yet is the same tile: blank time slots, a day or a windo
     assert.equal(view.container.querySelectorAll('.card.miss').length, 0); // no transport row falls back to the old card
   } finally { view.close(); }
 });
+test('a hotel tile shows the whole stay on every night: both times, nights, a dot for tonight, per-night price, directions, and keeps the pin', async () => {
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const stay = (extra = {}) => ({ who: 'all', name: 'Synthetic Hotel', address: 'Synthetic street', status: 'booked', ...extra });
+  const raw = { days: [
+    { ...day, date: '2040-01-02', hotels: [stay({ checkInTime: '15:00', price: { amount: 900, currency: 'USD', per: 'stay' } })] },
+    { ...day, date: '2040-01-03', hotels: 'same' },
+    { ...day, date: '2040-01-04', hotels: 'same' },
+    { ...day, date: '2040-01-05', hotels: [stay({ checkOutTime: '12:00' })] },
+  ] };
+  const days = resolveDays(raw);
+  const render = (i) => mount(React.createElement(DayCard, { ...props, day: days[i], days, dayNumber: i, expanded: true, onToggle() {} }));
+  let view = render(0);
+  try {
+    const card = view.container.querySelector('.card');
+    assert.ok(card.querySelector('.cmain a').textContent.includes('📍 Synthetic Hotel')); // the pin stays
+    const strip = card.querySelector('.stay-strip');
+    assert.ok(strip.textContent.includes('3 nights') && strip.textContent.includes('Mon, Jan 2 · 15:00') && strip.textContent.includes('Thu, Jan 5 · 12:00')); // both times on the check-in tile
+    assert.equal(strip.querySelectorAll('.stay-dot').length, 4);
+    assert.equal(strip.querySelectorAll('.stay-dot.on').length, 1);
+    assert.equal(strip.querySelectorAll('.stay-dot.now').length, 1);
+    assert.ok(card.textContent.includes('$900.00 total · $300 / night'));
+    assert.ok(!card.textContent.includes('Check-in from')); // the strip says it; not repeated
+    assert.ok(card.querySelector('a.stay-dir').getAttribute('href').startsWith('https://www.google.com/maps/dir/'));
+  } finally { view.close(); }
+  view = render(3);
+  try {
+    const strip = view.container.querySelector('.stay-strip');
+    assert.equal(strip.querySelectorAll('.stay-dot.on').length, 4); // the whole stay is done
+    assert.equal(strip.querySelector('.stay-hot').textContent.startsWith('Out'), true); // check-out is the one that matters today
+  } finally { view.close(); }
+});
+test('a middle night of a booked stay is one slim line that opens to the full tile and closes again', async () => {
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const stay = (extra = {}) => ({ who: 'all', name: 'Synthetic Hotel', address: 'Synthetic street', status: 'booked', ...extra });
+  const days = resolveDays({ days: [
+    { ...day, date: '2040-01-02', hotels: [stay({ checkInTime: '15:00' })] },
+    { ...day, date: '2040-01-03', hotels: 'same' },
+    { ...day, date: '2040-01-04', hotels: [stay({ checkOutTime: '12:00' })] },
+  ] });
+  const view = mount(React.createElement(DayCard, { ...props, day: days[1], days, dayNumber: 1, expanded: true, onToggle() {} }));
+  try {
+    const slim = view.container.querySelector('button.stay-slim');
+    assert.ok(slim, 'a carried middle night is slim');
+    assert.ok(slim.textContent.includes('📍 Synthetic Hotel') && slim.textContent.includes('night 2 of 2') && slim.textContent.includes('out Wed, Jan 4 · 12:00'));
+    assert.equal(view.container.querySelector('.card'), null);
+    act(() => slim.click());
+    assert.ok(view.container.querySelector('.card .stay-strip') && !view.container.querySelector('button.stay-slim'));
+    act(() => view.container.querySelector('.stay-collapse').click());
+    assert.ok(view.container.querySelector('button.stay-slim') && !view.container.querySelector('.card'));
+  } finally { view.close(); }
+  // The check-in day and an unbooked stay are never slimmed.
+  const first = mount(React.createElement(DayCard, { ...props, day: days[0], days, dayNumber: 0, expanded: true, onToggle() {} }));
+  try { assert.ok(first.container.querySelector('.card') && !first.container.querySelector('button.stay-slim')); } finally { first.close(); }
+});
+test('moving hotels on one day says how long it is between check-out and check-in', async () => {
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const hotel = (name, extra = {}) => ({ who: 'all', name, address: 'Synthetic street', status: 'booked', ...extra });
+  const days = resolveDays({ days: [
+    { ...day, date: '2040-01-02', hotels: [hotel('Synthetic Hotel A', { checkOutTime: '11:00' })] },
+    { ...day, date: '2040-01-03', hotels: [hotel('Synthetic Hotel A'), hotel('Synthetic Hotel B', { checkInTime: '15:00' })] },
+    { ...day, date: '2040-01-04', hotels: [hotel('Synthetic Hotel B')] },
+  ] });
+  const view = mount(React.createElement(DayCard, { ...props, day: days[1], days, dayNumber: 1, expanded: true, onToggle() {} }));
+  try {
+    const into = [...view.container.querySelectorAll('.card')].find((c) => c.textContent.includes('Synthetic Hotel B'));
+    assert.ok(into.querySelector('.stay-gap').textContent.includes('4h between check-out at 📍 Synthetic Hotel A (11:00) and check-in here'));
+    const leaving = [...view.container.querySelectorAll('.card')].find((c) => c.textContent.includes('Synthetic Hotel A') && !c.textContent.includes('Synthetic Hotel B'));
+    assert.ok(!leaving.querySelector('.stay-gap')); // only the tile you are arriving at
+  } finally { view.close(); }
+});
 test('a booking can mix a ferry hop and a flight hop, each with its own icon and operator', async () => {
   const { resolveDays } = await import('../../lib/tripLogic.ts');
   const segments = [
