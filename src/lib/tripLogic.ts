@@ -1,6 +1,6 @@
 // Ported 1:1 from the original static site's trip.js — the pure logic
 // functions, decoupled from DOM rendering.
-import type { Act, Day, Flight, FlightLeg, Group, Hotel, LegColor, Place, ResolvedDay, Status, TransportMode, Trip, Who } from "./types";
+import type { Act, Day, Flight, FlightLeg, Group, Hotel, LegColor, Place, ResolvedDay, Segment, Status, TransportMode, Trip, Who } from "./types";
 
 // Normalizes a legacy plain-string activity and a rich {tag,time,text}
 // activity to the same shape for rendering.
@@ -170,10 +170,17 @@ export interface FlightGroup {
   price?: string;
   legs?: FlightLeg[];
   layovers?: string[];
+  segments?: Segment[];
+  confirmation?: string;
   who: string[];
   ids: string[];
   statuses: Status[];
 }
+// Different flights can share a route and day once `detail` is empty, so the
+// merge key also names each segment's flight and departure.
+const segmentsKey = (segs?: Segment[]) =>
+  (segs ?? []).map((s) => `${s.airline ?? s.carrier ?? ""}${s.number ?? ""}@${s.depart ?? ""}`).join(",");
+
 export function mergeFlightsByRoute(
   allFlights: Flight[],
   date: string,
@@ -187,7 +194,7 @@ export function mergeFlightsByRoute(
     const id = flightId(date, f);
     const ids = Array.isArray(f.who) ? f.who : [f.who];
     const status = statusOf(ticks, id, f.status);
-    const key = `${f.mode || "flight"}|${f.route}|${f.detail || ""}`;
+    const key = `${f.mode || "flight"}|${f.route}|${f.detail || ""}|${segmentsKey(f.segments)}`;
     if (byKey.has(key)) {
       const g = byKey.get(key)!;
       g.who.push(...ids);
@@ -202,6 +209,8 @@ export function mergeFlightsByRoute(
         price: f.price,
         legs: f.legs,
         layovers: f.layovers,
+        segments: f.segments,
+        confirmation: f.confirmation,
         who: [...ids],
         ids: [id],
         statuses: [status],

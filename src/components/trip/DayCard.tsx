@@ -35,7 +35,7 @@ function focusInlinePlace(e: React.MouseEvent) {
 // What a line is, for telling an edited line from an untouched one (not its
 // ids or ticks, which change without the content changing).
 const actKey = (a: Act) => JSON.stringify(a);
-const flightKey = (g: FlightGroup) => JSON.stringify([g.mode, g.route, g.title, g.price, g.detail, g.legs, g.layovers]);
+const flightKey = (g: FlightGroup) => JSON.stringify([g.mode, g.route, g.title, g.price, g.detail, g.legs, g.layovers, g.segments]);
 const hotelKey = (g: HotelGroup) => JSON.stringify([g.name, g.address, g.placeId, g.detail, g.checkIn, g.checkOut]);
 const unchanged = <T,>(items: T[]): Change<T>[] => items.map((item) => ({ item, state: "same" }));
 
@@ -175,8 +175,9 @@ export function DayCard({
   // Under Only gaps, booked hotels and transport still show as context for planning; only open ones are labelled.
   const checkoutHotels = hotelChanges.filter((c) => isCheckout(c.item));
   const otherHotels = hotelChanges.filter((c) => !isCheckout(c.item));
-  const legFlights = flightChanges.filter((c) => c.item.legs && c.item.legs.length);
-  const plainFlights = flightChanges.filter((c) => !(c.item.legs && c.item.legs.length));
+  const isRich = (g: FlightGroup) => !!(g.segments?.length || g.legs?.length);
+  const legFlights = flightChanges.filter((c) => isRich(c.item));
+  const plainFlights = flightChanges.filter((c) => !isRich(c.item));
   const transportGaps = gapsOnly ? gaps?.transport ?? [] : [];
   // Under Only gaps, a to-do or consideration that is done or settled is not a gap.
   const shownConsiderations = gapsOnly ? dayConsiderations.filter((t) => !t.done) : dayConsiderations;

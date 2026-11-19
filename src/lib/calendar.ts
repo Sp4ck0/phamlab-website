@@ -3,7 +3,7 @@
 // OAuth or API key — the link opens a "Save event" page in the viewer's own
 // Google account. Every helper returns null when it can't be sure of the
 // time or timezone, which is how "no specific time → no button" is enforced.
-import type { Act, ResolvedDay, TransportMode } from "./types";
+import type { Act, ResolvedDay, Segment, TransportMode } from "./types";
 
 // Country code (as stored on days) -> IANA zone. Multi-zone countries get
 // their most common zone here and CITY_TZ below overrides it per city.
@@ -212,7 +212,7 @@ addAirports("Asia/Singapore", "SIN");
 addAirports("Asia/Kuala_Lumpur", "KUL PEN BKI");
 addAirports("Asia/Manila", "MNL CEB");
 addAirports("Asia/Jakarta", "CGK");
-addAirports("Asia/Makassar", "DPS");
+addAirports("Asia/Makassar", "DPS LOP");
 addAirports("Asia/Phnom_Penh", "PNH REP");
 addAirports("Asia/Kolkata", "DEL BOM BLR");
 addAirports("Asia/Dubai", "DXB AUH");
@@ -220,25 +220,38 @@ addAirports("Asia/Qatar", "DOH");
 addAirports("Europe/Istanbul", "IST SAW");
 addAirports("Europe/London", "LHR LGW");
 addAirports("Europe/Dublin", "DUB");
-addAirports("Europe/Paris", "CDG ORY");
+addAirports("Europe/Paris", "CDG ORY BOD");
 addAirports("Europe/Amsterdam", "AMS");
-addAirports("Europe/Berlin", "FRA MUC BER");
-addAirports("Europe/Madrid", "MAD BCN");
+addAirports("Europe/Berlin", "FRA MUC BER DUS CGN");
+addAirports("America/Vancouver", "YVR");
+addAirports("Europe/Madrid", "MAD BCN SVQ");
 addAirports("Europe/Rome", "FCO MXP VCE");
 addAirports("Europe/Zurich", "ZRH");
-addAirports("Europe/Vienna", "VIE");
-addAirports("Europe/Lisbon", "LIS OPO");
-addAirports("Europe/Athens", "ATH");
+addAirports("Europe/Vienna", "VIE KLU");
+addAirports("Europe/Lisbon", "LIS OPO FAO");
+addAirports("Europe/Athens", "ATH ZTH JTR JNX");
 addAirports("Europe/Prague", "PRG");
 addAirports("Europe/Budapest", "BUD");
+addAirports("Europe/Oslo", "OSL EVE");
+addAirports("Europe/Brussels", "BRU");
+addAirports("Europe/Zagreb", "ZAG SPU DBV");
+addAirports("Asia/Amman", "AMM");
+addAirports("Africa/Cairo", "CAI");
 addAirports("Australia/Sydney", "SYD MEL CBR");
 addAirports("Australia/Brisbane", "BNE");
 addAirports("Pacific/Auckland", "AKL");
 
-const airportZone = (side: string) => {
+export const airportZone = (side: string) => {
   const code = /\b[A-Z]{3}\b/.exec(side)?.[0];
   return (code && AIRPORT_TZ[code]) || null;
 };
+
+/** "YYYY-MM-DDTHH:MM" local wall-clock in `zone` -> UTC milliseconds. */
+export function localToUtcMs(dt: string, zone: string): number {
+  const [date, time] = dt.split("T");
+  const [h, m] = time.split(":").map(Number);
+  return wallToUtc(wall(date, { h, m }), zone).getTime();
+}
 
 const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
 /** A leg's own date ("Wed, Nov 4 · 12:10 AM → …"), else `fallback`; the year comes from `fallback`. */
@@ -273,6 +286,38 @@ export function legUrl(
     title: transportTitle(mode, leg.route, leg.meta, detail), date: legDate(leg.time, day.date), start: t.dep, tz: depTz,
     end: arrTz ? t.arr : undefined, endDayOffset: t.arrDayOffset, endTz: arrTz, defaultMinutes: 60,
     location: from, details: detailsFor(dayNumber),
+  });
+}
+
+/**
+ * One structured segment. Exact dates and times, so nothing is parsed from
+ * text. Zones come from the airport codes; as with legUrl, the first segment
+ * may fall back to the day's origin and the last to its destination, and no
+ * departure zone means no button.
+ */
+export function segmentUrl(
+  seg: Segment, mode: TransportMode | undefined, day: ResolvedDay, dayNumber: number,
+  edge: { first?: boolean; last?: boolean } = {},
+): string | null {
+  if (!seg.depart) return null;
+  const depTz = airportZone(seg.from) || (edge.first ? zoneFor(day.city, day.country) : null);
+  if (!depTz) return null;
+  const arrTz = airportZone(seg.to) || (edge.last ? zoneFor(day.to || day.city, day.toCountry || day.country) : null);
+  const [date, time] = seg.depart.split("T");
+  const [h, m] = time.split(":").map(Number);
+  let end: Clock | undefined, endDayOffset = 0;
+  if (seg.arrive) {
+    const [adate, atime] = seg.arrive.split("T");
+    const [ah, am] = atime.split(":").map(Number);
+    end = { h: ah, m: am };
+    endDayOffset = Math.round((Date.parse(adate) - Date.parse(date)) / 864e5);
+  }
+  const m0 = mode || "flight";
+  const num = seg.airline && seg.number ? `${seg.airline} ${seg.number}` : "";
+  return timedUrl({
+    title: `${MODE_EMOJI[m0]} ${num ? `${num}: ` : ""}${seg.from} → ${seg.to}`, date, start: { h, m }, tz: depTz,
+    end: arrTz ? end : undefined, endDayOffset, endTz: arrTz, defaultMinutes: 60,
+    location: seg.from, details: detailsFor(dayNumber),
   });
 }
 

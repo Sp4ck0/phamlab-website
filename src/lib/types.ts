@@ -22,7 +22,24 @@ export interface FlightLeg {
   route: string;
   time: string;
   meta?: string;
+}
+
+// One hop of a transport booking. depart/arrive are local wall-clock at
+// from/to, "YYYY-MM-DDTHH:MM" (see convex/travel/validators.ts).
+export interface Segment {
+  from: string;
+  to: string;
+  depart?: string;
+  arrive?: string;
   airline?: string;
+  number?: string;
+  carrier?: string;
+  fromTerminal?: string;
+  toTerminal?: string;
+  aircraft?: string;
+  cabin?: string;
+  durationMin?: number;
+  note?: string;
 }
 
 export type TransportMode = "flight" | "train" | "bus" | "ferry";
@@ -40,6 +57,10 @@ export interface Flight {
   price?: string;
   legs?: FlightLeg[];
   layovers?: string[];
+  // Structured hops; when present they replace legs/layovers/detail on screen.
+  segments?: Segment[];
+  // Booking reference, shown behind a tap. Never part of the export.
+  confirmation?: string;
 }
 
 // A named place: pinned on the trip map (by placeId if set, else address) and
@@ -190,6 +211,7 @@ export interface TripExportFlight {
   detail?: string;
   layovers?: string[];
   legs?: { route: string; time: string; meta?: string }[];
+  segments?: Segment[];
 }
 export interface TripExportHotel {
   who: Who;

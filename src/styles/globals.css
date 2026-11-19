@@ -440,6 +440,36 @@ details.tour-box[open] summary::after{content:"Hide"}
 .fl-meta{font-size:12.5px;color:var(--text-secondary);margin-top:1px}
 .fl-layover{font-size:12px;color:var(--text-muted);padding:4px 0 4px 14px;border-left:2px dotted var(--border);margin-left:3px}
 
+/* structured segment: boarding-pass row (SegmentRow) */
+.seg{padding:8px 0}
+.seg-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12.5px;font-weight:600;color:var(--text-secondary)}
+.seg-carrier{display:inline-flex;align-items:center;gap:8px;min-width:0}
+.seg-carrier .fl-airline{margin-right:0}
+.seg-mode{font-size:16px;line-height:1}
+.seg-chips{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+.seg-chip{font-size:11.5px;font-weight:500;color:var(--text-secondary);border:1px solid var(--border);border-radius:999px;padding:1px 8px}
+.seg-main{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;column-gap:14px;margin-top:6px}
+.seg-end{min-width:0}
+.seg-end-arr{text-align:right}
+.seg-time{font-size:22px;font-weight:700;color:var(--text-primary);font-variant-numeric:tabular-nums;line-height:1.15;white-space:nowrap}
+.seg-plus{font-size:11px;font-weight:700;color:var(--accent-1);margin-left:2px}
+.seg-place{font-size:13px;font-weight:600;color:var(--text-secondary);margin-top:1px}
+.seg-date{font-size:12px;color:var(--text-muted)}
+.seg-mid{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:56px}
+.seg-dur{font-size:12px;color:var(--text-muted);white-space:nowrap}
+.seg-line{align-self:stretch;height:0;border-top:2px solid var(--border);position:relative}
+.seg-line::after{content:"";position:absolute;right:-1px;top:-5px;border-left:7px solid var(--border);border-top:4px solid transparent;border-bottom:4px solid transparent}
+.seg-note{font-size:12.5px;color:var(--text-secondary);margin-top:4px}
+.conf-chip{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:12px;font-weight:600;color:var(--text-secondary);background:transparent;border:1px solid var(--border);border-radius:999px;padding:2px 10px;cursor:pointer}
+.conf-chip:hover{border-color:var(--accent-1);color:var(--text-primary)}
+.conf-label{color:var(--text-muted);font-weight:500}
+.conf-code{font-variant-numeric:tabular-nums;letter-spacing:.04em}
+@media (max-width:420px){
+  .seg-time{font-size:19px}
+  .seg-main{column-gap:8px}
+  .seg-mid{min-width:44px}
+}
+
 /* simple single-leg flight card (used when a flight has no `legs`) */
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--r,12px);padding:14px 15px;position:relative;transition:.18s}
 .card:hover{box-shadow:0 4px 12px var(--border);transform:translateY(-1px)}
