@@ -421,7 +421,7 @@ test('a hotel tile shows the whole stay on every night: both times, nights, a do
     assert.equal(strip.querySelectorAll('.stay-dot.now').length, 1);
     assert.ok(card.textContent.includes('$900.00 total · $300 / night'));
     assert.ok(!card.textContent.includes('Check-in from')); // the strip says it; not repeated
-    assert.equal(card.querySelector('a.stay-dir'), null); // no Directions button
+    assert.equal(card.querySelector('a[href*="google.com/maps/dir"]'), null); // no Directions button
     assert.equal(card.querySelector('.stay-collapse'), null); // a full tile that was never slim has nothing to collapse
   } finally { view.close(); }
   view = render(3);
@@ -445,9 +445,11 @@ test('a hotel tile shows the cancellation deadline in its colour, a Call link, a
   let view = render({ ...base, freeCancelUntil: when(24 * 10) });
   try {
     assert.ok(chip(view).classList.contains('cx-ok') && /Free cancel until .*\(\d+ days\)/.test(chip(view).textContent));
-    const call = view.container.querySelector('a.stay-dir[href^="tel:"]');
+    const call = view.container.querySelector('.ctop a.call-btn[href^="tel:"]'); // with the other top-right buttons
     assert.equal(call.getAttribute('href'), 'tel:+001112223333');
-    assert.equal(call.textContent, 'Call');
+    assert.equal(call.textContent.trim(), '📞');
+    assert.ok(call.getAttribute('aria-label').startsWith('Call '));
+    assert.equal(view.container.querySelector('.cmain a[href^="tel:"]'), null); // no longer beside the name
   } finally { view.close(); }
   view = render({ ...base, freeCancelUntil: when(30) });
   try { assert.ok(chip(view).classList.contains('cx-soon') && chip(view).textContent.startsWith('⚠ Free cancel ends in 2 days')); } finally { view.close(); }
