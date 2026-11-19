@@ -72,7 +72,7 @@ export function HotelCard({ g, status: s, stay, gapAfter, groups, date, days, da
           "Hotel to be decided"
         )}
       </div>
-      {g.area && <div className="cmeta">{g.area}</div>}
+      {placeholder && g.area && <div className="cmeta">{g.area}</div>}
       {/* With a Place ID the link opens the exact listing, so the address text adds nothing. */}
       {g.address && !g.placeId && <div className="cmeta">{g.address}</div>}
       {stay && <StayStrip stay={stay} checkInTime={g.checkInTime} checkOutTime={g.checkOutTime} />}
