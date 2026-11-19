@@ -22,6 +22,7 @@ export interface FlightLeg {
   route: string;
   time: string;
   meta?: string;
+  airline?: string;
 }
 
 export type TransportMode = "flight" | "train" | "bus" | "ferry";

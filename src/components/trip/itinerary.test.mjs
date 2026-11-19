@@ -264,6 +264,24 @@ test('existing rich transport lodging activity and task detail capabilities rema
     assert.equal(days[1].hotels[0].carried, true);
   } finally { view.close(); }
 });
+test('flight legs show an airline logo chip from the airline code or the flight number in meta', async () => {
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const legs = [
+    { route: 'Synthetic leg A', time: 'Synthetic time', airline: 'JL' },
+    { route: 'Synthetic leg B', time: 'Synthetic time', meta: 'UA 837 · Synthetic meta' },
+    { route: 'Synthetic leg C', time: 'Synthetic time', meta: 'Synthetic meta' },
+  ];
+  const flight = { who: 'all', route: 'Synthetic route', title: 'Synthetic multi-leg', status: 'booked', legs };
+  const days = resolveDays({ days: [{ ...day, flights: [flight] }] });
+  const view = mount(React.createElement(DayCard, { ...props, day: days[0], expanded: true, onToggle() {} }));
+  try {
+    const srcs = [...view.container.querySelectorAll('.fl-airline')].map(i => i.getAttribute('src'));
+    assert.deepEqual(srcs, [
+      'https://www.gstatic.com/flights/airline_logos/70px/JL.png',
+      'https://www.gstatic.com/flights/airline_logos/70px/UA.png',
+    ]);
+  } finally { view.close(); }
+});
 test('latest jump wins and a removed pending occurrence never scrolls to a surviving date match', async () => {
   const { DetailedView } = await import('./DetailedView.tsx');
   let updateDays;
