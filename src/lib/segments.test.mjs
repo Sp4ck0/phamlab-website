@@ -59,6 +59,17 @@ test('calendar link uses the exact instants of each end', () => {
   assert.equal(segmentUrl({ from: 'SEA', to: 'TPE' }, 'flight', day, 0), null); // no time
 });
 
+test('a ferry (own mode, no airport zones) takes its duration from the wall clock and names its operator', () => {
+  const ferry = { from: 'Thong Sala', to: 'Bangrak Pier', mode: 'ferry', carrier: 'Seatran', depart: '2023-03-08T16:00', arrive: '2023-03-08T16:45' };
+  assert.equal(durationMin(ferry), 45);
+  assert.equal(durationMin({ ...ferry, mode: undefined }), null); // a flight with unknown zones is not guessed
+  assert.equal(segmentLine(ferry), 'Seatran · Thong Sala 4:00 PM → Bangrak Pier 4:45 PM · 45m');
+  const day = { date: '2023-03-08', city: 'Ko Pha Ngan', country: 'TH' };
+  const q = new URL(segmentUrl(ferry, 'flight', day, 0, { first: true, last: true })).searchParams; // the segment's own mode wins
+  assert.equal(q.get('text'), '⛴️ Seatran: Thong Sala → Bangrak Pier');
+  assert.equal(q.get('dates'), '20230308T160000/20230308T164500');
+});
+
 test('two different flights on the same route and day are not merged', () => {
   const f = (number, depart) => ({ who: 'tony', route: 'SEA → TPE', status: 'booked', segments: [{ ...overnight, number, depart }] });
   const groups = mergeFlightsByRoute([f('21', '2026-11-04T00:10'), f('23', '2026-11-04T13:00'), { ...f('21', '2026-11-04T00:10'), who: 'an' }], '2026-11-04', {});

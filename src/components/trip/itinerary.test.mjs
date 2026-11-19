@@ -307,6 +307,23 @@ test('structured segments render as boarding-pass rows with a computed layover a
     assert.ok(box.querySelector('.conf-chip').textContent.includes('SYNTH1'));
   } finally { view.close(); }
 });
+test('a booking can mix a ferry hop and a flight hop, each with its own icon and operator', async () => {
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const segments = [
+    { from: 'Synthetic Pier', to: 'Synthetic Quay', mode: 'ferry', carrier: 'Synthetic Ferries', depart: '2040-01-02T16:00', arrive: '2040-01-02T16:45' },
+    { from: 'USM', to: 'BKK', airline: 'PG', number: '170', depart: '2040-01-02T19:05', arrive: '2040-01-02T20:20' },
+  ];
+  const flight = { who: 'all', route: 'Synthetic mixed route', status: 'booked', segments };
+  const days = resolveDays({ days: [{ ...day, flights: [flight] }] });
+  const view = mount(React.createElement(DayCard, { ...props, day: days[0], expanded: true, onToggle() {} }));
+  try {
+    const rows = view.container.querySelectorAll('.flight-box .seg');
+    assert.equal(rows.length, 2);
+    assert.ok(rows[0].querySelector('.seg-mode').textContent.includes('⛴'));
+    assert.ok(rows[0].textContent.includes('Synthetic Ferries') && rows[0].querySelector('.seg-dur').textContent === '45m');
+    assert.ok(rows[1].querySelector('.fl-airline') && !rows[1].querySelector('.seg-mode'));
+  } finally { view.close(); }
+});
 test('latest jump wins and a removed pending occurrence never scrolls to a surviving date match', async () => {
   const { DetailedView } = await import('./DetailedView.tsx');
   let updateDays;
