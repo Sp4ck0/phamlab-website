@@ -20,7 +20,8 @@ interface Props {
 export function SegmentRow({ seg, mode, day, dayNumber = 0, first, last }: Props) {
   const m = seg.mode || mode || "flight";
   const name = (seg.airline && AIRLINES[seg.airline]?.name) || seg.carrier || seg.airline || "";
-  const label = segmentLabel(seg);
+  // A flight shows "CI 21"; a train, ferry or bus shows its operator, then its number if it has one ("Sample Rail · G123").
+  const label = seg.airline ? segmentLabel(seg) : seg.number ?? "";
   // No carrier at all (a ferry, a train): say what it is rather than leave the line empty.
   const modeName = m === "flight" ? "" : m[0].toUpperCase() + m.slice(1);
   const mins = durationMin(seg);

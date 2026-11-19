@@ -783,3 +783,35 @@ test('a chosen hotel shows no district line (the area is only the city of a hote
   assert.deepEqual([...gapDates([task])], []); // information, not something missing
 });
 
+// The site has no search box: "search" is the browser's find-in-page, which matches the text in the
+// page (collapsed days stay in the page as hidden="until-found"). So what is findable is exactly the
+// rendered text: everything a tile shows must be in it, and nothing secret may be.
+test('find-in-page: structured tile fields are findable; confirmations, phone numbers and ticket links are not in the page text', async () => {
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const { AIRLINES } = await import('../../lib/airlines.ts');
+  const hotel = { who: 'all', name: 'Synthetic Grand', address: 'Synthetic Street 1', status: 'booked', checkInTime: '15:00', checkOutTime: '11:00', room: 'Synthetic Twin Room', price: { amount: 900, currency: 'USD', per: 'stay' },
+    freeCancelUntil: '2999-01-01T23:59', phone: '+00 777 888 9999', confirmation: 'SECRETHOTEL1', detail: 'Synthetic hotel note' };
+  const unbooked = { who: 'all', name: 'TBD — Synthetic placeholder', status: 'needed', area: 'Synthetic Area', budget: { amount: 400, currency: 'USD', per: 'night' } };
+  const flight = { who: 'all', route: 'SEA → ICN', status: 'booked', title: 'Synthetic flight title', confirmation: 'SECRETFLIGHT1', ticketUrl: 'https://example.com/secret-flight-ticket',
+    segments: [{ from: 'SEA', to: 'ICN', airline: 'DL', number: '197', depart: '2040-01-02T12:30', arrive: '2040-01-03T17:45', aircraft: 'Synthetic Jet', cabin: 'Synthetic Economy', seat: '42F', toTerminal: 'T2' }] };
+  const train = { who: 'all', route: 'Synthetic City → Synthetic Town', mode: 'train', status: 'booked', confirmation: 'SECRETTRAIN1', ticketUrl: 'https://example.com/secret-train-ticket',
+    segments: [{ from: 'Synthetic City South', to: 'Synthetic Town East', carrier: 'Synthetic Rail', number: 'G123', depart: '2040-01-02T11:25', arrive: '2040-01-02T12:27', fromTerminal: '4', seat: 'Coach 5 · 12A' }] };
+  const days = resolveDays({ days: [{ ...day, date: '2040-01-02', flights: [flight, train], hotels: [hotel, unbooked] }, { ...day, date: '2040-01-04', hotels: 'same' }] });
+  const view = mount(React.createElement(DayCard, { ...props, day: days[0], days, expanded: false }));
+  try {
+    const text = view.container.textContent;
+    const findable = {
+      'hotel name': 'Synthetic Grand', 'hotel note': 'Synthetic hotel note', 'room': 'Synthetic Twin Room', 'price': '$900.00', 'check-in time': '15:00', 'check-out time': '11:00',
+      'free-cancel deadline': 'Free cancel until', 'budget': 'Budget ≈ $400.00 / night', 'budget for the stay': '$800.00 for 2 nights', 'placeholder shown as': 'Hotel to be decided', 'placeholder city': 'Synthetic Area',
+      'flight title': 'Synthetic flight title', 'airline name': AIRLINES.DL.name, 'flight code and number': 'DL 197', 'route places': 'SEA', 'arrival place': 'ICN', 'aircraft': 'Synthetic Jet', 'cabin': 'Synthetic Economy', 'seat': '42F', 'terminal': 'T2',
+      'operator': 'Synthetic Rail', 'train number': 'G123', 'train places': 'Synthetic City South', 'platform': 'Platform 4', 'coach seat': 'Coach 5 · 12A', 'mode': 'Train', 'depart time': '11:25', 'arrive time': '12:27',
+    };
+    for (const [what, needle] of Object.entries(findable)) assert.ok(text.includes(needle), `${what}: "${needle}" is not findable in the page text`);
+    // Never in the text: a code, a phone number, a ticket link (the code appears only after a tap).
+    for (const secret of ['SECRETHOTEL1', 'SECRETFLIGHT1', 'SECRETTRAIN1', '777 888 9999', '7778889999', 'secret-flight-ticket', 'secret-train-ticket', 'https://']) {
+      assert.ok(!text.includes(secret), `${secret} leaked into the page text`);
+    }
+    assert.ok(text.includes('••••••')); // the chip shows a mask
+  } finally { view.close(); }
+});
+
