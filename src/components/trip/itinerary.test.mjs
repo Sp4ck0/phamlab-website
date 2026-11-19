@@ -270,6 +270,7 @@ test('flight legs show an airline logo chip from the airline code or the flight 
     { route: 'Synthetic leg A', time: 'Synthetic time', airline: 'JL' },
     { route: 'Synthetic leg B', time: 'Synthetic time', meta: 'UA 837 · Synthetic meta' },
     { route: 'Synthetic leg C', time: 'Synthetic time', meta: 'Synthetic meta' },
+    { route: 'Synthetic leg D', time: 'Synthetic time', meta: 'Synthetic Air CI 21 · Airbus A350 · 13h' },
   ];
   const flight = { who: 'all', route: 'Synthetic route', title: 'Synthetic multi-leg', status: 'booked', legs };
   const days = resolveDays({ days: [{ ...day, flights: [flight] }] });
@@ -279,6 +280,7 @@ test('flight legs show an airline logo chip from the airline code or the flight 
     assert.deepEqual(srcs, [
       'https://www.gstatic.com/flights/airline_logos/70px/JL.png',
       'https://www.gstatic.com/flights/airline_logos/70px/UA.png',
+      'https://www.gstatic.com/flights/airline_logos/70px/CI.png',
     ]);
   } finally { view.close(); }
 });
