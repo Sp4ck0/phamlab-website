@@ -45,11 +45,19 @@ fix is merged (and its backend, if any, is deployed), add one from the
 
 `npx convex run admin:addVersionLog '{"area":"trips","version":"2026.10.28.10","title":"...","notes":"...","links":[{"label":"Website #71","url":"https://github.com/Sp4ck0/phamlab-website/pull/71"}],"date":"2026-10-28"}'`
 
-`area` is one of `board | trips | dating | manage | general | other` and
-decides who sees it (the matching access gate; general/other are public).
-Use `other` for dev-only changes. Link every related PR (backend and
-website) so one feature is one entry. A daily check posts to Slack for any
-merged PR whose URL isn't linked by an entry, so don't skip this step.
+`area` is one of `board | trips | dating | accent | manage | general | other`
+and decides who sees it (the matching access gate; `other` goes with `manage`,
+admins only; only `general` is public to people with no access code). Use
+`other` for dev-only changes. Link every related PR (backend and website) so
+one feature is one entry. A daily check posts to Slack for any merged PR whose
+URL isn't linked by an entry, so don't skip this step.
+
+**What never goes in an entry:** traveler names, trip destinations or event
+details (a `trips` entry is seen by everyone who has any trip, not just that
+trip's travelers), confirmation numbers, addresses, contact details, secrets,
+or how our defenses work (rate limits, validation, CSP) — put the latter in
+`manage`. The backend rejects emails, long numbers, token-looking text and any
+link that is not a `github.com/Sp4ck0` PR or commit.
 
 ## Before pushing to git
 
