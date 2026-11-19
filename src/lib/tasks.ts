@@ -85,11 +85,24 @@ export function gapDates(tasks: Task[]): Set<string> {
       }
       continue;
     }
+    let firstOpen: string | undefined;
     t.refs.forEach((ref, i) => {
       if (t.refsDone[i]) return;
       const start = ref.indexOf(":") + 1;
-      out.add(ref.slice(start, start + 10));
+      const date = ref.slice(start, start + 10);
+      out.add(date);
+      if (!firstOpen || date < firstOpen) firstOpen = date;
     });
+    // A hotel stay's carried nights ("same") have no entry of their own, but each is
+    // still a night without a booking: count every night from the first open one.
+    const end = t.mode === "hotel" ? scopeEnd(t.scope) : undefined;
+    if (firstOpen && end) {
+      for (let d = new Date(firstOpen + "T00:00:00Z"); ; d.setUTCDate(d.getUTCDate() + 1)) {
+        const iso = d.toISOString().slice(0, 10);
+        if (iso > end) break;
+        out.add(iso);
+      }
+    }
   }
   return out;
 }

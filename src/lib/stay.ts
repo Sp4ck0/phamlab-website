@@ -2,7 +2,7 @@
 // costs per night, and where to get directions. Everything here is derived from
 // data the trip already has; nothing is typed in.
 import { stayEndDate, stayStartIndex } from "./calendar";
-import type { HotelPrice, Place, ResolvedDay } from "./types";
+import type { HotelPrice, ResolvedDay } from "./types";
 
 export interface StayInfo {
   checkIn: string; // "YYYY-MM-DD", the day the stay starts
@@ -61,13 +61,4 @@ export function gapMinutes(checkOutTime: string | undefined, checkInTime: string
   };
   const gap = mins(checkInTime) - mins(checkOutTime);
   return gap >= 0 ? gap : null;
-}
-
-/** A Google Maps directions link to the place (the exact listing when it has a place id). */
-export function directionsUrl(p: Place): string {
-  const url = new URL("https://www.google.com/maps/dir/");
-  url.searchParams.set("api", "1");
-  url.searchParams.set("destination", [p.name, p.address].filter(Boolean).join(", "));
-  if (p.placeId) url.searchParams.set("destination_place_id", p.placeId);
-  return url.toString();
 }
