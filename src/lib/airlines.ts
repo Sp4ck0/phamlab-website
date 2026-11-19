@@ -70,6 +70,9 @@ export const AIRLINES: Record<string, { name: string; logo?: string }> = {
   VZ: { name: "Thai Vietjet" },
   WK: { name: "Edelweiss" },
   XJ: { name: "Thai AirAsia X" },
+  GQ: { name: "Sky Express" },
+  OS: { name: "Austrian" },
+  EW: { name: "Eurowings" },
 };
 
 // Google Flights' logo CDN: keyed by IATA code, no API key. Unofficial, so the
