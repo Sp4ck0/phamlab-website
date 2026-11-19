@@ -84,10 +84,9 @@ export function HotelCard({ g, status: s, stay, gapAfter, groups, date, days, da
       <HotelFacts g={g} stay={stay} status={s} />
       {g.detail && <div className="cmeta"><Linkify text={g.detail} /></div>}
       {s === "needed" && <TbdLine fields={missingHotelFields(g)} area={placeholder ? undefined : g.area} />}
-      {s === "needed" && !g.tentative && (
+      {s === "needed" && !g.tentative && placeholder && g.area && (
         <div className="tile-links">
-          {placeholder && g.area && <a href={hotelSearchUrl(g.area, stay?.checkIn, stay?.checkOut)} target="_blank" rel="noopener noreferrer">Search hotels here</a>}
-          <button type="button" onClick={() => onToggle(g.srcs, "booked")}>Mark as booked</button>
+          <a href={hotelSearchUrl(g.area, stay?.checkIn, stay?.checkOut)} target="_blank" rel="noopener noreferrer">Search hotels here</a>
         </div>
       )}
       {onCollapse && (

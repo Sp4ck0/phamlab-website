@@ -476,7 +476,7 @@ details.tour-box[open] summary::after{content:"Hide"}
 .tbd-label{font-weight:700;text-transform:uppercase;letter-spacing:.04em}
 .tbd-chip{border-style:dashed}
 .tile-links{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:13px}
-.tile-links a,.tile-links button{color:var(--accent-1);text-decoration:none;font:inherit;font-weight:600;background:none;border:0;padding:0;cursor:pointer}
+.tile-links a{color:var(--accent-1);text-decoration:none;font-weight:600}
 /* stay strip, slim middle night, move-day gap, directions (HotelCard, StayStrip) */
 .seg-chip.cx-ok{border-color:var(--good);color:var(--good)}
 .seg-chip.cx-soon{border-color:var(--warn);color:var(--warn);font-weight:700}
