@@ -135,17 +135,15 @@ test('route entry resets child state and reading position together including Bac
   const module = await import('./TripEntryBoundary.tsx').catch(() => ({}));
   assert.equal(typeof module.TripEntryBoundary, 'function', 'entry reset boundary must be implemented');
   const { MemoryRouter, Routes, Route, useNavigate } = await import('react-router-dom');
-  const { TripEntryBoundary, ItineraryStart, RouteScrollPolicy } = module;
+  const { TripEntryBoundary, RouteScrollPolicy } = module;
   let navigate;
-  let resets = 0;
-  window.HTMLElement.prototype.scrollIntoView = () => { resets++; };
+  let itineraryScrolls = 0;
+  window.HTMLElement.prototype.scrollIntoView = () => { itineraryScrolls++; };
   window.scrollTo = () => {};
-  window.requestAnimationFrame = () => 1;
-  window.cancelAnimationFrame = () => {};
   function Controls() { navigate = useNavigate(); return null; }
   function Content() {
     const [open, setOpen] = React.useState(false);
-    return React.createElement(ItineraryStart, null, React.createElement('button', { 'data-open': '', onClick: () => setOpen(!open) }, String(open)));
+    return React.createElement('button', { 'data-open': '', onClick: () => setOpen(!open) }, String(open));
   }
   const view = mount(React.createElement(MemoryRouter, { initialEntries: ['/trip/synthetic?view=detailed'] },
     React.createElement(Controls), React.createElement(RouteScrollPolicy),
@@ -158,11 +156,11 @@ test('route entry resets child state and reading position together including Bac
     act(() => navigate('/away'));
     act(() => navigate(-1));
     assert.equal(view.container.querySelector('[data-open]').textContent, 'false');
-    assert.equal(resets, 2);
     act(() => view.container.querySelector('[data-open]').click());
     act(() => window.dispatchEvent(new window.PageTransitionEvent('pageshow', { persisted: true })));
     assert.equal(view.container.querySelector('[data-open]').textContent, 'false');
-    assert.equal(resets, 3);
+    // Opening a trip never scrolls an element into view; only jumps do.
+    assert.equal(itineraryScrolls, 0);
     assert.equal(window.history.scrollRestoration, 'manual');
   } finally { view.close(); }
 });
