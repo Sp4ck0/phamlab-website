@@ -1,6 +1,6 @@
 import type { HotelGroup } from "../../lib/tripLogic";
 import { fmtHm } from "../../lib/segments";
-import { budgetText, cancelStatus, priceText, type StayInfo } from "../../lib/stay";
+import { budgetChips, cancelStatus, priceText, type StayInfo } from "../../lib/stay";
 import type { Status } from "../../lib/types";
 import { ConfirmationChip } from "./ConfirmationChip";
 
@@ -20,7 +20,7 @@ export function HotelFacts({ g, stay, status = "booked", now = Date.now() }: { g
   // A passed deadline on a stay that is already over is just noise.
   const cancel = g.freeCancelUntil ? cancelStatus(g.freeCancelUntil, now) : null;
   const showCancel = cancel && !(cancel.state === "ended" && (!stay || Date.parse(stay.checkOut) < now));
-  const chips = [g.room, g.price ? priceText(g.price, stay?.nights) : "", status === "needed" && g.budget ? budgetText(g.budget, stay?.nights) : ""].filter(Boolean);
+  const chips = [g.room, g.price ? priceText(g.price, stay?.nights) : "", ...(status === "needed" && g.budget ? budgetChips(g.budget, stay?.nights) : [])].filter(Boolean);
   if (!times.length && !chips.length && !g.confirmation && !showCancel) return null;
   return (
     <div className="hotel-facts">

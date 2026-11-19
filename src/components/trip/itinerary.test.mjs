@@ -326,9 +326,18 @@ test('hotel tiles show their stay facts and a tap-to-reveal confirmation; a not-
     act(() => stay.querySelector('.conf-chip').click());
     assert.ok(stay.querySelector('.conf-chip').textContent.includes('SYNTH1'));
     assert.ok(!stay.querySelector('.tbd')); // a booked tile never says "to be decided"
-    const undecided = cards.find((c) => c.textContent.includes('TBD — Synthetic hotel'));
-    assert.equal(undecided.querySelector('.tbd-label').textContent, 'To be decided · Synthetic area');
-    assert.deepEqual([...undecided.querySelectorAll('.tbd-chip')].map((c) => c.textContent), ['hotel']);
+    const undecided = cards.find((c) => c.textContent.includes('Hotel to be decided'));
+    assert.ok(!undecided.textContent.includes('TBD')); // the typed placeholder is not shown
+    assert.equal(undecided.querySelector('.cmain').textContent, 'Hotel to be decided');
+    assert.equal(undecided.querySelector('.cmain a'), null); // no pin or map link for a place that isn't chosen
+    assert.equal(undecided.querySelector('.cmeta').textContent, 'Synthetic area'); // the city sits under the title
+    assert.equal(undecided.querySelector('.tbd-label').textContent, 'To be decided');
+    assert.deepEqual([...undecided.querySelectorAll('.tbd-chip')].map((c) => c.textContent), ['hotel', 'check-in time', 'check-out time']);
+    const search = undecided.querySelector('.tile-links a');
+    assert.equal(search.textContent, 'Search hotels here');
+    assert.ok(new URL(search.href).searchParams.get('q').startsWith('Hotels in Synthetic area'));
+    assert.equal(undecided.querySelector('.tile-links button').textContent, 'Mark as booked');
+    assert.ok(!stay.querySelector('.tile-links')); // a booked tile has no actions to book
   } finally { view.close(); }
 });
 test('a not-booked transport tile lists what is to be decided; a booked one missing a field is labelled under Only gaps', async () => {
@@ -441,7 +450,7 @@ test('a hotel tile shows the cancellation deadline in its colour, a Call link, a
   view = render({ ...base, phone: undefined, status: 'needed', budget: { amount: 400, currency: 'USD', per: 'night' } });
   try {
     assert.ok(!view.container.querySelector('a[href^="tel:"]'));
-    assert.ok(view.container.textContent.includes('Budget ≈ $400.00 / night · ≈ $800.00 for 2 nights'));
+    assert.deepEqual([...view.container.querySelectorAll('.seg-chip')].map((c) => c.textContent).filter((t) => /≈/.test(t)), ['Budget ≈ $400.00 / night', '≈ $800.00 for 2 nights']); // two chips, not one long one
   } finally { view.close(); }
   view = render({ ...base, budget: { amount: 400, currency: 'USD', per: 'night' } });
   try { assert.ok(!view.container.textContent.includes('Budget')); } finally { view.close(); }

@@ -30,7 +30,11 @@ export function missingTransportFields(f: { mode?: TransportMode; segments?: Seg
   return [...out];
 }
 
-/** A not-booked hotel with no address or place id has not been chosen yet. */
-export function missingHotelFields(h: { address?: string; placeId?: string }): string[] {
-  return !h.address && !h.placeId ? ["hotel"] : [];
+/** A not-booked hotel with no address or place id has not been chosen yet; its times are the other things to settle. */
+export function missingHotelFields(h: { address?: string; placeId?: string; checkInTime?: string; checkOutTime?: string }): string[] {
+  const out: string[] = [];
+  if (!h.address && !h.placeId) out.push("hotel");
+  if (!h.checkInTime) out.push("check-in time");
+  if (!h.checkOutTime) out.push("check-out time");
+  return out;
 }

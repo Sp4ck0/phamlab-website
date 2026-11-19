@@ -94,17 +94,24 @@ export function phoneHref(phone: string): string {
 }
 
 /**
- * The budget chip for a stay that isn't booked: the target as given, with the
- * other basis when the length is known ("≈ $400 / night · ≈ $1,600 for 4 nights").
+ * The budget chips for a stay that isn't booked: the target as given, then the other
+ * basis when the length is known ("Budget ≈ $400 / night", "≈ $1,600 for 4 nights").
  * `per` unset means we don't know what it covers, so it is shown as it is.
  */
-export function budgetText(b: HotelPrice, nights: number | undefined): string {
+export function budgetChips(b: HotelPrice, nights: number | undefined): string[] {
   const money = (n: number, round = false) => fmtMoney(n, b.currency, round);
   if (b.per === "night") {
-    return nights ? `Budget ≈ ${money(b.amount)} / night · ≈ ${money(b.amount * nights)} for ${nights} ${nights === 1 ? "night" : "nights"}` : `Budget ≈ ${money(b.amount)} / night`;
+    return [`Budget ≈ ${money(b.amount)} / night`, ...(nights ? [`≈ ${money(b.amount * nights)} for ${nights} ${nights === 1 ? "night" : "nights"}`] : [])];
   }
   if (b.per === "stay") {
-    return nights ? `Budget ≈ ${money(b.amount)} for the stay · ≈ ${money(b.amount / nights, true)} / night` : `Budget ≈ ${money(b.amount)} for the stay`;
+    return [`Budget ≈ ${money(b.amount)} for the stay`, ...(nights ? [`≈ ${money(b.amount / nights, true)} / night`] : [])];
   }
-  return `Budget ≈ ${money(b.amount)}`;
+  return [`Budget ≈ ${money(b.amount)}`];
+}
+
+/** A Google hotel search for the area and dates of a stay that has no hotel yet. */
+export function hotelSearchUrl(area: string, checkIn?: string, checkOut?: string): string {
+  const url = new URL("https://www.google.com/travel/search");
+  url.searchParams.set("q", `Hotels in ${area}${checkIn && checkOut ? ` ${checkIn} to ${checkOut}` : ""}`);
+  return url.toString();
 }

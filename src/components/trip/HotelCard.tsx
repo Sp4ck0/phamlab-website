@@ -2,7 +2,7 @@ import { useState } from "react";
 import { googleMapsUrl } from "../../lib/mapPoints";
 import { hotelUrl } from "../../lib/calendar";
 import { fmtDate, fmtDuration, fmtHm } from "../../lib/segments";
-import { phoneHref, type StayInfo } from "../../lib/stay";
+import { hotelSearchUrl, phoneHref, type StayInfo } from "../../lib/stay";
 import { missingHotelFields } from "../../lib/tbd";
 import type { HotelGroup } from "../../lib/tripLogic";
 import type { Group, ResolvedDay, Status } from "../../lib/types";
@@ -38,6 +38,8 @@ export interface HotelCardProps {
 // "show on map".
 export function HotelCard({ g, status: s, stay, gapAfter, groups, date, days, dayNumber, tileId, gapsOnly, onToggle, onCollapse }: HotelCardProps) {
   const nm = g.name || "Hotel not chosen";
+  // A placeholder name ("TBD — Oslo hotel", or none) is not a place: show it as "Hotel to be decided" (the stored name is untouched).
+  const placeholder = !g.name || /^TBD\b/i.test(g.name);
   const uniqueWho = [...new Set(g.who)];
   const ctype =
     g.checkIn && g.checkOut ? "Hotel" : g.checkIn ? "Hotel · check-in" : g.checkOut ? "Hotel · check-out" : "Hotel · staying";
@@ -54,7 +56,7 @@ export function HotelCard({ g, status: s, stay, gapAfter, groups, date, days, da
         {days && <AddToCalendar url={hotelUrl(g.name, g.address, days, dayNumber)} />}
       </div>
       <div className={`cmain ${s === "needed" && !g.tentative ? "todo" : ""}`}>
-        {g.name ? (
+        {!placeholder ? (
           <>
             <a href={googleMapsUrl(place)} target="_blank" rel="noopener noreferrer">
               📍 {nm}
@@ -63,9 +65,10 @@ export function HotelCard({ g, status: s, stay, gapAfter, groups, date, days, da
             {g.phone && <a className="stay-dir" href={phoneHref(g.phone)} title={g.phone}>Call</a>}
           </>
         ) : (
-          nm
+          "Hotel to be decided"
         )}
       </div>
+      {placeholder && g.area && <div className="cmeta">{g.area}</div>}
       {/* With a Place ID the link opens the exact listing, so the address text adds nothing. */}
       {g.address && !g.placeId && <div className="cmeta">{g.address}</div>}
       {stay && <StayStrip stay={stay} checkInTime={g.checkInTime} checkOutTime={g.checkOutTime} />}
@@ -76,7 +79,13 @@ export function HotelCard({ g, status: s, stay, gapAfter, groups, date, days, da
       )}
       <HotelFacts g={g} stay={stay} status={s} />
       {g.detail && <div className="cmeta"><Linkify text={g.detail} /></div>}
-      {s === "needed" && <TbdLine fields={missingHotelFields(g)} area={g.area} />}
+      {s === "needed" && <TbdLine fields={missingHotelFields(g)} area={placeholder ? undefined : g.area} />}
+      {s === "needed" && !g.tentative && (
+        <div className="tile-links">
+          {placeholder && g.area && <a href={hotelSearchUrl(g.area, stay?.checkIn, stay?.checkOut)} target="_blank" rel="noopener noreferrer">Search hotels here</a>}
+          <button type="button" onClick={() => onToggle(g.srcs, "booked")}>Mark as booked</button>
+        </div>
+      )}
       {onCollapse && (
         <button type="button" className="stay-collapse" onClick={onCollapse} aria-label={`Collapse ${nm}`}>Show less ▴</button>
       )}
