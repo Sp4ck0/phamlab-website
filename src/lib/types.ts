@@ -74,10 +74,25 @@ export interface Place {
   placeId?: string;
 }
 
+export interface HotelPrice {
+  amount: number;
+  currency: string;
+  // Unset when the source doesn't say whether it is per night or for the stay.
+  per?: "night" | "stay";
+}
+
 export interface Hotel extends Place {
   who: Who;
   status: Status;
+  // What has no field of its own (phone, door code, cancellation terms).
   detail?: string;
+  // Per-stay facts. They may sit on any entry of a stay; resolveDays fills them across it.
+  checkInTime?: string; // local "HH:MM"
+  checkOutTime?: string; // local "HH:MM"
+  room?: string;
+  price?: HotelPrice;
+  confirmation?: string; // behind a tap; never exported
+  area?: string; // where a not-yet-chosen hotel will be; the name stays as typed (it is the identity)
 }
 
 export type Tag = "" | "move" | "transit" | "event" | undefined;
@@ -127,7 +142,8 @@ export interface ActionItem {
 
 // One row of the Action Items list, derived by the backend (convex/travel/tasks.ts).
 // `kind` is why it exists, `scope` is when it applies.
-export type TaskKind = "booking" | "plan" | "transport" | "consider" | "custom";
+// `details` is a booked transport tile that still lacks a required field.
+export type TaskKind = "booking" | "plan" | "transport" | "details" | "consider" | "custom";
 export type Priority = "high" | "medium" | "low";
 export type Outcome = "chosen" | "dropped";
 export type Vote = "yes" | "no";
@@ -222,6 +238,9 @@ export interface TripExportHotel {
   name?: string;
   address?: string;
   detail?: string;
+  checkInTime?: string;
+  checkOutTime?: string;
+  room?: string;
 }
 export interface TripExportDay {
   date: string;

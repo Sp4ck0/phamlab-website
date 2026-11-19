@@ -311,6 +311,47 @@ test('structured segments render as boarding-pass rows with a computed layover a
     assert.ok(box.querySelector('.conf-chip').textContent.includes('SYNTH1'));
   } finally { view.close(); }
 });
+test('hotel tiles show their stay facts and a tap-to-reveal confirmation; a not-chosen hotel says what is to be decided', async () => {
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const booked = { who: 'all', name: 'Synthetic Hotel', address: 'Synthetic street', status: 'booked', checkInTime: '15:00', checkOutTime: '11:00', room: 'Synthetic twin', price: { amount: 131.03, currency: 'USD', per: 'night' }, confirmation: 'SYNTH1', detail: 'Synthetic leftover' };
+  const open = { who: 'all', name: 'TBD — Synthetic hotel', status: 'needed', area: 'Synthetic area' };
+  // Two nights, so the first day is the check-in day and not also the check-out day.
+  const days = resolveDays({ days: [{ ...day, hotels: [booked, open] }, { ...day, date: '2040-01-03', hotels: [{ ...booked, checkInTime: undefined, confirmation: undefined }] }] });
+  const view = mount(React.createElement(DayCard, { ...props, day: days[0], expanded: true, onToggle() {} }));
+  try {
+    const cards = [...view.container.querySelectorAll('.card')];
+    const stay = cards.find((c) => c.textContent.includes('Synthetic Hotel') && !c.textContent.includes('TBD'));
+    const text = stay.textContent;
+    assert.ok(text.includes('Check-in from 3:00 PM') && text.includes('Synthetic twin') && text.includes('$131.03 / night') && text.includes('Synthetic leftover'));
+    assert.ok(!text.includes('Check-out by')); // the check-out time belongs on the check-out tile, not the arrival tile
+    assert.ok(!text.includes('SYNTH1')); // the reference stays hidden until tapped
+    act(() => stay.querySelector('.conf-chip').click());
+    assert.ok(stay.querySelector('.conf-chip').textContent.includes('SYNTH1'));
+    assert.ok(!stay.querySelector('.tbd')); // a booked tile never says "to be decided"
+    const undecided = cards.find((c) => c.textContent.includes('TBD — Synthetic hotel'));
+    assert.equal(undecided.querySelector('.tbd-label').textContent, 'To be decided · Synthetic area');
+    assert.deepEqual([...undecided.querySelectorAll('.tbd-chip')].map((c) => c.textContent), ['hotel']);
+  } finally { view.close(); }
+});
+test('a not-booked transport tile lists what is to be decided; a booked one missing a field is labelled under Only gaps', async () => {
+  const { resolveDays, flightId } = await import('../../lib/tripLogic.ts');
+  const needed = { who: 'all', route: 'Synthetic needed route', status: 'needed' };
+  const bookedPlain = { who: 'all', route: 'Synthetic booked route', status: 'booked' };
+  const days = resolveDays({ days: [{ ...day, flights: [needed, bookedPlain] }] });
+  const id = flightId(day.date, bookedPlain);
+  const gaps = { plan: false, transport: [], details: [{ key: `details:${id}`, kind: 'details', refs: [`details:${id}`], refsDone: [false], done: false }] };
+  const view = mount(React.createElement(DayCard, { ...props, day: days[0], expanded: true, gapsOnly: true, gaps, onToggle() {} }));
+  try {
+    const cards = [...view.container.querySelectorAll('.card')];
+    const open = cards.find((c) => c.textContent.includes('Synthetic needed route'));
+    assert.equal(open.querySelector('.tbd-label').textContent, 'To be decided');
+    assert.deepEqual([...open.querySelectorAll('.tbd-chip')].map((c) => c.textContent), ['route details']);
+    assert.equal(open.querySelector('.gap-reason').textContent, 'Not booked');
+    const missing = cards.find((c) => c.textContent.includes('Synthetic booked route'));
+    assert.equal(missing.querySelector('.gap-reason').textContent, 'Missing details');
+    assert.ok(!missing.querySelector('.tbd')); // booked: labelled as a gap, but not "to be decided"
+  } finally { view.close(); }
+});
 test('a booking can mix a ferry hop and a flight hop, each with its own icon and operator', async () => {
   const { resolveDays } = await import('../../lib/tripLogic.ts');
   const segments = [

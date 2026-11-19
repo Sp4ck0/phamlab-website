@@ -7,7 +7,9 @@ import { legUrl } from "../../lib/calendar";
 import { ShareLinkButton } from "./ShareLinkButton";
 import { ConfirmationChip } from "./ConfirmationChip";
 import { SegmentRow } from "./SegmentRow";
+import { TbdLine } from "./TbdLine";
 import { fmtDuration, layoverMin } from "../../lib/segments";
+import { missingTransportFields } from "../../lib/tbd";
 
 interface Props {
   group: FlightGroup;
@@ -82,6 +84,7 @@ export function FlightBox({ group, onToggle, day, dayNumber = 0, tileId, gapReas
           {group.layovers?.[i] && <div className="fl-layover">{group.layovers[i]}</div>}
         </div>
       ))}
+      {status === "needed" && <TbdLine fields={missingTransportFields(group)} />}
     </div>
   );
 }
