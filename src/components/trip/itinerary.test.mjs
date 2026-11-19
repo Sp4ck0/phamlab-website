@@ -759,14 +759,14 @@ test('while the trip is under way the next departure and the next check-in say h
   } finally { view.close(); }
 });
 
-test('a chosen hotel shows its area under the name; a deadline task has its own label and marks its day as a gap', async () => {
+test('a chosen hotel shows no district line (the area is only the city of a hotel not chosen yet); a deadline task has its own label and marks its day as a gap', async () => {
   const { resolveDays } = await import('../../lib/tripLogic.ts');
   const { gapDates, kindLabel } = await import('../../lib/tasks.ts');
   const days = resolveDays({ days: [{ ...day, date: '2040-01-02', hotels: [{ who: 'all', name: 'Synthetic Hotel', address: 'Synthetic street', status: 'booked', area: 'Synthetic District' }] }] });
   const view = mount(React.createElement(DayCard, { ...props, day: days[0], days, expanded: true }));
   try {
     const card = [...view.container.querySelectorAll('.card')].find((c) => c.textContent.includes('Synthetic Hotel'));
-    assert.ok([...card.querySelectorAll('.cmeta')].some((m) => m.textContent === 'Synthetic District'));
+    assert.ok(![...card.querySelectorAll('.cmeta')].some((m) => m.textContent === 'Synthetic District'));
   } finally { view.close(); }
   const task = { kind: 'deadline', mode: 'hotel', key: 'deadline:2040-01-02|h|Synthetic|all', refs: ['deadline:2040-01-02|h|Synthetic|all'], refsDone: [false], done: false, scope: { kind: 'day', date: '2040-01-04' } };
   assert.equal(kindLabel(task), 'Free cancellation');
