@@ -15,8 +15,8 @@ export function flash(el: HTMLElement) {
 export const scrollBehavior = (): ScrollBehavior =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth";
 
-// A trip page that was just opened re-places its own scroll for a couple of
-// frames (ItineraryStart); scrolling after this long keeps ours from being undone.
+// A short wait after a trip page opens, so its first layout has settled before
+// we scroll to a day.
 export const SETTLE_MS = 150;
 
 // Run `cb` once the page has stopped scrolling (scrollend), or after `fallbackMs`

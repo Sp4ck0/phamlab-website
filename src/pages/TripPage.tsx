@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { Fragment, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { PageShell } from "../components/layout/PageShell";
 import { TripHeader } from "../components/trip/TripHeader";
@@ -7,7 +7,7 @@ import { DetailedView } from "../components/trip/DetailedView";
 import { ActionItems } from "../components/trip/ActionItems";
 import { TripMap } from "../components/trip/TripMap";
 import { TripNote } from "../components/trip/TripNote";
-import { ItineraryStart, TripEntryBoundary } from "../components/trip/TripEntryBoundary";
+import { TripEntryBoundary } from "../components/trip/TripEntryBoundary";
 import { useTrip } from "../hooks/useTrip";
 import { useRememberTab } from "../hooks/useRememberTab";
 import { useResolvedDays } from "../hooks/useResolvedDays";
@@ -96,7 +96,7 @@ function TripPageEntry() {
         onRemoveItem={removeItem}
       />
 
-      <ItineraryStart key={trip._id}>
+      <Fragment key={trip._id}>
         <DetailedView
           today={today}
           days={resolvedDays}
@@ -118,7 +118,7 @@ function TripPageEntry() {
           onToggleActionItem={toggleActionItem}
           onEditActivity={updateActivity}
         />
-      </ItineraryStart>
+      </Fragment>
 
       <TripMap
         points={mapPlanPoints}
