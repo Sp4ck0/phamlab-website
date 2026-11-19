@@ -1,6 +1,7 @@
 import type { FlightGroup } from "../../lib/tripLogic";
 import { StatusToggle } from "./StatusToggle";
-import type { ResolvedDay, Status } from "../../lib/types";
+import type { FlightLeg, ResolvedDay, Status } from "../../lib/types";
+import { AIRLINES, airlineLogoUrl, legAirline } from "../../lib/airlines";
 import { AddToCalendar } from "./AddToCalendar";
 import { legUrl } from "../../lib/calendar";
 import { ShareLinkButton } from "./ShareLinkButton";
@@ -14,6 +15,24 @@ interface Props {
   tileId?: string;
   // Under Only gaps: why this box is listed.
   gapReason?: string;
+}
+
+function AirlineChip({ leg }: { leg: FlightLeg }) {
+  const code = legAirline(leg);
+  if (!code) return null;
+  const name = AIRLINES[code]?.name ?? code;
+  return (
+    <img
+      className="fl-airline"
+      src={airlineLogoUrl(code)}
+      alt={name}
+      title={name}
+      width={20}
+      height={20}
+      loading="lazy"
+      onError={(e) => { e.currentTarget.style.display = "none"; }}
+    />
+  );
 }
 
 export function FlightBox({ group, onToggle, day, dayNumber = 0, tileId, gapReason }: Props) {
@@ -34,7 +53,10 @@ export function FlightBox({ group, onToggle, day, dayNumber = 0, tileId, gapReas
       {legs.map((leg, i) => (
         <div key={i}>
           <div className="flight-leg">
-            <div className="fl-route">{leg.route}</div>
+            <div className="fl-route">
+              {(!group.mode || group.mode === "flight") && <AirlineChip leg={leg} />}
+              {leg.route}
+            </div>
             <div className="fl-time">
               {leg.time}
               {day && <AddToCalendar url={legUrl(leg, i, legs.length, group.mode, day, dayNumber, group.detail)} />}
