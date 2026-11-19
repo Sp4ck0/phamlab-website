@@ -483,7 +483,6 @@ details.tour-box[open] summary::after{content:"Hide"}
 .seg-chip.cx-ok{border-color:var(--good);color:var(--good)}
 .seg-chip.cx-soon{border-color:var(--warn);color:var(--warn);font-weight:700}
 .seg-chip.cx-ended{color:var(--text-muted)}
-.stay-dir{margin-left:10px;font-size:12.5px;font-weight:600;color:var(--accent-1);text-decoration:none}
 .stay-strip{margin-top:10px}
 .stay-bar{display:flex;align-items:center}
 .stay-seg{display:flex;align-items:center;flex:1}

@@ -36,8 +36,8 @@ export interface HotelCardProps {
 }
 
 // The full hotel tile. The name keeps its pin and map link; the stay strip shows
-// both check-in and check-out on every night of the stay; the Call link sits beside
-// "show on map".
+// both check-in and check-out on every night of the stay; the Call button sits with
+// the share and calendar buttons at the top right.
 export function HotelCard({ g, status: s, stay, gapAfter, groups, date, days, dayNumber, tileId, gapsOnly, onToggle, onCollapse, nextUp }: HotelCardProps) {
   const nm = g.name || "Hotel not chosen";
   // A placeholder name ("TBD — Oslo hotel", or none) is not a place: show it as "Hotel to be decided" (the stored name is untouched).
@@ -57,6 +57,11 @@ export function HotelCard({ g, status: s, stay, gapAfter, groups, date, days, da
         {gapsOnly && s === "needed" && !g.tentative && <span className="gap-reason">{g.name ? "Not booked" : "Not chosen"}</span>}
         <WhoPill who={uniqueWho.length === 1 ? uniqueWho[0] : uniqueWho} groups={groups} date={date} />
         <ShareLinkButton param={{ day: date, tile: g.srcs[0] }} label={`Share link to ${nm}`} />
+        {g.phone && (
+          <a className="gcal-btn call-btn" href={phoneHref(g.phone)} aria-label={`Call ${nm}`} title={`Call ${g.phone}`}>
+            📞
+          </a>
+        )}
         {days && <AddToCalendar url={hotelUrl(g.name, g.address, days, dayNumber)} />}
       </div>
       <div className={`cmain ${s === "needed" && !g.tentative ? "todo" : ""}`}>
@@ -66,7 +71,6 @@ export function HotelCard({ g, status: s, stay, gapAfter, groups, date, days, da
               📍 {nm}
             </a>
             <ShowOnMap place={place} />
-            {g.phone && <a className="stay-dir" href={phoneHref(g.phone)} title={g.phone}>Call</a>}
           </>
         ) : (
           "Hotel to be decided"
