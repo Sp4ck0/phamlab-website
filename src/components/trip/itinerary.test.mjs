@@ -476,7 +476,8 @@ test('a middle night of a booked stay is one slim line that opens to the full ti
   try {
     const slim = view.container.querySelector('button.stay-slim');
     assert.ok(slim, 'a carried middle night is slim');
-    assert.ok(slim.textContent.includes('📍 Synthetic Hotel') && slim.textContent.includes('night 2 of 2') && slim.textContent.includes('out Wed, Jan 4 · 12:00'));
+    assert.ok(slim.textContent.includes('📍 Synthetic Hotel') && slim.textContent.includes('· 2 of 2') && !/night|out/i.test(slim.textContent.replace('📍 Synthetic Hotel', '')));
+    assert.equal(slim.getAttribute('title'), 'Night 2 of 2, check-out Wed, Jan 4 · 12:00'); // the full detail stays as a tooltip
     assert.equal(view.container.querySelector('.card'), null);
     act(() => slim.click());
     assert.ok(view.container.querySelector('.card .stay-strip') && !view.container.querySelector('button.stay-slim'));

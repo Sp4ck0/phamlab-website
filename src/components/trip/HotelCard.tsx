@@ -109,12 +109,19 @@ export function HotelSlim(props: HotelCardProps) {
   const { g, stay, tileId } = props;
   if (open) return <HotelCard {...props} onCollapse={() => setOpen(false)} />;
   return (
-    <button type="button" className="stay-slim" id={tileId} onClick={() => setOpen(true)} aria-expanded="false">
+    <button
+      type="button"
+      className="stay-slim"
+      id={tileId}
+      onClick={() => setOpen(true)}
+      aria-expanded="false"
+      title={stay ? `Night ${stay.night} of ${stay.nights}, check-out ${fmtDate(stay.checkOut)}${g.checkOutTime ? ` · ${fmtHm(g.checkOutTime)}` : ""}` : undefined}
+    >
       <span aria-hidden="true">🏨</span>
       <span className="stay-slim-name">📍 {g.name}</span>
       {stay && (
         <span className="stay-slim-mu">
-          · night {stay.night} of {stay.nights} · out {fmtDate(stay.checkOut)}{g.checkOutTime ? ` · ${fmtHm(g.checkOutTime)}` : ""}
+          · {stay.night} of {stay.nights}
         </span>
       )}
       <span className="stay-slim-chev" aria-hidden="true">Show ▾</span>
