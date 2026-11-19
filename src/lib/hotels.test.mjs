@@ -66,3 +66,10 @@ test('a "Missing details" task marks its day as a gap until it is dismissed, and
   assert.equal(dayGaps([task([true])])['2040-01-02'], undefined);
   assert.equal(kindLabel(task([false])), 'Missing details');
 });
+
+test('an unbooked hotel stay is a gap on every night, including the carried ones between its entries', () => {
+  const stay = (refsDone) => ({ kind: 'booking', mode: 'hotel', key: 'booking:2040-01-02|h|Synthetic|all', refs: ['booking:2040-01-02|h|Synthetic|all', 'booking:2040-01-05|h|Synthetic|all'], refsDone, done: refsDone.every(Boolean), scope: { kind: 'range', start: '2040-01-02', end: '2040-01-05' } });
+  assert.deepEqual([...gapDates([stay([false, false])])].sort(), ['2040-01-02', '2040-01-03', '2040-01-04', '2040-01-05']);
+  assert.deepEqual([...gapDates([stay([true, true])])], []);
+  assert.deepEqual([...gapDates([stay([true, false])])], ['2040-01-05']); // only the open night
+});
