@@ -59,6 +59,17 @@ export const AIRLINES: Record<string, { name: string; logo?: string }> = {
   A3: { name: "Aegean" },
   OA: { name: "Olympic Air" },
   HX: { name: "Hong Kong Airlines" },
+  "3U": { name: "Sichuan Airlines" },
+  AK: { name: "AirAsia" },
+  EI: { name: "Aer Lingus" },
+  FM: { name: "Shanghai Airlines" },
+  HB: { name: "Greater Bay Airlines" },
+  HU: { name: "Hainan Airlines" },
+  MU: { name: "China Eastern" },
+  QZ: { name: "Indonesia AirAsia" },
+  VZ: { name: "Thai Vietjet" },
+  WK: { name: "Edelweiss" },
+  XJ: { name: "Thai AirAsia X" },
 };
 
 // Google Flights' logo CDN: keyed by IATA code, no API key. Unofficial, so the

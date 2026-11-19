@@ -19,6 +19,8 @@ export function SegmentRow({ seg, mode, day, dayNumber = 0, first, last }: Props
   const m = mode || "flight";
   const name = (seg.airline && AIRLINES[seg.airline]?.name) || seg.carrier || seg.airline || "";
   const label = segmentLabel(seg);
+  // No carrier at all (a ferry, a train): say what it is rather than leave the line empty.
+  const modeName = m === "flight" ? "" : m[0].toUpperCase() + m.slice(1);
   const mins = durationMin(seg);
   const plus = dayOffset(seg);
   const chips = [seg.aircraft, seg.cabin].filter(Boolean);
@@ -30,7 +32,7 @@ export function SegmentRow({ seg, mode, day, dayNumber = 0, first, last }: Props
     <div className="seg">
       <div className="seg-top">
         <span className="seg-carrier">
-          {m === "flight" && seg.airline ? (
+          {seg.airline ? (
             <img
               className="fl-airline"
               src={airlineLogoUrl(seg.airline)}
@@ -43,7 +45,7 @@ export function SegmentRow({ seg, mode, day, dayNumber = 0, first, last }: Props
           ) : (
             <span className="seg-mode" aria-hidden="true">{MODE_EMOJI[m]}</span>
           )}
-          <span>{[name, label && label !== name ? label : ""].filter(Boolean).join(" · ")}</span>
+          <span>{[name, label && label !== name ? label : ""].filter(Boolean).join(" · ") || modeName}</span>
         </span>
         <span className="seg-chips">
           {chips.map((c) => <span key={c} className="seg-chip">{c}</span>)}
