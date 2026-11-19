@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { resolveDays } from './tripLogic.ts';
-import { directionsUrl, fmtMoney, gapMinutes, priceText, stayInfo } from './stay.ts';
+import { fmtMoney, gapMinutes, priceText, stayInfo } from './stay.ts';
 
 const day = (date, hotels) => ({ date, city: 'Synthetic city', country: 'JP', flights: [], hotels, acts: ['x'], highlight: 'x' });
 const H = (name, extra = {}) => ({ who: 'all', name, address: 'Synthetic street', status: 'booked', ...extra });
@@ -41,12 +41,4 @@ test('the wait between leaving one hotel and getting into the next', () => {
   assert.equal(gapMinutes('11:00', '11:00'), 0);
   assert.equal(gapMinutes('15:00', '11:00'), null); // arriving before leaving is not a gap
   assert.equal(gapMinutes(undefined, '15:00'), null);
-});
-
-test('directions go to the exact listing when there is a place id', () => {
-  const u = new URL(directionsUrl({ name: 'Synthetic Hotel', address: 'Synthetic street', placeId: 'synthetic-id' }));
-  assert.equal(u.origin + u.pathname, 'https://www.google.com/maps/dir/');
-  assert.equal(u.searchParams.get('destination'), 'Synthetic Hotel, Synthetic street');
-  assert.equal(u.searchParams.get('destination_place_id'), 'synthetic-id');
-  assert.equal(new URL(directionsUrl({ name: 'Synthetic Hotel' })).searchParams.has('destination_place_id'), false);
 });

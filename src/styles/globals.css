@@ -495,8 +495,9 @@ details.tour-box[open] summary::after{content:"Hide"}
 .stay-slim:hover{box-shadow:0 2px 8px var(--border)}
 .stay-slim-name{font-weight:600}
 .stay-slim-mu{color:var(--text-muted)}
-.stay-slim-chev{margin-left:auto;opacity:.6}
-.stay-collapse{margin-left:auto;border:0;background:transparent;color:var(--text-muted);cursor:pointer;font-size:12px}
+.stay-slim-chev{margin-left:auto;font-size:12.5px;font-weight:600;color:var(--text-secondary);white-space:nowrap}
+.stay-collapse{display:block;margin:10px 0 0 auto;border:0;background:transparent;color:var(--text-secondary);cursor:pointer;font:inherit;font-size:12.5px;font-weight:600;padding:2px 0}
+.stay-collapse:hover,.stay-slim:hover .stay-slim-chev{color:var(--accent-1)}
 @media (max-width:420px){
   .seg-time{font-size:19px}
   .seg-main{column-gap:8px}
