@@ -720,7 +720,7 @@ test('a booked train, ferry or bus has a mode and state header, the operator as 
 
 test('an unbooked train shows its route as the title, a route search; the check mark books it; the flight tile is unchanged', async () => {
   const { resolveDays, flightId } = await import('../../lib/tripLogic.ts');
-  const open = { who: 'all', route: 'Synthetic City → Synthetic Town', mode: 'train', status: 'needed' };
+  const open = { who: 'all', route: 'Synthetic City → Synthetic Town', mode: 'train', status: 'needed', detail: 'Synthetic train note' };
   const flight = { who: 'all', route: 'Synthetic F → Synthetic G', status: 'booked', title: 'Synthetic flight title' };
   const days = resolveDays({ days: [{ ...day, flights: [open, flight], hotels: [] }] });
   const calls = [];
@@ -729,6 +729,8 @@ test('an unbooked train shows its route as the title, a route search; the check 
     const [train, plane] = view.container.querySelectorAll('.flight-box');
     assert.equal(train.querySelector('.tx-state').textContent, 'Not booked');
     assert.equal(train.querySelector('.tx-title').textContent, 'Synthetic City → Synthetic Town');
+    assert.equal(train.lastElementChild.textContent, 'Synthetic train note'); // the free-form note is last, after the to-be-decided row and the links
+    assert.ok(train.querySelector('.tbd').compareDocumentPosition(train.lastElementChild) & 4); // (following)
     const search = train.querySelector('.tile-links a');
     assert.equal(train.querySelector('.tile-links button'), null); // no Mark as booked: the check mark does it
     assert.equal(search.textContent, 'Search this route');
