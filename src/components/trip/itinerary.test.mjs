@@ -340,14 +340,49 @@ test('a not-booked transport tile lists what is to be decided; a booked one miss
   const gaps = { plan: false, transport: [], details: [{ key: `details:${id}`, kind: 'details', refs: [`details:${id}`], refsDone: [false], done: false }] };
   const view = mount(React.createElement(DayCard, { ...props, day: days[0], expanded: true, gapsOnly: true, gaps, onToggle() {} }));
   try {
-    const cards = [...view.container.querySelectorAll('.card')];
+    const cards = [...view.container.querySelectorAll('.flight-box')];
     const open = cards.find((c) => c.textContent.includes('Synthetic needed route'));
     assert.equal(open.querySelector('.tbd-label').textContent, 'To be decided');
-    assert.deepEqual([...open.querySelectorAll('.tbd-chip')].map((c) => c.textContent), ['route details']);
+    // One blank hop (the route names no places we can read), so every field is open.
+    assert.deepEqual([...open.querySelectorAll('.tbd-chip')].map((c) => c.textContent), ['origin', 'destination', 'airline', 'flight number', 'depart time', 'arrive time']);
+    assert.deepEqual([...open.querySelectorAll('.seg-time')].map((t) => t.textContent), ['--:--', '--:--']); // the blank slots
     assert.equal(open.querySelector('.gap-reason').textContent, 'Not booked');
     const missing = cards.find((c) => c.textContent.includes('Synthetic booked route'));
     assert.equal(missing.querySelector('.gap-reason').textContent, 'Missing details');
     assert.ok(!missing.querySelector('.tbd')); // booked: labelled as a gap, but not "to be decided"
+  } finally { view.close(); }
+});
+test('a hop not planned yet is the same tile: blank time slots, a day or a window, an undecided place, Maybe', async () => {
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const rows = [
+    { who: 'all', route: 'Synthetic window route', status: 'needed', mode: 'train', segments: [{ from: 'Synthetic A', to: 'Synthetic B', window: { from: '2040-01-10', to: '2040-01-12' }, note: 'Synthetic preference' }] },
+    { who: 'all', route: 'Synthetic day route', status: 'needed', mode: 'train', segments: [{ from: 'Synthetic C', depart: '2040-01-02' }] },
+    { who: 'all', route: 'Synthetic A → Synthetic M → Synthetic Z', status: 'needed' },
+    { who: 'all', route: 'Synthetic maybe route', status: 'needed', tentative: true },
+  ];
+  const maybeHotel = { who: 'all', name: 'Synthetic maybe stay', status: 'needed', tentative: true };
+  const days = resolveDays({ days: [{ ...day, flights: rows, hotels: [maybeHotel] }] });
+  const gaps = { plan: false, transport: [], details: [] };
+  const view = mount(React.createElement(DayCard, { ...props, day: days[0], expanded: true, gapsOnly: true, gaps, onToggle() {} }));
+  try {
+    const tiles = [...view.container.querySelectorAll('.flight-box')];
+    const tile = (t) => tiles.find((c) => c.textContent.includes(t));
+    const win = tile('Synthetic window route');
+    assert.ok(win.textContent.includes('Any day Jan 10–12') && win.textContent.includes('Synthetic preference'));
+    assert.deepEqual([...win.querySelectorAll('.seg-time')].map((t) => t.textContent), ['--:--', '--:--']);
+    const dayOnly = tile('Synthetic day route');
+    assert.ok(dayOnly.textContent.includes('Not decided')); // the destination was never chosen
+    assert.ok(dayOnly.textContent.includes('Mon, Jan 2')); // the day shows where a time would
+    assert.ok(dayOnly.querySelector('.seg-undecided'));
+    const multi = tile('Synthetic A → Synthetic M → Synthetic Z');
+    assert.equal(multi.querySelectorAll('.seg').length, 2); // built from the route: two hops, no plain card
+    const maybe = tile('Synthetic maybe route');
+    assert.equal(maybe.querySelector('.maybe-pill').textContent, 'Maybe');
+    assert.ok(!maybe.querySelector('.gap-reason')); // a maybe row is not a gap
+    const stay = [...view.container.querySelectorAll('.card')].find((c) => c.textContent.includes('Synthetic maybe stay'));
+    assert.equal(stay.querySelector('.maybe-pill').textContent, 'Maybe');
+    assert.ok(!stay.querySelector('.gap-reason'));
+    assert.equal(view.container.querySelectorAll('.card.miss').length, 0); // no transport row falls back to the old card
   } finally { view.close(); }
 });
 test('a booking can mix a ferry hop and a flight hop, each with its own icon and operator', async () => {
@@ -456,7 +491,7 @@ test('Only gaps opens each day and shows just the open items, each with why it i
     const text = view.container.textContent;
     assert.ok(text.includes('Synthetic open lodging') && text.includes('Not booked'));
     // Booked hotels and transport stay as planning context, without the "Not booked" label.
-    const cardWith = (t) => [...view.container.querySelectorAll('.card')].find(c => c.textContent.includes(t));
+    const cardWith = (t) => [...view.container.querySelectorAll('.card, .flight-box')].find(c => c.textContent.includes(t));
     assert.ok(cardWith('Synthetic booked lodging') && !cardWith('Synthetic booked lodging').textContent.includes('Not booked'));
     assert.ok(cardWith('Synthetic booked route') && !cardWith('Synthetic booked route').textContent.includes('Not booked'));
     assert.ok(cardWith('Synthetic open lodging').textContent.includes('Not booked'));

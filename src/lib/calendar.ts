@@ -299,14 +299,14 @@ export function segmentUrl(
   seg: Segment, mode: TransportMode | undefined, day: ResolvedDay, dayNumber: number,
   edge: { first?: boolean; last?: boolean } = {},
 ): string | null {
-  if (!seg.depart) return null;
-  const depTz = airportZone(seg.from) || (edge.first ? zoneFor(day.city, day.country) : null);
+  if (!seg.depart || !seg.depart.includes("T")) return null; // a day with no time is not an event yet
+  const depTz = airportZone(seg.from ?? "") || (edge.first ? zoneFor(day.city, day.country) : null);
   if (!depTz) return null;
-  const arrTz = airportZone(seg.to) || (edge.last ? zoneFor(day.to || day.city, day.toCountry || day.country) : null);
+  const arrTz = airportZone(seg.to ?? "") || (edge.last ? zoneFor(day.to || day.city, day.toCountry || day.country) : null);
   const [date, time] = seg.depart.split("T");
   const [h, m] = time.split(":").map(Number);
   let end: Clock | undefined, endDayOffset = 0;
-  if (seg.arrive) {
+  if (seg.arrive && seg.arrive.includes("T")) {
     const [adate, atime] = seg.arrive.split("T");
     const [ah, am] = atime.split(":").map(Number);
     end = { h: ah, m: am };
@@ -316,7 +316,7 @@ export function segmentUrl(
   // "CI 21", else the operator ("Seatran") for a ferry or train
   const num = seg.airline && seg.number ? `${seg.airline} ${seg.number}` : seg.carrier || "";
   return timedUrl({
-    title: `${MODE_EMOJI[m0]} ${num ? `${num}: ` : ""}${seg.from} → ${seg.to}`, date, start: { h, m }, tz: depTz,
+    title: `${MODE_EMOJI[m0]} ${num ? `${num}: ` : ""}${seg.from ?? "?"} → ${seg.to ?? "?"}`, date, start: { h, m }, tz: depTz,
     end: arrTz ? end : undefined, endDayOffset, endTz: arrTz, defaultMinutes: 60,
     location: seg.from, details: detailsFor(dayNumber),
   });

@@ -1,6 +1,8 @@
 // Pure helpers for structured transport segments (types.ts Segment). Times are
 // stored as local wall-clock "YYYY-MM-DDTHH:MM" at each end, so durations are
-// derived here from the two airports' zones instead of being typed in.
+// derived here from the two airports' zones instead of being typed in. A hop may
+// be only partly planned: a day with no time ("YYYY-MM-DD"), a flexible window,
+// or a place not decided yet (unset from/to).
 import { airportZone, localToUtcMs } from "./calendar";
 import type { Segment } from "./types";
 
@@ -10,15 +12,18 @@ const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const dateOf = (dt: string) => dt.split("T")[0];
 const wallMs = (dt: string) => Date.parse(`${dt}:00Z`); // wall-clock as if UTC; only for same-zone diffs
 
+/** "2027-02-10T10:20" has a time; "2027-02-10" is only a day. */
+export const hasTime = (dt: string | undefined): dt is string => !!dt && dt.includes("T");
+
 /**
  * Minutes in the air/on the move: from both airports' zones when known, else (for
  * a ferry, train or bus, which starts and ends in one place) the wall-clock gap,
- * else the stated `durationMin`.
+ * else the stated `durationMin`. Needs both clock times.
  */
 export function durationMin(s: Segment): number | null {
-  if (s.depart && s.arrive) {
-    const dz = airportZone(s.from);
-    const az = airportZone(s.to);
+  if (hasTime(s.depart) && hasTime(s.arrive)) {
+    const dz = s.from ? airportZone(s.from) : null;
+    const az = s.to ? airportZone(s.to) : null;
     if (dz && az) {
       const mins = Math.round((localToUtcMs(s.arrive, az) - localToUtcMs(s.depart, dz)) / 60000);
       if (mins > 0) return mins;
@@ -32,7 +37,7 @@ export function durationMin(s: Segment): number | null {
 
 /** Wait between two hops at the same place, else null. Same place means same zone, so wall-clock is enough. */
 export function layoverMin(prev: Segment, next: Segment): number | null {
-  if (!prev.arrive || !next.depart || prev.to !== next.from) return null;
+  if (!prev.to || prev.to !== next.from || !hasTime(prev.arrive) || !hasTime(next.depart)) return null;
   const mins = Math.round((wallMs(next.depart) - wallMs(prev.arrive)) / 60000);
   return mins >= 0 ? mins : null;
 }
@@ -60,6 +65,15 @@ export function fmtDate(dt: string): string {
   return `${DAYS[d.getUTCDay()]}, ${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
 }
 
+/** "Feb 10–12" within a month, "Feb 28 – Mar 2" across two, for a hop that can happen on any day in the range. */
+export function fmtWindow(w: { from: string; to: string }): string {
+  const a = new Date(`${w.from}T00:00:00Z`);
+  const b = new Date(`${w.to}T00:00:00Z`);
+  const left = `${MONTHS[a.getUTCMonth()]} ${a.getUTCDate()}`;
+  if (w.from === w.to) return left;
+  return a.getUTCMonth() === b.getUTCMonth() ? `${left}–${b.getUTCDate()}` : `${left} – ${MONTHS[b.getUTCMonth()]} ${b.getUTCDate()}`;
+}
+
 /** "13h 10m", "3h", "45m". */
 export function fmtDuration(min: number): string {
   const h = Math.floor(min / 60);
@@ -71,14 +85,49 @@ export function fmtDuration(min: number): string {
 export function segmentLine(s: Segment): string {
   const plus = dayOffset(s);
   const mins = durationMin(s);
+  // A time when there is one, else the day ("Wed, Feb 10") or the flexible window ("Feb 10–12").
+  const when = (dt: string | undefined, plusDays = 0) =>
+    hasTime(dt) ? ` ${fmtClock(dt)}${plusDays > 0 ? ` +${plusDays}` : ""}` : dt ? ` ${fmtDate(dt)}` : "";
   const ends = [
-    `${s.from}${s.depart ? ` ${fmtClock(s.depart)}` : ""}`,
-    `${s.to}${s.arrive ? ` ${fmtClock(s.arrive)}${plus > 0 ? ` +${plus}` : ""}` : ""}`,
+    `${s.from ?? "?"}${when(s.depart)}`,
+    `${s.to ?? "?"}${when(s.arrive, plus)}`,
   ].join(" → ");
-  return [segmentLabel(s), ends, mins ? fmtDuration(mins) : "", s.aircraft, s.cabin].filter(Boolean).join(" · ");
+  return [segmentLabel(s), ends, !s.depart && s.window ? `any day ${fmtWindow(s.window)}` : "", mins ? fmtDuration(mins) : "", s.aircraft, s.cabin]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 /** "CI 21", or the operator's name when there is no flight number. */
 export function segmentLabel(s: Segment): string {
   return s.airline && s.number ? `${s.airline} ${s.number}` : s.carrier ?? "";
+}
+
+// A place in route text that is really a placeholder ("next destination TBD").
+const PLACEHOLDER = /\b(?:TBD|TBC|next destination)\b/i;
+
+/**
+ * The places named in a route, in order: "A → B → C" (also "->", "–", "—"), or an
+ * IATA chain written with hyphens ("SPU-ZAG-DBV"). A placeholder ("next destination
+ * TBD") comes back as undefined, so it shows as "not decided" instead of as text.
+ * Anything it can't read comes back empty.
+ */
+export function routePlaces(route: string): (string | undefined)[] {
+  const base = route.replace(/\s+via\s+.*$/i, "").replace(/\s*·.*$/, "").trim();
+  let parts = base.split(/\s*(?:→|->|–|—)\s*/).map((p) => p.trim()).filter(Boolean);
+  if (parts.length < 2) {
+    const chain = base.split("-").map((p) => p.trim());
+    parts = chain.length >= 2 && chain.every((p) => /^[A-Z]{3}$/.test(p)) ? chain : [];
+  }
+  return parts.map((p) => (PLACEHOLDER.test(p) ? undefined : p));
+}
+
+/**
+ * Blank hops for a transport row that has no segments, built from its route, so
+ * every row draws the same structured tile (places known, times still empty). A
+ * route that can't be read gives one hop with no places.
+ */
+export function derivedSegments(route: string): Segment[] {
+  const places = routePlaces(route);
+  if (places.length < 2) return [{}];
+  return places.slice(1).map((to, i) => ({ from: places[i], to }));
 }

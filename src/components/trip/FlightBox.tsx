@@ -1,6 +1,7 @@
 import type { FlightGroup } from "../../lib/tripLogic";
 import { StatusToggle } from "./StatusToggle";
-import type { FlightLeg, ResolvedDay, Status } from "../../lib/types";
+import type { FlightLeg, Group, ResolvedDay, Status } from "../../lib/types";
+import { WhoPill } from "./WhoPill";
 import { AIRLINES, airlineLogoUrl, legAirline } from "../../lib/airlines";
 import { AddToCalendar } from "./AddToCalendar";
 import { legUrl } from "../../lib/calendar";
@@ -8,11 +9,13 @@ import { ShareLinkButton } from "./ShareLinkButton";
 import { ConfirmationChip } from "./ConfirmationChip";
 import { SegmentRow } from "./SegmentRow";
 import { TbdLine } from "./TbdLine";
-import { fmtDuration, layoverMin } from "../../lib/segments";
+import { derivedSegments, fmtDuration, layoverMin } from "../../lib/segments";
 import { missingTransportFields } from "../../lib/tbd";
 
 interface Props {
   group: FlightGroup;
+  // For the who pill on a row without a title (a titled row already names its travelers).
+  groups?: Group[];
   onToggle: (ids: string[], status: Status) => void;
   day?: ResolvedDay;
   dayNumber?: number;
@@ -40,17 +43,25 @@ function AirlineChip({ leg }: { leg: FlightLeg }) {
   );
 }
 
-export function FlightBox({ group, onToggle, day, dayNumber = 0, tileId, gapReason }: Props) {
+export function FlightBox({ group, groups, onToggle, day, dayNumber = 0, tileId, gapReason }: Props) {
   const status: Status = group.statuses.includes("needed") ? "needed" : "booked";
-  const segments = group.segments || [];
-  // Structured segments replace the legacy legs/layovers/detail text.
-  const legs = segments.length ? [] : group.legs || [];
+  const legs = group.segments?.length ? [] : group.legs || [];
+  // Every transport row draws this one tile. A row with no segments yet gets blank
+  // hops built from its route (places known, times empty), so nothing falls back to
+  // a plain text card; legacy `legs` keep their own rows.
+  const derived = !group.segments?.length && !legs.length;
+  const segments = group.segments?.length ? group.segments : derived ? derivedSegments(group.route) : [];
 
   return (
-    <div className="flight-box" id={tileId}>
+    <div className={`flight-box${status === "needed" ? " flight-box-open" : ""}${group.tentative ? " flight-box-maybe" : ""}`} id={tileId}>
       <div className="flight-box-head">
         <span className="flight-box-title">{group.title || group.route}</span>
+        {group.tentative && <span className="maybe-pill">Maybe</span>}
         {gapReason && <span className="gap-reason">{gapReason}</span>}
+        {groups && !group.title && day && (() => {
+          const who = [...new Set(group.who)];
+          return <WhoPill who={who.length === 1 ? who[0] : who} groups={groups} date={day.date} />;
+        })()}
         <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
           {group.price && <span className="flight-box-price">{group.price}</span>}
           {group.confirmation && <ConfirmationChip code={group.confirmation} />}
@@ -67,7 +78,7 @@ export function FlightBox({ group, onToggle, day, dayNumber = 0, tileId, gapReas
           </div>
         );
       })}
-      {segments.length > 0 && group.detail && <div className="fl-meta">{group.detail}</div>}
+      {(segments.length > 0 || derived) && group.detail && <div className="fl-meta">{group.detail}</div>}
       {legs.map((leg, i) => (
         <div key={i}>
           <div className="flight-leg">
@@ -84,7 +95,7 @@ export function FlightBox({ group, onToggle, day, dayNumber = 0, tileId, gapReas
           {group.layovers?.[i] && <div className="fl-layover">{group.layovers[i]}</div>}
         </div>
       ))}
-      {status === "needed" && <TbdLine fields={missingTransportFields(group)} />}
+      {status === "needed" && !legs.length && <TbdLine fields={missingTransportFields({ mode: group.mode, segments })} />}
     </div>
   );
 }

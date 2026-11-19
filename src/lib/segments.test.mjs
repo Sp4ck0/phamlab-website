@@ -3,7 +3,7 @@
 //   esbuild src/lib/segments.test.mjs --bundle --platform=node --format=esm --outfile=/tmp/segments.test.mjs
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { dayOffset, durationMin, fmtClock, fmtDate, fmtDuration, layoverMin, segmentLabel, segmentLine } from './segments.ts';
+import { dayOffset, derivedSegments, durationMin, fmtClock, fmtDate, fmtDuration, fmtWindow, hasTime, layoverMin, routePlaces, segmentLabel, segmentLine } from './segments.ts';
 import { segmentUrl } from './calendar.ts';
 import { mergeFlightsByRoute } from './tripLogic.ts';
 
@@ -69,6 +69,37 @@ test('a ferry (own mode, no airport zones) takes its duration from the wall cloc
   const q = new URL(segmentUrl(ferry, 'flight', day, 0, { first: true, last: true })).searchParams; // the segment's own mode wins
   assert.equal(q.get('text'), '⛴️ Seatran: Thong Sala → Bangrak Pier');
   assert.equal(q.get('dates'), '20230308T160000/20230308T164500');
+});
+
+test('a hop that is only partly planned: a day is not a time, and nothing is computed from it', () => {
+  const dayOnly = { from: 'SEA', to: 'TPE', depart: '2026-11-04', arrive: '2026-11-05' };
+  assert.equal(hasTime('2026-11-04T09:00'), true);
+  assert.equal(hasTime('2026-11-04'), false);
+  assert.equal(hasTime(undefined), false);
+  assert.equal(durationMin(dayOnly), null);
+  assert.equal(layoverMin(dayOnly, { ...dayOnly, from: 'TPE', to: 'BKK' }), null);
+  assert.equal(segmentUrl(dayOnly, 'flight', { date: '2026-11-04', city: 'Seattle', country: 'US' }, 0, { first: true }), null); // no time, no calendar event
+  assert.equal(segmentLine(dayOnly), 'SEA Wed, Nov 4 → TPE Thu, Nov 5');
+  assert.equal(segmentLine({ from: 'VCE', to: 'OSL', window: { from: '2027-02-10', to: '2027-02-12' } }), 'VCE → OSL · any day Feb 10–12');
+});
+
+test('a place not decided yet is a question mark in text, and a flexible window reads naturally', () => {
+  assert.equal(segmentLine({ from: 'Upper Engadin' }), 'Upper Engadin → ?');
+  assert.equal(segmentLine({}), '? → ?');
+  assert.equal(fmtWindow({ from: '2027-02-10', to: '2027-02-12' }), 'Feb 10–12');
+  assert.equal(fmtWindow({ from: '2027-02-28', to: '2027-03-02' }), 'Feb 28 – Mar 2');
+  assert.equal(fmtWindow({ from: '2027-02-10', to: '2027-02-10' }), 'Feb 10');
+});
+
+test('hops are built from a route when a row has no segments yet, so every row can be one tile', () => {
+  assert.deepEqual(routePlaces('Narvik → Kiruna'), ['Narvik', 'Kiruna']);
+  assert.deepEqual(routePlaces('OSL → EVE → Narvik'), ['OSL', 'EVE', 'Narvik']);
+  assert.deepEqual(routePlaces('SPU-ZAG-DBV'), ['SPU', 'ZAG', 'DBV']);
+  assert.deepEqual(routePlaces('Zamora → next destination TBD'), ['Zamora', undefined]); // a placeholder is "not decided", not a place
+  assert.deepEqual(routePlaces('Thong Sala-BKK via ferry'), []); // not readable: no guess
+  assert.deepEqual(derivedSegments('OSL → EVE → Narvik'), [{ from: 'OSL', to: 'EVE' }, { from: 'EVE', to: 'Narvik' }]);
+  assert.deepEqual(derivedSegments('Upper Engadin → next destination TBD'), [{ from: 'Upper Engadin', to: undefined }]);
+  assert.deepEqual(derivedSegments('Synthetic route'), [{}]); // one blank hop with no places
 });
 
 test('two different flights on the same route and day are not merged', () => {
