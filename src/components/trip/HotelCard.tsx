@@ -82,13 +82,15 @@ export function HotelCard({ g, status: s, stay, gapAfter, groups, date, days, da
         </div>
       )}
       <HotelFacts g={g} stay={stay} status={s} />
-      {g.detail && <div className="cmeta"><Linkify text={g.detail} /></div>}
-      {s === "needed" && <TbdLine fields={missingHotelFields(g)} area={placeholder ? undefined : g.area} />}
-      {s === "needed" && !g.tentative && placeholder && g.area && (
-        <div className="tile-links">
-          <a href={hotelSearchUrl(g.area, stay?.checkIn, stay?.checkOut)} target="_blank" rel="noopener noreferrer">Search hotels here</a>
-        </div>
+      {s === "needed" && (
+        <TbdLine fields={missingHotelFields(g)} area={placeholder ? undefined : g.area}>
+          {!g.tentative && placeholder && g.area && (
+            <a href={hotelSearchUrl(g.area, stay?.checkIn, stay?.checkOut)} target="_blank" rel="noopener noreferrer">Search hotels here</a>
+          )}
+        </TbdLine>
       )}
+      {/* The free-form note goes last: facts and what is open come first. */}
+      {g.detail && <div className="cmeta"><Linkify text={g.detail} /></div>}
       {onCollapse && (
         <button type="button" className="stay-collapse" onClick={onCollapse} aria-label={`Collapse ${nm}`}>Show less ▴</button>
       )}

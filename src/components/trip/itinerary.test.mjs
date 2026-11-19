@@ -312,7 +312,7 @@ test('structured segments render as boarding-pass rows with a computed layover a
 test('hotel tiles show their stay facts and a tap-to-reveal confirmation; a not-chosen hotel says what is to be decided', async () => {
   const { resolveDays } = await import('../../lib/tripLogic.ts');
   const booked = { who: 'all', name: 'Synthetic Hotel', address: 'Synthetic street', status: 'booked', checkInTime: '15:00', checkOutTime: '11:00', room: 'Synthetic twin', price: { amount: 131.03, currency: 'USD', per: 'night' }, confirmation: 'SYNTH1', detail: 'Synthetic leftover' };
-  const open = { who: 'all', name: 'TBD — Synthetic hotel', status: 'needed', area: 'Synthetic area' };
+  const open = { who: 'all', name: 'TBD — Synthetic hotel', status: 'needed', area: 'Synthetic area', detail: 'Synthetic free-form note' };
   // Two nights, so the first day is the check-in day and not also the check-out day.
   const days = resolveDays({ days: [{ ...day, hotels: [booked, open] }, { ...day, date: '2040-01-03', hotels: [{ ...booked, checkInTime: undefined, confirmation: undefined }] }] });
   const view = mount(React.createElement(DayCard, { ...props, day: days[0], expanded: true, onToggle() {} }));
@@ -335,10 +335,13 @@ test('hotel tiles show their stay facts and a tap-to-reveal confirmation; a not-
     assert.equal(undecided.querySelector('.tx-state.open').textContent, 'Not booked'); // amber state text, like the proposal
     assert.ok(undecided.classList.contains('miss')); // the dashed amber tile
     assert.deepEqual([...undecided.querySelectorAll('.tbd-chip')].map((c) => c.textContent), ['hotel', 'check-in time', 'check-out time']);
-    const search = undecided.querySelector('.tile-links a');
+    const search = undecided.querySelector('.tbd .tbd-action a'); // on the same row as "to be decided"
     assert.equal(search.textContent, 'Search hotels here');
     assert.ok(new URL(search.href).searchParams.get('q').startsWith('Hotels in Synthetic area'));
-    assert.equal(undecided.querySelector('.tile-links button'), null); // booking is ticked with the check mark at the top right
+    assert.equal(undecided.querySelector('.tile-links'), null); // no separate links row; booking is the check mark at the top right
+    const note = [...undecided.querySelectorAll('.cmeta')].find((m) => m.textContent === 'Synthetic free-form note');
+    assert.ok(note.compareDocumentPosition(undecided.querySelector('.tbd')) & 2); // the note comes after the to-be-decided row (preceding bit)
+    assert.equal(undecided.lastElementChild, note); // and is the last thing on the tile
     assert.ok(!stay.querySelector('.tile-links')); // a booked tile has no actions to book
   } finally { view.close(); }
 });
