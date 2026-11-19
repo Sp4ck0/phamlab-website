@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/api";
 import type { Id } from "@convex/dataModel";
 import { useAccessCode } from "../hooks/useAccessCode";
+import { serverMessage } from "../lib/serverError";
 import { SettingsSection } from "./SettingsSection";
 
 type Connection = {
@@ -15,9 +16,11 @@ type Connection = {
 
 function errorText(e: unknown) {
   const msg = e instanceof Error ? e.message : "";
-  // Convex wraps server errors; keep just the message we threw.
+  // Production redacts the text of a plain Error, so the backend throws a
+  // ConvexError for what people should read (serverMessage). The regex still
+  // covers a dev deployment, which shows plain Errors.
   const m = msg.match(/Uncaught Error: (.*?)(?: at |\n|$)/);
-  return m?.[1] ?? "Something went wrong";
+  return serverMessage(e, m?.[1] ?? "Something went wrong");
 }
 
 const day = (ms: number) => new Date(ms).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
