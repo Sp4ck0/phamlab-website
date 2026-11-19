@@ -114,11 +114,10 @@ export function FlightBox({ group, groups, onToggle, day, dayNumber = 0, tileId,
         </div>
       ))}
       {status === "needed" && !legs.length && <TbdLine fields={missingTransportFields({ mode: group.mode, segments })} />}
-      {(ticket || search || (ground && status === "needed" && !group.tentative)) && (
+      {(ticket || search) && (
         <div className="tile-links">
           {ticket && <a href={ticket} target="_blank" rel="noopener noreferrer">Ticket</a>}
           {search && <a href={search} target="_blank" rel="noopener noreferrer">Search this route</a>}
-          {ground && status === "needed" && !group.tentative && <button type="button" onClick={() => onToggle(group.ids, "booked")}>Mark as booked</button>}
         </div>
       )}
     </div>

@@ -338,7 +338,7 @@ test('hotel tiles show their stay facts and a tap-to-reveal confirmation; a not-
     const search = undecided.querySelector('.tile-links a');
     assert.equal(search.textContent, 'Search hotels here');
     assert.ok(new URL(search.href).searchParams.get('q').startsWith('Hotels in Synthetic area'));
-    assert.equal(undecided.querySelector('.tile-links button').textContent, 'Mark as booked');
+    assert.equal(undecided.querySelector('.tile-links button'), null); // booking is ticked with the check mark at the top right
     assert.ok(!stay.querySelector('.tile-links')); // a booked tile has no actions to book
   } finally { view.close(); }
 });
@@ -713,7 +713,7 @@ test('a booked train, ferry or bus has a mode and state header, the operator as 
   try { assert.equal(view2.container.querySelector('.tile-links'), null); } finally { view2.close(); }
 });
 
-test('an unbooked train shows its route as the title, a route search and Mark as booked; the flight tile is unchanged', async () => {
+test('an unbooked train shows its route as the title, a route search; the check mark books it; the flight tile is unchanged', async () => {
   const { resolveDays, flightId } = await import('../../lib/tripLogic.ts');
   const open = { who: 'all', route: 'Synthetic City → Synthetic Town', mode: 'train', status: 'needed' };
   const flight = { who: 'all', route: 'Synthetic F → Synthetic G', status: 'booked', title: 'Synthetic flight title' };
@@ -724,12 +724,12 @@ test('an unbooked train shows its route as the title, a route search and Mark as
     const [train, plane] = view.container.querySelectorAll('.flight-box');
     assert.equal(train.querySelector('.tx-state').textContent, 'Not booked');
     assert.equal(train.querySelector('.tx-title').textContent, 'Synthetic City → Synthetic Town');
-    const [search, mark] = [train.querySelector('.tile-links a'), train.querySelector('.tile-links button')];
+    const search = train.querySelector('.tile-links a');
+    assert.equal(train.querySelector('.tile-links button'), null); // no Mark as booked: the check mark does it
     assert.equal(search.textContent, 'Search this route');
     assert.equal(new URL(search.href).searchParams.get('travelmode'), 'transit');
-    assert.equal(mark.textContent, 'Mark as booked');
-    act(() => mark.click());
-    assert.deepEqual(calls[0], [[flightId(day.date, open)], 'booked']);
+    act(() => train.querySelector('.status').click());
+    assert.deepEqual(calls[0], [[flightId(day.date, open)], 'needed']); // the toggle reports the current state; the page flips it
     // A flight keeps its own header: no mode pill or state text, and no booking links.
     assert.equal(plane.querySelector('.ctype'), null);
     assert.equal(plane.querySelector('.tx-state'), null);
