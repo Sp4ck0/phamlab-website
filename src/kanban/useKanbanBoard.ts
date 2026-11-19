@@ -1,8 +1,9 @@
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/api";
 import type { Id } from "@convex/dataModel";
 import { useAccessCode } from "../hooks/useAccessCode";
+import { serverMessage } from "../lib/serverError";
 import { DONE_PREVIEW, uploadImages } from "./lib";
 import type { Board, Card, LaneId, QuickAddDraft } from "./types";
 
@@ -62,6 +63,14 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined, { allDo
   const addNoteImagesMut = useMutation(api.kanban.addNoteImages);
   const removeNoteImageMut = useMutation(api.kanban.removeNoteImage);
 
+  // Edits the user doesn't wait on (drag, edit a field, delete) have no form to
+  // show a failure in, so a failed one lands here and the page shows it.
+  const [actionError, setActionError] = useState("");
+  const report = (call: Promise<unknown>) => {
+    setActionError("");
+    call.catch((e) => setActionError(serverMessage(e, "Couldn't save that change — try again.")));
+  };
+
   const board: Board | null = useMemo(() => {
     if (!result?.authorized || !result.board) return null;
     const cards: Record<string, Card> = {};
@@ -94,17 +103,17 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined, { allDo
 
   function setLanes(update: (lanes: Board["lanes"]) => Board["lanes"]) {
     if (!code || !boardId || !board) return;
-    void setLanesMut({ code, boardId, lanes: update(board.lanes) as Board["lanes"] });
+    report(setLanesMut({ code, boardId, lanes: update(board.lanes) as Board["lanes"] }));
   }
 
   function updateCard(id: string, patch: Partial<Card>) {
     if (!code || !boardId) return;
-    void updateCardMut({ code, boardId, cardId: id as Id<"kanban_cards">, ...patch });
+    report(updateCardMut({ code, boardId, cardId: id as Id<"kanban_cards">, ...patch }));
   }
 
   function removeCard(id: string) {
     if (!code || !boardId) return;
-    void removeCardMut({ code, boardId, cardId: id as Id<"kanban_cards"> });
+    report(removeCardMut({ code, boardId, cardId: id as Id<"kanban_cards"> }));
   }
 
   // Images go to Convex storage first (resized in the browser), then ride
@@ -138,17 +147,17 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined, { allDo
 
   function removeNoteImage(id: string, imageId: string) {
     if (!code || !boardId) return;
-    void removeNoteImageMut({
+    report(removeNoteImageMut({
       code,
       boardId,
       cardId: id as Id<"kanban_cards">,
       imageId: imageId as Id<"_storage">,
-    });
+    }));
   }
 
   function removeReply(id: string, replyId: string) {
     if (!code || !boardId) return;
-    void removeReplyMut({ code, boardId, cardId: id as Id<"kanban_cards">, replyId });
+    report(removeReplyMut({ code, boardId, cardId: id as Id<"kanban_cards">, replyId }));
   }
 
   function markRead(id: string) {
@@ -169,5 +178,7 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined, { allDo
     addNoteImages,
     removeNoteImage,
     markRead,
+    actionError,
+    clearActionError: () => setActionError(""),
   };
 }
