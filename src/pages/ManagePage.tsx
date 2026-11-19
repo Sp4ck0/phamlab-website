@@ -33,6 +33,26 @@ interface CodeRow {
 // Off → read-only → read & write → off.
 const NEXT_MCP = { null: "read", read: "write", write: null } as const;
 
+// An edit on this page that the server can refuse (say, a name over the length
+// limit). `run` keeps the row busy meanwhile and, on failure, keeps the server's
+// reason in `error` for the caller to show; nothing else surfaces it.
+function useGuardedAction() {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  async function run(action: () => Promise<unknown>) {
+    setBusy(true);
+    setError("");
+    try {
+      await action();
+    } catch (e) {
+      setError(serverMessage(e, "Couldn't save that change — try again."));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return { busy, error, run };
+}
+
 export function ManagePage() {
   const { code } = useAccessCode();
   const isAuthorized = useQuery(api.management.checkManagementAccess, code ? { code } : "skip");
@@ -231,12 +251,11 @@ function WhoHasAccess({
   codes: CodeRow[];
 }) {
   const upsert = useMutation(api.management.upsertAccessCode);
-  const [busy, setBusy] = useState(false);
+  const { busy, error, run } = useGuardedAction();
 
   async function toggleFlag(row: CodeRow, flag: "datingAccess" | "accentAccess") {
-    setBusy(true);
-    try {
-      await upsert({
+    await run(() =>
+      upsert({
         code,
         id: row._id as any,
         targetCode: row.code,
@@ -246,16 +265,13 @@ function WhoHasAccess({
         accentAccess: flag === "accentAccess" ? !row.accentAccess : row.accentAccess,
         name: row.name,
         active: row.active,
-      });
-    } finally {
-      setBusy(false);
-    }
+      })
+    );
   }
 
   async function cycleMcp(row: CodeRow) {
-    setBusy(true);
-    try {
-      await upsert({
+    await run(() =>
+      upsert({
         code,
         id: row._id as any,
         targetCode: row.code,
@@ -265,18 +281,15 @@ function WhoHasAccess({
         mcpAccess: NEXT_MCP[`${row.mcpAccess}`],
         name: row.name,
         active: row.active,
-      });
-    } finally {
-      setBusy(false);
-    }
+      })
+    );
   }
 
   async function toggle(row: CodeRow, kind: "tripIds" | "boardIds", id: string) {
     const current = row[kind];
     const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
-    setBusy(true);
-    try {
-      await upsert({
+    await run(() =>
+      upsert({
         code,
         id: row._id as any,
         targetCode: row.code,
@@ -285,10 +298,8 @@ function WhoHasAccess({
         datingAccess: row.datingAccess,
         name: row.name,
         active: row.active,
-      });
-    } finally {
-      setBusy(false);
-    }
+      })
+    );
   }
 
   function renderRows(items: { id: string; label: string }[], kind: "tripIds" | "boardIds") {
@@ -324,6 +335,11 @@ function WhoHasAccess({
       <h2 className="section-title" style={{ marginTop: 40 }}>
         Who has access
       </h2>
+      {error && (
+        <p role="alert" style={{ color: "var(--danger)", fontSize: 13, margin: "10px 0 0" }}>
+          {error}
+        </p>
+      )}
       <div style={{ overflowX: "auto", marginTop: 14 }}>
         <table style={{ borderCollapse: "collapse", fontSize: 14 }}>
           <thead>
@@ -434,13 +450,12 @@ const cellStyle: CSSProperties = { padding: "6px 10px", borderBottom: "1px solid
 function CodeTableRow({ code, row }: { code: string; row: CodeRow }) {
   const upsert = useMutation(api.management.upsertAccessCode);
   const del = useMutation(api.management.deleteAccessCode);
-  const [busy, setBusy] = useState(false);
+  const { busy, error, run } = useGuardedAction();
   const [revealed, setRevealed] = useState(false);
 
   async function toggleActive() {
-    setBusy(true);
-    try {
-      await upsert({
+    await run(() =>
+      upsert({
         code,
         id: row._id as any,
         targetCode: row.code,
@@ -449,25 +464,25 @@ function CodeTableRow({ code, row }: { code: string; row: CodeRow }) {
         datingAccess: row.datingAccess,
         name: row.name,
         active: !row.active,
-      });
-    } finally {
-      setBusy(false);
-    }
+      })
+    );
   }
 
   async function remove() {
-    setBusy(true);
-    try {
-      await del({ code, id: row._id as any });
-    } finally {
-      setBusy(false);
-    }
+    await run(() =>
+      del({ code, id: row._id as any })
+    );
   }
 
   return (
     <tr style={{ opacity: busy ? 0.6 : 1 }}>
       <th scope="row" style={{ ...cellStyle, textAlign: "left", fontWeight: 500 }}>
         {row.name}
+        {error && (
+          <div role="alert" style={{ color: "var(--danger)", fontSize: 12, fontWeight: 400 }}>
+            {error}
+          </div>
+        )}
       </th>
       <td style={{ ...cellStyle, fontFamily: "monospace", letterSpacing: 1 }}>
         {revealed ? row.code : `${row.code.charAt(0)}${"•".repeat(8)}`}
