@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { resolveDays } from './tripLogic.ts';
-import { directionsUrl, fmtMoney, gapMinutes, priceText, stayInfo } from './stay.ts';
+import { budgetText, cancelStatus, directionsUrl, fmtMoney, gapMinutes, phoneHref, priceText, stayInfo } from './stay.ts';
 
 const day = (date, hotels) => ({ date, city: 'Synthetic city', country: 'JP', flights: [], hotels, acts: ['x'], highlight: 'x' });
 const H = (name, extra = {}) => ({ who: 'all', name, address: 'Synthetic street', status: 'booked', ...extra });
@@ -49,4 +49,35 @@ test('directions go to the exact listing when there is a place id', () => {
   assert.equal(u.searchParams.get('destination'), 'Synthetic Hotel, Synthetic street');
   assert.equal(u.searchParams.get('destination_place_id'), 'synthetic-id');
   assert.equal(new URL(directionsUrl({ name: 'Synthetic Hotel' })).searchParams.has('destination_place_id'), false);
+});
+
+const at = (iso) => Date.parse(`${iso}:00`); // a fixed "now", in the same local-wall-clock terms the chip uses
+
+test('free cancellation: green with time to spare, amber inside three days (in hours under a day), gray once it has passed', () => {
+  const until = '2026-11-22T23:59';
+  assert.deepEqual(cancelStatus(until, at('2026-11-12T12:00')), { state: 'ok', text: 'Free cancel until Sun, Nov 22 · 23:59 (11 days)' });
+  assert.deepEqual(cancelStatus(until, at('2026-11-20T12:00')), { state: 'soon', text: 'Free cancel ends in 3 days · Sun, Nov 22 · 23:59' });
+  assert.deepEqual(cancelStatus(until, at('2026-11-21T12:00')), { state: 'soon', text: 'Free cancel ends in 2 days · Sun, Nov 22 · 23:59' });
+  assert.deepEqual(cancelStatus(until, at('2026-11-22T20:00')), { state: 'soon', text: 'Free cancel ends in 4 h · Sun, Nov 22 · 23:59' });
+  assert.deepEqual(cancelStatus(until, at('2026-11-22T23:59')), { state: 'ended', text: 'Cancellation window ended' }); // the deadline itself is over
+  assert.equal(cancelStatus(until, at('2026-12-01T00:00')).state, 'ended');
+});
+
+test('a deadline that is only a day means the end of that day', () => {
+  assert.equal(cancelStatus('2026-11-22', at('2026-11-22T12:00')).state, 'soon');
+  assert.equal(cancelStatus('2026-11-22', at('2026-11-23T00:01')).state, 'ended');
+  assert.equal(cancelStatus('2026-11-22', at('2026-11-12T12:00')).text, 'Free cancel until Sun, Nov 22 (11 days)');
+});
+
+test('a phone becomes a tel: link without its spaces and punctuation', () => {
+  assert.equal(phoneHref('+34 935 52 96 96'), 'tel:+34935529696');
+  assert.equal(phoneHref('+86-21-6882 8888'), 'tel:+862168828888');
+  assert.equal(phoneHref('(212) 555-0100'), 'tel:2125550100');
+});
+
+test('budget: the target as given, with the other basis when the length is known, never guessed otherwise', () => {
+  assert.equal(budgetText({ amount: 400, currency: 'USD', per: 'night' }, 4), 'Budget ≈ $400.00 / night · ≈ $1,600.00 for 4 nights');
+  assert.equal(budgetText({ amount: 400, currency: 'USD', per: 'night' }, undefined), 'Budget ≈ $400.00 / night');
+  assert.equal(budgetText({ amount: 1600, currency: 'USD', per: 'stay' }, 4), 'Budget ≈ $1,600.00 for the stay · ≈ $400 / night');
+  assert.equal(budgetText({ amount: 400, currency: 'USD' }, 4), 'Budget ≈ $400.00'); // basis unknown: not multiplied or divided
 });

@@ -2,6 +2,7 @@
 // costs per night, and where to get directions. Everything here is derived from
 // data the trip already has; nothing is typed in.
 import { stayEndDate, stayStartIndex } from "./calendar";
+import { fmtDate, fmtHm } from "./segments";
 import type { HotelPrice, Place, ResolvedDay } from "./types";
 
 export interface StayInfo {
@@ -70,4 +71,48 @@ export function directionsUrl(p: Place): string {
   url.searchParams.set("destination", [p.name, p.address].filter(Boolean).join(", "));
   if (p.placeId) url.searchParams.set("destination_place_id", p.placeId);
   return url.toString();
+}
+
+export interface CancelStatus {
+  state: "ok" | "soon" | "ended";
+  text: string;
+}
+
+/**
+ * The free-cancellation chip: plenty of time (green), inside three days (amber,
+ * counted in days or, under a day, hours), or passed (gray). The deadline is local
+ * to the hotel; it is compared as a wall-clock time in the reader's own zone, which
+ * is close enough for "days left". A day alone means the end of that day.
+ */
+export function cancelStatus(until: string, now: number): CancelStatus {
+  const hasTime = until.includes("T");
+  const ms = Date.parse(`${hasTime ? until : `${until}T23:59`}:00`);
+  const label = `${fmtDate(until)}${hasTime ? ` · ${fmtHm(until.split("T")[1])}` : ""}`;
+  if (ms <= now) return { state: "ended", text: "Cancellation window ended" };
+  const hours = (ms - now) / 36e5;
+  if (hours < 24) return { state: "soon", text: `Free cancel ends in ${Math.max(1, Math.round(hours))} h · ${label}` };
+  const days = Math.ceil(hours / 24);
+  if (hours <= 72) return { state: "soon", text: `Free cancel ends in ${days} days · ${label}` };
+  return { state: "ok", text: `Free cancel until ${label} (${days} days)` };
+}
+
+/** A tel: link from a phone as typed ("+34 935 52 96 96" gives "tel:+34935529696"). */
+export function phoneHref(phone: string): string {
+  return `tel:${phone.replace(/[^\d+]/g, "")}`;
+}
+
+/**
+ * The budget chip for a stay that isn't booked: the target as given, with the
+ * other basis when the length is known ("≈ $400 / night · ≈ $1,600 for 4 nights").
+ * `per` unset means we don't know what it covers, so it is shown as it is.
+ */
+export function budgetText(b: HotelPrice, nights: number | undefined): string {
+  const money = (n: number, round = false) => fmtMoney(n, b.currency, round);
+  if (b.per === "night") {
+    return nights ? `Budget ≈ ${money(b.amount)} / night · ≈ ${money(b.amount * nights)} for ${nights} ${nights === 1 ? "night" : "nights"}` : `Budget ≈ ${money(b.amount)} / night`;
+  }
+  if (b.per === "stay") {
+    return nights ? `Budget ≈ ${money(b.amount)} for the stay · ≈ ${money(b.amount / nights, true)} / night` : `Budget ≈ ${money(b.amount)} for the stay`;
+  }
+  return `Budget ≈ ${money(b.amount)}`;
 }

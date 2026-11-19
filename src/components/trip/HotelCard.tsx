@@ -2,7 +2,7 @@ import { useState } from "react";
 import { googleMapsUrl } from "../../lib/mapPoints";
 import { hotelUrl } from "../../lib/calendar";
 import { fmtDate, fmtDuration, fmtHm } from "../../lib/segments";
-import { directionsUrl, type StayInfo } from "../../lib/stay";
+import { directionsUrl, phoneHref, type StayInfo } from "../../lib/stay";
 import { missingHotelFields } from "../../lib/tbd";
 import type { HotelGroup } from "../../lib/tripLogic";
 import type { Group, ResolvedDay, Status } from "../../lib/types";
@@ -62,6 +62,7 @@ export function HotelCard({ g, status: s, stay, gapAfter, groups, date, days, da
             </a>
             <ShowOnMap place={place} />
             <a className="stay-dir" href={directionsUrl(place)} target="_blank" rel="noopener noreferrer">Directions</a>
+            {g.phone && <a className="stay-dir" href={phoneHref(g.phone)} title={g.phone}>Call</a>}
           </>
         ) : (
           nm
@@ -75,7 +76,7 @@ export function HotelCard({ g, status: s, stay, gapAfter, groups, date, days, da
           {fmtDuration(gapAfter.minutes)} between check-out at 📍 {gapAfter.name}{gapAfter.checkOutTime ? ` (${fmtHm(gapAfter.checkOutTime)})` : ""} and check-in here
         </div>
       )}
-      <HotelFacts g={g} stay={stay} />
+      <HotelFacts g={g} stay={stay} status={s} />
       {g.detail && <div className="cmeta"><Linkify text={g.detail} /></div>}
       {s === "needed" && <TbdLine fields={missingHotelFields(g)} area={g.area} />}
     </div>
