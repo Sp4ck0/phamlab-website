@@ -6,6 +6,8 @@ import { DOW, MON, actParts, fmtShort, gapLabel, mergeFlightsByRoute, mergeHotel
 import type { FlightGroup, HotelGroup } from "../../lib/tripLogic";
 import { FlightBox } from "./FlightBox";
 import { HotelCard, HotelSlim } from "./HotelCard";
+import { countdownText, nextUp } from "../../lib/nextUp";
+import { useNow } from "../../lib/useNow";
 import { gapMinutes, stayInfo } from "../../lib/stay";
 import { TaskRow } from "./TaskRow";
 import { TourBox } from "./TourBox";
@@ -128,6 +130,10 @@ export function DayCard({
   const [editingAct, setEditingAct] = useState<number | null>(null);
   const { slug } = useParams<{ slug: string }>();
   const showFocus = useShowAiFocus();
+  // While the trip is under way, the next departure or check-in says how long is left.
+  const now = useNow();
+  const up = days ? nextUp(days, now) : null;
+  const upText = (ids: string[]) => (up && ids.includes(up.id) ? countdownText(up, now) : undefined);
   const collapsed = !expanded;
   // A collapsed panel is hidden="until-found": still in the page, so Ctrl+F finds its text.
   // The browser fires beforematch on it just before revealing a match; open the day to keep it shown.
@@ -201,7 +207,7 @@ export function DayCard({
     const wait = leaving ? gapMinutes(leaving.checkOutTime, g.checkInTime) : null;
     const gapAfter = leaving && wait !== null ? { name: leaving.name, minutes: wait, checkOutTime: leaving.checkOutTime } : undefined;
     const props = {
-      g, status: s, stay, gapAfter, groups, date: d.date, days, dayNumber, gapsOnly, onToggle,
+      g, status: s, stay, gapAfter, groups, date: d.date, days, dayNumber, gapsOnly, onToggle, nextUp: upText(g.srcs),
       tileId: state === "gone" ? undefined : tileDomId(rowId, g.srcs[0]),
     };
     // A middle night of a booked stay is one slim line, not a full card repeated every night.
@@ -259,7 +265,7 @@ export function DayCard({
         <>
           {flightChanges.map(({ item: g, state }, gi) =>
             mark(state, `fbm${gi}`, (
-              <FlightBox key={`fb${gi}`} group={g} groups={groups} onToggle={onToggle} day={d} dayNumber={dayNumber} tileId={state === "gone" ? undefined : tileDomId(rowId, g.ids[0])} gapReason={flightGapReason(g)} />
+              <FlightBox key={`fb${gi}`} group={g} groups={groups} onToggle={onToggle} day={d} dayNumber={dayNumber} tileId={state === "gone" ? undefined : tileDomId(rowId, g.ids[0])} gapReason={flightGapReason(g)} nextUp={upText(g.ids)} />
             ))
           )}
 

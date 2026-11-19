@@ -1,6 +1,6 @@
 import { AIRLINES, airlineLogoUrl } from "../../lib/airlines";
 import { MODE_EMOJI, segmentUrl } from "../../lib/calendar";
-import { dayOffset, durationMin, fmtClock, fmtDate, fmtDuration, fmtWindow, hasTime, segmentLabel } from "../../lib/segments";
+import { dayOffset, durationMin, fmtClock, fmtDate, fmtDuration, fmtWindow, hasTime, segmentLabel, terminalText } from "../../lib/segments";
 import type { ResolvedDay, Segment, TransportMode } from "../../lib/types";
 import { AddToCalendar } from "./AddToCalendar";
 
@@ -25,7 +25,7 @@ export function SegmentRow({ seg, mode, day, dayNumber = 0, first, last }: Props
   const modeName = m === "flight" ? "" : m[0].toUpperCase() + m.slice(1);
   const mins = durationMin(seg);
   const plus = hasTime(seg.arrive) ? dayOffset(seg) : 0;
-  const chips = [seg.aircraft, seg.cabin].filter(Boolean);
+  const chips = [seg.aircraft, seg.cabin, seg.seat].filter(Boolean);
   // The day under a place when it isn't the card's own day, or when there is no time to say it.
   const depDate = seg.depart && ((day && seg.depart.slice(0, 10) !== day.date) || !hasTime(seg.depart)) ? fmtDate(seg.depart) : "";
   const arrDate = seg.arrive && (plus !== 0 || !hasTime(seg.arrive)) ? fmtDate(seg.arrive) : "";
@@ -34,7 +34,15 @@ export function SegmentRow({ seg, mode, day, dayNumber = 0, first, last }: Props
 
   const place = (p: string | undefined, terminal: string | undefined) =>
     p ? (
-      <div className="seg-place">{p}{terminal ? ` · ${terminal}` : ""}</div>
+      m === "flight" ? (
+        <div className="seg-place">{p}{terminal ? ` · ${terminal}` : ""}</div>
+      ) : (
+        // A train, ferry or bus: the place keeps its room, and the platform, pier or stop sits under it.
+        <>
+          <div className="seg-place">{p}</div>
+          {terminal && <div className="seg-terminal">{terminalText(m, terminal)}</div>}
+        </>
+      )
     ) : (
       <div className="seg-place seg-undecided">Not decided</div>
     );

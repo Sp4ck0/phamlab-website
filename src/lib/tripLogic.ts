@@ -217,6 +217,7 @@ export interface FlightGroup {
   layovers?: string[];
   segments?: Segment[];
   confirmation?: string;
+  ticketUrl?: string;
   tentative?: boolean; // maybe: only if every merged row is
   who: string[];
   ids: string[];
@@ -258,6 +259,7 @@ export function mergeFlightsByRoute(
         layovers: f.layovers,
         segments: f.segments,
         confirmation: f.confirmation,
+        ticketUrl: f.ticketUrl,
         tentative: f.tentative,
         who: [...ids],
         ids: [id],

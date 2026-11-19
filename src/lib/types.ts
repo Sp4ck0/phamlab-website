@@ -45,6 +45,7 @@ export interface Segment {
   toTerminal?: string;
   aircraft?: string;
   cabin?: string;
+  seat?: string; // "Coach 5 · 12A"; never exported
   durationMin?: number;
   note?: string;
 }
@@ -70,6 +71,7 @@ export interface Flight {
   segments?: Segment[];
   // Booking reference, shown behind a tap. Never part of the export.
   confirmation?: string;
+  ticketUrl?: string; // an https link; shown as "Ticket", never exported
 }
 
 // A named place: pinned on the trip map (by placeId if set, else address) and
@@ -155,7 +157,7 @@ export interface ActionItem {
 // One row of the Action Items list, derived by the backend (convex/travel/tasks.ts).
 // `kind` is why it exists, `scope` is when it applies.
 // `details` is a booked transport tile that still lacks a required field.
-export type TaskKind = "booking" | "plan" | "transport" | "details" | "consider" | "custom";
+export type TaskKind = "booking" | "plan" | "transport" | "details" | "deadline" | "consider" | "custom";
 export type Priority = "high" | "medium" | "low";
 export type Outcome = "chosen" | "dropped";
 export type Vote = "yes" | "no";
