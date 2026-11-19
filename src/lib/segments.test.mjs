@@ -37,16 +37,17 @@ test('layover is the wait between hops at the same airport only', () => {
 });
 
 test('formatting', () => {
-  assert.equal(fmtClock('2026-11-04T00:10'), '12:10 AM');
-  assert.equal(fmtClock('2026-11-04T12:00'), '12:00 PM');
-  assert.equal(fmtClock('2026-11-04T15:05'), '3:05 PM');
+  assert.equal(fmtClock('2026-11-04T00:10'), '00:10'); // 24-hour, zero-padded
+  assert.equal(fmtClock('2026-11-04T12:00'), '12:00');
+  assert.equal(fmtClock('2026-11-04T15:05'), '15:05');
+  assert.equal(fmtClock('2026-11-04T05:20'), '05:20');
   assert.equal(fmtDate('2026-11-04'), 'Wed, Nov 4');
   assert.equal(fmtDuration(790), '13h 10m');
   assert.equal(fmtDuration(180), '3h');
   assert.equal(fmtDuration(45), '45m');
   assert.equal(segmentLabel(overnight), 'CI 21');
   assert.equal(segmentLabel({ from: 'A', to: 'B', carrier: 'Seatran' }), 'Seatran');
-  assert.equal(segmentLine(overnight), 'CI 21 · SEA 12:10 AM → TPE 5:20 AM +1 · 13h 10m');
+  assert.equal(segmentLine(overnight), 'CI 21 · SEA 00:10 → TPE 05:20 +1 · 13h 10m');
 });
 
 test('calendar link uses the exact instants of each end', () => {
@@ -63,7 +64,7 @@ test('a ferry (own mode, no airport zones) takes its duration from the wall cloc
   const ferry = { from: 'Thong Sala', to: 'Bangrak Pier', mode: 'ferry', carrier: 'Seatran', depart: '2023-03-08T16:00', arrive: '2023-03-08T16:45' };
   assert.equal(durationMin(ferry), 45);
   assert.equal(durationMin({ ...ferry, mode: undefined }), null); // a flight with unknown zones is not guessed
-  assert.equal(segmentLine(ferry), 'Seatran · Thong Sala 4:00 PM → Bangrak Pier 4:45 PM · 45m');
+  assert.equal(segmentLine(ferry), 'Seatran · Thong Sala 16:00 → Bangrak Pier 16:45 · 45m');
   const day = { date: '2023-03-08', city: 'Ko Pha Ngan', country: 'TH' };
   const q = new URL(segmentUrl(ferry, 'flight', day, 0, { first: true, last: true })).searchParams; // the segment's own mode wins
   assert.equal(q.get('text'), '⛴️ Seatran: Thong Sala → Bangrak Pier');

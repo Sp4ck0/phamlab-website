@@ -298,7 +298,7 @@ test('structured segments render as boarding-pass rows with a computed layover a
   try {
     const box = view.container.querySelector('.flight-box');
     assert.equal(box.querySelectorAll('.seg').length, 2);
-    assert.deepEqual([...box.querySelectorAll('.seg-time')].map(t => t.textContent), ['12:10 AM', '5:20 AM+1', '7:00 AM', '9:50 AM']);
+    assert.deepEqual([...box.querySelectorAll('.seg-time')].map(t => t.textContent), ['00:10', '05:20+1', '07:00', '09:50']);
     assert.deepEqual([...box.querySelectorAll('.seg-dur')].map(t => t.textContent), ['13h 10m', '3h 50m']);
     assert.equal(box.querySelector('.fl-layover').textContent, '1h 40m layover · TPE');
     assert.equal(box.querySelector('.fl-airline').getAttribute('src'), 'https://www.gstatic.com/flights/airline_logos/70px/CI.png');
@@ -320,7 +320,7 @@ test('hotel tiles show their stay facts and a tap-to-reveal confirmation; a not-
     const cards = [...view.container.querySelectorAll('.card')];
     const stay = cards.find((c) => c.textContent.includes('Synthetic Hotel') && !c.textContent.includes('TBD'));
     const text = stay.textContent;
-    assert.ok(text.includes('Check-in from 3:00 PM') && text.includes('Synthetic twin') && text.includes('$131.03 / night') && text.includes('Synthetic leftover'));
+    assert.ok(text.includes('Check-in from 15:00') && text.includes('Synthetic twin') && text.includes('$131.03 / night') && text.includes('Synthetic leftover'));
     assert.ok(!text.includes('Check-out by')); // the check-out time belongs on the check-out tile, not the arrival tile
     assert.ok(!text.includes('SYNTH1')); // the reference stays hidden until tapped
     act(() => stay.querySelector('.conf-chip').click());

@@ -43,16 +43,15 @@ export function dayOffset(s: Segment): number {
   return Math.round((Date.parse(dateOf(s.arrive)) - Date.parse(dateOf(s.depart))) / 864e5);
 }
 
-/** "12:10 AM" from "2026-11-04T00:10". */
+/** "00:10" (24-hour, zero-padded) from "2026-11-04T00:10". */
 export function fmtClock(dt: string): string {
-  const [h, m] = dt.split("T")[1].split(":").map(Number);
-  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+  return fmtHm(dt.split("T")[1]);
 }
 
-/** "3:00 PM" from a bare local "15:00" (a hotel's check-in/out time). */
+/** "15:00" (24-hour, zero-padded) from a bare local "15:00" (a hotel's check-in/out time). */
 export function fmtHm(hm: string): string {
   const [h, m] = hm.split(":").map(Number);
-  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
 /** "Wed, Nov 4" from "2026-11-04" or a datetime. */
@@ -68,7 +67,7 @@ export function fmtDuration(min: number): string {
   return [h ? `${h}h` : "", m || !h ? `${m}m` : ""].filter(Boolean).join(" ");
 }
 
-/** One printable line: "CI 21 · SEA 12:10 AM → TPE 5:20 AM +1 · 13h 10m · Airbus A350". */
+/** One printable line: "CI 21 · SEA 00:10 → TPE 05:20 +1 · 13h 10m · Airbus A350". */
 export function segmentLine(s: Segment): string {
   const plus = dayOffset(s);
   const mins = durationMin(s);
