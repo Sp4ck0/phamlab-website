@@ -305,7 +305,6 @@ export function KanbanPage() {
                     expanded={allDone}
                     onExpandedChange={setAllDone}
                     compact={narrow}
-                    onMove={moveToLane}
                   />
                 ))}
             </main>
