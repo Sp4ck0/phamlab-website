@@ -43,11 +43,6 @@
     color: var(--ink);
     box-shadow: 0 1px 2px var(--shadow);
   }
-  /* A card is being dragged over this tab. */
-  .lanetab[data-over] {
-    border-color: var(--ink);
-    color: var(--ink);
-  }
   .lanetab__count {
     font-size: 12px;
     opacity: 0.7;
@@ -106,6 +101,71 @@
     margin-top: 10px;
     padding-top: 10px;
     border-top: 1px solid var(--rule);
+  }
+
+  /* While dragging: the tile shrinks and fades so the lane and tray stay visible. */
+  .card[data-dragging] {
+    transform: scale(0.7);
+    transform-origin: center;
+    opacity: 0.85;
+  }
+
+  /* Drop targets that rise from the bottom while a card is being dragged. */
+  .movetray {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+    background: var(--paper);
+    border-top: 1px solid var(--rule-firm);
+    box-shadow: 0 -10px 30px var(--shadow);
+    animation: movetray-in 0.18s ease-out;
+  }
+  .movetray__hint {
+    margin: 0 0 8px;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+    color: var(--ink-soft);
+  }
+  .movetray__targets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .movetray__target {
+    flex: 1 1 40%;
+    min-height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 12px;
+    text-align: center;
+    border: 2px dashed var(--rule-firm);
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+    transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+  }
+  .movetray__target[data-over] {
+    border-style: solid;
+    border-color: var(--ink);
+    background: var(--ink);
+    color: var(--paper);
+  }
+  @keyframes movetray-in {
+    from {
+      transform: translateY(100%);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .movetray {
+      animation: none;
+    }
   }
 
   /* Floating add button, reachable with a thumb. */
