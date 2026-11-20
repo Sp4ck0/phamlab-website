@@ -12,7 +12,8 @@ import { useRememberTab } from "../hooks/useRememberTab";
 import { useAiCardFocus } from "../hooks/useAiFocus";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { Lane } from "../kanban/components/Lane";
-import { LaneTabs, TAB_PREFIX } from "../kanban/components/LaneTabs";
+import { LaneTabs } from "../kanban/components/LaneTabs";
+import { MoveTray, MOVE_PREFIX } from "../kanban/components/MoveTray";
 import { CardDrawer } from "../kanban/components/CardDrawer";
 import { NewCardPane } from "../kanban/components/NewCardPane";
 import { NotifyMenu } from "../kanban/components/NotifyMenu";
@@ -208,8 +209,8 @@ export function KanbanPage() {
             KeyboardSensor,
           ]}
           onDragOver={(event) => {
-            // Over a lane tab there is nothing to reorder; the drop decides.
-            if (String(event.operation.target?.id ?? "").startsWith(TAB_PREFIX)) return;
+            // Over the move tray there is nothing to reorder; the drop decides.
+            if (String(event.operation.target?.id ?? "").startsWith(MOVE_PREFIX)) return;
             setDragLanes(move(lanes, event));
           }}
           onDragEnd={(event) => {
@@ -217,10 +218,10 @@ export function KanbanPage() {
               setDragLanes(null);
               return;
             }
-            // Dropped on a lane tab: send the card to the top of that lane.
+            // Dropped on a move-tray target: send the card to the top of that lane.
             const target = String(event.operation.target?.id ?? "");
-            if (target.startsWith(TAB_PREFIX)) {
-              const to = target.slice(TAB_PREFIX.length) as LaneId;
+            if (target.startsWith(MOVE_PREFIX)) {
+              const to = target.slice(MOVE_PREFIX.length) as LaneId;
               const id = String(event.operation.source?.id ?? "");
               setDragLanes(null);
               if (id && board.cards[id]) {
@@ -308,6 +309,8 @@ export function KanbanPage() {
                   />
                 ))}
             </main>
+
+            {narrow && <MoveTray board={displayBoard} />}
 
             {narrow && !openId && !paneOpen && (
               <button
