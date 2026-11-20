@@ -17,3 +17,4 @@ body { margin: 0; background: var(--page); color: var(--text-primary); font-fami
 .pwa-arrow { text-align: center; font-size: 28px; color: var(--accent-1); margin-top: 8px; animation: pwa-bob 1s ease-in-out infinite; }
 @keyframes pwa-bob { 50% { transform: translateY(6px); } }
 @media (prefers-reduced-motion: reduce) { .pwa-arrow { animation: none; } }
+.pwa-sheet .pwa-btn { width: 100%; margin-bottom: 14px; }
