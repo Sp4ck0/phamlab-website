@@ -6,37 +6,41 @@ import { api } from "@convex/api";
 import type { Id } from "@convex/dataModel";
 import { useAccessCode } from "../../hooks/useAccessCode";
 
-type NotifyEvent = "reply" | "card_added" | "card_moved" | "card_changed";
+// What can be subscribed to, by kind. The ids are the backend's registry
+// (notificationTopics.ts); the wording is ours. A new kind (a trip) is an entry here.
+type Kind = "board";
 
-const EVENTS: { id: NotifyEvent; label: string; short: string }[] = [
-  { id: "reply", label: "New replies", short: "Replies" },
-  { id: "card_added", label: "New cards", short: "New cards" },
-  { id: "card_moved", label: "Cards moved between lanes", short: "Moved" },
-  { id: "card_changed", label: "Cards edited or removed", short: "Edited" },
-];
+const TOPIC_EVENTS: Record<Kind, { id: string; label: string; short: string }[]> = {
+  board: [
+    { id: "reply", label: "New replies", short: "Replies" },
+    { id: "card_added", label: "New cards", short: "New cards" },
+    { id: "card_moved", label: "Cards moved between lanes", short: "Moved" },
+    { id: "card_changed", label: "Cards edited or removed", short: "Edited" },
+  ],
+};
 
 // Typed by hand: Convex infers the notifications query results as `any` (see
 // NotificationChannels).
-function useSubscribedEvents(boardId: Id<"kanban_boards">) {
+function useSubscribedEvents(kind: Kind, targetId: string) {
   const { code } = useAccessCode();
   const args = code ? { code } : {};
   const subs = useQuery(api.notifications.listSubscriptions, args) as
-    | { boardId: Id<"kanban_boards">; events: NotifyEvent[] }[]
+    | { kind: Kind; targetId: string; events: string[] }[]
     | null
     | undefined;
-  return { args, current: subs?.find((s) => s.boardId === boardId)?.events ?? [] };
+  return { args, current: subs?.find((s) => s.kind === kind && s.targetId === targetId)?.events ?? [] };
 }
 
-function useToggleEvent(boardId: Id<"kanban_boards">) {
-  const { args, current } = useSubscribedEvents(boardId);
-  const save = useMutation(api.notifications.setBoardSubscription);
+function useToggleEvent(kind: Kind, targetId: string) {
+  const { args, current } = useSubscribedEvents(kind, targetId);
+  const save = useMutation(api.notifications.setSubscription);
   const [error, setError] = useState("");
 
-  async function toggle(id: NotifyEvent) {
+  async function toggle(id: string) {
     const events = current.includes(id) ? current.filter((e) => e !== id) : [...current, id];
     setError("");
     try {
-      await save({ ...args, boardId, events });
+      await save({ ...args, kind, targetId, events });
     } catch {
       setError("Couldn't save that");
     }
@@ -44,12 +48,12 @@ function useToggleEvent(boardId: Id<"kanban_boards">) {
   return { current, error, toggle };
 }
 
-// The event checkboxes for one board, in the board's bell menu.
-export function BoardNotifyOptions({ boardId }: { boardId: Id<"kanban_boards"> }) {
-  const { current, error, toggle } = useToggleEvent(boardId);
+// The event checkboxes for one thing you can subscribe to.
+export function NotifyOptions({ kind, targetId }: { kind: Kind; targetId: string }) {
+  const { current, error, toggle } = useToggleEvent(kind, targetId);
   return (
     <>
-      {EVENTS.map((e) => (
+      {TOPIC_EVENTS[kind].map((e) => (
         <label key={e.id} className="notify__row">
           <input type="checkbox" checked={current.includes(e.id)} onChange={() => void toggle(e.id)} />
           {e.label}
@@ -60,12 +64,17 @@ export function BoardNotifyOptions({ boardId }: { boardId: Id<"kanban_boards"> }
   );
 }
 
+// The checkboxes for one board, in the board's bell menu.
+export function BoardNotifyOptions({ boardId }: { boardId: Id<"kanban_boards"> }) {
+  return <NotifyOptions kind="board" targetId={boardId} />;
+}
+
 // The same choices as compact on/off chips, for the Settings page.
-export function BoardNotifyChips({ boardId }: { boardId: Id<"kanban_boards"> }) {
-  const { current, error, toggle } = useToggleEvent(boardId);
+export function NotifyChips({ kind, targetId }: { kind: Kind; targetId: string }) {
+  const { current, error, toggle } = useToggleEvent(kind, targetId);
   return (
     <div className="notif-chips">
-      {EVENTS.map((e) => (
+      {TOPIC_EVENTS[kind].map((e) => (
         <button
           key={e.id}
           type="button"
@@ -82,9 +91,13 @@ export function BoardNotifyChips({ boardId }: { boardId: Id<"kanban_boards"> }) 
   );
 }
 
+export function BoardNotifyChips({ boardId }: { boardId: Id<"kanban_boards"> }) {
+  return <NotifyChips kind="board" targetId={boardId} />;
+}
+
 // Bell in the board header: which events on this board to be notified about.
 export function NotifyMenu({ boardId }: { boardId: Id<"kanban_boards"> }) {
-  const { args, current } = useSubscribedEvents(boardId);
+  const { args, current } = useSubscribedEvents("board", boardId);
   const channels = useQuery(api.notifications.listChannels, args) as { status: "pending" | "verified" }[] | null | undefined;
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
