@@ -91,7 +91,7 @@ export function AlertsPanel({
                 {t.kind === "consider" ? (
                   <button
                     type="button"
-                    className="icon-btn"
+                    className="ai-chip"
                     aria-label={`Go to ${t.title} under consideration`}
                     onClick={() => document.getElementById(`ai-row-${id}`)?.scrollIntoView({ block: "center", behavior: "smooth" })}
                   >

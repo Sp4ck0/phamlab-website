@@ -30,6 +30,12 @@ export function DayNav({ rows, todayId, onJump }: { rows: ItineraryRow[]; todayI
   return (
     <div className="daynav-shell" ref={shell}>
       <nav className="daynav" aria-label="Jump to itinerary day" ref={nav}>
+        {/* Phones: stays at the strip's left edge so today is one tap away from any day. */}
+        {todayId && (
+          <button type="button" className="daynav-jump" onClick={() => onJump(todayId)}>
+            ↩ Today
+          </button>
+        )}
         {rows.map(({ id, day: d }, i) => id === todayId ? (
           <button type="button" key={id} ref={todayBtn} className="daynav-today" aria-current="date" onClick={() => onJump(id)}>
             <span className="d">Today ·</span> {MON[d._d.getMonth()]} {d._d.getDate()}
