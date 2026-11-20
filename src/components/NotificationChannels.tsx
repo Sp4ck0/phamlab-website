@@ -10,6 +10,7 @@ import { readThisDeviceId, unsubscribeThisDevice } from "../lib/pushDevice";
 import { SettingsSection } from "./SettingsSection";
 import { useKanbanBoards } from "../kanban/useKanbanBoards";
 import { BoardNotifyChips, NotifyChips } from "../kanban/components/NotifyMenu";
+import { TOPIC_EVENTS } from "../lib/notifyTopics";
 import { useAccessibleTrips } from "../hooks/useAccessibleTrips";
 
 type ChannelType = "email" | "slack" | "discord" | "push";
@@ -180,6 +181,57 @@ function ChannelRow({ channel }: { channel: Channel }) {
   );
 }
 
+// What each chip and button below means. The chip lines come from TOPIC_EVENTS,
+// the same list that draws the chips, so they can't drift apart.
+function NotifyHelp({ boards, trips }: { boards: boolean; trips: boolean }) {
+  const group = (title: string, kind: "board" | "trip") => (
+    <>
+      <h4>{title}</h4>
+      <ul>
+        {TOPIC_EVENTS[kind].map((e) => (
+          <li key={e.id}>
+            <strong>{e.short}</strong> — {e.help}
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+  return (
+    <details className="setting-row notif-help">
+      <summary>What do these mean?</summary>
+      <p>A highlighted chip is on. You're told when…</p>
+      {boards && group("Boards", "board")}
+      {trips && group("Trips", "trip")}
+      <h4>Buttons</h4>
+      <ul>
+        <li>
+          <strong>Turn on notifications</strong> — get a push on the device you're using. It then shows as a row tagged
+          “This device”.
+        </li>
+        <li>
+          <strong>Remove</strong> — delete a channel or device. Removing this device also turns off push in this browser.
+        </li>
+        <li>
+          <strong>Connect Slack / Discord</strong> — add a channel, then confirm it with the 6-digit code it posts
+          (Confirm, or Resend for a new one).
+        </li>
+        {boards && (
+          <li>
+            <strong>🔔 Notifying / 🔕 Notify me</strong> — the bell in a board's header: the same choices as the board
+            chips, as checkboxes.
+          </li>
+        )}
+      </ul>
+      <h4>Good to know</h4>
+      <ul>
+        <li>You're never notified about your own changes.</li>
+        <li>Notifications go to the channels and devices you've connected. With none connected, nothing is sent.</li>
+        <li>Changes by the AI, or several quick edits, arrive as one summary after about 30 seconds.</li>
+      </ul>
+    </details>
+  );
+}
+
 export function NotificationChannels() {
   const { code } = useAccessCode();
   const args = code ? { code } : {};
@@ -220,6 +272,7 @@ export function NotificationChannels() {
 
   return (
     <SettingsSection title="Notifications" description="Connect a channel, then choose what to be notified about on each board.">
+      <NotifyHelp boards={boards.length > 0} trips={!!trips && trips.length > 0} />
       <PushDevice channelIds={(channels ?? []).map((c) => c._id)} />
       {(channels ?? []).map((c) => (
         <ChannelRow key={c._id} channel={c} />
