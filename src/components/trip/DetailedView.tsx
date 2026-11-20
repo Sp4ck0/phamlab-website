@@ -195,8 +195,8 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focus, state.rows, consume]);
 
-  // Opening a trip that is under way lands on today: expand it and scroll it
-  // in, once per mount. A shared link or AI pointer wins, and so does the reader
+  // Opening a trip that is under way lands on today: expand it, scroll it
+  // in, then settle on the now line (or the activity in progress), once per mount. A shared link or AI pointer wins, and so does the reader
   // (any input before the timer fires cancels it).
   const [params] = useSearchParams();
   const todayRow = state.rows.find(r => isDestToday(r.day, nowMs));
@@ -207,12 +207,21 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   useEffect(() => {
     if (autoDone.current || !todayRow || hasPointer) return;
     const id = todayRow.id;
-    const t = setTimeout(() => { autoDone.current = true; jumpRef.current(id); }, SETTLE_MS + 100);
-    const cancel = () => { autoDone.current = true; clearTimeout(t); };
+    let cancelNow = () => {};
+    const t = setTimeout(() => {
+      autoDone.current = true;
+      cancelNow = afterScroll(() => {
+        document.getElementById(id)?.querySelector(".now-line, .activity--now")
+          ?.scrollIntoView({ block: "center", behavior: scrollBehavior() });
+      });
+      jumpRef.current(id);
+    }, SETTLE_MS + 100);
+    const cancel = () => { autoDone.current = true; clearTimeout(t); cancelNow(); };
     const events = ["pointerdown", "wheel", "touchstart", "keydown"] as const;
     events.forEach(event => window.addEventListener(event, cancel, { passive: true }));
     return () => {
       clearTimeout(t);
+      cancelNow();
       events.forEach(event => window.removeEventListener(event, cancel));
     };
   }, [todayRow?.id, hasPointer]);
