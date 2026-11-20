@@ -105,7 +105,7 @@
 
   /* While dragging: the tile shrinks and fades so the lane and tray stay visible. */
   .card[data-dragging] {
-    transform: scale(0.7);
+    transform: scale(0.5);
     transform-origin: center;
     opacity: 0.85;
   }
