@@ -5,11 +5,12 @@ import type { Id } from "@convex/dataModel";
 import { useAccessCode } from "../hooks/useAccessCode";
 import { serverMessage } from "../lib/serverError";
 import { ChannelIcon } from "./ChannelIcon";
+import { PushDevice } from "./PushDevice";
 import { SettingsSection } from "./SettingsSection";
 import { useKanbanBoards } from "../kanban/useKanbanBoards";
 import { BoardNotifyChips } from "../kanban/components/NotifyMenu";
 
-type ChannelType = "email" | "slack" | "discord";
+type ChannelType = "email" | "slack" | "discord" | "push";
 // Email is switched off (the backend rejects it) until a sender is set up;
 // TYPE_COPY keeps its entry so any existing email channel still renders.
 const ADDABLE_TYPES: ChannelType[] = ["slack", "discord"];
@@ -26,6 +27,8 @@ const TYPE_COPY: Record<
   { label: string; placeholder: string; hint: string; steps?: { needs: string; list: string[] } }
 > = {
   email: { label: "Email", placeholder: "you@example.com", hint: "We'll email a 6-digit code to confirm it." },
+  // Added from the "This device" block (PushDevice), never from the form below.
+  push: { label: "Push", placeholder: "", hint: "" },
   slack: {
     label: "Slack",
     placeholder: "https://hooks.slack.com/services/…",
@@ -175,6 +178,7 @@ export function NotificationChannels() {
 
   return (
     <SettingsSection title="Notifications" description="Connect a channel, then choose what to be notified about on each board.">
+      <PushDevice channelIds={(channels ?? []).map((c) => c._id)} />
       {(channels ?? []).map((c) => (
         <ChannelRow key={c._id} channel={c} />
       ))}
