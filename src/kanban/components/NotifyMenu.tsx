@@ -7,8 +7,8 @@ import type { Id } from "@convex/dataModel";
 import { useAccessCode } from "../../hooks/useAccessCode";
 
 // What can be subscribed to, by kind. The ids are the backend's registry
-// (notificationTopics.ts); the wording is ours. A new kind (a trip) is an entry here.
-type Kind = "board";
+// (notificationTopics.ts); the wording is ours. A new kind is an entry here.
+type Kind = "board" | "trip";
 
 const TOPIC_EVENTS: Record<Kind, { id: string; label: string; short: string }[]> = {
   board: [
@@ -16,6 +16,12 @@ const TOPIC_EVENTS: Record<Kind, { id: string; label: string; short: string }[]>
     { id: "card_added", label: "New cards", short: "New cards" },
     { id: "card_moved", label: "Cards moved between lanes", short: "Moved" },
     { id: "card_changed", label: "Cards edited or removed", short: "Edited" },
+  ],
+  trip: [
+    { id: "task_added", label: "New tasks and suggestions", short: "New tasks" },
+    { id: "task_done", label: "Tasks completed or decided", short: "Done" },
+    { id: "note_changed", label: "Trip notes changed", short: "Notes" },
+    { id: "itinerary_changed", label: "Itinerary edits", short: "Itinerary" },
   ],
 };
 

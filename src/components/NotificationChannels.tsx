@@ -9,7 +9,8 @@ import { PushDevice } from "./PushDevice";
 import { readThisDeviceId, unsubscribeThisDevice } from "../lib/pushDevice";
 import { SettingsSection } from "./SettingsSection";
 import { useKanbanBoards } from "../kanban/useKanbanBoards";
-import { BoardNotifyChips } from "../kanban/components/NotifyMenu";
+import { BoardNotifyChips, NotifyChips } from "../kanban/components/NotifyMenu";
+import { useAccessibleTrips } from "../hooks/useAccessibleTrips";
 
 type ChannelType = "email" | "slack" | "discord" | "push";
 // Email is switched off (the backend rejects it) until a sender is set up;
@@ -191,6 +192,7 @@ export function NotificationChannels() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const { boards } = useKanbanBoards();
+  const { trips } = useAccessibleTrips();
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -257,6 +259,19 @@ export function NotificationChannels() {
             <div key={b._id} className="notif-boardrow">
               <span className="notif-boardrow__name">{b.name}</span>
               <BoardNotifyChips boardId={b._id} />
+            </div>
+          ))}
+        </div>
+      )}
+      {trips && trips.length > 0 && (
+        <div className="setting-row notif-boards">
+          <div className="setting-label">{boards.length > 0 ? "Trips" : "Notify me about"}</div>
+          {trips.map((t) => (
+            <div key={t._id} className="notif-boardrow">
+              <span className="notif-boardrow__name">
+                {t.navIcon} {t.title}
+              </span>
+              <NotifyChips kind="trip" targetId={t._id} />
             </div>
           ))}
         </div>
