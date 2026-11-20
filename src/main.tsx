@@ -26,6 +26,18 @@ if ("serviceWorker" in navigator) {
   };
   document.addEventListener("visibilitychange", clearSeen);
   clearSeen();
+  // Tapping a notification while the app is open: the worker (public/sw.js) sends
+  // the link. The site routes by "#", so setting the hash goes there in-app (and
+  // useShareLinkFocus scrolls to the day, activity or task). Only our own origin.
+  navigator.serviceWorker.addEventListener("message", (e: MessageEvent<{ type?: string; url?: unknown }>) => {
+    if (e.data?.type !== "open-url" || typeof e.data.url !== "string") return;
+    try {
+      const target = new URL(e.data.url);
+      if (target.origin === location.origin && target.hash) location.hash = target.hash;
+    } catch {
+      /* not a link we can follow: staying put is fine */
+    }
+  });
 }
 
 createRoot(document.getElementById("root")!).render(
