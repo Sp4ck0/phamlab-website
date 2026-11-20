@@ -1070,8 +1070,9 @@ test('an activity approved from a suggestion opens to its History; a hotel opens
   } finally { view.close(); }
 });
 
-test('a day with nothing planned shows a "Nothing planned yet" tile on the rail; a planned day has none', () => {
-  const view = mount(React.createElement(DayCard, { ...props, day: { ...day, acts: [] }, expanded: true }));
+test('a day with an open plan task shows a "Nothing planned yet" tile on the rail in the normal view too; a dismissed one shows none', () => {
+  const plan = { plan: true, transport: [], details: [] };
+  const view = mount(React.createElement(DayCard, { ...props, day: { ...day, acts: [] }, expanded: true, gaps: plan }));
   try {
     const tile = view.container.querySelector('.tl-plan');
     assert.ok(tile && tile.closest('li.tl-entry'));
@@ -1079,6 +1080,7 @@ test('a day with nothing planned shows a "Nothing planned yet" tile on the rail;
     assert.equal(tile.querySelector('.tl-toggle, .tl-body'), null); // nothing to open
     assert.equal(view.container.querySelector('.day-subtitle'), null); // no loose "Not decided yet" line
   } finally { view.close(); }
-  const planned = mount(React.createElement(DayCard, { ...props, day, expanded: true }));
-  try { assert.equal(planned.container.querySelector('.tl-plan'), null); } finally { planned.close(); }
+  // Dismissed in Action Items (no open plan task): no tile, even though the day is empty.
+  const dismissed = mount(React.createElement(DayCard, { ...props, day: { ...day, acts: [] }, expanded: true, gaps: { ...plan, plan: false } }));
+  try { assert.equal(dismissed.container.querySelector('.tl-plan'), null); } finally { dismissed.close(); }
 });
