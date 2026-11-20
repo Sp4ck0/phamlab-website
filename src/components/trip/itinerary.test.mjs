@@ -919,10 +919,11 @@ test('Expand all / Collapse all opens and closes the tiles of that one day only'
     const [first, second] = dayCards(view.container);
     assert.deepEqual([tileStates(first), tileStates(second)], [['false', 'false'], ['false', 'false']]);
     const all = first.querySelector('.day-tiles-btn');
-    assert.equal(all.textContent, 'Expand all');
+    assert.equal(all.getAttribute('title'), 'Expand all'); // an icon: the words are its tooltip and label
+    assert.equal(all.textContent, '');
     act(() => all.click());
     assert.deepEqual([tileStates(first), tileStates(second)], [['true', 'true'], ['false', 'false']]);
-    assert.equal(all.textContent, 'Collapse all');
+    assert.equal(all.getAttribute('title'), 'Collapse all');
     act(() => all.click());
     assert.deepEqual(tileStates(first), ['false', 'false']);
   } finally { view.close(); localStorage.clear(); }
