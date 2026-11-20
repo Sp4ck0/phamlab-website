@@ -6,8 +6,12 @@ import { actWindow, zoneFor, zoneNow } from "./calendar";
 import { todayISO } from "./dueDates";
 import type { ResolvedDay } from "./types";
 
+/** The marker that sits at the left end of the now line. */
+export const NOW_EMOJI = "👉";
+
 export type NowPosition =
-  | { kind: "during"; index: number; hhmm: string }
+  | { kind: "during"; index: number; hhmm: string; progress: number } // progress: 0..1 through the activity
+  | { kind: "untimed"; hhmm: string } // no timed activities to place it among
   | { kind: "before" | "between"; beforeIndex: number; hhmm: string; next: { hhmm: string; inMin: number } }
   | { kind: "after"; afterIndex: number; hhmm: string };
 
@@ -23,7 +27,7 @@ export function isDestToday(d: Pick<ResolvedDay, "date" | "city" | "country">, n
 
 const hm = (min: number) => `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
 
-/** Where "now" falls among the day's timed activities; null when it has none (or no zone). */
+/** Where "now" falls among the day's timed activities; null when the day's zone is unknown. */
 export function nowPosition(d: DayLike, now: number): NowPosition | null {
   const zone = dayZone(d);
   if (!zone) return null;
@@ -34,11 +38,11 @@ export function nowPosition(d: DayLike, now: number): NowPosition | null {
     const start = w.start.h * 60 + w.start.m;
     return [{ index, start, end: w.end ? w.end.h * 60 + w.end.m : start + w.minutes }];
   });
-  if (!timed.length) return null;
+  if (!timed.length) return { kind: "untimed", hhmm: t.hhmm };
   const upcoming = (i: number) => ({ beforeIndex: timed[i].index, hhmm: t.hhmm, next: { hhmm: hm(timed[i].start), inMin: timed[i].start - t.minutes } });
   if (t.minutes < timed[0].start) return { kind: "before", ...upcoming(0) };
   for (let i = 0; i < timed.length; i++) {
-    if (t.minutes >= timed[i].start && t.minutes < timed[i].end) return { kind: "during", index: timed[i].index, hhmm: t.hhmm };
+    if (t.minutes >= timed[i].start && t.minutes < timed[i].end) return { kind: "during", index: timed[i].index, hhmm: t.hhmm, progress: (t.minutes - timed[i].start) / (timed[i].end - timed[i].start) };
     const nxt = timed[i + 1];
     if (nxt && t.minutes >= timed[i].end && t.minutes < nxt.start) return { kind: "between", ...upcoming(i + 1) };
   }

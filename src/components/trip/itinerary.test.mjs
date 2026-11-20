@@ -832,7 +832,17 @@ test('today\'s card marks "now" in the destination\'s time: a line between activ
     view = render();
     assert.equal(view.container.querySelectorAll('.now-line').length, 0);
     assert.equal(view.container.querySelectorAll('.activity--now').length, 1);
+    assert.equal(view.container.querySelectorAll('.activity--now .now-track .now-emoji').length, 1); // the line runs through the row, with the emoji on it
     assert.match(view.container.querySelector('.activity--now').textContent, /Now/);
+    view.close();
+    // No timed activities, or none at all: still one line, saying why it has nothing to sit between.
+    at('12:00');
+    view = mount(React.createElement(DayCard, { ...props, day: { ...synthetic, acts: ['Untimed plan'] }, expanded: true, isToday: true }));
+    assert.match(view.container.querySelector('.now-line').textContent, /Now 12:00 · today's plans have no times/);
+    view.close();
+    view = mount(React.createElement(DayCard, { ...props, day: { ...synthetic, acts: [] }, expanded: true, isToday: true }));
+    assert.equal(view.container.querySelectorAll('.now-line').length, 1);
+    assert.match(view.container.querySelector('.now-line').textContent, /no activities listed/);
     view.close();
   } finally { Date.now = realNow; }
 });
