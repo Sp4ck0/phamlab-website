@@ -15,6 +15,17 @@ if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {});
   });
+  // Opening the app means the notifications have been seen: clear them and the icon badge.
+  const clearSeen = () => {
+    if (document.visibilityState !== "visible") return;
+    void navigator.serviceWorker.ready
+      .then((reg) => reg.getNotifications())
+      .then((list) => list.forEach((n) => n.close()))
+      .catch(() => {});
+    void (navigator as Navigator & { clearAppBadge?: () => Promise<void> }).clearAppBadge?.().catch(() => {});
+  };
+  document.addEventListener("visibilitychange", clearSeen);
+  clearSeen();
 }
 
 createRoot(document.getElementById("root")!).render(
