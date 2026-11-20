@@ -299,12 +299,8 @@ export function DayCard({
           ) : title,
           label: linked ? title : undefined,
           className: `tl-hotel${unresolved ? " miss" : ""}`, nextUpLine: upText(g.srcs),
-          headerEnd: (
-            <>
-              <TileStatePill state={pill} label={pill === "needed" && !g.name ? "Not chosen" : undefined} />
-              <StatusToggle ids={g.srcs} status={s} onToggle={onToggle} />
-            </>
-          ),
+          headerEnd: <TileStatePill state={pill} label={pill === "needed" && !g.name ? "Not chosen" : undefined} />,
+          control: <StatusToggle ids={g.srcs} status={s} onToggle={onToggle} />,
           children: (
             <>
               <HotelBody g={g} status={s} stay={stay} gapAfter={gapAfter} groups={groups} date={d.date} days={days} dayNumber={dayNumber} />
@@ -332,9 +328,9 @@ export function DayCard({
             <>
               {live?.pill}
               <TileStatePill state={pill} />
-              <StatusToggle ids={g.ids} status={s} onToggle={onToggle} />
             </>
           ),
+          control: <StatusToggle ids={g.ids} status={s} onToggle={onToggle} />,
           children: (
             <>
               <TransportBody group={g} groups={groups} day={d} dayNumber={dayNumber} />
@@ -481,11 +477,10 @@ export function DayCard({
           </button>
         </span>
       );
-    } else {
-      headerEnd = (
-        <input type="checkbox" className="tl-check" checked={done} onChange={() => onToggleActionItem(id)} aria-label={`Done: ${title}`} />
-      );
     }
+    const control = consider ? undefined : (
+      <input type="checkbox" className="tl-check" checked={done} onChange={() => onToggleActionItem(id)} aria-label={`Done: ${title}`} />
+    );
     const draftBody = (() => {
       if (!proposes) return null;
       if (proposes.type === "hotel") {
@@ -513,6 +508,7 @@ export function DayCard({
         meta: [status, what, range, who ? gapLabel(who, groups, start ?? d.date)?.label : undefined, priority ? `${PRIORITY_LABELS[priority]} priority` : undefined].filter(Boolean).join(" · "),
         className: `tl-item${consider ? " tl-consider" : ""}${done ? " is-done" : ""}`,
         headerEnd,
+        control,
         children: (
           <>
             {(titleHasLinks || detail) && (

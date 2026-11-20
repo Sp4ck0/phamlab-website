@@ -34,9 +34,11 @@ export interface TimelineTileProps {
   expandable?: boolean;
   /** One line of essentials under the title. */
   meta?: ReactNode;
-  /** Status pill, booking toggle, vote buttons: siblings of the toggle button, never inside it. */
+  /** Pills, votes, an activity's buttons: right-aligned before the control. Siblings of the toggle, never inside it. */
   headerEnd?: ReactNode;
-  /** Something here is unresolved; a dot shows while the tile is closed. */
+  /** The tile's one main control (the booked check, a to-do's checkbox), in a fixed slot so it lines up on every tile. */
+  control?: ReactNode;
+  /** Something here is unresolved; a dot on its rail icon shows while the tile is closed. */
   warn?: boolean;
   open: boolean;
   onToggle: () => void;
@@ -60,7 +62,7 @@ export interface TimelineTileProps {
 // opens it (hidden="until-found"). Only the header toggles; the body's own
 // buttons and links never do.
 export function TimelineTile({
-  domId, time, icon, iconLabel, title, label, expandable = true, meta, headerEnd, warn, open, onToggle, onReveal, change = "same", className, nextUpLine, now, progress, children,
+  domId, time, icon, iconLabel, title, label, expandable = true, meta, headerEnd, control, warn, open, onToggle, onReveal, change = "same", className, nextUpLine, now, progress, children,
 }: TimelineTileProps) {
   const bodyId = useId();
   const bodyRef = useUntilFound(open, onReveal ?? onToggle);
@@ -95,8 +97,9 @@ export function TimelineTile({
       {...(gone ? { inert: true, "aria-hidden": true } : {})}
     >
       <span className="tl-time" data-all-day={time === ALL_DAY ? "true" : undefined}>{time}</span>
-      <span className="tl-rail" aria-hidden="true">
-        <span className="tl-dot" title={iconLabel}>{icon}</span>
+      <span className="tl-rail">
+        <span className="tl-dot" aria-hidden="true" title={iconLabel}>{icon}</span>
+        {expandable && warn && !open && <span className="tl-warn" role="img" aria-label="Needs attention" title="Needs attention" />}
       </span>
       <div className={`tl-tile${open && expandable ? " is-open" : ""}${expandable ? "" : " tl-flat"}${className ? ` ${className}` : ""}${changeClass(change)}`}>
         {/* The toggle button is the keyboard control; this click handler only widens the click target. */}
@@ -109,12 +112,13 @@ export function TimelineTile({
             <div className="tl-heading">{heading}</div>
           )}
           {headerEnd && <span className="tl-end">{headerEnd}</span>}
-          {expandable && warn && !open && <span className="tl-warn" role="img" aria-label="Needs attention" title="Needs attention" />}
-          {expandable && (label === undefined ? chevron : (
+          {/* Fixed slots on every tile, filled or not, so checks and chevrons line up down the day. */}
+          <span className="tl-control">{control}</span>
+          {!expandable ? <span className="tl-chev-slot" aria-hidden="true" /> : label === undefined ? chevron : (
             <button type="button" className="tl-toggle tl-chev-btn" aria-expanded={open} aria-controls={bodyId} aria-label={`${label}: details`} onClick={onToggle}>
               {chevron}
             </button>
-          ))}
+          )}
           {progress}
         </div>
         {expandable && (
