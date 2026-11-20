@@ -815,3 +815,24 @@ test('find-in-page: structured tile fields are findable; confirmations, phone nu
   } finally { view.close(); }
 });
 
+test('today\'s card marks "now" in the destination\'s time: a line between activities, a pill on the one in progress', () => {
+  const realNow = Date.now;
+  const at = (hhmm) => { Date.now = () => Date.parse(`2040-01-02T${hhmm}:00+07:00`); }; // Bangkok wall clock, whatever zone the test runs in
+  const synthetic = { ...day, country: 'TH', acts: [{ tag: 'Food', time: '09:00', text: 'First' }, { tag: 'Activity', time: '16:00', text: 'Second' }] };
+  const render = () => mount(React.createElement(DayCard, { ...props, day: synthetic, expanded: true, isToday: true }));
+  try {
+    at('12:00');
+    let view = render();
+    assert.equal(view.container.querySelectorAll('.now-line').length, 1);
+    assert.equal(view.container.querySelectorAll('.activity--now').length, 0);
+    assert.match(view.container.querySelector('.now-line').textContent, /Now 12:00 · next 16:00 \(in 4h\)/);
+    assert.match(view.container.querySelector('.today-badge').textContent, /Today · 12:00/);
+    view.close();
+    at('09:30');
+    view = render();
+    assert.equal(view.container.querySelectorAll('.now-line').length, 0);
+    assert.equal(view.container.querySelectorAll('.activity--now').length, 1);
+    assert.match(view.container.querySelector('.activity--now').textContent, /Now/);
+    view.close();
+  } finally { Date.now = realNow; }
+});
