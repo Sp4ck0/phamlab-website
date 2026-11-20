@@ -465,8 +465,8 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 .tl-history summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--text-secondary)}
 .tl-history-body{display:grid;gap:4px;margin-top:6px}
 /* Day header: open or close every tile of the day. */
-.day-tiles-btn{flex:none;display:inline-flex;align-items:center;gap:4px;font:inherit;font-size:12px;font-weight:600;color:var(--text-secondary);background:transparent;border:1px solid var(--border);border-radius:999px;padding:3px 10px 3px 7px;cursor:pointer;white-space:nowrap}
-.day-tiles-btn:hover,.day-tiles-btn:focus-visible{color:var(--accent-1);border-color:var(--accent-1)}
+/* An icon like the day's share button beside it; "Expand all" / "Collapse all" is its tooltip and label. */
+.day-tiles-btn{flex:none}
 @media(prefers-reduced-motion:reduce){.tl-chev,.tl-tile{transition:none}}
 @media(max-width:640px){
   .tl-entry,.tl-now{grid-template-columns:38px 22px minmax(0,1fr);column-gap:6px}
@@ -482,8 +482,7 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
   .tl-end{grid-column:1 / -1;grid-row:2;justify-content:flex-start;padding:0 0 8px 10px}
   .tl-body:not([hidden]){padding:10px}
   .tl-actions .icon-btn{width:36px;height:36px}
-  .day-tiles-btn{min-height:36px;min-width:36px;justify-content:center;padding:0}
-  .day-tiles-label{display:none}
+
   .tl-approve,.tl-end .vote-btn{min-height:44px}
   .tl-check{width:24px;height:24px}
 }
