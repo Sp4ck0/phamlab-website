@@ -9,16 +9,16 @@ import { HotelBody } from "./HotelCard";
 import { hotelHeader, transportHeader } from "../../lib/tileHeaders";
 import { ALL_DAY, TileStatePill, TimelineTile, type TimelineTileProps, type TileState } from "./TimelineTile";
 import { StatusToggle } from "./StatusToggle";
-import { buildTimeline, timelineSpans, type ActRow, type TimelineEntry } from "../../lib/timeline";
+import { buildTimeline, timelineSpans, type ActRow, type DayItem, type TimelineEntry } from "../../lib/timeline";
+import { serverMessage } from "../../lib/serverError";
 import type { TileOpen } from "../../hooks/useTileOpen";
 import { countdownText, nextUp } from "../../lib/nextUp";
 import { useNow } from "../../lib/useNow";
 import { gapMinutes, stayInfo } from "../../lib/stay";
-import { TaskRow } from "./TaskRow";
 import { TourBox } from "./TourBox";
 import { WeatherBadge } from "./WeatherBadge";
 import { AddToCalendar } from "./AddToCalendar";
-import { TAG_EMOJI, actUrl, plain, zoneNow } from "../../lib/calendar";
+import { MODE_EMOJI, TAG_EMOJI, actUrl, plain, zoneNow } from "../../lib/calendar";
 import { NOW_EMOJI, dayZone, nowPosition, untilText, viewerHint, type NowPosition } from "../../lib/nowMarker";
 import { sanitizeHtml } from "../../lib/sanitizeHtml";
 import type { DayWeather } from "../../lib/weather";
@@ -98,6 +98,40 @@ interface Props {
   // Saves new text and places for the activity at `index`; `expected` is the text it had
   // when the editor opened. The pencil only shows when this is passed.
   onEditActivity?: (date: string, index: number, expected: string, text: string, places: Place[]) => Promise<unknown>;
+  // Every stored item by id (its wording, votes and outcome), for the History of an entry approved from one.
+  itemTasks?: Record<string, Task>;
+  // "Add to itinerary": approves an item into the days (convex actionItems.promoteActionItem).
+  onPromote?: (id: string, date: string) => Promise<unknown>;
+}
+
+// "Add to itinerary" on an item tile, with its own busy state and the server's reason when it can't.
+function ApproveButton({ onApprove, label }: { onApprove: () => Promise<unknown>; label: string }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  return (
+    <>
+      <button
+        type="button"
+        className="tl-approve"
+        disabled={busy}
+        aria-label={label}
+        onClick={async () => {
+          setBusy(true);
+          setError("");
+          try {
+            await onApprove();
+          } catch (e) {
+            setError(serverMessage(e, "Couldn't add it — try again."));
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        {busy ? "Adding…" : "Add to itinerary"}
+      </button>
+      {error && <span className="ai-error" role="alert">{error}</span>}
+    </>
+  );
 }
 
 export function DayCard({
@@ -124,6 +158,8 @@ export function DayCard({
   actionItemsDone,
   onToggleActionItem,
   onEditActivity,
+  itemTasks,
+  onPromote,
 }: Props) {
   const [editingAct, setEditingAct] = useState<number | null>(null);
   const { slug } = useParams<{ slug: string }>();
@@ -171,6 +207,40 @@ export function DayCard({
   // Under Only gaps, a to-do or consideration that is done or settled is not a gap.
   const shownConsiderations = gapsOnly ? dayConsiderations.filter((t) => !t.done) : dayConsiderations;
   const shownActionItems = gapsOnly ? dayActionItems.filter((item) => !actionItemsDone[item.id]) : dayActionItems;
+  // To-dos and considerations that cover this day are tiles too; a time only counts on the item's own first day.
+  const dayItems: DayItem[] = [
+    ...shownConsiderations.map((t) => ({ id: t.key.slice("item:".length), task: t, time: (t.scope.kind === "day" ? t.scope.date : t.scope.kind === "range" ? t.scope.start : undefined) === d.date ? t.time : undefined })),
+    ...shownActionItems.map((i) => ({ id: i.id, todo: i, time: i.date === d.date ? i.time : undefined })),
+  ];
+  // Items already written into the itinerary (an entry links back to them).
+  const linkedIds = new Set(
+    (days ?? [d]).flatMap((day) => [
+      ...day.flights.map((f) => f.fromItem),
+      ...day.hotels.map((h) => h.fromItem),
+      ...day.acts.map((a) => (typeof a === "string" ? undefined : a.fromItem)),
+    ]).filter((x): x is string => !!x)
+  );
+  // An entry approved from an item: what was weighed and how the votes went, folded away at the end of the tile.
+  const history = (fromItem?: string) => {
+    const t = fromItem ? itemTasks?.[fromItem] : undefined;
+    if (!fromItem || !t) return null;
+    const { yes, no } = voteTally(t, pendingVotes[fromItem]);
+    return (
+      <details className="tl-history">
+        <summary>History</summary>
+        <div className="tl-history-body">
+          <div className="cmeta"><b>{t.kind === "consider" ? "Considered as" : "From the to-do"}:</b> {plain(sanitizeHtml(t.title))}</div>
+          {t.detail && <div className="cmeta" dangerouslySetInnerHTML={{ __html: sanitizeHtml(t.detail) }} />}
+          {t.kind === "consider" && (
+            <div className="cmeta">
+              👍 {yes}{t.votes?.yes.length ? ` (${t.votes.yes.join(", ")})` : ""} · 👎 {no}{t.votes?.no.length ? ` (${t.votes.no.join(", ")})` : ""}
+              {t.outcome === "chosen" ? " · Chosen" : ""}
+            </div>
+          )}
+        </div>
+      </details>
+    );
+  };
   const actChanges = old ? diffLines(old.acts ?? [], d.acts ?? [], actKey) : unchanged(d.acts ?? []);
   // Edit buttons, share links and ids use an activity's real index; a ghost has none.
   let actIndex = 0;
@@ -180,7 +250,7 @@ export function DayCard({
 
   // The day as one ordered list of tiles (lib/timeline.ts). Under Only gaps the activities and the tour are left out.
   const entries = buildTimeline({
-    date: d.date, hotels: hotelChanges, flights: flightChanges, acts: gapsOnly ? [] : actRows, gaps: transportGaps, tour: !gapsOnly && !!d.tourDetails,
+    date: d.date, hotels: hotelChanges, flights: flightChanges, acts: gapsOnly ? [] : actRows, gaps: transportGaps, tour: !gapsOnly && !!d.tourDetails, items: dayItems,
   });
   // Where the current time falls among the timed tiles (activities and timed transport).
   const nowPos = isToday ? nowPosition(d, now, timelineSpans(entries, d)) : null;
@@ -223,7 +293,12 @@ export function DayCard({
               <StatusToggle ids={g.srcs} status={s} onToggle={onToggle} />
             </>
           ),
-          children: <HotelBody g={g} status={s} stay={stay} gapAfter={gapAfter} groups={groups} date={d.date} days={days} dayNumber={dayNumber} />,
+          children: (
+            <>
+              <HotelBody g={g} status={s} stay={stay} gapAfter={gapAfter} groups={groups} date={d.date} days={days} dayNumber={dayNumber} />
+              {history(g.fromItem)}
+            </>
+          ),
         },
       };
     }
@@ -248,10 +323,16 @@ export function DayCard({
               <StatusToggle ids={g.ids} status={s} onToggle={onToggle} />
             </>
           ),
-          children: <TransportBody group={g} groups={groups} day={d} dayNumber={dayNumber} />,
+          children: (
+            <>
+              <TransportBody group={g} groups={groups} day={d} dayNumber={dayNumber} />
+              {history(g.fromItem)}
+            </>
+          ),
         },
       };
     }
+    if (entry.kind === "item") return describeItem(entry);
     if (entry.kind === "gap") {
       return {
         key: entry.key, ghost: false, defaultOpen: true,
@@ -313,11 +394,116 @@ export function DayCard({
               <ShareLinkButton param={{ day: d.date, tile: `act:${ai}` }} label={`Share link to activity: ${text}`} />
               <AddToCalendar url={actUrl(a, d, dayNumber, ai)} />
             </div>
+            {history(typeof a === "string" ? undefined : a.fromItem)}
           </>
         ),
       },
     };
   };
+  // A to-do or consideration on the timeline. A consideration votes in its header, a to-do
+  // ticks off there. One that proposes a hotel, transport or activity shows that entry as a
+  // "Proposed" card, drawn like the real tile, and "Add to itinerary" writes it into the days.
+  function describeItem(entry: Extract<TimelineEntry, { kind: "item" }>): Described {
+    const { id, task, todo } = entry.item;
+    const consider = !!task;
+    // The header has the title as plain text (it sits in a button); a title with links shows them again in the body.
+    const richTitle = sanitizeHtml(task?.title ?? todo?.title ?? "");
+    const titleHasLinks = /<a\b/i.test(richTitle);
+    const title = plain(richTitle);
+    const detail = task?.detail ?? todo?.detail;
+    const proposes = task?.proposes ?? todo?.proposes;
+    const done = consider ? !!task!.done : !!actionItemsDone[id];
+    const linked = linkedIds.has(id);
+    const open = !done && !linked;
+    const start = task ? (task.scope.kind === "day" ? task.scope.date : task.scope.kind === "range" ? task.scope.start : undefined) : todo?.date;
+    const end = task ? (task.scope.kind === "range" ? task.scope.end : start) : todo?.endDate ?? todo?.date;
+    const icon = !proposes ? (consider ? "🗳️" : "☑️")
+      : proposes.type === "hotel" ? "🏨"
+      : proposes.type === "transport" ? MODE_EMOJI[proposes.entry.mode || "flight"]
+      : (proposes.entry.tag && TAG_EMOJI[proposes.entry.tag]) || "📍";
+    const status = consider ? (task!.outcome === "chosen" ? "Chosen" : task!.outcome === "dropped" ? "Dropped" : "Considering") : done ? "Done" : "To-do";
+    const what = !proposes ? undefined
+      : proposes.type === "hotel" ? `Proposed stay · ${proposes.entry.name}`
+      : proposes.type === "transport" ? `Proposed ${proposes.entry.mode || "flight"} · ${proposes.entry.route}`
+      : "Proposed activity";
+    const range = start && end && end !== start ? `${fmtShort(start)} – ${fmtShort(end)}` : undefined;
+    const who = task?.who ?? todo?.who;
+    const priority = task?.priority ?? todo?.priority;
+    let headerEnd;
+    if (consider) {
+      const { mine, yes, no } = voteTally(task!, pendingVotes[id]);
+      const pick = (v: Vote) => onVote(id, mine === v ? null : v);
+      headerEnd = (
+        <span className="vote-bar" role="group" aria-label={`Vote on ${title}`}>
+          {/* A settled item keeps its tally but voting is over. */}
+          <button type="button" className="vote-btn" data-vote="yes" aria-pressed={mine === "yes"} disabled={!!task!.outcome} onClick={() => pick("yes")}>
+            👍 <b>{yes}</b>
+          </button>
+          <button type="button" className="vote-btn" data-vote="no" aria-pressed={mine === "no"} disabled={!!task!.outcome} onClick={() => pick("no")}>
+            👎 <b>{no}</b>
+          </button>
+        </span>
+      );
+    } else {
+      headerEnd = (
+        <input type="checkbox" className="tl-check" checked={done} onChange={() => onToggleActionItem(id)} aria-label={`Done: ${title}`} />
+      );
+    }
+    const draftBody = (() => {
+      if (!proposes) return null;
+      if (proposes.type === "hotel") {
+        const h = proposes.entry;
+        const g = { ...h, who: [h.who].flat(), srcs: [`item:${id}`], statuses: [h.status], carriedAll: false, checkIn: d.date === start, checkOut: d.date === end };
+        return <HotelBody g={g} status={h.status} stay={null} groups={groups} date={d.date} dayNumber={dayNumber} actions={false} />;
+      }
+      if (proposes.type === "transport") {
+        const f = proposes.entry;
+        const g = { ...f, who: [f.who].flat(), ids: [`item:${id}`], statuses: [f.status] };
+        return <TransportBody group={g} groups={groups} day={d} dayNumber={dayNumber} actions={false} />;
+      }
+      const a = proposes.entry;
+      return (
+        <div className="activity-text">
+          {a.time && <b>{a.time} </b>}
+          <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(a.text) }} />
+        </div>
+      );
+    })();
+    return {
+      key: entry.key, ghost: false, defaultOpen: open,
+      tile: {
+        domId: tileDomId(rowId, entry.domKey), time: entry.time, icon, title, warn: open,
+        meta: [status, what, range, who ? gapLabel(who, groups, start ?? d.date)?.label : undefined, priority ? `${PRIORITY_LABELS[priority]} priority` : undefined].filter(Boolean).join(" · "),
+        className: `tl-item${consider ? " tl-consider" : ""}${done ? " is-done" : ""}`,
+        headerEnd,
+        children: (
+          <>
+            {(titleHasLinks || detail) && (
+              <div className="action-text">
+                {titleHasLinks && <div dangerouslySetInnerHTML={{ __html: richTitle }} />}
+                {detail && <div className="cmeta" dangerouslySetInnerHTML={{ __html: sanitizeHtml(detail) }} />}
+              </div>
+            )}
+            {draftBody && (
+              <div className="tl-proposal">
+                <span className="tl-proposal-label">Proposed</span>
+                {draftBody}
+              </div>
+            )}
+            {linked && <p className="cmeta tl-linked">In the itinerary.</p>}
+            <div className="tl-actions">
+              {open && onPromote && (proposes || consider) && <ApproveButton label={`Add ${title} to the itinerary`} onApprove={() => onPromote(id, d.date)} />}
+              {/* Jumps to this item in the Action Items or Under consideration list. */}
+              <button type="button" className="tl-link tl-link-btn" onClick={() => slug && showFocus({ slug, target: { kind: "actionItem", id }, nonce: `${Date.now()}` })}>
+                Open in list
+              </button>
+              <ShareLinkButton param={{ task: `item:${id}` }} label={`Share link to ${title}`} />
+            </div>
+          </>
+        ),
+      },
+    };
+  }
   const described = entries.map((e) => (e.kind === "tour" ? null : describe(e)));
   // Open state is kept per trip, so an id carries the day's date.
   const idOf = (key: string) => `${d.date}#${key}`;
@@ -435,59 +621,6 @@ export function DayCard({
             </div>
           )}
 
-          {shownConsiderations.length > 0 && (
-            <div className="day-considering">
-              <span className="consider-pill">{shownConsiderations.some((t) => !t.outcome) ? "Under consideration" : "Decided"}</span>
-              <ul>
-                {shownConsiderations.map((t) => {
-                  const id = t.key.slice("item:".length);
-                  const { mine, yes, no } = voteTally(t, pendingVotes[id]);
-                  const pick = (v: Vote) => onVote(id, mine === v ? null : v);
-                  return (
-                    <li key={t.key} data-outcome={t.outcome}>
-                      {/* Jumps to this item's card in the Under consideration list, opening Settled if needed. */}
-                      <button
-                        type="button"
-                        className="day-considering-title"
-                        title="Go to this in the Under consideration list"
-                        onClick={() => slug && showFocus({ slug, target: { kind: "actionItem", id }, nonce: `${Date.now()}` })}
-                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(t.title) }}
-                      />
-                      {t.outcome === "chosen" && <span className="consider-pill day-chosen">Chosen</span>}
-                      <span className="vote-bar" role="group" aria-label={`Vote on ${t.title}`}>
-                        {/* A chosen item is settled: its tally stays but voting is over. */}
-                        <button type="button" className="vote-btn" data-vote="yes" aria-pressed={mine === "yes"} disabled={!!t.outcome} onClick={() => pick("yes")}>
-                          👍 <b>{yes}</b>
-                        </button>
-                        <button type="button" className="vote-btn" data-vote="no" aria-pressed={mine === "no"} disabled={!!t.outcome} onClick={() => pick("no")}>
-                          👎 <b>{no}</b>
-                        </button>
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          )}
-
-          {shownActionItems.length > 0 && (
-            <div className="action-items" style={{ marginTop: 14 }}>
-              {shownActionItems.map((item) => (
-                <TaskRow
-                  key={item.id}
-                  domId={`${rowId}-ai-${item.id}`}
-                  done={!!actionItemsDone[item.id]}
-                  onToggle={() => onToggleActionItem(item.id)}
-                  badge={item.who ? gapLabel(item.who, groups, item.date || d.date) : null}
-                  pill={item.priority ? PRIORITY_LABELS[item.priority] : undefined}
-                  lead={item.title}
-                  body={item.detail}
-                  // The day is already obvious; a range is worth spelling out.
-                  scope={item.endDate ? `${fmtShort(item.date ?? d.date)} – ${fmtShort(item.endDate)}` : undefined}
-                />
-              ))}
-            </div>
-          )}
         </>
       </div>
     </section>

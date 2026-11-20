@@ -3,7 +3,7 @@ import { api } from "@convex/api";
 import { useAccessCode } from "./useAccessCode";
 import type { ActionItem } from "../lib/types";
 
-export type ActionItemFields = Pick<ActionItem, "title" | "detail" | "date" | "endDate" | "who" | "kind" | "priority" | "places">;
+export type ActionItemFields = Pick<ActionItem, "title" | "detail" | "date" | "endDate" | "who" | "kind" | "priority" | "places" | "time" | "proposes">;
 
 // Add / edit / remove a trip's custom Action Items (actionItems.ts). Anyone
 // with access to the trip can do this, same as check-offs and due dates. The
@@ -13,11 +13,14 @@ export function useActionItemEdits(slug: string) {
   const addMut = useMutation(api.actionItems.addActionItem);
   const updateMut = useMutation(api.actionItems.updateActionItem);
   const removeMut = useMutation(api.actionItems.removeActionItem);
+  const promoteMut = useMutation(api.actionItems.promoteActionItem);
 
   return {
     // Pass `id` only to restore a deleted item under its original id.
     addItem: (fields: ActionItemFields & { id?: string }) => addMut({ slug, code, ...fields }),
     updateItem: (id: string, fields: ActionItemFields) => updateMut({ slug, code, id, ...fields }),
     removeItem: (id: string) => removeMut({ slug, code, id }),
+    // "Add to itinerary": writes what the item proposes (or an activity from its title) into the days.
+    promoteItem: (id: string, date: string) => promoteMut({ slug, code, id, date }),
   };
 }

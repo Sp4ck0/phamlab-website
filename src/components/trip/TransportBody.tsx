@@ -18,6 +18,8 @@ export interface TransportBodyProps {
   groups?: Group[];
   day?: ResolvedDay;
   dayNumber?: number;
+  // A proposed (draft) row inside an action item: the item's own actions stand in for these.
+  actions?: boolean;
 }
 
 function AirlineChip({ leg }: { leg: FlightLeg }) {
@@ -41,7 +43,7 @@ function AirlineChip({ leg }: { leg: FlightLeg }) {
 // What a transport tile shows when open: its hops as boarding-pass rows, what is still
 // open, the free-form note, and one action row (share, and the ticket or route search).
 // The header already has the title, the booking state and the booked toggle.
-export function TransportBody({ group, groups, day, dayNumber = 0 }: TransportBodyProps) {
+export function TransportBody({ group, groups, day, dayNumber = 0, actions = true }: TransportBodyProps) {
   const status: Status = group.statuses.includes("needed") ? "needed" : "booked";
   const { legs, derived, segments } = segmentsOf(group);
   const ground = !!group.mode && group.mode !== "flight";
@@ -89,7 +91,7 @@ export function TransportBody({ group, groups, day, dayNumber = 0 }: TransportBo
       {status === "needed" && !legs.length && <TbdLine fields={missingTransportFields({ mode: group.mode, segments })} />}
       {/* The free-form note goes last: the hops and what is open come first. */}
       {(segments.length > 0 || derived) && group.detail && <div className="fl-meta">{group.detail}</div>}
-      {(day || ticket || search) && (
+      {actions && (day || ticket || search) && (
         <div className="tl-actions">
           {day && <ShareLinkButton param={{ day: day.date, tile: group.ids[0] }} label={`Share link to ${group.title || group.route}`} />}
           {ticket && <a className="tl-link" href={ticket} target="_blank" rel="noopener noreferrer">Ticket</a>}

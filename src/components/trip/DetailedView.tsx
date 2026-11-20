@@ -42,11 +42,15 @@ interface Props {
   actionItemsDone: Record<string, boolean>;
   onToggleActionItem: (id: string) => void;
   onEditActivity?: (date: string, index: number, expected: string, text: string, places: Place[]) => Promise<unknown>;
+  // Every stored item by id, for the History of an entry approved from one.
+  itemTasks?: Record<string, Task>;
+  // "Add to itinerary" on an item tile.
+  onPromote?: (id: string, date: string) => Promise<unknown>;
 }
 
 // Unified itinerary; name retained to keep the detail renderer's consumer small.
 export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps, isGap, dayGaps, onOnlyGapsChange, filterRef,
-  onToggle, actionItems, considerations, pendingVotes, onVote, actionItemsDone, onToggleActionItem, onEditActivity }: Props) {
+  onToggle, actionItems, considerations, pendingVotes, onVote, actionItemsDone, onToggleActionItem, onEditActivity, itemTasks, onPromote }: Props) {
   const prefix = useId();
   const nowMs = useNow();
   // A day the AI just edited keeps showing its old content until the page is
@@ -281,7 +285,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
             }} onToggle={onToggle} dayActionItems={actionItems.filter(item => item.date !== undefined && item.date <= d.date && d.date <= (item.endDate ?? item.date))}
             dayConsiderations={considerations.filter(t => t.scope.kind !== "trip" && coversDay(t.scope, d.date))}
             pendingVotes={pendingVotes} onVote={onVote}
-            actionItemsDone={actionItemsDone} onToggleActionItem={onToggleActionItem} onEditActivity={editActivity} />
+            actionItemsDone={actionItemsDone} onToggleActionItem={onToggleActionItem} onEditActivity={editActivity} itemTasks={itemTasks} onPromote={onPromote} />
           </Fragment>
         ))}
         {ghostAt === -1 && ghostDay}

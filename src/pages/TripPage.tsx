@@ -46,7 +46,9 @@ function TripPageEntry() {
     return (day: { date: string }) => dates.has(day.date);
   }, [loaded, tasks]);
   const gapsByDate = useMemo(() => dayGaps(tasks), [tasks]);
-  const { addItem, updateItem, removeItem } = useActionItemEdits(slug || "");
+  const { addItem, updateItem, removeItem, promoteItem } = useActionItemEdits(slug || "");
+  // Every stored item by id: an itinerary entry approved from one shows its wording and votes as History.
+  const itemTasks = useMemo(() => Object.fromEntries(tasks.filter((t) => t.key.startsWith("item:")).map((t) => [t.key.slice("item:".length), t])), [tasks]);
   const { updateActivity } = useActivityEdits(slug || "");
   const weather = useTripWeather(slug);
   const weatherStops = useMemo(() => deriveWeatherStops(resolvedDays, weather), [resolvedDays, weather]);
@@ -116,6 +118,8 @@ function TripPageEntry() {
           actionItemsDone={done}
           onToggleActionItem={toggleActionItem}
           onEditActivity={updateActivity}
+          itemTasks={itemTasks}
+          onPromote={promoteItem}
         />
       </Fragment>
 
