@@ -103,6 +103,7 @@ a{color:inherit}
   display:flex;flex-direction:column;gap:30px;
 }
 .navhead{display:flex;align-items:center;gap:11px;padding:0 4px}
+.navhandle{display:none}
 .navmark{
   width:34px;height:34px;border-radius:9px;flex-shrink:0;
   display:grid;place-items:center;font-size:16px;
