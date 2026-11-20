@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg" />
+    <link rel="icon" type="image/png" href="/icons/icon-192.png" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <meta name="theme-color" content="#2a78d6" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -13,6 +13,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>phamlab — Add to Home Screen</title>
     <link rel="stylesheet" href="/src/pwa/pwa.css" />
+  <noscript><style>.pwa { visibility: visible !important; }</style></noscript>
   </head>
   <body>
     <main class="pwa">
@@ -25,12 +26,13 @@
       <a class="pwa-link" href="/phamlab-website/">Continue to the website</a>
 
       <div id="pwa-ios" class="pwa-sheet" hidden>
-        <button id="pwa-share" class="pwa-btn" type="button" hidden>Share</button>
         <ol>
           <li>Tap the <strong>Share</strong> button
             <svg class="pwa-share" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
-            in the Safari toolbar</li>
-          <li>Scroll and choose <strong>Add to Home Screen</strong></li>
+            in Safari’s toolbar
+            <span class="pwa-note">(only see <strong>•••</strong>? Tap it, then Share)</span></li>
+          <li>Scroll down and tap <strong>Add to Home Screen</strong>
+            <span class="pwa-note">(under <strong>View More</strong> on newer iPhones)</span></li>
           <li>Tap <strong>Add</strong></li>
         </ol>
         <div class="pwa-arrow" aria-hidden="true">↓</div>
