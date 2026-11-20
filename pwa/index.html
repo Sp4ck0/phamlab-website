@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="theme-color" content="#2a78d6" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="phamlab" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <title>phamlab — Add to Home Screen</title>
+    <link rel="stylesheet" href="/src/pwa/pwa.css" />
+  </head>
+  <body>
+    <main class="pwa">
+      <img class="pwa-icon" src="/icons/icon-192.png" width="96" height="96" alt="" />
+      <h1>phamlab</h1>
+      <p class="pwa-sub">Keep your trips one tap away.</p>
+
+      <button id="pwa-add" class="pwa-btn" type="button">Add to Home Screen</button>
+      <p id="pwa-msg" class="pwa-msg" role="status" hidden></p>
+      <a class="pwa-link" href="/phamlab-website/">Continue to the website</a>
+
+      <div id="pwa-ios" class="pwa-sheet" hidden>
+        <ol>
+          <li>Tap the <strong>Share</strong> button
+            <svg class="pwa-share" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
+            in the Safari toolbar</li>
+          <li>Scroll and choose <strong>Add to Home Screen</strong></li>
+          <li>Tap <strong>Add</strong></li>
+        </ol>
+        <div class="pwa-arrow" aria-hidden="true">↓</div>
+      </div>
+
+      <div id="pwa-inapp" class="pwa-sheet" hidden>
+        <p>This browser can’t install apps. Open this page in <strong>Safari</strong> or <strong>Chrome</strong>, then tap Add to Home Screen.</p>
+        <button id="pwa-copy" class="pwa-btn pwa-btn-secondary" type="button">Copy link</button>
+      </div>
+    </main>
+    <script type="module" src="/src/pwa/main.ts"></script>
+  </body>
+</html>

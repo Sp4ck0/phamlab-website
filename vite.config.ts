@@ -31,6 +31,12 @@ const cspPlugin = {
 export default defineConfig({
   plugins: [react(), cspPlugin],
   base: '/phamlab-website/',
+  // /pwa is a real page (the app itself uses HashRouter), so GitHub Pages can serve it.
+  build: {
+    rollupOptions: {
+      input: { main: path.resolve(import.meta.dirname, 'index.html'), pwa: path.resolve(import.meta.dirname, 'pwa/index.html') },
+    },
+  },
   resolve: {
     alias: {
       '@convex': path.resolve(import.meta.dirname, 'src/_generated'),
