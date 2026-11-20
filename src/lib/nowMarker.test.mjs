@@ -15,7 +15,7 @@ const acts = [
 test('before, during, between and after, read from the destination clock', () => {
   const d = day(acts);
   assert.deepEqual(nowPosition(d, bkk('07:10')), { kind: 'before', beforeIndex: 0, hhmm: '07:10', next: { hhmm: '09:00', inMin: 110 } });
-  assert.deepEqual(nowPosition(d, bkk('09:30')), { kind: 'during', index: 0, hhmm: '09:30' });
+  assert.deepEqual(nowPosition(d, bkk('09:30')), { kind: 'during', index: 0, hhmm: '09:30', progress: 1 / 3 });
   assert.deepEqual(nowPosition(d, bkk('15:00')), { kind: 'between', beforeIndex: 2, hhmm: '15:00', next: { hhmm: '16:00', inMin: 60 } });
   assert.deepEqual(nowPosition(d, bkk('22:00')), { kind: 'after', afterIndex: 2, hhmm: '22:00' });
 });
@@ -29,8 +29,14 @@ test('an explicit endTime is honoured', () => {
   assert.equal(nowPosition(d, bkk('10:45')).kind, 'during');
 });
 
-test('a day with no timed activities, or no known zone, has no line', () => {
-  assert.equal(nowPosition(day(['x', { text: 'y' }]), bkk('10:00')), null);
+test('progress runs from 0 at the start toward 1 at the end', () => {
+  assert.equal(nowPosition(day(acts), bkk('09:00')).progress, 0);
+  assert.equal(nowPosition(day(acts), bkk('09:45')).progress, 0.5);
+});
+
+test('a day with no timed activities still gets a line; no known zone gets none', () => {
+  assert.deepEqual(nowPosition(day(['x', { text: 'y' }]), bkk('10:00')), { kind: 'untimed', hhmm: '10:00' });
+  assert.deepEqual(nowPosition(day([]), bkk('10:00')), { kind: 'untimed', hhmm: '10:00' });
   assert.equal(nowPosition(day(acts, 'ZZ'), bkk('10:00')), null);
 });
 

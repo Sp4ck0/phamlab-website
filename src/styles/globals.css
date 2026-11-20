@@ -27,6 +27,7 @@
   --accent-transit: #eda100; --accent-transit-tint: #fdf3e0;
 
   --danger: #c9453b; --danger-tint: #fbe9e7;
+  --now: #e8362b;
   --warn: #9a6a00;
   --good: #0ca30c;
 }
@@ -51,6 +52,7 @@
     --accent-transit: #c98500; --accent-transit-tint: #362a11;
 
     --danger: #e0655a; --danger-tint: #3a1613;
+    --now: #ff5a4d;
   --warn: #e0b03a;
     --good: #0ca30c;
   }
@@ -75,6 +77,7 @@
   --accent-transit: #c98500; --accent-transit-tint: #362a11;
 
   --danger: #e0655a; --danger-tint: #3a1613;
+  --now: #ff5a4d;
   --warn: #e0b03a;
   --good: #0ca30c;
 }
@@ -353,6 +356,64 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 /* tile share + calendar buttons: pushed right in the card header, clear of the status dot (the .ctop padding) */
 .ctop .share-wrap{margin-left:auto}
 .ctop a.gcal-btn{margin-left:0}
+.card .icon-btn,.flight-box .icon-btn,.activity .share-btn{opacity:.6;width:24px;height:24px}
+.card .icon-btn:hover,.flight-box .icon-btn:hover,.activity .share-btn:hover,.card .icon-btn:focus-visible,.flight-box .icon-btn:focus-visible,.activity .share-btn:focus-visible{opacity:1}
+.activity .share-wrap{flex:none;align-self:flex-start}
+.day-heading .icon-btn:hover,.day-heading .icon-btn:focus-visible{opacity:1}
+.day-head{display:grid;grid-template-columns:100px minmax(0,1fr) auto;align-items:center;gap:8px 14px;margin:0}
+.day-head-btn{
+  width:100%;background:none;border:0;padding:13px 16px;font:inherit;color:inherit;
+  text-align:left;cursor:pointer;scroll-margin-top:76px;border-radius:10px;
+}
+.day-head-btn:hover{background:var(--page)}
+.day-head-btn:focus-visible,.daynav button:focus-visible{outline:3px solid var(--accent-1);outline-offset:2px}
+.day-head-right{grid-column:3;grid-row:1;display:inline-flex;align-items:center;flex-wrap:wrap;gap:8px;min-width:0}
+.day-summary{grid-column:2;grid-row:1;font-size:13.5px;color:var(--text-secondary);overflow-wrap:anywhere;min-width:0}
+.day-card > div:not([hidden]){padding:4px 16px 16px}
+.itinerary-status{font-size:13px;color:var(--text-secondary)}
+.itinerary-status:empty{margin:0}
+.itinerary-empty{padding:12px 0 20px}
+.day-chevron{transition:transform .16s ease;color:var(--text-muted);flex:none}
+.day-chevron[data-collapsed="true"]{transform:rotate(-90deg)}
+.day-title-group{grid-column:1;grid-row:1;display:flex;flex-direction:column;gap:3px;min-width:0}
+.day-num{font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--text-muted);text-transform:uppercase}
+.day-date{font-size:14.5px;font-weight:700;letter-spacing:-.01em}
+.leg-badge{
+  display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;
+  padding:4px 10px;border-radius:999px;background:var(--leg-tint,var(--accent-1-tint));color:var(--leg-color,var(--accent-1));
+}
+.leg-badge .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.weather-badge{
+  display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;white-space:nowrap;
+  padding:3px 9px;border-radius:999px;border:1px solid transparent;
+  background:var(--surface-2,rgba(128,128,128,.12));color:var(--text-primary,inherit);
+}
+/* Historical average, not a forecast: dashed, muted, italic. */
+.weather-badge.weather-typical{
+  background:transparent;border:1px dashed var(--text-muted);color:var(--text-muted);font-style:italic;font-weight:500;
+}
+.weather-badge.weather-actual{color:var(--text-muted)}
+.day-subtitle{font-size:13.5px;color:var(--text-secondary);margin:2px 0 14px}
+
+.activity-list{list-style:none;margin:0;padding:0}
+.activity{display:flex;gap:12px;padding:9px 0;border-top:1px solid var(--gridline);font-size:14.5px;line-height:1.5}
+.activity:first-child{border-top:none;padding-top:0}
+.act-tag{
+  flex:none;align-self:flex-start;margin-top:1px;font-size:10.5px;font-weight:700;letter-spacing:.03em;
+  text-transform:uppercase;color:var(--text-muted);background:var(--chip-bg);border-radius:6px;
+  padding:3px 7px;min-width:78px;text-align:center;white-space:nowrap;
+}
+.activity-text{flex:1;min-width:0;overflow-wrap:anywhere;color:var(--text-primary)}
+.activity-text a{color:var(--accent-1);font-weight:600;text-decoration:underline}
+.activity-time{font-variant-numeric:tabular-nums;color:var(--text-secondary);font-weight:600;margin-right:4px}
+.now-line{position:relative;display:flex;align-items:center;list-style:none;margin:6px 0;padding:0;border-top:2px solid var(--now);font-size:12px;font-weight:700;color:var(--now)}
+.now-line::before,.now-track::before{content:"";position:absolute;left:0;top:-5px;width:8px;height:8px;border-radius:50%;background:var(--now)}
+.now-line-label{margin-top:8px;padding-left:2px;font-variant-numeric:tabular-nums}
+.now-line-mine{font-weight:500;color:var(--text-muted)}
+.activity--now{position:relative;isolation:isolate;padding-left:8px;padding-right:8px;border-radius:6px;background:color-mix(in srgb,var(--now) 8%,transparent)}
+.now-track{position:absolute;left:0;right:0;height:0;border-top:2px solid var(--now);z-index:-1;pointer-events:none}
+.now-pill{display:inline-block;margin-right:6px;padding:1px 8px;border-radius:999px;background:var(--now);color:#fff;font-size:11px;font-weight:700;vertical-align:middle}
+a.gcal-btn{margin-left:0}
 .card .icon-btn,.flight-box .icon-btn,.activity .share-btn{opacity:.6;width:24px;height:24px}
 .card .icon-btn:hover,.flight-box .icon-btn:hover,.activity .share-btn:hover,.card .icon-btn:focus-visible,.flight-box .icon-btn:focus-visible,.activity .share-btn:focus-visible{opacity:1}
 .activity .share-wrap{flex:none;align-self:flex-start}

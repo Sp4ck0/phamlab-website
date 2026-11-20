@@ -139,11 +139,14 @@ export function DayCard({
   const zone = dayZone(d);
   const mine = isToday ? viewerHint(now, zone) : null;
   const clock = isToday && zone ? zoneNow(now, zone).hhmm : null;
-  const nowLine = (pos: NonNullable<typeof nowPos>, key: string) => (
+  // A full-width line between rows (or above/below the list). During an activity the line is drawn inside that row instead.
+  const nowLine = (pos: Exclude<NonNullable<typeof nowPos>, { kind: "during" }>, key: string) => (
     <li className="now-line" key={key} aria-label="Current time">
       <span className="now-line-label">
         Now {pos.hhmm}
-        {pos.kind === "after" ? " · that's the plan for today" : pos.kind !== "during" ? ` · ${pos.kind === "before" ? "first up" : "next"} ${pos.next.hhmm} (in ${untilText(pos.next.inMin)})` : ""}
+        {pos.kind === "after" ? " · that's the plan for today"
+          : pos.kind === "untimed" ? (actRows.length ? " · today's plans have no times" : " · no activities listed")
+          : ` · ${pos.kind === "before" ? "first up" : "next"} ${pos.next.hhmm} (in ${untilText(pos.next.inMin)})`}
         {mine && <span className="now-line-mine"> · {mine} your time</span>}
       </span>
     </li>
@@ -300,13 +303,15 @@ export function DayCard({
             </div>
           )}
 
+          {!gapsOnly && actRows.length === 0 && nowPos?.kind === "untimed" && <ul className="activity-list">{nowLine(nowPos, "now")}</ul>}
+
           {gapsOnly ? (
             gaps?.plan && <p className="day-subtitle"><span className="gap-reason">Nothing planned</span></p>
           ) : actRows.length > 0 ? (
             <ul className="activity-list">
               {actRows.map(({ item: a, state, ai, prev }, ri) => {
                 const { tag, time, text, places } = actParts(a);
-                const lineBefore = nowPos && nowPos.kind !== "during" && nowPos.kind !== "after" && nowPos.beforeIndex === ai;
+                const lineBefore = nowPos && ((nowPos.kind === "before" || nowPos.kind === "between") ? nowPos.beforeIndex === ai : nowPos.kind === "untimed" && ri === 0);
                 const lineAfter = nowPos?.kind === "after" && nowPos.afterIndex === ai;
                 const inProgress = nowPos?.kind === "during" && nowPos.index === ai;
                 if (state === "gone") {
@@ -341,8 +346,9 @@ export function DayCard({
                 }
                 return (
                   <Fragment key={ai}>
-                  {lineBefore && nowLine(nowPos, "now")}
+                  {lineBefore && nowPos && nowPos.kind !== "during" && nowLine(nowPos, "now")}
                   <li className={`activity${prev ? " chg-row" : changeClass(state)}${inProgress ? " activity--now" : ""}`} id={tileDomId(rowId, `act:${ai}`)}>
+                    {inProgress && nowPos?.kind === "during" && <span className="now-track" aria-hidden="true" style={{ top: `${Math.min(0.94, Math.max(0.06, nowPos.progress)) * 100}%` }} />}
                     {tag && <span className="act-tag">{tag}</span>}
                     <span className="activity-text" onClick={focusInlinePlace}>
                       {time && <span className="activity-time">{time}</span>}
