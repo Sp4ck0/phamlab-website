@@ -832,7 +832,7 @@ test('today\'s card marks "now" in the destination\'s time: a line between activ
     view = render();
     assert.equal(view.container.querySelectorAll('.now-line').length, 0);
     assert.equal(view.container.querySelectorAll('.activity--now').length, 1);
-    assert.equal(view.container.querySelectorAll('.activity--now .now-track').length, 1); // the line runs through the row
+    assert.equal(view.container.querySelectorAll('.activity--now .now-track .now-emoji').length, 1); // the line runs through the row, with the emoji on it
     assert.match(view.container.querySelector('.activity--now').textContent, /Now/);
     view.close();
     // No timed activities, or none at all: still one line, saying why it has nothing to sit between.

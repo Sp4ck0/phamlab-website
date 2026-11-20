@@ -407,8 +407,9 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 .activity-text a{color:var(--accent-1);font-weight:600;text-decoration:underline}
 .activity-time{font-variant-numeric:tabular-nums;color:var(--text-secondary);font-weight:600;margin-right:4px}
 .now-line{position:relative;display:flex;align-items:center;list-style:none;margin:6px 0;padding:0;border-top:2px solid var(--now);font-size:12px;font-weight:700;color:var(--now)}
-.now-line::before,.now-track::before{content:"";position:absolute;left:0;top:-5px;width:8px;height:8px;border-radius:50%;background:var(--now)}
-.now-line-label{margin-top:8px;padding-left:2px;font-variant-numeric:tabular-nums}
+.now-emoji{position:absolute;left:0;top:-9px;padding-right:4px;font-size:14px;line-height:1;font-weight:400}
+.now-line .now-emoji{background:var(--card)}
+.now-line-label{margin-top:8px;padding-left:22px;font-variant-numeric:tabular-nums}
 .now-line-mine{font-weight:500;color:var(--text-muted)}
 .activity--now{position:relative;isolation:isolate;padding-left:8px;padding-right:8px;border-radius:6px;background:color-mix(in srgb,var(--now) 8%,transparent)}
 .now-track{position:absolute;left:0;right:0;height:0;border-top:2px solid var(--now);z-index:-1;pointer-events:none}

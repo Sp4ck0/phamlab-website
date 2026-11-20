@@ -14,7 +14,7 @@ import { TourBox } from "./TourBox";
 import { WeatherBadge } from "./WeatherBadge";
 import { AddToCalendar } from "./AddToCalendar";
 import { actUrl, zoneNow } from "../../lib/calendar";
-import { dayZone, nowPosition, untilText, viewerHint } from "../../lib/nowMarker";
+import { NOW_EMOJI, dayZone, nowPosition, untilText, viewerHint } from "../../lib/nowMarker";
 import { sanitizeHtml } from "../../lib/sanitizeHtml";
 import type { DayWeather } from "../../lib/weather";
 import { useParams } from "react-router-dom";
@@ -142,6 +142,7 @@ export function DayCard({
   // A full-width line between rows (or above/below the list). During an activity the line is drawn inside that row instead.
   const nowLine = (pos: Exclude<NonNullable<typeof nowPos>, { kind: "during" }>, key: string) => (
     <li className="now-line" key={key} aria-label="Current time">
+      <span className="now-emoji" aria-hidden="true">{NOW_EMOJI}</span>
       <span className="now-line-label">
         Now {pos.hhmm}
         {pos.kind === "after" ? " · that's the plan for today"
@@ -348,7 +349,7 @@ export function DayCard({
                   <Fragment key={ai}>
                   {lineBefore && nowPos && nowPos.kind !== "during" && nowLine(nowPos, "now")}
                   <li className={`activity${prev ? " chg-row" : changeClass(state)}${inProgress ? " activity--now" : ""}`} id={tileDomId(rowId, `act:${ai}`)}>
-                    {inProgress && nowPos?.kind === "during" && <span className="now-track" aria-hidden="true" style={{ top: `${Math.min(0.94, Math.max(0.06, nowPos.progress)) * 100}%` }} />}
+                    {inProgress && nowPos?.kind === "during" && <span className="now-track" aria-hidden="true" style={{ top: `${Math.min(0.94, Math.max(0.06, nowPos.progress)) * 100}%` }}><span className="now-emoji">{NOW_EMOJI}</span></span>}
                     {tag && <span className="act-tag">{tag}</span>}
                     <span className="activity-text" onClick={focusInlinePlace}>
                       {time && <span className="activity-time">{time}</span>}
