@@ -99,10 +99,11 @@ a{color:inherit}
 .sidenav{
   position:fixed;top:0;left:0;bottom:0;width:var(--sidenav-w);z-index:30;
   background:var(--card);border-right:1px solid var(--border);
-  padding:30px 18px;overflow-y:auto;
+  padding:30px 18px;overflow-y:auto;overflow-x:hidden;overscroll-behavior-x:contain;
   display:flex;flex-direction:column;gap:30px;
 }
 .navhead{display:flex;align-items:center;gap:11px;padding:0 4px}
+.navhandle{display:none}
 .navmark{
   width:34px;height:34px;border-radius:9px;flex-shrink:0;
   display:grid;place-items:center;font-size:16px;
@@ -758,6 +759,14 @@ footer code{background:var(--chip-bg);padding:2px 6px;border-radius:4px;color:va
   }
   .sidenav[data-open="true"]{transform:translateX(0);box-shadow:8px 0 24px rgba(0,0,0,.25)}
   .sidenav .navhead{display:none}
+  .navhandle{
+    display:block;position:fixed;top:50%;left:var(--sidenav-w);transform:translateY(-50%);z-index:41;
+    width:28px;height:56px;padding:0;font-size:20px;line-height:1;cursor:pointer;
+    background:var(--card);color:var(--text-muted);border:1px solid var(--border);border-left:none;
+    border-radius:0 10px 10px 0;box-shadow:8px 0 24px rgba(0,0,0,.25);
+  }
+  .navhandle:hover{color:var(--text-primary)}
+  .sidenav,.navbackdrop{touch-action:pan-y}
   .daynav-shell{top:56px}
   .day-head-btn{scroll-margin-top:132px}
   .day-card{scroll-margin-top:124px}
@@ -811,7 +820,7 @@ footer code{background:var(--chip-bg);padding:2px 6px;border-radius:4px;color:va
 body:has(.print-doc){padding:0}
 @media(prefers-reduced-motion:reduce){.day-chevron{transition:none}}
 @media print{
-  .sidenav,.status,.navtoggle,.navbackdrop,.mobile-topbar{display:none}
+  .sidenav,.status,.navtoggle,.navbackdrop,.navhandle,.mobile-topbar{display:none}
 }
 
 /* ── printable itinerary (/trip/:slug/print) ───────────────

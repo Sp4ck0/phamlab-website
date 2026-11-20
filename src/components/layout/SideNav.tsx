@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type TouchEvent } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "@convex/api";
@@ -47,6 +47,22 @@ export function SideNav() {
     return () => window.removeEventListener("keydown", onKey);
   }, [isOpen]);
 
+  // A leftward swipe on the open drawer (or its backdrop) closes it.
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
+  function onTouchStart(e: TouchEvent) {
+    const t = e.touches[0];
+    swipeStart.current = { x: t.clientX, y: t.clientY };
+  }
+  function onTouchEnd(e: TouchEvent) {
+    const start = swipeStart.current;
+    swipeStart.current = null;
+    if (!start || !isOpen) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (dx < -50 && Math.abs(dx) > Math.abs(dy) * 1.5) setIsOpen(false);
+  }
+
   const themeButton = (
     <button
       className="btn btn-icon"
@@ -81,9 +97,20 @@ export function SideNav() {
         <span className="navtitle">Pham Lab</span>
         {themeButton}
       </div>
-      <div className="navbackdrop" data-open={isOpen ? "true" : undefined} onClick={() => setIsOpen(false)} />
+      <div
+        className="navbackdrop"
+        data-open={isOpen ? "true" : undefined}
+        onClick={() => setIsOpen(false)}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      />
 
-      <nav className="sidenav" data-open={isOpen ? "true" : undefined}>
+      <nav
+        className="sidenav"
+        data-open={isOpen ? "true" : undefined}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
         <div className="navhead">
           <span className="navmark">🧳</span>
           <span className="navtitle">Pham Lab</span>
@@ -210,6 +237,11 @@ export function SideNav() {
           </Link>
         </div>
       </nav>
+      {isOpen && (
+        <button className="navhandle" onClick={() => setIsOpen(false)} aria-label="Minimize menu">
+          ‹
+        </button>
+      )}
       {showLog && <VersionLog onClose={() => setShowLog(false)} />}
     </>
   );
