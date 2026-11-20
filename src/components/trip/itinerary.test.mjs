@@ -1079,6 +1079,7 @@ test('a day with an open plan task shows a "Nothing planned yet" tile on the rai
     assert.ok(tile && tile.closest('li.tl-entry'));
     assert.equal(tile.querySelector('.tl-title').textContent, 'Nothing planned yet');
     assert.equal(tile.querySelector('.tl-toggle, .tl-body'), null); // nothing to open
+    assert.ok(tile.closest('li.tl-entry').querySelector('.tl-rail .tl-warn')); // and the amber badge on its icon, like other open items
     assert.equal(view.container.querySelector('.day-subtitle'), null); // no loose "Not decided yet" line
   } finally { view.close(); }
   // Dismissed in Action Items (no open plan task): no tile, even though the day is empty.
