@@ -79,14 +79,18 @@
     -webkit-user-select: none;
   }
 
-  /* While dragging: the tile shrinks and fades so the lane and tray stay visible. */
-  /* dnd-kit pins `transform` on the dragged element with !important, so shrink it with the
-     separate `scale` property, anchored where it was grabbed (dnd-kit's origin variable). The
-     doubled attribute selector out-ranks dnd-kit's own `[style*='scale']` rule. */
-  .card[data-dragging][data-dragging] {
+  /* While dragging: the tile fades a little. */
+  .card[data-dragging] {
+    opacity: 0.85;
+  }
+  /* Over a move-tray target (.shell[data-over-move]): the tile shrinks, so the target and its
+     "Release to move to…" label aren't hidden under it. dnd-kit pins `transform` on the dragged
+     element with !important, so use the separate `scale` property, anchored where it was grabbed
+     (dnd-kit's origin variable). The doubled attribute selector out-ranks dnd-kit's own
+     `[style*='scale']` rule. */
+  .shell[data-over-move] .card[data-dragging][data-dragging] {
     scale: 0.5 !important;
     transform-origin: var(--dnd-transform-origin, center) !important;
-    opacity: 0.85;
   }
 
   /* Drop targets that rise from the bottom while a card is being dragged. */

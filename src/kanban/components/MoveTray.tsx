@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { pointerIntersection } from '@dnd-kit/collision';
 import { useDragOperation, useDroppable } from '@dnd-kit/react';
 import type { Board, LaneId } from '../types';
@@ -23,8 +24,13 @@ function Target({ lane, name }: { lane: LaneId; name: string }) {
 }
 
 /** Phone layout: while a card is being dragged, big drop targets (one per other lane) rise from the bottom. */
-export function MoveTray({ board }: { board: Board }) {
-  const { source } = useDragOperation();
+export function MoveTray({ board, onOverChange }: { board: Board; onOverChange: (over: boolean) => void }) {
+  const { source, target } = useDragOperation();
+  // Tell the page when the finger is on a target, so it can shrink the dragged tile then.
+  const over = !!source && String(target?.id ?? '').startsWith(MOVE_PREFIX);
+  useEffect(() => {
+    onOverChange(over);
+  }, [over, onOverChange]);
   if (!source) return null;
   const from = laneOf(board, String(source.id));
   return (

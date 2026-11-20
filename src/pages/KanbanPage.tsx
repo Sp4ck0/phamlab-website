@@ -75,6 +75,8 @@ export function KanbanPage() {
   // as styles/narrow.css).
   const narrow = useMediaQuery("(max-width: 720px)");
   const [pickedLane, setPickedLane] = useState<LaneId | null>(null);
+  // True while a dragged tile is over a move-tray target (the tile shrinks then).
+  const [overMove, setOverMove] = useState(false);
 
   const [openId, setOpenId] = useState<string | null>(null);
   // The board only holds tile summaries; the open card is loaded whole.
@@ -243,7 +245,7 @@ export function KanbanPage() {
             }
           }}
         >
-          <div className="shell">
+          <div className="shell" data-over-move={overMove || undefined}>
             <header className="top">
               <div className="top__brand">
                 <h1>{board.name}</h1>
@@ -309,7 +311,7 @@ export function KanbanPage() {
                 ))}
             </main>
 
-            {narrow && <MoveTray board={displayBoard} />}
+            {narrow && <MoveTray board={displayBoard} onOverChange={setOverMove} />}
 
             {narrow && !openId && !paneOpen && (
               <button
