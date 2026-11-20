@@ -178,12 +178,16 @@ test('identical day task labels are occurrence-safe and nested controls never to
   const element = React.createElement(React.Fragment, null, ...['one', 'two'].map(rowId => React.createElement(DayCard, { ...props, key: rowId, rowId, day: rich, expanded: true, dayActionItems: [item], onToggleActionItem: id => calls.push(id), onExpandedChange: () => calls.push('day-toggle') })));
   const view = mount(element);
   try {
-    const inputs = [...view.container.querySelectorAll('input')];
-    assert.equal(new Set(inputs.map(i => i.id)).size, 2);
-    // Only the checkbox toggles a task; its text is a plain, selectable span that names the checkbox.
-    const text = document.getElementById(inputs[1].getAttribute('aria-labelledby'));
-    assert.ok(text.textContent.includes('Synthetic task'));
-    act(() => text.click());
+    // Each day's to-do is a tile with its own checkbox; ids stay unique across the two days.
+    const inputs = [...view.container.querySelectorAll('input[type=checkbox]')];
+    assert.equal(inputs.length, 2);
+    const ids = [...view.container.querySelectorAll('[id]')].map((e) => e.id);
+    assert.equal(new Set(ids).size, ids.length);
+    assert.equal(inputs[1].getAttribute('aria-label'), 'Done: Synthetic task');
+    // Only the checkbox ticks the task; the tile's title opens and closes the tile, never the day.
+    const toggle = inputs[1].closest('.tl-tile').querySelector('.tl-toggle');
+    assert.ok(toggle.textContent.includes('Synthetic task'));
+    act(() => toggle.click());
     assert.deepEqual(calls, []);
     act(() => inputs[1].click());
     assert.deepEqual(calls, [item.id]);
@@ -955,4 +959,67 @@ test('Only gaps: booked tiles start closed and actionable ones open, whatever th
     const ids = [...view.container.querySelectorAll('[id]')].map((e) => e.id);
     assert.equal(new Set(ids).size, ids.length);
   } finally { view.close(); localStorage.clear(); }
+});
+
+// ---- to-dos and considerations on the timeline ----
+const consider = (id, extra = {}) => ({ key: `item:${id}`, kind: 'consider', scope: { kind: 'day', date: day.date }, title: `Synthetic ${id}`, refs: [`item:${id}`], refsDone: [false], done: false, dueDate: null, dueDateIsDefault: true, editable: true, votes: { yes: [], no: [], mine: null }, ...extra });
+
+test('dated to-dos and considerations are tiles on the day: a timed one among the activities, an untimed one after them', () => {
+  const votes = [];
+  const ticks = [];
+  const synthetic = { ...day, acts: [{ time: '09:00', text: 'Synthetic morning' }, { time: '15:00', text: 'Synthetic afternoon' }] };
+  const todo = { id: 'todo1', date: day.date, title: 'Synthetic to-do', detail: '' };
+  const view = mount(React.createElement(DayCard, { ...props, day: synthetic, expanded: true,
+    dayConsiderations: [consider('lunch', { time: '12:00', votes: { yes: ['Ann'], no: [], mine: null } })], dayActionItems: [todo],
+    onVote: (...a) => votes.push(a), onToggleActionItem: (id) => ticks.push(id) }));
+  try {
+    const titles = [...view.container.querySelectorAll('.tl-entry .tl-title')].map((t) => t.textContent);
+    assert.deepEqual(titles, ['Synthetic morning', 'Synthetic lunch', 'Synthetic afternoon', 'Synthetic to-do']);
+    const lunch = view.container.querySelector('.tl-consider');
+    assert.equal(lunch.closest('.tl-entry').querySelector('.tl-time').textContent, '12:00');
+    assert.match(lunch.querySelector('.tl-meta').textContent, /Considering/);
+    // Voting and ticking happen in the header, so they work while the tile is closed, and never toggle it.
+    const before = lunch.querySelector('.tl-toggle').getAttribute('aria-expanded');
+    act(() => lunch.querySelector('.tl-end .vote-btn[data-vote="yes"]').click());
+    assert.deepEqual(votes, [['lunch', 'yes']]);
+    assert.equal(lunch.querySelector('.tl-toggle').getAttribute('aria-expanded'), before);
+    assert.equal(lunch.querySelector('.vote-btn[data-vote="yes"] b').textContent, '1');
+    act(() => view.container.querySelector('.tl-item:not(.tl-consider) .tl-check').click());
+    assert.deepEqual(ticks, ['todo1']);
+  } finally { view.close(); }
+});
+
+test('a consideration proposing a hotel shows it as a Proposed tile, and Add to itinerary approves it for that day', async () => {
+  const promoted = [];
+  const hotel = { who: 'all', name: 'Synthetic Proposed Hotel', status: 'needed', checkInTime: '15:00' };
+  const task = consider('stay', { scope: { kind: 'range', start: day.date, end: '2040-01-04' }, proposes: { type: 'hotel', entry: hotel } });
+  const view = mount(React.createElement(DayCard, { ...props, day, expanded: true, dayConsiderations: [task], onPromote: async (...a) => { promoted.push(a); } }));
+  try {
+    const tile = view.container.querySelector('.tl-consider');
+    assert.equal(tile.closest('.tl-entry').querySelector('.tl-dot').textContent, '🏨');
+    assert.match(tile.querySelector('.tl-meta').textContent, /Proposed stay · Synthetic Proposed Hotel/);
+    assert.equal(tile.querySelector('.tl-toggle').getAttribute('aria-expanded'), 'true'); // unsettled: open
+    const proposal = tile.querySelector('.tl-proposal');
+    assert.ok(proposal.textContent.includes('Proposed') && proposal.textContent.includes('Synthetic Proposed Hotel'));
+    assert.equal(proposal.querySelector('.tl-actions'), null); // the draft has no actions of its own
+    await act(async () => { tile.querySelector('.tl-approve').click(); });
+    assert.deepEqual(promoted, [['stay', day.date]]);
+  } finally { view.close(); }
+});
+
+test('an entry approved from an item shows its History (wording and votes), and the item says it is in the itinerary', () => {
+  const synthetic = { ...day, acts: [{ text: 'Synthetic chosen dinner', time: '19:00', fromItem: 'dinner' }] };
+  const task = consider('dinner', { title: 'Synthetic dinner idea', detail: 'Synthetic reason', done: true, outcome: 'chosen', votes: { yes: ['Ann', 'Ben'], no: ['Cy'], mine: null } });
+  const view = mount(React.createElement(DayCard, { ...props, day: synthetic, days: [synthetic], expanded: true, dayConsiderations: [task], itemTasks: { dinner: task }, onPromote: async () => {} }));
+  try {
+    const act = [...view.container.querySelectorAll('.tl-tile')].find((t) => t.querySelector('.tl-title').textContent === 'Synthetic chosen dinner');
+    const hist = act.querySelector('details.tl-history');
+    assert.ok(hist && !hist.open); // folded away
+    assert.ok(hist.textContent.includes('Synthetic dinner idea') && hist.textContent.includes('Synthetic reason'));
+    assert.match(hist.textContent, /👍 2 \(Ann, Ben\) · 👎 1 \(Cy\) · Chosen/);
+    const item = view.container.querySelector('.tl-consider');
+    assert.ok(item.textContent.includes('In the itinerary.'));
+    assert.equal(item.querySelector('.tl-approve'), null); // already added
+    assert.equal(item.querySelector('.tl-toggle').getAttribute('aria-expanded'), 'false'); // settled: closed
+  } finally { view.close(); }
 });

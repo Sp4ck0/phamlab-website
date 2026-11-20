@@ -25,13 +25,15 @@ export interface HotelBodyProps {
   date: string; // the day this tile is on
   days?: ResolvedDay[];
   dayNumber: number;
+  // A proposed (draft) hotel inside an action item: the item's own actions stand in for these.
+  actions?: boolean;
 }
 
 // What a hotel tile shows when open. The timeline header already has the name, the
 // stay's part, the booking state and the booked toggle; this is the rest. The name
 // keeps its pin and map link, the stay strip shows both check-in and check-out on every
 // night of the stay, and the actions (share, call, calendar) sit in one row at the end.
-export function HotelBody({ g, status: s, stay, gapAfter, groups, date, days, dayNumber }: HotelBodyProps) {
+export function HotelBody({ g, status: s, stay, gapAfter, groups, date, days, dayNumber, actions = true }: HotelBodyProps) {
   const nm = g.name || "Hotel not chosen";
   const placeholder = isPlaceholderHotel(g);
   const uniqueWho = [...new Set(g.who)];
@@ -81,7 +83,7 @@ export function HotelBody({ g, status: s, stay, gapAfter, groups, date, days, da
           {g.detail && <div className="cmeta"><Linkify text={g.detail} /></div>}
         </div>
       </div>
-      <div className="tl-actions">
+      {actions && <div className="tl-actions">
         <ShareLinkButton param={{ day: date, tile: g.srcs[0] }} label={`Share link to ${nm}`} />
         {g.phone && (
           <a className="gcal-btn call-btn" href={phoneHref(g.phone)} aria-label={`Call ${nm}`} title={`Call ${g.phone}`}>
@@ -89,7 +91,7 @@ export function HotelBody({ g, status: s, stay, gapAfter, groups, date, days, da
           </a>
         )}
         {days && <AddToCalendar url={hotelUrl(g.name, g.address, days, dayNumber)} />}
-      </div>
+      </div>}
     </div>
   );
 }

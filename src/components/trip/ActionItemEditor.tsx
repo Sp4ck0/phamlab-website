@@ -55,6 +55,8 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
   const [scope, setScope] = useState<Scope>(initial?.endDate ? "range" : initial?.date ? "day" : "trip");
   const [date, setDate] = useState(initial?.date ?? "");
   const [endDate, setEndDate] = useState(initial?.endDate ?? "");
+  // A time of day places a dated item on its day's timeline.
+  const [time, setTime] = useState(initial?.time ?? "");
   const [whoIds, setWhoIds] = useState<string[]>(() => toIds(initial?.who));
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -91,6 +93,10 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
         priority,
         places: cleanPlaces(places),
         who: whoIds.length === 0 ? undefined : whoIds.length === 1 ? whoIds[0] : whoIds,
+        time: scope === "trip" ? undefined : time || undefined,
+        // The editor can't change a proposed entry (the AI writes those), but saving keeps it:
+        // the save replaces the whole item.
+        proposes: initial?.proposes,
       });
     } catch (e) {
       setError(errorText(e));
@@ -120,7 +126,7 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
     whoIds.length === 0 ? "Everyone" : whoIds.map((id) => groups.find((g) => g.id === id)?.name ?? id).join(", "),
     KIND_LABELS[kind],
     ...(priority ? [`${PRIORITY_LABELS[priority]} priority`] : []),
-    when,
+    time && scope !== "trip" ? `${when} · ${time}` : when,
     ...(placeNames.length === 0 ? [] : [placeNames.length === 1 ? placeNames[0] : `${placeNames.length} places`]),
   ].join(" · ");
 
@@ -245,6 +251,12 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                 />
+              </label>
+            )}
+            {scope !== "trip" && (
+              <label className="ai-day">
+                Time
+                <input type="time" className="due-input" value={time} onChange={(e) => setTime(e.target.value)} aria-label="Time of day (optional)" />
               </label>
             )}
             {scope === "range" && (

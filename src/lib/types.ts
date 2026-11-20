@@ -72,6 +72,7 @@ export interface Flight {
   // Booking reference, shown behind a tap. Never part of the export.
   confirmation?: string;
   ticketUrl?: string; // an https link; shown as "Ticket", never exported
+  fromItem?: string; // the action item it was approved from (its votes and earlier wording)
 }
 
 // A named place: pinned on the trip map (by placeId if set, else address) and
@@ -107,6 +108,7 @@ export interface Hotel extends Place {
   budget?: HotelPrice; // a target while the stay isn't booked yet
   confirmation?: string; // behind a tap; never exported
   area?: string; // where a not-yet-chosen hotel will be; the name stays as typed (it is the identity)
+  fromItem?: string; // the action item it was approved from
 }
 
 export type Tag = "" | "move" | "transit" | "event" | undefined;
@@ -114,7 +116,7 @@ export type Tag = "" | "move" | "transit" | "event" | undefined;
 // An activity is either a plain string (legacy — no tag/time shown) or a
 // richer object with an optional tag pill and time prefix.
 // `endTime` (local HH:MM) is never displayed; it only sets the calendar link's end.
-export type Act = string | { tag?: string; time?: string; endTime?: string; text: string; places?: Place[] };
+export type Act = string | { tag?: string; time?: string; endTime?: string; text: string; places?: Place[]; fromItem?: string };
 
 export interface TourDetails {
   summary: string;
@@ -152,7 +154,17 @@ export interface ActionItem {
   priority?: Priority;
   // Where it is: a Maps link on the row, and a map pin for a consideration.
   places?: Place[];
+  // Local "HH:MM" on its day: places it on that day's timeline (else it sits at the end).
+  time?: string;
+  // What it would add to the itinerary once approved (convex/travel/validators.ts).
+  proposes?: Proposal;
 }
+
+// A draft entry an item proposes, in the shape the day stores it.
+export type Proposal =
+  | { type: "hotel"; entry: Hotel }
+  | { type: "transport"; entry: Flight }
+  | { type: "activity"; entry: Exclude<Act, string> };
 
 // One row of the Action Items list, derived by the backend (convex/travel/tasks.ts).
 // `kind` is why it exists, `scope` is when it applies.
@@ -189,6 +201,9 @@ export interface Task {
   places?: Place[];
   outcome?: Outcome;
   votes?: { yes: string[]; no: string[]; mine: Vote | null };
+  // Stored items only: a time of day and a draft entry (see ActionItem).
+  time?: string;
+  proposes?: Proposal;
 }
 
 export interface HighlightStat {

@@ -434,6 +434,24 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 .tl-now .tl-rail{align-items:flex-start}
 .tl-now-dot{position:relative;z-index:1;margin-top:3px;width:10px;height:10px;border-radius:50%;background:var(--now);box-shadow:0 0 0 3px var(--card)}
 .tl-now-label{border-top:2px solid var(--now);margin-top:7px;padding-top:4px;font-size:12px;font-weight:700;color:var(--now);font-variant-numeric:tabular-nums}
+/* To-dos and considerations on the timeline: a dashed edge says "not in the plan yet". */
+.tl-tile.tl-item{border-style:dashed}
+.tl-tile.tl-item.is-done{opacity:.7}
+.tl-tile.tl-item.is-done:not(.tl-consider) .tl-title{text-decoration:line-through;text-decoration-color:var(--text-muted)}
+.tl-check{width:18px;height:18px;margin:0;accent-color:var(--good);cursor:pointer}
+.tl-end .vote-bar{display:inline-flex;gap:4px}
+.tl-end .vote-btn{min-height:28px}
+/* A proposed hotel, transport or activity: drawn like the real tile, inside a labelled box. */
+.tl-proposal{position:relative;margin-top:8px;padding:14px 12px 10px;border:1px dashed var(--accent-1);border-radius:8px;background:color-mix(in srgb,var(--accent-1) 4%,transparent)}
+.tl-proposal-label{position:absolute;top:-9px;left:10px;padding:0 6px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-1);background:var(--card)}
+.tl-linked{color:var(--good)}
+.tl-approve{font:inherit;font-size:13px;font-weight:700;color:#fff;background:var(--good);border:0;border-radius:8px;padding:6px 12px;cursor:pointer}
+.tl-approve:disabled{opacity:.6;cursor:default}
+.tl-link-btn{border:0;background:transparent;padding:0;cursor:pointer;font-family:inherit}
+/* An entry approved from an item: what was weighed, folded away at the end of the tile. */
+.tl-history{margin-top:10px;border-top:1px solid var(--gridline);padding-top:6px}
+.tl-history summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--text-secondary)}
+.tl-history-body{display:grid;gap:4px;margin-top:6px}
 /* Day header: open or close every tile of the day. */
 .day-tiles-btn{flex:none;display:inline-flex;align-items:center;gap:4px;font:inherit;font-size:12px;font-weight:600;color:var(--text-secondary);background:transparent;border:1px solid var(--border);border-radius:999px;padding:3px 10px 3px 7px;cursor:pointer;white-space:nowrap}
 .day-tiles-btn:hover,.day-tiles-btn:focus-visible{color:var(--accent-1);border-color:var(--accent-1)}
@@ -454,6 +472,8 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
   .tl-actions .icon-btn{width:36px;height:36px}
   .day-tiles-btn{min-height:36px;min-width:36px;justify-content:center;padding:0}
   .day-tiles-label{display:none}
+  .tl-approve,.tl-end .vote-btn{min-height:44px}
+  .tl-check{width:24px;height:24px}
 }
 .itinerary-status{font-size:13px;color:var(--text-secondary)}
 .itinerary-status:empty{margin:0}

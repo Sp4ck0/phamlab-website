@@ -4,16 +4,26 @@
 // transport with no usable time, then the activities in their stored order. A
 // transport row with a real departure time on this day is slotted in among the
 // activities that have times; nothing else moves. Only-gaps placeholders and the
-// tour box close the day.
+// tour box close the day. To-dos and considerations that cover the day follow the
+// same rule as transport: one with a time is slotted among the timed activities, one
+// without goes after the activities.
 import type { Change } from "./changeDiff";
 import { actWindow, parseTime } from "./calendar";
 import type { Span } from "./nowMarker";
 import { actParts } from "./tripLogic";
 import type { FlightGroup, HotelGroup } from "./tripLogic";
-import type { Act, ResolvedDay, Task } from "./types";
+import type { Act, ActionItem, ResolvedDay, Task } from "./types";
 
 /** An activity row as DayCard builds it: its diff state, its real index (-1 for a ghost) and, for a rewrite, the old wording. */
 export type ActRow = Change<Act> & { prev?: Act; ai: number };
+
+/** An action item on a day: a to-do (`todo`) or a consideration (`task`). `time` only counts on its own first day. */
+export interface DayItem {
+  id: string;
+  time?: string;
+  task?: Task;
+  todo?: ActionItem;
+}
 
 export type TimelineEntry =
   // `key` is unique within the day and is what open/closed state is stored under;
@@ -21,6 +31,7 @@ export type TimelineEntry =
   | { kind: "hotel"; key: string; domKey?: string; change: Change<HotelGroup> }
   | { kind: "transport"; key: string; domKey?: string; time?: string; minutes?: number; change: Change<FlightGroup> }
   | { kind: "activity"; key: string; domKey?: string; time?: string; minutes?: number; row: ActRow }
+  | { kind: "item"; key: string; domKey: string; time?: string; minutes?: number; item: DayItem }
   | { kind: "gap"; key: string; task: Task }
   | { kind: "tour"; key: "tour" };
 
@@ -41,10 +52,12 @@ export interface TimelineInput {
   acts: ActRow[];
   /** Only gaps: transport still to be entered, as placeholder tiles. */
   gaps: Task[];
+  /** To-dos and considerations that cover this day. */
+  items?: DayItem[];
   tour: boolean;
 }
 
-export function buildTimeline({ date, hotels, flights, acts, gaps, tour }: TimelineInput): TimelineEntry[] {
+export function buildTimeline({ date, hotels, flights, acts, gaps, tour, items = [] }: TimelineInput): TimelineEntry[] {
   const out: TimelineEntry[] = [];
 
   // A hotel being left goes first, then the rest, each in data order.
@@ -63,8 +76,14 @@ export function buildTimeline({ date, hotels, flights, acts, gaps, tour }: Timel
     return { kind: "transport", key, domKey: gone ? undefined : key, time, minutes: time ? minutesOf(time) : undefined, change };
   });
   for (const t of transport) if (t.minutes === undefined) out.push(t);
-  // Timed transport, earliest first (data order for equal times).
-  const timed = transport.filter((t) => t.minutes !== undefined).sort((a, b) => a.minutes! - b.minutes!);
+  const itemEntries = items.map((item): TimelineEntry & { kind: "item" } => {
+    const clock = parseTime(item.time);
+    const key = `item:${item.id}`;
+    return { kind: "item", key, domKey: key, time: clock ? item.time : undefined, minutes: clock ? clock.h * 60 + clock.m : undefined, item };
+  });
+  // Timed transport and items, earliest first (transport first, then data order, for equal times).
+  type Timed = (TimelineEntry & { kind: "transport" }) | (TimelineEntry & { kind: "item" });
+  const timed: Timed[] = [...transport, ...itemEntries].filter((t) => t.minutes !== undefined).sort((a, b) => a.minutes! - b.minutes!);
 
   const actEntries = acts.map((row, i): TimelineEntry & { kind: "activity" } => {
     const gone = row.state === "gone";
@@ -75,8 +94,11 @@ export function buildTimeline({ date, hotels, flights, acts, gaps, tour }: Timel
   });
   const lastTimed = actEntries.reduce((last, e, i) => (e.minutes !== undefined ? i : last), -1);
 
-  // No timed activity to slot between: timed transport closes the transport block.
-  if (lastTimed < 0) out.push(...timed);
+  // No timed activity to slot between: timed transport closes the transport block (timed items wait for the activities).
+  if (lastTimed < 0) {
+    out.push(...timed.filter((t) => t.kind === "transport"));
+    timed.splice(0, timed.length, ...timed.filter((t) => t.kind === "item"));
+  }
   actEntries.forEach((e, i) => {
     if (e.minutes !== undefined) {
       // Before the first activity that starts later; an equal time sorts after the activity.
@@ -86,6 +108,8 @@ export function buildTimeline({ date, hotels, flights, acts, gaps, tour }: Timel
     if (i === lastTimed) out.push(...timed.splice(0));
   });
 
+  out.push(...timed.splice(0));
+  for (const e of itemEntries) if (e.minutes === undefined) out.push(e);
   for (const task of gaps) out.push({ kind: "gap", key: `gap:${task.key}`, task });
   if (tour) out.push({ kind: "tour", key: "tour" });
   return out;
