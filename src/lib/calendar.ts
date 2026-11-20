@@ -164,13 +164,12 @@ const where = (d: Pick<ResolvedDay, "city" | "country">) => [d.city, d.country].
 export const detailsFor = (dayNumber: number) => `Pham Lab · Day ${dayNumber}`;
 
 // Default length per tag, capped at the next timed act that day so back-to-back
-// events don't overlap in the calendar.
-export function actUrl(a: Act, day: ResolvedDay, dayNumber: number, index = -1): string | null {
+// events don't overlap in the calendar. An explicit endTime wins, but only when
+// it falls after the start on the same day.
+export function actWindow(a: Act, day: Pick<ResolvedDay, "acts">, index = -1): { start: Clock; end?: Clock; minutes: number } | null {
   if (typeof a === "string") return null;
   const start = parseTime(a.time);
-  const text = plain(a.text);
-  if (!start || !text) return null;
-  const emoji = (a.tag && TAG_EMOJI[a.tag]) || "📍";
+  if (!start) return null;
   let minutes = (a.tag && DEFAULT_MINUTES[a.tag]) || 60;
   const startMin = start.h * 60 + start.m;
   for (const n of index >= 0 ? day.acts.slice(index + 1) : []) {
@@ -180,13 +179,31 @@ export function actUrl(a: Act, day: ResolvedDay, dayNumber: number, index = -1):
     if (gap > 0) minutes = Math.min(minutes, gap);
     break;
   }
-  // An explicit endTime wins, but only when it falls after the start on the same day.
   const explicitEnd = parseTime(a.endTime);
   const end = explicitEnd && explicitEnd.h * 60 + explicitEnd.m > startMin ? explicitEnd : undefined;
+  return { start, end, minutes };
+}
+
+export function actUrl(a: Act, day: ResolvedDay, dayNumber: number, index = -1): string | null {
+  if (typeof a === "string") return null;
+  const text = plain(a.text);
+  const win = actWindow(a, day, index);
+  if (!win || !text) return null;
+  const emoji = (a.tag && TAG_EMOJI[a.tag]) || "📍";
   return timedUrl({
-    title: `${emoji} ${text}`, date: day.date, start, end, tz: zoneFor(day.city, day.country),
-    defaultMinutes: minutes, location: where(day), details: detailsFor(dayNumber),
+    title: `${emoji} ${text}`, date: day.date, start: win.start, end: win.end, tz: zoneFor(day.city, day.country),
+    defaultMinutes: win.minutes, location: where(day), details: detailsFor(dayNumber),
   });
+}
+
+/** The wall-clock date and time in an IANA zone at instant `now` (ms). */
+export function zoneNow(now: number, zone: string): { date: string; minutes: number; hhmm: string } {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: zone, hourCycle: "h23", year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric",
+    }).formatToParts(new Date(now)).map((x) => [x.type, +x.value]),
+  );
+  return { date: `${p.year}-${p2(p.month)}-${p2(p.day)}`, minutes: p.hour * 60 + p.minute, hhmm: `${p2(p.hour)}:${p2(p.minute)}` };
 }
 
 // IATA airport code -> IANA zone, so each leg of a multi-leg flight gets its

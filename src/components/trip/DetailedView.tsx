@@ -14,10 +14,11 @@ import { reconcileRows } from "../../lib/itineraryState";
 import { DayNav } from "./DayNav";
 import { DayCard } from "./DayCard";
 import type { DayWeather } from "../../lib/weather";
+import { isDestToday } from "../../lib/nowMarker";
+import { useNow } from "../../lib/useNow";
 
 interface Props {
   // Local date (YYYY-MM-DD). The trip opens on this day when it is one of the trip's days.
-  today: string;
   days: ResolvedDay[];
   legColors: LegColor[];
   weather: Record<string, DayWeather>;
@@ -43,9 +44,10 @@ interface Props {
 }
 
 // Unified itinerary; name retained to keep the detail renderer's consumer small.
-export function DetailedView({ today, days, legColors, weather, groups, ticks, onlyGaps, isGap, dayGaps, onOnlyGapsChange, filterRef,
+export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps, isGap, dayGaps, onOnlyGapsChange, filterRef,
   onToggle, actionItems, considerations, pendingVotes, onVote, actionItemsDone, onToggleActionItem, onEditActivity }: Props) {
   const prefix = useId();
+  const nowMs = useNow();
   // A day the AI just edited keeps showing its old content until the page is
   // pointed at it (see useRecentChanges), so the change can be played from the old text.
   const recent = useRecentChanges(days, d => d.date, useHoldForAi());
@@ -197,7 +199,7 @@ export function DetailedView({ today, days, legColors, weather, groups, ticks, o
   // in, once per mount. A shared link or AI pointer wins, and so does the reader
   // (any input before the timer fires cancels it).
   const [params] = useSearchParams();
-  const todayRow = state.rows.find(r => r.day.date === today);
+  const todayRow = state.rows.find(r => isDestToday(r.day, nowMs));
   const autoDone = useRef(false);
   const jumpRef = useRef(jump);
   jumpRef.current = jump;
@@ -246,7 +248,7 @@ export function DetailedView({ today, days, legColors, weather, groups, ticks, o
         {state.rows.map(({ id, day: d }, i) => visible[i] && (
           <Fragment key={id}>
           {ghostAt === i && ghostDay}
-          <DayCard rowId={id} day={d} isToday={d.date === today} changedFrom={diff?.date === d.date ? diff.prev : undefined} days={days} dayNumber={i} legColor={legColors[i]} weather={weather[d.date]}
+          <DayCard rowId={id} day={d} isToday={isDestToday(d, nowMs)} changedFrom={diff?.date === d.date ? diff.prev : undefined} days={days} dayNumber={i} legColor={legColors[i]} weather={weather[d.date]}
             groups={groups} ticks={ticks} expanded={isOpen(id)} gapsOnly={gapsView} gaps={dayGaps?.[d.date]} onExpandedChange={() => {
               if (gapsView) {
                 setGapsCollapsed(current => {

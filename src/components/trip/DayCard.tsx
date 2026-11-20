@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import type { Act, ActionItem, Group, LegColor, Place, ResolvedDay, Status, Task, Vote } from "../../lib/types";
 import { changeClass, diffLines, type Change, type ChangeState } from "../../lib/changeDiff";
 import { focusOnMapKey, googleMapsUrl, inlinePlaces } from "../../lib/mapPoints";
@@ -13,7 +13,8 @@ import { TaskRow } from "./TaskRow";
 import { TourBox } from "./TourBox";
 import { WeatherBadge } from "./WeatherBadge";
 import { AddToCalendar } from "./AddToCalendar";
-import { actUrl } from "../../lib/calendar";
+import { actUrl, zoneNow } from "../../lib/calendar";
+import { dayZone, nowPosition, untilText, viewerHint } from "../../lib/nowMarker";
 import { sanitizeHtml } from "../../lib/sanitizeHtml";
 import type { DayWeather } from "../../lib/weather";
 import { useParams } from "react-router-dom";
@@ -134,6 +135,19 @@ export function DayCard({
   const now = useNow();
   const up = days ? nextUp(days, now) : null;
   const upText = (ids: string[]) => (up && ids.includes(up.id) ? countdownText(up, now) : undefined);
+  const nowPos = isToday ? nowPosition(d, now) : null;
+  const zone = dayZone(d);
+  const mine = isToday ? viewerHint(now, zone) : null;
+  const clock = isToday && zone ? zoneNow(now, zone).hhmm : null;
+  const nowLine = (pos: NonNullable<typeof nowPos>, key: string) => (
+    <li className="now-line" key={key} aria-label="Current time">
+      <span className="now-line-label">
+        Now {pos.hhmm}
+        {pos.kind === "after" ? " · that's the plan for today" : pos.kind !== "during" ? ` · ${pos.kind === "before" ? "first up" : "next"} ${pos.next.hhmm} (in ${untilText(pos.next.inMin)})` : ""}
+        {mine && <span className="now-line-mine"> · {mine} your time</span>}
+      </span>
+    </li>
+  );
   const collapsed = !expanded;
   // A collapsed panel is hidden="until-found": still in the page, so Ctrl+F finds its text.
   // The browser fires beforematch on it just before revealing a match; open the day to keep it shown.
@@ -230,7 +244,7 @@ export function DayCard({
           </span>
         </span>
         <span className="day-head-right">
-          {isToday && <span className="today-badge">Today</span>}
+          {isToday && <span className="today-badge">Today{clock ? ` · ${clock}` : ""}</span>}
           <WeatherBadge weather={weather} />
           <span className="leg-badge">
             <span className="dot" />
@@ -292,6 +306,9 @@ export function DayCard({
             <ul className="activity-list">
               {actRows.map(({ item: a, state, ai, prev }, ri) => {
                 const { tag, time, text, places } = actParts(a);
+                const lineBefore = nowPos && nowPos.kind !== "during" && nowPos.kind !== "after" && nowPos.beforeIndex === ai;
+                const lineAfter = nowPos?.kind === "after" && nowPos.afterIndex === ai;
+                const inProgress = nowPos?.kind === "during" && nowPos.index === ai;
                 if (state === "gone") {
                   // What it said before the edit: struck through, then folded away.
                   return (
@@ -323,10 +340,13 @@ export function DayCard({
                   );
                 }
                 return (
-                  <li className={`activity${prev ? " chg-row" : changeClass(state)}`} key={ai} id={tileDomId(rowId, `act:${ai}`)}>
+                  <Fragment key={ai}>
+                  {lineBefore && nowLine(nowPos, "now")}
+                  <li className={`activity${prev ? " chg-row" : changeClass(state)}${inProgress ? " activity--now" : ""}`} id={tileDomId(rowId, `act:${ai}`)}>
                     {tag && <span className="act-tag">{tag}</span>}
                     <span className="activity-text" onClick={focusInlinePlace}>
                       {time && <span className="activity-time">{time}</span>}
+                      {inProgress && <span className="now-pill">Now</span>}
                       {prev ? (
                         <InlineDiff prev={sanitizeHtml(actParts(prev).text)} next={sanitizeHtml(text)}>
                           <span dangerouslySetInnerHTML={{ __html: html }} />
@@ -351,6 +371,8 @@ export function DayCard({
                     <ShareLinkButton param={{ day: d.date, tile: `act:${ai}` }} label={`Share link to activity: ${text}`} />
                     <AddToCalendar url={actUrl(a, d, dayNumber, ai)} />
                   </li>
+                  {lineAfter && nowLine(nowPos, "now")}
+                  </Fragment>
                 );
               })}
             </ul>

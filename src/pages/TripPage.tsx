@@ -98,7 +98,6 @@ function TripPageEntry() {
 
       <Fragment key={trip._id}>
         <DetailedView
-          today={today}
           days={resolvedDays}
           legColors={legColors}
           weather={weather}
