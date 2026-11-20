@@ -6,7 +6,7 @@ import { DOW, MON, actParts, fmtShort, gapLabel, mergeFlightsByRoute, mergeHotel
 import type { FlightGroup, HotelGroup } from "../../lib/tripLogic";
 import { TransportBody } from "./TransportBody";
 import { HotelBody } from "./HotelCard";
-import { hotelHeader, transportHeader } from "../../lib/tileHeaders";
+import { hotelHeader, isPlaceholderHotel, transportHeader } from "../../lib/tileHeaders";
 import { ALL_DAY, TileStatePill, TimelineTile, type TimelineTileProps, type TileState } from "./TimelineTile";
 import { StatusToggle } from "./StatusToggle";
 import { buildTimeline, timelineSpans, type ActRow, type DayItem, type TimelineEntry } from "../../lib/timeline";
@@ -282,10 +282,20 @@ export function DayCard({
       const unresolved = s === "needed" && !g.tentative;
       const pill: TileState = g.tentative ? "maybe" : s;
       const { title, meta } = hotelHeader(g, stay);
+      // A chosen hotel's name is its Google Maps link, right in the header; the rest of the header opens the tile.
+      const place = { name: g.name, address: g.address, placeId: g.placeId };
+      const linked = !isPlaceholderHotel(g);
       return {
         key: entry.key, ghost: state === "gone", defaultOpen: unresolved,
         tile: {
-          domId: entry.domKey && tileDomId(rowId, entry.domKey), time: ALL_DAY, icon: "🏨", title, meta, change: state, warn: unresolved,
+          domId: entry.domKey && tileDomId(rowId, entry.domKey), time: ALL_DAY, icon: "🏨", meta, change: state, warn: unresolved,
+          title: linked ? (
+            <>
+              <a href={googleMapsUrl(place)} target="_blank" rel="noopener noreferrer">📍 {title}</a>
+              <ShowOnMap place={place} />
+            </>
+          ) : title,
+          label: linked ? title : undefined,
           className: `tl-hotel${unresolved ? " miss" : ""}`, nextUpLine: upText(g.srcs),
           headerEnd: (
             <>
@@ -350,17 +360,56 @@ export function DayCard({
     // A place named in the sentence is linked in place; the rest follow as chips.
     // Sanitize first: inlinePlaces adds its own show-on-map buttons, which the sanitizer would strip.
     const { html, rest } = inlinePlaces(sanitizeHtml(text), places);
-    // The header carries the sentence as plain text; the body repeats it only when it has links or places to show.
-    const rich = /<[a-z]/i.test(html) || rest.length > 0;
+    // The sentence, with its places linked, is the header: there is nothing more to open, so the tile is
+    // just that row with its actions. It opens only for an editor, or the History of an approved suggestion.
+    const hist = history(typeof a === "string" ? undefined : a.fromItem);
     const title = plain(text);
+    // An activity that is just a place's name ("Some Cafe"): the pinned Maps link alone says it, not the name twice.
+    const bare = rest.find((p) => p.name.trim().toLowerCase() === title.trim().toLowerCase());
     return {
       key: entry.key, ghost: gone, defaultOpen: false, forceOpen: editing,
       tile: {
-        domId: entry.domKey && tileDomId(rowId, entry.domKey), time: entry.time, icon: (tag && TAG_EMOJI[tag]) || "📍", meta: tag, change: state, now: !!live,
-        title: prev ? <InlineDiff prev={sanitizeHtml(actParts(prev).text)} next={sanitizeHtml(text)}>{title}</InlineDiff> : title,
-        headerEnd: live?.pill,
+        domId: entry.domKey && tileDomId(rowId, entry.domKey), time: entry.time, // The tag (Food, Sightsee…) is the icon; its name is the icon's tooltip, not a second line.
+        icon: (tag && TAG_EMOJI[tag]) || "📍", iconLabel: tag, change: state, now: !!live,
+        label: title,
+        expandable: editing || !!hist,
+        title: (
+          <span className="activity-text" onClick={focusInlinePlace}>
+            {bare && !prev ? null : prev ? (
+              <InlineDiff prev={sanitizeHtml(actParts(prev).text)} next={sanitizeHtml(text)}>
+                <span dangerouslySetInnerHTML={{ __html: html }} />
+              </InlineDiff>
+            ) : (
+              <span dangerouslySetInnerHTML={{ __html: html }} />
+            )}
+            {rest.map((p, pi) => (
+              <span key={pi} style={p === bare && !prev ? undefined : { marginLeft: 8 }}>
+                <a href={googleMapsUrl(p)} target="_blank" rel="noopener noreferrer">
+                  📍 {p.name}
+                </a>
+                <ShowOnMap place={p} />
+              </span>
+            ))}
+          </span>
+        ),
+        headerEnd: (
+          <>
+            {live?.pill}
+            {!gone && (
+              <span className="tl-actions-inline">
+                {onEditActivity && (
+                  <button type="button" className="icon-btn act-edit" aria-label={`Edit activity: ${text}`} onClick={() => setEditingAct(ai)}>
+                    <PencilIcon />
+                  </button>
+                )}
+                <ShareLinkButton param={{ day: d.date, tile: `act:${ai}` }} label={`Share link to activity: ${text}`} />
+                <AddToCalendar url={actUrl(a, d, dayNumber, ai)} />
+              </span>
+            )}
+          </>
+        ),
         progress: live?.progress,
-        children: gone ? null : editing ? (
+        children: editing ? (
           <ActivityEditor
             initial={text}
             initialPlaces={places}
@@ -370,33 +419,7 @@ export function DayCard({
               setEditingAct(null);
             }}
           />
-        ) : (
-          <>
-            {rich && (
-              <div className="activity-text" onClick={focusInlinePlace}>
-                <span dangerouslySetInnerHTML={{ __html: html }} />
-                {rest.map((p, pi) => (
-                  <span key={pi} style={{ marginLeft: 8 }}>
-                    <a href={googleMapsUrl(p)} target="_blank" rel="noopener noreferrer">
-                      📍 {p.name}
-                    </a>
-                    <ShowOnMap place={p} />
-                  </span>
-                ))}
-              </div>
-            )}
-            <div className="tl-actions">
-              {onEditActivity && (
-                <button type="button" className="icon-btn act-edit" aria-label={`Edit activity: ${text}`} onClick={() => setEditingAct(ai)}>
-                  <PencilIcon />
-                </button>
-              )}
-              <ShareLinkButton param={{ day: d.date, tile: `act:${ai}` }} label={`Share link to activity: ${text}`} />
-              <AddToCalendar url={actUrl(a, d, dayNumber, ai)} />
-            </div>
-            {history(typeof a === "string" ? undefined : a.fromItem)}
-          </>
-        ),
+        ) : hist,
       },
     };
   };
@@ -454,7 +477,7 @@ export function DayCard({
       if (proposes.type === "hotel") {
         const h = proposes.entry;
         const g = { ...h, who: [h.who].flat(), srcs: [`item:${id}`], statuses: [h.status], carriedAll: false, checkIn: d.date === start, checkOut: d.date === end };
-        return <HotelBody g={g} status={h.status} stay={null} groups={groups} date={d.date} dayNumber={dayNumber} actions={false} />;
+        return <HotelBody g={g} status={h.status} stay={null} groups={groups} date={d.date} dayNumber={dayNumber} actions={false} showName />;
       }
       if (proposes.type === "transport") {
         const f = proposes.entry;
@@ -508,7 +531,7 @@ export function DayCard({
   // Open state is kept per trip, so an id carries the day's date.
   const idOf = (key: string) => `${d.date}#${key}`;
   const isOpenTile = (x: Described) => !!x.forceOpen || tiles.isOpen(idOf(x.key), x.defaultOpen);
-  const liveTiles = described.filter((x): x is Described => !!x && !x.ghost);
+  const liveTiles = described.filter((x): x is Described => !!x && !x.ghost && x.tile.expandable !== false);
   const anyClosed = liveTiles.some((x) => !isOpenTile(x));
 
   return (

@@ -27,13 +27,15 @@ export interface HotelBodyProps {
   dayNumber: number;
   // A proposed (draft) hotel inside an action item: the item's own actions stand in for these.
   actions?: boolean;
+  // The name with its Maps link. A hotel tile has it in its header; a draft card has no header.
+  showName?: boolean;
 }
 
 // What a hotel tile shows when open. The timeline header already has the name, the
 // stay's part, the booking state and the booked toggle; this is the rest. The name
 // keeps its pin and map link, the stay strip shows both check-in and check-out on every
 // night of the stay, and the actions (share, call, calendar) sit in one row at the end.
-export function HotelBody({ g, status: s, stay, gapAfter, groups, date, days, dayNumber, actions = true }: HotelBodyProps) {
+export function HotelBody({ g, status: s, stay, gapAfter, groups, date, days, dayNumber, actions = true, showName = false }: HotelBodyProps) {
   const nm = g.name || "Hotel not chosen";
   const placeholder = isPlaceholderHotel(g);
   const uniqueWho = [...new Set(g.who)];
@@ -46,9 +48,8 @@ export function HotelBody({ g, status: s, stay, gapAfter, groups, date, days, da
         <span className="ctype">{ctype}</span>
         <WhoPill who={uniqueWho.length === 1 ? uniqueWho[0] : uniqueWho} groups={groups} date={date} />
       </div>
-      <div className="tl-cols">
-        <div className="tl-col">
-          <div className={`cmain ${s === "needed" && !g.tentative ? "todo" : ""}`}>
+      <div className="hotel-main">
+          {(placeholder || showName) && <div className={`cmain ${s === "needed" && !g.tentative ? "todo" : ""}`}>
             {!placeholder ? (
               <>
                 <a href={googleMapsUrl(place)} target="_blank" rel="noopener noreferrer">
@@ -59,7 +60,7 @@ export function HotelBody({ g, status: s, stay, gapAfter, groups, date, days, da
             ) : (
               "Hotel to be decided"
             )}
-          </div>
+          </div>}
           {placeholder && g.area && <div className="cmeta">{g.area}</div>}
           {/* With a Place ID the link opens the exact listing, so the address text adds nothing. */}
           {g.address && !g.placeId && <div className="cmeta">{g.address}</div>}
@@ -69,8 +70,6 @@ export function HotelBody({ g, status: s, stay, gapAfter, groups, date, days, da
               {fmtDuration(gapAfter.minutes)} between check-out at 📍 {gapAfter.name}{gapAfter.checkOutTime ? ` (${fmtHm(gapAfter.checkOutTime)})` : ""} and check-in here
             </div>
           )}
-        </div>
-        <div className="tl-col">
           <HotelFacts g={g} stay={stay} status={s} />
           {s === "needed" && (
             <TbdLine fields={missingHotelFields(g)} area={placeholder ? undefined : g.area}>
@@ -81,7 +80,6 @@ export function HotelBody({ g, status: s, stay, gapAfter, groups, date, days, da
           )}
           {/* The free-form note goes last: facts and what is open come first. */}
           {g.detail && <div className="cmeta"><Linkify text={g.detail} /></div>}
-        </div>
       </div>
       {actions && <div className="tl-actions">
         <ShareLinkButton param={{ day: date, tile: g.srcs[0] }} label={`Share link to ${nm}`} />
