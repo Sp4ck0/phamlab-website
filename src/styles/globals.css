@@ -333,6 +333,7 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 }
 .daynav button .d{color:var(--text-muted);font-weight:600}
 .daynav button.daynav-today{background:var(--accent-1);border-color:var(--accent-1);color:#fff}
+.daynav button.daynav-jump{display:none}
 .today-badge{
   font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;
   background:var(--accent-1);color:#fff;
@@ -579,7 +580,7 @@ details.tour-box[open] summary::after{content:"Hide"}
 
 /* simple single-leg flight card (used when a flight has no `legs`) */
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--r,12px);padding:14px 15px;position:relative;transition:.18s}
-.card:hover{box-shadow:0 4px 12px var(--border);transform:translateY(-1px)}
+@media (hover:hover){.card:hover{box-shadow:0 4px 12px var(--border);transform:translateY(-1px)}}
 .card.miss{border-style:dashed;border-left-style:solid;border-color:var(--warn);background:var(--accent-transit-tint)}
 /* Only gaps: the reason a tile is listed, and a heavier border so it stands out. */
 .gap-reason{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--warn)}
@@ -608,7 +609,7 @@ details.tour-box[open] summary::after{content:"Hide"}
 .status[data-s="booked"]{background:var(--good);border-color:var(--good)}
 .status[data-s="booked"]::after{content:'';width:4px;height:7px;border:solid var(--card);border-width:0 1.5px 1.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
 .status[data-s="needed"]{border-color:var(--danger);border-style:dashed}
-.status:hover{transform:scale(1.18)}
+@media (hover:hover){.status:hover{transform:scale(1.18)}}
 .card:has(.status) .ctop{padding-right:22px}
 
 /* ── section headers ───────────────────────────── */
@@ -809,6 +810,11 @@ footer code{background:var(--chip-bg);padding:2px 6px;border-radius:4px;color:va
   .sidenav .navhead{display:none}
   .daynav-shell{top:56px}
   .day-head-btn{scroll-margin-top:132px}
+  .day-card{scroll-margin-top:124px}
+  /* Today, pinned at the left edge of the scrolling strip; a fade shows there is more to the right. */
+  .daynav{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent)}
+  .daynav button.daynav-jump{display:inline-flex;align-items:center;position:sticky;left:0;z-index:1;background:var(--accent-1-tint);border-color:var(--accent-1);color:var(--accent-1)}
+  .daynav button{min-height:44px}
 }
 @media(max-width:640px){
   .wrap{padding:0 16px 60px}
@@ -834,6 +840,23 @@ footer code{background:var(--chip-bg);padding:2px 6px;border-radius:4px;color:va
   .export-menu-list{left:0;right:0;width:auto;max-width:none}
   .range-picker select{width:100%;max-width:100%}
   .print-doc{padding:20px 16px 40px}
+
+  /* Activity rows: tag and actions on one line, the text full width below. */
+  .activity{flex-wrap:wrap;row-gap:0}
+  .activity::after{content:"";flex:1;order:1}
+  .activity>.act-tag{min-width:0;order:0}
+  .activity>:not(.activity-text):not(.act-tag):not(.now-track){order:2}
+  .activity>.activity-text{order:3;flex:1 0 100%;margin-top:2px}
+  .card .icon-btn,.flight-box .icon-btn,.activity .share-btn{width:36px;height:36px}
+  a.gcal-btn,.conf-chip{min-height:36px}
+
+  /* Tap targets and inputs */
+  .vote-btn,.day-considering .vote-btn,.ai-btn,.add-btn,.ai-chip,.undo-bar button,.stay-collapse,.export-menu-list button{min-height:44px}
+  .day-link{padding:10px 0}
+  .navtoggle{width:44px;height:44px}
+  .trip-note-close{min-width:44px;min-height:44px}
+  .trip-note textarea,.vlog-select{font-size:16px}
+  .trip-note{max-height:calc(100dvh - 40px);padding-bottom:calc(12px + env(safe-area-inset-bottom))}
 }
 body:has(.print-doc){padding:0}
 @media(prefers-reduced-motion:reduce){.day-chevron{transition:none}}
@@ -925,7 +948,9 @@ textarea.ai-input{display:block;width:100%;resize:none;overflow:hidden;line-heig
 @media (hover:none){
   .row-actions,.act-edit{opacity:1}
   .icon-btn{width:36px;height:36px}
-  .status::after{content:"";position:absolute;inset:-12px}
+  /* ::before, not ::after: the booked tick is drawn on ::after. The status circle is
+     positioned (absolute, or relative inside the flight box), so this stays within it. */
+  .status::before{content:"";position:absolute;inset:-14px}
 }
 .cmain,.cmeta,.flight-box-title,.fl-route,.fl-meta,.note,.tour-body,.alert li{overflow-wrap:anywhere}
 

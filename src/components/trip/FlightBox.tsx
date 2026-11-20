@@ -82,7 +82,7 @@ export function FlightBox({ group, groups, onToggle, day, dayNumber = 0, tileId,
           {group.price && <span className="flight-box-price">{group.price}</span>}
           {group.confirmation && <ConfirmationChip code={group.confirmation} />}
           {day && <ShareLinkButton param={{ day: day.date, tile: group.ids[0] }} label={`Share link to ${group.title || group.route}`} />}
-          <StatusToggle ids={group.ids} status={status} onToggle={onToggle} style={{ position: "static" }} />
+          <StatusToggle ids={group.ids} status={status} onToggle={onToggle} style={{ position: "relative", top: "auto", right: "auto" }} />
         </span>
       </div>
       {/* Booked, the operator in the row is the title; without one the route says what this is. */}

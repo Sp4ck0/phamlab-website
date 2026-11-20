@@ -17,6 +17,7 @@ export function StatusToggle({
       className="status"
       data-s={status}
       title="Toggle booked"
+      aria-label={status === "booked" ? "Booked. Mark as not booked" : "Not booked yet. Mark as booked"}
       onClick={() => onToggle(ids, status)}
       style={style}
     />
