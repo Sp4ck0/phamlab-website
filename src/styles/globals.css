@@ -400,6 +400,21 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 @media (hover:hover){.tl-head:hover{background:color-mix(in srgb,var(--accent-1) 5%,transparent)}}
 .tl-toggle{grid-column:1;display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0;padding:8px 0 8px 12px;border:0;background:transparent;font:inherit;color:inherit;text-align:left;cursor:pointer;border-radius:9px}
 .tl-toggle:focus-visible{outline:2px solid var(--accent-1);outline-offset:-2px}
+/* A title with links is not inside a button: the chevron is the button, the rest of the header still opens the tile. */
+.tl-heading{grid-column:1;display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0;padding:8px 0 8px 12px}
+.tl-title a{color:var(--accent-1);text-decoration:underline}
+.tl-title .map-focus,.tl-title .map-btn{vertical-align:middle}
+.tl-chev-btn{grid-column:4;display:grid;place-items:center;width:32px;height:32px;margin-right:-8px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--text-muted);cursor:pointer}
+.tl-chev-btn .tl-chev{grid-column:auto}
+/* A tile with nothing to open: just its row, the whole sentence shown. */
+.tl-flat .tl-head{cursor:default}
+@media (hover:hover){.tl-flat .tl-head:hover{background:transparent}}
+.tl-flat .tl-title{display:block;-webkit-line-clamp:unset;font-weight:500}
+.tl-heading .tl-title.activity-text,.tl-heading .activity-text{flex:none}
+.tl-actions-inline{display:inline-flex;align-items:center;gap:2px}
+.tl-actions-inline .icon-btn{opacity:.7;width:28px;height:28px}
+.tl-actions-inline .act-edit{opacity:.7}
+.tl-actions-inline a.gcal-btn{margin-left:2px}
 .tl-title{max-width:100%;font-size:14.5px;font-weight:600;line-height:1.35;color:var(--text-primary);overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 .tl-tile.is-open .tl-title{display:block;-webkit-line-clamp:unset}
 .tl-meta{font-size:12.5px;line-height:1.35;color:var(--text-secondary);overflow-wrap:anywhere}
@@ -413,9 +428,6 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 .tl-head .now-progress{border-radius:0 0 9px 9px}
 /* Body: the tile's own content, then one row of actions in the same order on every tile. */
 .tl-body:not([hidden]){padding:10px 12px 12px;border-top:1px solid var(--gridline)}
-.tl-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 24px}
-.tl-cols:has(>.tl-col:empty){grid-template-columns:minmax(0,1fr)}
-.tl-col:empty{display:none}
 .tl-actions{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;margin-top:10px;padding-top:8px;border-top:1px solid var(--gridline)}
 .tl-actions:first-child{margin-top:0;padding-top:0;border-top:0}
 .tl-actions .icon-btn{opacity:.75;width:28px;height:28px}
@@ -465,10 +477,10 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
   .tl-head{grid-template-columns:minmax(0,1fr) auto auto;padding-right:10px}
   .tl-toggle{padding-left:10px}
   .tl-warn{grid-column:2;grid-row:1}
-  .tl-chev{grid-column:3;grid-row:1}
+  .tl-chev,.tl-chev-btn{grid-column:3;grid-row:1}
+  .tl-actions-inline .icon-btn{width:36px;height:36px}
   .tl-end{grid-column:1 / -1;grid-row:2;justify-content:flex-start;padding:0 0 8px 10px}
   .tl-body:not([hidden]){padding:10px}
-  .tl-cols{grid-template-columns:minmax(0,1fr)}
   .tl-actions .icon-btn{width:36px;height:36px}
   .day-tiles-btn{min-height:36px;min-width:36px;justify-content:center;padding:0}
   .day-tiles-label{display:none}

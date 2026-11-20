@@ -20,7 +20,18 @@ export interface TimelineTileProps {
   time?: string;
   /** The tile's type marker on the rail. */
   icon: ReactNode;
+  /** What the marker stands for ("Food"), as its tooltip. */
+  iconLabel?: string;
   title: ReactNode;
+  /**
+   * The tile's name as plain text, when `title` holds links (a hotel's Maps link, an
+   * activity's places). A link can't sit inside the toggle button, so the title is then
+   * plain content, the chevron becomes the button (named from this), and a click anywhere
+   * else on the header still opens the tile.
+   */
+  label?: string;
+  /** False for a tile with nothing more to show: just its header, no chevron, no body. */
+  expandable?: boolean;
   /** One line of essentials under the title. */
   meta?: ReactNode;
   /** Status pill, booking toggle, vote buttons: siblings of the toggle button, never inside it. */
@@ -49,17 +60,34 @@ export interface TimelineTileProps {
 // opens it (hidden="until-found"). Only the header toggles; the body's own
 // buttons and links never do.
 export function TimelineTile({
-  domId, time, icon, title, meta, headerEnd, warn, open, onToggle, onReveal, change = "same", className, nextUpLine, now, progress, children,
+  domId, time, icon, iconLabel, title, label, expandable = true, meta, headerEnd, warn, open, onToggle, onReveal, change = "same", className, nextUpLine, now, progress, children,
 }: TimelineTileProps) {
   const bodyId = useId();
   const bodyRef = useUntilFound(open, onReveal ?? onToggle);
   const gone = change === "gone";
-  // A click on the header's plain parts (the chevron, the space around the pills) toggles too;
-  // a click on any control inside it does not. The title button handles its own click.
+  // A click on the header's plain parts (the chevron, the space around the pills, a linked
+  // title's text) toggles too; a click on any control or link inside it does not. The
+  // toggle button handles its own click.
   const headClick = (e: MouseEvent<HTMLElement>) => {
     if ((e.target as HTMLElement).closest("button, a, input, label, select, textarea")) return;
     onToggle();
   };
+  const heading = (
+    <>
+      <span className="tl-title">{title}</span>
+      {(meta || nextUpLine) && (
+        <span className="tl-meta">
+          {nextUpLine && <span className="next-up-line">{nextUpLine}</span>}
+          {meta}
+        </span>
+      )}
+    </>
+  );
+  const chevron = (
+    <svg className="tl-chev" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path d="M3.5 5.25L7 8.75l3.5-3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
   return (
     <li
       className={`tl-entry${now ? " tl-entry--now" : ""}${nextUpLine ? " next-up" : ""}`}
@@ -68,30 +96,32 @@ export function TimelineTile({
     >
       <span className="tl-time" data-all-day={time === ALL_DAY ? "true" : undefined}>{time}</span>
       <span className="tl-rail" aria-hidden="true">
-        <span className="tl-dot">{icon}</span>
+        <span className="tl-dot" title={iconLabel}>{icon}</span>
       </span>
-      <div className={`tl-tile${open ? " is-open" : ""}${className ? ` ${className}` : ""}${changeClass(change)}`}>
-        {/* The title button is the keyboard control; this click handler only widens the click target. */}
-        <div className="tl-head" onClick={headClick}>
-          <button type="button" className="tl-toggle" aria-expanded={open} aria-controls={bodyId} onClick={onToggle}>
-            <span className="tl-title">{title}</span>
-            {(meta || nextUpLine) && (
-              <span className="tl-meta">
-                {nextUpLine && <span className="next-up-line">{nextUpLine}</span>}
-                {meta}
-              </span>
-            )}
-          </button>
+      <div className={`tl-tile${open && expandable ? " is-open" : ""}${expandable ? "" : " tl-flat"}${className ? ` ${className}` : ""}${changeClass(change)}`}>
+        {/* The toggle button is the keyboard control; this click handler only widens the click target. */}
+        <div className="tl-head" onClick={expandable ? headClick : undefined}>
+          {expandable && label === undefined ? (
+            <button type="button" className="tl-toggle" aria-expanded={open} aria-controls={bodyId} onClick={onToggle}>
+              {heading}
+            </button>
+          ) : (
+            <div className="tl-heading">{heading}</div>
+          )}
           {headerEnd && <span className="tl-end">{headerEnd}</span>}
-          {warn && !open && <span className="tl-warn" role="img" aria-label="Needs attention" title="Needs attention" />}
-          <svg className="tl-chev" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-            <path d="M3.5 5.25L7 8.75l3.5-3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          {expandable && warn && !open && <span className="tl-warn" role="img" aria-label="Needs attention" title="Needs attention" />}
+          {expandable && (label === undefined ? chevron : (
+            <button type="button" className="tl-toggle tl-chev-btn" aria-expanded={open} aria-controls={bodyId} aria-label={`${label}: details`} onClick={onToggle}>
+              {chevron}
+            </button>
+          ))}
           {progress}
         </div>
-        <div className="tl-body" id={bodyId} ref={bodyRef}>
-          {children}
-        </div>
+        {expandable && (
+          <div className="tl-body" id={bodyId} ref={bodyRef}>
+            {children}
+          </div>
+        )}
       </div>
     </li>
   );
