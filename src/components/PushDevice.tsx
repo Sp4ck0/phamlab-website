@@ -58,17 +58,33 @@ export function PushDevice({ channelIds }: { channelIds: string[] }) {
   async function turnOn() {
     setBusy(true);
     setMessage("");
+    // Where it stopped, so the message says what failed instead of a generic "couldn't".
+    let step: "permission" | "worker" | "subscribe" | "save" = "permission";
     try {
-      if ((await Notification.requestPermission()) !== "granted") {
-        setMessage("Notifications are blocked for phamlab. Allow them in your device's settings, then try again.");
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        setMessage(
+          permission === "denied"
+            ? "Notifications are blocked for phamlab. In Safari: Settings → Websites → Notifications, set phamlab to Allow. In Chrome: the lock icon in the address bar → Notifications. Then try again."
+            : "Nothing was allowed. Tap Turn on notifications again and choose Allow when your browser asks."
+        );
         return;
       }
-      const reg = await navigator.serviceWorker.ready;
+      step = "worker";
+      // Register here too (a no-op if the page already did) and don't wait forever:
+      // `ready` never settles when the worker failed to start.
+      await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`);
+      const reg = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timed out")), 8000)),
+      ]);
+      step = "subscribe";
       const sub =
         (await reg.pushManager.getSubscription()) ??
         (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapid!) }));
       const json = sub.toJSON();
       if (!json.endpoint || !json.keys?.p256dh || !json.keys.auth) throw new Error("Incomplete subscription");
+      step = "save";
       const id = await addPush({
         ...args,
         label: deviceLabel(ua, navigator.maxTouchPoints),
@@ -78,7 +94,14 @@ export function PushDevice({ channelIds }: { channelIds: string[] }) {
       setChannelId(id);
       setHasSubscription(true);
     } catch (e) {
-      setMessage(serverMessage(e, "Couldn't turn on notifications on this device"));
+      const why = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+      setMessage(
+        step === "worker"
+          ? `The notification service didn't start (${why}). Reload the page and try again.`
+          : step === "subscribe"
+            ? `Your browser wouldn't set up push (${why}).`
+            : serverMessage(e, "Couldn't turn on notifications on this device")
+      );
     } finally {
       setBusy(false);
     }
