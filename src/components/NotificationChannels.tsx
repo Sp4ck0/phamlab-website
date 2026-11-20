@@ -9,9 +9,12 @@ import { SettingsSection } from "./SettingsSection";
 import { useKanbanBoards } from "../kanban/useKanbanBoards";
 import { BoardNotifyChips } from "../kanban/components/NotifyMenu";
 
-type ChannelType = "email" | "slack" | "discord";
+import { PushSetup } from "./PushSetup";
+
+type ChannelType = "email" | "slack" | "discord" | "push";
 // Email is switched off (the backend rejects it) until a sender is set up;
 // TYPE_COPY keeps its entry so any existing email channel still renders.
+// Push is added by PushSetup, not the webhook form.
 const ADDABLE_TYPES: ChannelType[] = ["slack", "discord"];
 type Channel = {
   _id: Id<"notification_channels">;
@@ -26,6 +29,7 @@ const TYPE_COPY: Record<
   { label: string; placeholder: string; hint: string; steps?: { needs: string; list: string[] } }
 > = {
   email: { label: "Email", placeholder: "you@example.com", hint: "We'll email a 6-digit code to confirm it." },
+  push: { label: "Device", placeholder: "", hint: "" },
   slack: {
     label: "Slack",
     placeholder: "https://hooks.slack.com/services/…",
@@ -175,6 +179,7 @@ export function NotificationChannels() {
 
   return (
     <SettingsSection title="Notifications" description="Connect a channel, then choose what to be notified about on each board.">
+      <PushSetup channels={channels ?? []} />
       {(channels ?? []).map((c) => (
         <ChannelRow key={c._id} channel={c} />
       ))}

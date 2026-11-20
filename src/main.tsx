@@ -8,6 +8,11 @@ import App from "./App.tsx";
 import { AccessCodeProvider } from "./hooks/useAccessCode";
 import { SettingsProvider } from "./hooks/useSettings";
 
+// Makes the site installable and lets it receive push notifications (public/sw.js).
+if ("serviceWorker" in navigator) {
+  void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {});
+}
+
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
 createRoot(document.getElementById("root")!).render(
