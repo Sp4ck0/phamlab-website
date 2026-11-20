@@ -4,7 +4,6 @@ body { margin: 0; background: var(--page); color: var(--text-primary); font-fami
 .pwa { min-height: 100dvh; box-sizing: border-box; padding: 32px 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 12px; }
 html:not(.ready) .pwa { visibility: hidden; } /* no flash before a desktop redirect */
 .pwa-icon { border-radius: 22px; box-shadow: 0 6px 20px rgba(0,0,0,.18); }
-.pwa h1 { margin: 8px 0 0; font-size: 28px; }
 .pwa-sub { margin: 0 0 12px; color: var(--text-secondary); }
 .pwa-btn { width: min(100%, 320px); padding: 16px; border: 0; border-radius: 14px; background: var(--accent-1); color: #fff; font: inherit; font-size: 17px; font-weight: 600; cursor: pointer; }
 .pwa-btn-secondary { background: var(--chip-bg); color: var(--text-primary); }
@@ -14,6 +13,7 @@ html:not(.ready) .pwa { visibility: hidden; } /* no flash before a desktop redir
 .pwa-sheet[hidden], .pwa-msg[hidden] { display: none; }
 .pwa-sheet ol { margin: 0; padding-left: 20px; display: grid; gap: 10px; }
 .pwa-sheet p { margin: 0 0 12px; }
+.pwa-menu { vertical-align: -3px; }
 .pwa-share { vertical-align: -4px; color: var(--accent-1); }
 .pwa-arrow { text-align: center; font-size: 28px; color: var(--accent-1); margin-top: 8px; animation: pwa-bob 1s ease-in-out infinite; }
 @keyframes pwa-bob { 50% { transform: translateY(6px); } }
