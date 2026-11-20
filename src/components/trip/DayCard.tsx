@@ -349,7 +349,7 @@ export function DayCard({
                   <Fragment key={ai}>
                   {lineBefore && nowPos && nowPos.kind !== "during" && nowLine(nowPos, "now")}
                   <li className={`activity${prev ? " chg-row" : changeClass(state)}${inProgress ? " activity--now" : ""}`} id={tileDomId(rowId, `act:${ai}`)}>
-                    {inProgress && nowPos?.kind === "during" && <span className="now-track" aria-hidden="true" style={{ top: `${Math.min(0.94, Math.max(0.06, nowPos.progress)) * 100}%` }}><span className="now-emoji">{NOW_EMOJI}</span></span>}
+                    {inProgress && nowPos?.kind === "during" && <span className="now-progress" aria-hidden="true" style={{ ["--p" as string]: `${Math.round(nowPos.progress * 100)}%` }}><span className="now-progress-emoji">{NOW_EMOJI}</span></span>}
                     {tag && <span className="act-tag">{tag}</span>}
                     <span className="activity-text" onClick={focusInlinePlace}>
                       {time && <span className="activity-time">{time}</span>}
