@@ -251,6 +251,8 @@ export function DayCard({
   // The day as one ordered list of tiles (lib/timeline.ts). Under Only gaps the activities and the tour are left out.
   const entries = buildTimeline({
     date: d.date, hotels: hotelChanges, flights: flightChanges, acts: gapsOnly ? [] : actRows, gaps: transportGaps, tour: !gapsOnly && !!d.tourDetails, items: dayItems,
+    // Nothing planned: under Only gaps, the day's open plan task; otherwise a day with no activities and no transport.
+    plan: gapsOnly ? !!gaps?.plan : actRows.length === 0 && noPlan,
   });
   // Where the current time falls among the timed tiles (activities and timed transport).
   const nowPos = isToday ? nowPosition(d, now, timelineSpans(entries, d)) : null;
@@ -343,6 +345,18 @@ export function DayCard({
       };
     }
     if (entry.kind === "item") return describeItem(entry);
+    if (entry.kind === "plan") {
+      // A row like any other on the rail, so an empty day reads as a gap in the plan, not a stray note.
+      return {
+        key: entry.key, ghost: false, defaultOpen: false,
+        tile: {
+          icon: "🗓️", title: "Nothing planned yet", expandable: false, className: "tl-gap tl-plan miss",
+          meta: gapsOnly ? "Add activities to this day, or dismiss it in Action Items." : "Add activities to this day.",
+          headerEnd: <TileStatePill state="needed" label="Not planned" />,
+          children: null,
+        },
+      };
+    }
     if (entry.kind === "gap") {
       return {
         key: entry.key, ghost: false, defaultOpen: true,
@@ -624,13 +638,7 @@ export function DayCard({
             </ol>
           )}
 
-          {gapsOnly ? (
-            gaps?.plan && <p className="day-subtitle"><span className="gap-reason">Nothing planned</span></p>
-          ) : actRows.length === 0 && noPlan ? (
-            <p className="day-subtitle" style={{ color: "var(--danger)", fontStyle: "italic" }}>
-              Not decided yet
-            </p>
-          ) : null}
+
 
           {!gapsOnly && d.callout && (
             <div className={`note${old && !old.callout && old.callout !== d.callout ? " chg-new" : ""}`}>

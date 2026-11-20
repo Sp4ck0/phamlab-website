@@ -120,3 +120,8 @@ test('to-dos and considerations: a timed one slots in by time like transport; un
   const flat = build({ acts: acts('plain'), items: [{ id: 'b', time: '18:00' }, { id: 'a', time: '08:00' }, { id: 'c' }] });
   assert.deepEqual(keys(flat), ['act:0', 'item:a', 'item:b', 'item:c']);
 });
+
+test('a day with nothing planned gets a placeholder where the activities would be: after transport, before untimed items', () => {
+  const out = build({ hotels: [hotel('Stay')], flights: [flight('F1')], items: [{ id: 'later' }], plan: true, tour: true });
+  assert.deepEqual(keys(out), [`${DATE}|h|Stay|a`, `${DATE}|f|F1|a`, 'plan', 'item:later', 'tour']);
+});

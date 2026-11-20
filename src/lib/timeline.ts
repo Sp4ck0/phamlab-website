@@ -32,6 +32,7 @@ export type TimelineEntry =
   | { kind: "transport"; key: string; domKey?: string; time?: string; minutes?: number; change: Change<FlightGroup> }
   | { kind: "activity"; key: string; domKey?: string; time?: string; minutes?: number; row: ActRow }
   | { kind: "item"; key: string; domKey: string; time?: string; minutes?: number; item: DayItem }
+  | { kind: "plan"; key: "plan" }
   | { kind: "gap"; key: string; task: Task }
   | { kind: "tour"; key: "tour" };
 
@@ -54,10 +55,12 @@ export interface TimelineInput {
   gaps: Task[];
   /** To-dos and considerations that cover this day. */
   items?: DayItem[];
+  /** Nothing is planned for the day yet: a placeholder tile where the activities would be. */
+  plan?: boolean;
   tour: boolean;
 }
 
-export function buildTimeline({ date, hotels, flights, acts, gaps, tour, items = [] }: TimelineInput): TimelineEntry[] {
+export function buildTimeline({ date, hotels, flights, acts, gaps, tour, items = [], plan = false }: TimelineInput): TimelineEntry[] {
   const out: TimelineEntry[] = [];
 
   // A hotel being left goes first, then the rest, each in data order.
@@ -108,6 +111,7 @@ export function buildTimeline({ date, hotels, flights, acts, gaps, tour, items =
     if (i === lastTimed) out.push(...timed.splice(0));
   });
 
+  if (plan) out.push({ kind: "plan", key: "plan" });
   out.push(...timed.splice(0));
   for (const e of itemEntries) if (e.minutes === undefined) out.push(e);
   for (const task of gaps) out.push({ kind: "gap", key: `gap:${task.key}`, task });
