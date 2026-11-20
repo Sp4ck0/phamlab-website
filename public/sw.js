@@ -1,12 +1,22 @@
 // Service worker for push notifications only: no caching and no fetch
 // handler, so the site always loads live. Registered from src/main.tsx.
+
+// Take over right away. Without this an installed app that is never fully
+// closed keeps running the previous worker, so updates (like the badge) would
+// not apply until the person force-quits the app.
+self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
+
 // The app-icon badge is the number of our notifications still unread. Counting
 // the ones on screen (rather than a stored counter) stays right even though
 // this worker is stopped between pushes, and drops when one is tapped or cleared.
-async function updateBadge() {
+// `atLeast` is 1 right after a push: some browsers (iOS) can lag in listing a
+// notification they just showed, and the badge must never read 0 for it.
+async function updateBadge(atLeast = 0) {
   if (!("setAppBadge" in self.navigator)) return;
   try {
-    const unread = (await self.registration.getNotifications()).length;
+    const shown = (await self.registration.getNotifications()).length;
+    const unread = Math.max(shown, atLeast);
     if (unread > 0) await self.navigator.setAppBadge(unread);
     else await self.navigator.clearAppBadge();
   } catch {
@@ -28,7 +38,7 @@ self.addEventListener("push", (event) => {
         icon: "icons/icon-192.png", // relative to this file, so under /phamlab-website/
         data: { url: data.url },
       })
-      .then(updateBadge)
+      .then(() => updateBadge(1))
   );
 });
 
