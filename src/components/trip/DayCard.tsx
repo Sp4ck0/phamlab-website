@@ -375,7 +375,11 @@ export function DayCard({
           aria-label={`${anyClosed ? "Expand" : "Collapse"} all tiles on Day ${dayNumber}`}
           onClick={() => tiles.setMany(liveTiles.map((x) => idOf(x.key)), anyClosed)}
         >
-          {anyClosed ? "Expand all" : "Collapse all"}
+          {/* On a phone only the icon shows, so the day's own badges keep their room. */}
+          <svg className="day-tiles-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <path d={anyClosed ? "M3.5 3.5L7 7l3.5-3.5M3.5 7.5L7 11l3.5-3.5" : "M3.5 10.5L7 7l3.5 3.5M3.5 6.5L7 3l3.5 3.5"} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span className="day-tiles-label">{anyClosed ? "Expand all" : "Collapse all"}</span>
         </button>
       )}
       <ShareLinkButton param={{ day: d.date }} label={`Share link to Day ${dayNumber}`} />

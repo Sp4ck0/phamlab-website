@@ -724,7 +724,8 @@ test('a booked train, ferry or bus has a mode and state header, the operator as 
     const box = view.container.querySelector('.tl-transport');
     assert.equal(box.querySelector('.ctype').textContent, 'Train');
     assert.equal(box.closest('.tl-entry').querySelector('.tl-dot').textContent, '🚆'); // the mode's icon is the marker on the rail
-    assert.equal(box.querySelector('.tx-state').textContent, '✓ Booked');
+    assert.equal(box.querySelector('.tx-state'), null); // booked needs no words: the check says it
+    assert.equal(box.querySelector('.status').dataset.s, 'booked');
     assert.equal(box.querySelector('.tx-title'), null); // the operator in the row is the title
     assert.ok(box.querySelector('.seg-carrier').textContent.includes('Synthetic Rail'));
     assert.equal(box.querySelector('.seg-terminal').textContent, 'Platform 4');
@@ -761,9 +762,10 @@ test('an unbooked train shows its route as the title, a route search; the check 
     assert.equal(new URL(search.href).searchParams.get('travelmode'), 'transit');
     act(() => train.querySelector('.status').click());
     assert.deepEqual(calls[0], [[flightId(day.date, open)], 'needed']); // the toggle reports the current state; the page flips it
-    // A flight keeps its own title; like every tile it says its booking state in the header, and has no booking links.
+    // A flight keeps its own title; booked, its header has just the check, and it has no booking links.
     assert.equal(plane.querySelector('.ctype'), null);
-    assert.equal(plane.querySelector('.tx-state').textContent, '✓ Booked');
+    assert.equal(plane.querySelector('.tx-state'), null);
+    assert.equal(plane.querySelector('.status').dataset.s, 'booked');
     assert.equal(plane.querySelector('.tl-link'), null);
   } finally { view.close(); }
 });

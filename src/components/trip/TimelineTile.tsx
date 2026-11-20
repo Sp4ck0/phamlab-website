@@ -6,11 +6,11 @@ export const ALL_DAY = "All day";
 
 export type TileState = "booked" | "needed" | "maybe" | "details";
 
-/** The booking state in words, for a tile header: booked, not booked, a maybe, or booked but missing details. */
+/** The booking state in words, for a tile header: not booked, a maybe, or booked but missing details. Booked needs no words: the check beside it says so. */
 export function TileStatePill({ state, label }: { state: TileState; label?: string }) {
+  if (state === "booked") return null;
   if (state === "maybe") return <span className="maybe-pill">Maybe</span>;
-  const text = label ?? (state === "booked" ? "✓ Booked" : state === "needed" ? "Not booked" : "Missing details");
-  return <span className={`tx-state ${state === "booked" ? "ok" : "open"}`}>{text}</span>;
+  return <span className="tx-state open">{label ?? (state === "needed" ? "Not booked" : "Missing details")}</span>;
 }
 
 export interface TimelineTileProps {
