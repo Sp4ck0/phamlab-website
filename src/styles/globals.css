@@ -411,8 +411,8 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 .now-emoji{position:absolute;left:0;top:-9px;padding-right:4px;font-size:14px;line-height:1;font-weight:400;background:var(--card)}
 .now-line-label{margin-top:8px;padding-left:22px;font-variant-numeric:tabular-nums}
 .now-line-mine{font-weight:500;color:var(--text-muted)}
-.activity--now{position:relative;padding-bottom:16px}
-/* The running activity's own line: a faint track along the row's bottom edge, filled red up to how far through it is, with the pointing finger riding the fill's end. It never crosses the text. */
+.activity--now{position:relative}
+/* The running activity's own line: a faint track along the row's bottom edge, filled red up to how far through it is, with the pointing finger riding the fill's end. It never crosses the text, and it is absolutely positioned so the row is the same height as any other. */
 .now-progress{position:absolute;left:0;right:0;bottom:0;height:2px;background:linear-gradient(to right,var(--now) var(--p),color-mix(in srgb,var(--now) 25%,transparent) var(--p));pointer-events:none}
 .now-progress-emoji{position:absolute;bottom:-7px;left:clamp(22px,var(--p),100%);transform:translateX(-100%);font-size:14px;line-height:1}
 .now-pill{display:inline-block;margin-right:6px;padding:1px 8px;border-radius:999px;background:var(--now);color:#fff;font-size:11px;font-weight:700;vertical-align:middle}
