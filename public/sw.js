@@ -53,7 +53,11 @@ self.addEventListener("notificationclick", (event) => {
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
       const open = windows.find((w) => "focus" in w);
-      return open ? open.focus() : self.clients.openWindow(url);
+      if (!open) return self.clients.openWindow(url);
+      // An open app can't be told to go somewhere by focusing it, so ask it to
+      // (src/main.tsx follows the link), then bring it to the front.
+      open.postMessage({ type: "open-url", url });
+      return open.focus();
     })
   );
 });
