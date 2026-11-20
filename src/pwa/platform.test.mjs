@@ -16,12 +16,12 @@ test("already installed wins over everything", () => {
 test("iPhone Safari is ios", () => assert.equal(detectPlatform(IPHONE, false), "ios"));
 test("iPadOS with a desktop user agent is ios, a real Mac is not", () => {
   assert.equal(detectPlatform(IPAD_DESKTOP, false, 5), "ios");
-  assert.equal(detectPlatform(MAC, false, 0), "other");
+  assert.equal(detectPlatform(MAC, false, 0), "desktop");
 });
 test("in-app browsers are detected before ios", () => {
   assert.equal(detectPlatform(INSTAGRAM_IOS, false), "in-app");
   assert.equal(detectPlatform(ANDROID_WEBVIEW, false), "in-app");
 });
-test("Android Chrome is other (it installs via beforeinstallprompt)", () => {
-  assert.equal(detectPlatform(ANDROID, false, 5), "other");
+test("Android Chrome is android (it installs via beforeinstallprompt)", () => {
+  assert.equal(detectPlatform(ANDROID, false, 5), "android");
 });

@@ -11,7 +11,6 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 const addBtn = $<HTMLButtonElement>("pwa-add");
 const msg = $("pwa-msg");
 const iosSheet = $("pwa-ios");
-const shareBtn = $<HTMLButtonElement>("pwa-share");
 const inAppSheet = $("pwa-inapp");
 
 const standalone =
@@ -19,20 +18,18 @@ const standalone =
   (navigator as Navigator & { standalone?: boolean }).standalone === true;
 const platform = detectPlatform(navigator.userAgent, standalone, navigator.maxTouchPoints);
 
-// Opened from the home screen (iOS may launch the saved page, not start_url).
-if (platform === "installed") location.replace(SITE);
+// Only phones need this page. Opened from the home screen (iOS may launch the
+// saved page, not start_url) or on a computer, go straight to the site.
+if (platform === "installed" || platform === "desktop") location.replace(SITE);
+else document.documentElement.classList.add("ready"); // reveal the page (hidden in CSS until now)
 
-// iPhone has no install API, so show the steps straight away; Share opens
-// Safari's Share sheet, which is where "Add to Home Screen" lives.
+// iPhone has no install API and no way to open the "Add to Home Screen" action
+// from a page (navigator.share shows a different, shorter sheet without it),
+// so show the steps for Safari's own Share button straight away.
 if (platform === "ios") {
   addBtn.hidden = true;
   iosSheet.hidden = false;
-  shareBtn.hidden = typeof navigator.share !== "function";
 }
-shareBtn.addEventListener("click", () => {
-  // Rejects if the person closes the sheet; nothing to do then.
-  navigator.share({ title: "phamlab", url: location.href }).catch(() => {});
-});
 
 let deferred: InstallPromptEvent | null = null;
 window.addEventListener("beforeinstallprompt", (e) => {
