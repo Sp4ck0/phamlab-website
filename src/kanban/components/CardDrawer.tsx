@@ -373,30 +373,29 @@ export function CardDrawer({
                 />
               </section>
 
-              <div className="row">
-                <label className="field">
-                  <span className="label">Check back on</span>
-                  <input
-                    type="date"
-                    value={card.followUp ?? ''}
-                    onChange={(e) => onChange(card.id, { followUp: e.target.value || null })}
-                  />
-                </label>
-
-                <label className="field">
-                  <span className="label">Lane</span>
-                  <select
-                    value={lane ?? ''}
-                    onChange={(e) => onMove(card.id, e.target.value as LaneId)}
-                  >
-                    {boardLanes(board).map((l) => (
-                      <option key={l.id} value={l.id}>
-                        {l.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+              <div className="who__block">
+                <span className="label">Lane</span>
+                <div className="seg seg--lanes" role="group" aria-label="Lane">
+                  {boardLanes(board).map((l) => (
+                    <button
+                      key={l.id}
+                      data-on={lane === l.id || undefined}
+                      onClick={() => lane !== l.id && onMove(card.id, l.id)}
+                    >
+                      {l.name}
+                    </button>
+                  ))}
+                </div>
               </div>
+
+              <label className="field">
+                <span className="label">Check back on</span>
+                <input
+                  type="date"
+                  value={card.followUp ?? ''}
+                  onChange={(e) => onChange(card.id, { followUp: e.target.value || null })}
+                />
+              </label>
 
               <Thread
                 card={card}

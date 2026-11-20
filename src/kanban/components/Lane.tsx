@@ -18,9 +18,12 @@ interface Props {
    */
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
+  /** Phone layout: the tabs name the lane, and each tile gets a Move button. */
+  compact?: boolean;
+  onMove: (id: string, to: LaneId) => void;
 }
 
-export function Lane({ lane, board, onOpen, onStartAdd, hasDraft, expanded, onExpandedChange }: Props) {
+export function Lane({ lane, board, onOpen, onStartAdd, hasDraft, expanded, onExpandedChange, compact, onMove }: Props) {
   const meta = boardLanes(board).find((l) => l.id === lane)!;
   const { ref, isDropTarget } = useDroppable({
     id: lane,
@@ -34,7 +37,7 @@ export function Lane({ lane, board, onOpen, onStartAdd, hasDraft, expanded, onEx
   const shown = hidden ? visible.slice(0, DONE_PREVIEW) : visible;
 
   return (
-    <section className="lane" data-over={isDropTarget || undefined}>
+    <section className="lane" data-over={isDropTarget || undefined} data-compact={compact || undefined}>
       <header className="lane__head">
         <div className="lane__titles">
           <h2 className="lane__name">{meta.name}</h2>
@@ -49,7 +52,17 @@ export function Lane({ lane, board, onOpen, onStartAdd, hasDraft, expanded, onEx
           // whole board down — just skip that tile.
           const card = board.cards[id];
           if (!card) return null;
-          return <CardTile key={id} card={card} index={index} lane={lane} board={board} onOpen={onOpen} />;
+          return (
+            <CardTile
+              key={id}
+              card={card}
+              index={index}
+              lane={lane}
+              board={board}
+              onOpen={onOpen}
+              onMove={compact ? onMove : undefined}
+            />
+          );
         })}
 
         {hidden > 0 && (
