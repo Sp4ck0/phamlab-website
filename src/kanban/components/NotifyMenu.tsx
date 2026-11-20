@@ -20,8 +20,10 @@ const TOPIC_EVENTS: Record<Kind, { id: string; label: string; short: string }[]>
   trip: [
     { id: "task_added", label: "New tasks and suggestions", short: "New tasks" },
     { id: "task_done", label: "Tasks completed or decided", short: "Done" },
+    { id: "vote_cast", label: "Votes on suggestions", short: "Votes" },
     { id: "note_changed", label: "Trip notes changed", short: "Notes" },
     { id: "itinerary_changed", label: "Itinerary edits", short: "Itinerary" },
+    { id: "reminder_due", label: "Daily reminder of tasks that are due", short: "Reminders" },
   ],
 };
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/api";
 import type { Id } from "@convex/dataModel";
@@ -193,6 +193,16 @@ export function NotificationChannels() {
   const [busy, setBusy] = useState(false);
   const { boards } = useKanbanBoards();
   const { trips } = useAccessibleTrips();
+
+  // The daily trip reminder goes out at 9am where you are, so keep the server's
+  // copy of this browser's time zone current (it follows you when you travel).
+  const settings = useQuery(api.settings.getSettings, args) as { timeZone: string | null } | null | undefined;
+  const saveTimeZone = useMutation(api.settings.setTimeZone);
+  const savedZone = settings?.timeZone;
+  useEffect(() => {
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (settings && zone && savedZone !== zone) void saveTimeZone({ ...(code ? { code } : {}), timeZone: zone }).catch(() => {});
+  }, [settings, savedZone, code, saveTimeZone]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

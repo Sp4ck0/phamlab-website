@@ -161,7 +161,7 @@ a{color:inherit}
 .notif-type__opt[aria-pressed="true"]{border-color:var(--accent-1);color:var(--text-primary)}
 .notif-boards{flex-direction:column;align-items:stretch;gap:10px}
 .notif-boardrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
-.notif-boardrow__name{flex:0 0 140px;font-size:14px;color:var(--text-primary)}
+.notif-boardrow__name{flex:0 0 min(220px,100%);font-size:14px;color:var(--text-primary)}
 .notif-chips{display:flex;flex-wrap:wrap;gap:6px}
 .notif-chip{flex:0 0 88px;box-sizing:border-box;text-align:center;font:inherit;font-size:12px;font-weight:600;padding:5px 0;border-radius:999px;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--text-muted);transition:.16s}
 .notif-chip:hover{color:var(--text-primary);border-color:var(--text-muted)}
