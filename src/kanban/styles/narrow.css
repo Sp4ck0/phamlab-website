@@ -58,10 +58,10 @@
   /* Swiping or tapping a tab slides the new lane in from the side it lies on. The lane is
      remounted per lane (keyed), so this plays once per change and leaves no transform behind. */
   .board[data-slide='next'] .lane {
-    animation: lane-from-right 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+    animation: lane-from-right 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .board[data-slide='prev'] .lane {
-    animation: lane-from-left 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+    animation: lane-from-left 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   }
   @keyframes lane-from-right {
     from {
@@ -76,8 +76,15 @@
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .board[data-slide] .lane {
-      animation: none;
+    /* Reduce Motion: no sideways travel, but still ease the lane in rather than snapping. */
+    .board[data-slide='next'] .lane,
+    .board[data-slide='prev'] .lane {
+      animation: lane-fade 0.4s ease-in-out;
+    }
+    @keyframes lane-fade {
+      from {
+        opacity: 0;
+      }
     }
   }
   /* The tab already names the lane and counts its cards. */
