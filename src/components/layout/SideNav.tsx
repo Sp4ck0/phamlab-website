@@ -237,6 +237,11 @@ export function SideNav() {
           </Link>
         </div>
       </nav>
+      {isOpen && (
+        <button className="navhandle" onClick={() => setIsOpen(false)} aria-label="Minimize menu">
+          ‹
+        </button>
+      )}
       {showLog && <VersionLog onClose={() => setShowLog(false)} />}
     </>
   );
