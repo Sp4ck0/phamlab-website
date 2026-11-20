@@ -644,7 +644,11 @@ test('Only gaps opens each day and shows just the open items, each with why it i
     assert.ok(cardWith('Synthetic booked route') && !cardWith('Synthetic booked route').textContent.includes('Not booked'));
     assert.ok(cardWith('Synthetic open lodging').textContent.includes('Not booked'));
     assert.ok(!text.includes('Synthetic activity') && !text.includes('Synthetic callout'));
-    assert.ok(text.includes('Nothing planned') && text.includes('None entered') && text.includes('Synthetic A → Synthetic B'));
+    assert.ok(text.includes('Nothing planned yet') && text.includes('None entered') && text.includes('Synthetic A → Synthetic B'));
+    // An empty day is a row on the rail like any other tile, not a loose line of text.
+    const empty = view.container.querySelector('.tl-plan');
+    assert.ok(empty && empty.closest('li.tl-entry') && empty.classList.contains('tl-flat'));
+    assert.equal(empty.querySelector('.tx-state').textContent, 'Not planned');
     // A day can still be closed by hand; turning the filter off and on opens it again.
     act(() => triggers()[0].click());
     assert.equal(triggers()[0].getAttribute('aria-expanded'), 'false');
@@ -1064,4 +1068,17 @@ test('an activity approved from a suggestion opens to its History; a hotel opens
     act(() => hotel.querySelector('.tl-meta').dispatchEvent(new window.MouseEvent('click', { bubbles: true })));
     assert.equal(chev.getAttribute('aria-expanded'), 'true'); // anywhere else on the header opens the tile
   } finally { view.close(); }
+});
+
+test('a day with nothing planned shows a "Nothing planned yet" tile on the rail; a planned day has none', () => {
+  const view = mount(React.createElement(DayCard, { ...props, day: { ...day, acts: [] }, expanded: true }));
+  try {
+    const tile = view.container.querySelector('.tl-plan');
+    assert.ok(tile && tile.closest('li.tl-entry'));
+    assert.equal(tile.querySelector('.tl-title').textContent, 'Nothing planned yet');
+    assert.equal(tile.querySelector('.tl-toggle, .tl-body'), null); // nothing to open
+    assert.equal(view.container.querySelector('.day-subtitle'), null); // no loose "Not decided yet" line
+  } finally { view.close(); }
+  const planned = mount(React.createElement(DayCard, { ...props, day, expanded: true }));
+  try { assert.equal(planned.container.querySelector('.tl-plan'), null); } finally { planned.close(); }
 });
