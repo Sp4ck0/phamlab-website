@@ -7,7 +7,7 @@ import { todayISO } from "./dueDates";
 import type { ResolvedDay } from "./types";
 
 /** The marker that sits at the left end of the now line. */
-export const NOW_EMOJI = "🕒";
+export const NOW_EMOJI = "👉";
 
 export type NowPosition =
   | { kind: "during"; index: number; hhmm: string; progress: number } // progress: 0..1 through the activity
