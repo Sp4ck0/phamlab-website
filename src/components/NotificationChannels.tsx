@@ -6,6 +6,7 @@ import { useAccessCode } from "../hooks/useAccessCode";
 import { serverMessage } from "../lib/serverError";
 import { ChannelIcon } from "./ChannelIcon";
 import { PushDevice } from "./PushDevice";
+import { readThisDeviceId, unsubscribeThisDevice } from "../lib/pushDevice";
 import { SettingsSection } from "./SettingsSection";
 import { useKanbanBoards } from "../kanban/useKanbanBoards";
 import { BoardNotifyChips } from "../kanban/components/NotifyMenu";
@@ -89,14 +90,33 @@ function ChannelRow({ channel }: { channel: Channel }) {
     }
   }
 
+  // Push rows are devices: tag the one this browser owns, so "iPhone" and "Mac"
+  // read as two phones/computers and not two "this device"s.
+  const isThisDevice = channel.type === "push" && readThisDeviceId() === channel._id;
+
   return (
     <div className="setting-row" style={{ alignItems: "flex-start" }}>
       <div style={{ minWidth: 0 }}>
         <div className="setting-label notif-name">
           <ChannelIcon type={channel.type} /> {channel.label}
+          {isThisDevice && (
+            <span
+              style={{
+                marginLeft: 8,
+                padding: "1px 8px",
+                borderRadius: 999,
+                background: "var(--chip-bg)",
+                color: "var(--text-secondary)",
+                fontSize: 11,
+                fontWeight: 500,
+              }}
+            >
+              This device
+            </span>
+          )}
         </div>
         <div className="sdek">
-          {channel.masked} ·{" "}
+          {channel.type === "push" ? "Push notifications" : channel.masked} ·{" "}
           {channel.status === "verified"
             ? "Connected"
             : `Not connected yet — we posted a 6-digit code to your ${TYPE_COPY[channel.type].label} channel. Enter it below.`}
@@ -142,7 +162,17 @@ function ChannelRow({ channel }: { channel: Channel }) {
         )}
         {message && <div className="sdek" role="status">{message}</div>}
       </div>
-      <button className="btn" disabled={busy} onClick={() => void run(() => remove({ ...args, channelId: channel._id }))}>
+      <button
+        className="btn"
+        disabled={busy}
+        onClick={() =>
+          void run(async () => {
+            await remove({ ...args, channelId: channel._id });
+            // Removing this device's row also switches push off in this browser.
+            if (isThisDevice) await unsubscribeThisDevice();
+          })
+        }
+      >
         Remove
       </button>
     </div>
