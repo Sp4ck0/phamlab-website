@@ -9,11 +9,16 @@ import type { ResolvedDay } from "./types";
 /** The marker that sits at the left end of the now line. */
 export const NOW_EMOJI = "👉";
 
+// Positions are named by tile key (lib/timeline.ts: `act:<index>` for an activity, a
+// booking id for transport), so the line can sit between any two timed tiles.
 export type NowPosition =
-  | { kind: "during"; index: number; hhmm: string; progress: number } // progress: 0..1 through the activity
-  | { kind: "untimed"; hhmm: string } // no timed activities to place it among
-  | { kind: "before" | "between"; beforeIndex: number; hhmm: string; next: { hhmm: string; inMin: number } }
-  | { kind: "after"; afterIndex: number; hhmm: string };
+  | { kind: "during"; key: string; hhmm: string; progress: number } // progress: 0..1 through the tile's time
+  | { kind: "untimed"; hhmm: string } // nothing timed to place it among
+  | { kind: "before" | "between"; beforeKey: string; hhmm: string; next: { hhmm: string; inMin: number } }
+  | { kind: "after"; afterKey: string; hhmm: string };
+
+/** A timed tile: minutes since midnight, local to the day. `end === start` is a moment, never "during". */
+export interface Span { key: string; start: number; end: number }
 
 type DayLike = Pick<ResolvedDay, "date" | "city" | "country" | "acts">;
 
@@ -27,26 +32,32 @@ export function isDestToday(d: Pick<ResolvedDay, "date" | "city" | "country">, n
 
 const hm = (min: number) => `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
 
-/** Where "now" falls among the day's timed activities; null when the day's zone is unknown. */
-export function nowPosition(d: DayLike, now: number): NowPosition | null {
-  const zone = dayZone(d);
-  if (!zone) return null;
-  const t = zoneNow(now, zone);
-  const timed = d.acts.flatMap((a, index) => {
+/** The day's timed activities as spans (an activity's length comes from actWindow). */
+export function actSpans(d: Pick<ResolvedDay, "acts">): Span[] {
+  return d.acts.flatMap((a, index) => {
     const w = actWindow(a, d, index);
     if (!w) return [];
     const start = w.start.h * 60 + w.start.m;
-    return [{ index, start, end: w.end ? w.end.h * 60 + w.end.m : start + w.minutes }];
+    return [{ key: `act:${index}`, start, end: w.end ? w.end.h * 60 + w.end.m : start + w.minutes }];
   });
+}
+
+/** Where "now" falls among the day's timed tiles (its activities, unless `spans` says otherwise); null when the day's zone is unknown. */
+export function nowPosition(d: DayLike, now: number, spans: Span[] = actSpans(d)): NowPosition | null {
+  const zone = dayZone(d);
+  if (!zone) return null;
+  const t = zoneNow(now, zone);
+  const timed = [...spans].sort((a, b) => a.start - b.start);
   if (!timed.length) return { kind: "untimed", hhmm: t.hhmm };
-  const upcoming = (i: number) => ({ beforeIndex: timed[i].index, hhmm: t.hhmm, next: { hhmm: hm(timed[i].start), inMin: timed[i].start - t.minutes } });
+  const upcoming = (i: number) => ({ beforeKey: timed[i].key, hhmm: t.hhmm, next: { hhmm: hm(timed[i].start), inMin: timed[i].start - t.minutes } });
   if (t.minutes < timed[0].start) return { kind: "before", ...upcoming(0) };
   for (let i = 0; i < timed.length; i++) {
-    if (t.minutes >= timed[i].start && t.minutes < timed[i].end) return { kind: "during", index: timed[i].index, hhmm: t.hhmm, progress: (t.minutes - timed[i].start) / (timed[i].end - timed[i].start) };
+    const s = timed[i];
+    if (t.minutes >= s.start && t.minutes < s.end) return { kind: "during", key: s.key, hhmm: t.hhmm, progress: (t.minutes - s.start) / (s.end - s.start) };
     const nxt = timed[i + 1];
-    if (nxt && t.minutes >= timed[i].end && t.minutes < nxt.start) return { kind: "between", ...upcoming(i + 1) };
+    if (nxt && t.minutes >= Math.max(s.end, s.start) && t.minutes < nxt.start) return { kind: "between", ...upcoming(i + 1) };
   }
-  return { kind: "after", afterIndex: timed[timed.length - 1].index, hhmm: t.hhmm };
+  return { kind: "after", afterKey: timed[timed.length - 1].key, hhmm: t.hhmm };
 }
 
 /** The viewer's own clock ("11:32 pm") when it differs from the destination's, else null. */

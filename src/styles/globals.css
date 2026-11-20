@@ -362,11 +362,6 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 .share-status:empty{display:none}
 .day-heading .icon-btn{opacity:.7}
 /* tile share + calendar buttons: pushed right in the card header, clear of the status dot (the .ctop padding) */
-.ctop .share-wrap{margin-left:auto}
-.ctop a.gcal-btn{margin-left:0}
-.card .icon-btn,.flight-box .icon-btn,.activity .share-btn{opacity:.6;width:24px;height:24px}
-.card .icon-btn:hover,.flight-box .icon-btn:hover,.activity .share-btn:hover,.card .icon-btn:focus-visible,.flight-box .icon-btn:focus-visible,.activity .share-btn:focus-visible{opacity:1}
-.activity .share-wrap{flex:none;align-self:flex-start}
 .day-heading .icon-btn:hover,.day-heading .icon-btn:focus-visible{opacity:1}
 .day-head{display:grid;grid-template-columns:100px minmax(0,1fr) auto;align-items:center;gap:8px 14px;margin:0}
 .day-head-btn{
@@ -378,6 +373,88 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 .day-head-right{grid-column:3;grid-row:1;display:inline-flex;align-items:center;flex-wrap:wrap;gap:8px;min-width:0}
 .day-summary{grid-column:2;grid-row:1;font-size:13.5px;color:var(--text-secondary);overflow-wrap:anywhere;min-width:0}
 .day-card > div:not([hidden]){padding:4px 16px 16px}
+
+/* ── day timeline (TimelineTile): one rail of tiles, each an accordion ──
+   time label | marker on the rail | tile. A closed tile is its header alone; opening one
+   only pushes what is below it down, so nothing moves sideways. */
+.tl{list-style:none;margin:4px 0 0;padding:0}
+.tl-entry,.tl-now{display:grid;grid-template-columns:52px 26px minmax(0,1fr);column-gap:8px;scroll-margin-top:66px}
+.tl-time{padding-top:15px;text-align:right;font-size:12px;font-weight:700;line-height:1.2;color:var(--text-secondary);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.tl-time[data-all-day]{font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--text-muted)}
+.tl-rail{position:relative;display:flex;justify-content:center}
+.tl-rail::before{content:"";position:absolute;top:0;bottom:0;left:calc(50% - 1px);width:2px;background:var(--gridline)}
+.tl>:first-child .tl-rail::before{top:20px}
+.tl>:last-child .tl-rail::before{bottom:auto;height:20px}
+.tl>:only-child .tl-rail::before{display:none}
+.tl-dot{position:relative;z-index:1;margin-top:8px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:13px;line-height:1;background:var(--card);border:1.5px solid var(--gridline)}
+.tl-entry--now .tl-dot{border-color:var(--now);box-shadow:0 0 0 3px color-mix(in srgb,var(--now) 22%,transparent)}
+.tl-tile{min-width:0;margin-bottom:8px;background:var(--card);border:1px solid var(--border);border-radius:10px;transition:border-color .15s}
+.tl-tile.is-open{border-color:color-mix(in srgb,var(--accent-1) 40%,var(--border))}
+.tl-tile.miss{border-style:dashed;border-color:var(--warn);background:var(--accent-transit-tint)}
+.day-card.gaps-only .tl-tile.miss{border-width:2px}
+.tl-tile.maybe{opacity:.88}
+.tl-entry.next-up{box-shadow:none}
+.tl-entry.next-up .tl-tile{box-shadow:0 0 0 2px var(--accent-1)}
+/* Header: the title button, then the state pills, the unresolved dot and the chevron. */
+.tl-head{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;align-items:center;column-gap:8px;min-height:42px;padding-right:12px;border-radius:9px;cursor:pointer}
+@media (hover:hover){.tl-head:hover{background:color-mix(in srgb,var(--accent-1) 5%,transparent)}}
+.tl-toggle{grid-column:1;display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0;padding:8px 0 8px 12px;border:0;background:transparent;font:inherit;color:inherit;text-align:left;cursor:pointer;border-radius:9px}
+.tl-toggle:focus-visible{outline:2px solid var(--accent-1);outline-offset:-2px}
+.tl-title{max-width:100%;font-size:14.5px;font-weight:600;line-height:1.35;color:var(--text-primary);overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.tl-tile.is-open .tl-title{display:block;-webkit-line-clamp:unset}
+.tl-meta{font-size:12.5px;line-height:1.35;color:var(--text-secondary);overflow-wrap:anywhere}
+.tl-meta .next-up-line{display:block;margin:0}
+.tl-end{grid-column:2;display:inline-flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:6px 8px}
+.tl-end .status{position:relative;top:auto;right:auto;flex:none}
+.tl-end .now-pill{margin-right:0}
+.tl-warn{grid-column:3;width:8px;height:8px;border-radius:50%;background:var(--warn)}
+.tl-chev{grid-column:4;color:var(--text-muted);transition:transform .16s}
+.tl-tile.is-open .tl-chev{transform:rotate(180deg)}
+.tl-head .now-progress{border-radius:0 0 9px 9px}
+/* Body: the tile's own content, then one row of actions in the same order on every tile. */
+.tl-body:not([hidden]){padding:10px 12px 12px;border-top:1px solid var(--gridline)}
+.tl-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 24px}
+.tl-cols:has(>.tl-col:empty){grid-template-columns:minmax(0,1fr)}
+.tl-col:empty{display:none}
+.tl-actions{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;margin-top:10px;padding-top:8px;border-top:1px solid var(--gridline)}
+.tl-actions:first-child{margin-top:0;padding-top:0;border-top:0}
+.tl-actions .icon-btn{opacity:.75;width:28px;height:28px}
+.tl-actions .icon-btn:hover,.tl-actions .icon-btn:focus-visible{opacity:1}
+.tl-actions .act-edit{opacity:.75;align-self:center}
+.tl-actions a.gcal-btn{margin-left:0}
+.tl-link{color:var(--accent-1);text-decoration:none;font-size:13px;font-weight:600}
+.tl-link:hover{text-decoration:underline}
+.tl-body>.activity-text{display:block;font-size:14.5px;line-height:1.5}
+.transport-top{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;margin-bottom:4px}
+/* Things that are not tiles: the tour box sits in the tile column; "now" is a line on the rail. */
+.tl-entry--plain .tl-plain{grid-column:3;margin-bottom:8px}
+.tl-entry--plain .tl-plain details.tour-box{margin-top:0}
+.tl-now{align-items:start;margin:-2px 0 6px}
+.tl-now .tl-time{padding-top:0;color:var(--now)}
+.tl-now .tl-rail{align-items:flex-start}
+.tl-now-dot{position:relative;z-index:1;margin-top:3px;width:10px;height:10px;border-radius:50%;background:var(--now);box-shadow:0 0 0 3px var(--card)}
+.tl-now-label{border-top:2px solid var(--now);margin-top:7px;padding-top:4px;font-size:12px;font-weight:700;color:var(--now);font-variant-numeric:tabular-nums}
+/* Day header: open or close every tile of the day. */
+.day-tiles-btn{flex:none;display:inline-flex;align-items:center;gap:4px;font:inherit;font-size:12px;font-weight:600;color:var(--text-secondary);background:transparent;border:1px solid var(--border);border-radius:999px;padding:3px 10px 3px 7px;cursor:pointer;white-space:nowrap}
+.day-tiles-btn:hover,.day-tiles-btn:focus-visible{color:var(--accent-1);border-color:var(--accent-1)}
+@media(prefers-reduced-motion:reduce){.tl-chev,.tl-tile{transition:none}}
+@media(max-width:640px){
+  .tl-entry,.tl-now{grid-template-columns:38px 22px minmax(0,1fr);column-gap:6px}
+  .tl-time{font-size:11px;padding-top:14px}
+  .tl-time[data-all-day]{font-size:9px}
+  .tl-dot{width:22px;height:22px;font-size:11px;margin-top:10px}
+  /* The state pills drop under the title, so a long title never squeezes them. */
+  .tl-head{grid-template-columns:minmax(0,1fr) auto auto;padding-right:10px}
+  .tl-toggle{padding-left:10px}
+  .tl-warn{grid-column:2;grid-row:1}
+  .tl-chev{grid-column:3;grid-row:1}
+  .tl-end{grid-column:1 / -1;grid-row:2;justify-content:flex-start;padding:0 0 8px 10px}
+  .tl-body:not([hidden]){padding:10px}
+  .tl-cols{grid-template-columns:minmax(0,1fr)}
+  .tl-actions .icon-btn{width:36px;height:36px}
+  .day-tiles-btn{min-height:36px;min-width:36px;justify-content:center;padding:0}
+  .day-tiles-label{display:none}
+}
 .itinerary-status{font-size:13px;color:var(--text-secondary)}
 .itinerary-status:empty{margin:0}
 .itinerary-empty{padding:12px 0 20px}
@@ -403,29 +480,15 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 .weather-badge.weather-actual{color:var(--text-muted)}
 .day-subtitle{font-size:13.5px;color:var(--text-secondary);margin:2px 0 14px}
 
-.activity-list{list-style:none;margin:0;padding:0}
-.activity{display:flex;gap:12px;padding:9px 0;border-top:1px solid var(--gridline);font-size:14.5px;line-height:1.5}
-.activity:first-child{border-top:none;padding-top:0}
-.act-tag{
-  flex:none;align-self:flex-start;margin-top:1px;font-size:10.5px;font-weight:700;letter-spacing:.03em;
-  text-transform:uppercase;color:var(--text-muted);background:var(--chip-bg);border-radius:6px;
-  padding:3px 7px;min-width:78px;text-align:center;white-space:nowrap;
-}
 .activity-text{flex:1;min-width:0;overflow-wrap:anywhere;color:var(--text-primary)}
 .activity-text a{color:var(--accent-1);font-weight:600;text-decoration:underline}
-.activity-time{font-variant-numeric:tabular-nums;color:var(--text-secondary);font-weight:600;margin-right:4px}
-.now-line{position:relative;display:flex;align-items:center;list-style:none;margin:6px 0;padding:0;border-top:2px solid var(--now);font-size:12px;font-weight:700;color:var(--now)}
-.now-emoji{position:absolute;left:0;top:-9px;padding-right:4px;font-size:14px;line-height:1;font-weight:400;background:var(--card)}
-.now-line-label{margin-top:8px;padding-left:22px;font-variant-numeric:tabular-nums}
 .now-line-mine{font-weight:500;color:var(--text-muted)}
-.activity--now{position:relative}
 /* The running activity's own line: a faint track along the row's bottom edge, filled red up to how far through it is, with the pointing finger riding the fill's end. It never crosses the text, and it is absolutely positioned so the row is the same height as any other. */
 .now-progress{position:absolute;left:0;right:0;bottom:0;height:2px;background:linear-gradient(to right,var(--now) var(--p),color-mix(in srgb,var(--now) 25%,transparent) var(--p));pointer-events:none}
 .now-progress-emoji{position:absolute;bottom:-7px;left:clamp(22px,var(--p),100%);transform:translateX(-100%);font-size:14px;line-height:1}
 .now-pill{display:inline-block;margin-right:6px;padding:1px 8px;border-radius:999px;background:var(--now);color:#fff;font-size:11px;font-weight:700;vertical-align:middle}
 a.gcal-btn{display:inline-flex;align-items:center;gap:4px;margin-left:8px;padding:2px 9px;border-radius:999px;border:1px solid var(--accent-1);background:var(--accent-1-tint);color:var(--accent-1);font-size:11.5px;font-weight:600;line-height:1.5;text-decoration:none;white-space:nowrap;vertical-align:middle;cursor:pointer}
 a.gcal-btn:hover,a.gcal-btn:focus-visible{background:var(--accent-1);color:var(--card)}
-.activity>a.gcal-btn{margin-left:0;flex-shrink:0;align-self:flex-start}
 
 details.tour-box{margin-top:14px;border:1px solid var(--border);border-radius:12px;background:var(--page);overflow:hidden}
 details.tour-box summary{
@@ -444,13 +507,7 @@ details.tour-box[open] summary::after{content:"Hide"}
 }
 .note b{color:var(--text-primary)}
 
-/* ── flight box (multi-leg) ───────────────────────────── */
-.flight-box{
-  margin:4px 0 18px;border:1px solid var(--border);border-left:4px solid var(--accent-1);
-  border-radius:12px;background:var(--accent-1-tint);padding:12px 16px 14px;
-}
-.flight-box-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px}
-.flight-box-title{font-size:12.5px;font-weight:700;letter-spacing:.02em;color:var(--accent-1);text-transform:uppercase}
+/* ── transport tile body (TransportBody) ───────────────── */
 .flight-box-price{font-size:12px;font-weight:600;color:var(--text-secondary)}
 .flight-leg{padding:5px 0}
 .fl-route{font-size:15px;font-weight:700;color:var(--text-primary)}
@@ -482,8 +539,6 @@ details.tour-box[open] summary::after{content:"Hide"}
 /* a hop not planned yet: blank time slots, an undecided place, a dashed tile, and the Maybe pill */
 .seg-time.blank{color:var(--text-muted);font-weight:600;font-size:18px}
 .seg-undecided{color:var(--text-muted);font-style:italic;font-weight:500}
-.flight-box-open{border-style:dashed;border-left-style:solid}
-.flight-box-maybe{opacity:.88}
 .maybe-pill{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--warn);border:1px dashed var(--warn);border-radius:999px;padding:1px 8px}
 .conf-chip{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:12px;font-weight:600;color:var(--text-secondary);background:transparent;border:1px solid var(--border);border-radius:999px;padding:2px 10px;cursor:pointer}
 .conf-chip:hover{border-color:var(--accent-1);color:var(--text-primary)}
@@ -497,8 +552,6 @@ details.tour-box[open] summary::after{content:"Hide"}
 .tbd-chip{border-style:dashed}
 .tbd-action{margin-left:auto}
 .tbd-action a{color:var(--accent-1);text-decoration:none;font-size:13px;font-weight:600}
-.tile-links{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:13px}
-.tile-links a{color:var(--accent-1);text-decoration:none;font-weight:600}
 /* stay strip, slim middle night, move-day gap, directions (HotelCard, StayStrip) */
 .seg-chip.cx-ok{border-color:var(--good);color:var(--good)}
 .seg-chip.cx-soon{border-color:var(--warn);color:var(--warn);font-weight:700}
@@ -516,13 +569,6 @@ details.tour-box[open] summary::after{content:"Hide"}
 .stay-lbl{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--text-secondary);margin-top:5px;font-variant-numeric:tabular-nums}
 .stay-lbl b{color:var(--text-primary);font-weight:600}
 .stay-gap{font-size:12.5px;color:var(--text-secondary);margin-top:8px;background:var(--chip-bg);border-radius:8px;padding:5px 10px}
-.stay-slim{display:flex;align-items:center;gap:8px;width:100%;text-align:left;font:inherit;font-size:13.5px;color:var(--text-primary);background:var(--card);border:1px solid var(--border);border-left:4px solid var(--accent-1);border-radius:10px;padding:8px 12px;cursor:pointer}
-.stay-slim:hover{box-shadow:0 2px 8px var(--border)}
-.stay-slim-name{font-weight:600}
-.stay-slim-mu{color:var(--text-muted)}
-.stay-slim-chev{margin-left:auto;font-size:12.5px;font-weight:600;color:var(--text-secondary);white-space:nowrap}
-.stay-collapse{display:block;margin:10px 0 0 auto;border:0;background:transparent;color:var(--text-secondary);cursor:pointer;font:inherit;font-size:12.5px;font-weight:600;padding:2px 0}
-.stay-collapse:hover,.stay-slim:hover .stay-slim-chev{color:var(--accent-1)}
 @media (max-width:420px){
   .seg-time{font-size:19px}
   .seg-main{column-gap:8px}
@@ -532,11 +578,8 @@ details.tour-box[open] summary::after{content:"Hide"}
 /* simple single-leg flight card (used when a flight has no `legs`) */
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--r,12px);padding:14px 15px;position:relative;transition:.18s}
 @media (hover:hover){.card:hover{box-shadow:0 4px 12px var(--border);transform:translateY(-1px)}}
-.card.miss{border-style:dashed;border-left-style:solid;border-color:var(--warn);background:var(--accent-transit-tint)}
 /* Only gaps: the reason a tile is listed, and a heavier border so it stands out. */
 .gap-reason{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--warn)}
-.day-card.gaps-only .card.miss{border-width:2px}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(max(240px,calc((100% - 12px)/2)),1fr));gap:12px;margin-top:4px}
 .ctop{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;margin-bottom:10px}
 .ctype{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted)}
 .who-pill{
@@ -561,7 +604,6 @@ details.tour-box[open] summary::after{content:"Hide"}
 .status[data-s="booked"]::after{content:'';width:4px;height:7px;border:solid var(--card);border-width:0 1.5px 1.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
 .status[data-s="needed"]{border-color:var(--danger);border-style:dashed}
 @media (hover:hover){.status:hover{transform:scale(1.18)}}
-.card:has(.status) .ctop{padding-right:22px}
 
 /* ── section headers ───────────────────────────── */
 .section-title{font-size:20px;font-weight:700;margin:40px 0 4px;letter-spacing:-.01em}
@@ -782,7 +824,6 @@ footer code{background:var(--chip-bg);padding:2px 6px;border-radius:4px;color:va
   .day-head-right{grid-column:2;justify-content:flex-end}
   .day-summary{grid-column:1 / -1;grid-row:2}
   .day-head-right .leg-badge{overflow-wrap:anywhere}
-  .flight-box{padding:10px 12px 12px}
   .trip-map{height:260px}
   .map-focus{padding:9px;margin:-9px -5px -9px -2px}
   .action-items,.overview-list,.alert,.trip-map-wrap{border-radius:12px}
@@ -801,16 +842,10 @@ footer code{background:var(--chip-bg);padding:2px 6px;border-radius:4px;color:va
   .print-doc{padding:20px 16px 40px}
 
   /* Activity rows: tag and actions on one line, the text full width below. */
-  .activity{flex-wrap:wrap;row-gap:0}
-  .activity::after{content:"";flex:1;order:1}
-  .activity>.act-tag{min-width:0;order:0}
-  .activity>:not(.activity-text):not(.act-tag):not(.now-track){order:2}
-  .activity>.activity-text{order:3;flex:1 0 100%;margin-top:2px}
-  .card .icon-btn,.flight-box .icon-btn,.activity .share-btn{width:36px;height:36px}
   a.gcal-btn,.conf-chip{min-height:36px}
 
   /* Tap targets and inputs */
-  .vote-btn,.day-considering .vote-btn,.ai-btn,.add-btn,.ai-chip,.undo-bar button,.stay-collapse,.export-menu-list button{min-height:44px}
+  .vote-btn,.day-considering .vote-btn,.ai-btn,.add-btn,.ai-chip,.undo-bar button,.export-menu-list button{min-height:44px}
   .day-link{padding:10px 0}
   .navtoggle{width:44px;height:44px}
   .trip-note-close{min-width:44px;min-height:44px}
@@ -901,7 +936,6 @@ textarea.ai-input{display:block;width:100%;resize:none;overflow:hidden;line-heig
 .icon-btn{display:flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;color:var(--text-muted);background:transparent;border:none;border-radius:6px;cursor:pointer}
 .icon-btn:hover{color:var(--text-primary);background:var(--chip-bg)}
 .act-edit{flex:none;align-self:flex-start;opacity:0;transition:opacity .12s}
-.activity:hover .act-edit,.activity:focus-within .act-edit{opacity:1}
 .undo-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;padding:8px 14px;font-size:13px;color:var(--text-secondary);background:var(--chip-bg);border-radius:10px}
 .undo-bar button{font:inherit;font-size:13px;font-weight:700;color:var(--text-primary);background:none;border:none;cursor:pointer;text-decoration:underline}
 @media (hover:none){
@@ -911,7 +945,7 @@ textarea.ai-input{display:block;width:100%;resize:none;overflow:hidden;line-heig
      positioned (absolute, or relative inside the flight box), so this stays within it. */
   .status::before{content:"";position:absolute;inset:-14px}
 }
-.cmain,.cmeta,.flight-box-title,.fl-route,.fl-meta,.note,.tour-body,.alert li{overflow-wrap:anywhere}
+.cmain,.cmeta,.fl-route,.fl-meta,.note,.tour-body,.alert li{overflow-wrap:anywhere}
 
 /* Entry-redirect loading state (App.tsx) */
 .boot{min-height:100vh;display:grid;place-items:center}
@@ -945,7 +979,6 @@ textarea.ai-input{display:block;width:100%;resize:none;overflow:hidden;line-heig
 .tx-state{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
 .tx-state.ok{color:var(--good)}
 .tx-state.open{color:var(--warn)}
-.tx-title{font-size:16px;font-weight:700;margin:2px 0 8px}
 .seg-terminal{font-size:12px;font-weight:600;color:var(--text-muted)}
 .next-up{box-shadow:0 0 0 2px var(--accent-1)}
 .next-up-line{font-size:12.5px;font-weight:700;color:var(--accent-1);margin-bottom:6px}

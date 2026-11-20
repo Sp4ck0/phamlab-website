@@ -1,11 +1,12 @@
 import { Fragment, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import type { ActionItem, Group, LegColor, Place, ResolvedDay, Status, Task, Vote } from "../../lib/types";
 import { coversDay } from "../../lib/tasks";
 import type { DayGaps } from "../../lib/tasks";
 import { useAiFocus } from "../../hooks/useAiFocus";
 import { useRecentChanges } from "../../hooks/useRecentChanges";
+import { useTileOpen } from "../../hooks/useTileOpen";
 import { useHoldForAi } from "../../hooks/useHoldForAi";
 import { DOW, MON } from "../../lib/tripLogic";
 import { afterScroll, flash, scrollBehavior, SETTLE_MS } from "../../lib/flash";
@@ -84,6 +85,9 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   }
   const isOpen = (id: string) => (gapsView ? !gapsCollapsed.has(id) : state.expanded.has(id));
   const pendingOpen = !!pending && isOpen(pending.id);
+  // Which tiles inside the days are open: the reader's choices are saved per trip; Only gaps starts afresh.
+  const { slug } = useParams<{ slug: string }>();
+  const tiles = useTileOpen(slug, gapsView);
 
   useLayoutEffect(() => {
     function remember(event: FocusEvent) {
@@ -172,6 +176,8 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
     if (!row && !recent.peek(date)?.gone) return;
     const t = setTimeout(() => {
       consume(focus.nonce);
+      // The pointed-at tile opens (for this visit only); no other tile is touched.
+      if (tile) tiles.reveal(`${date}#${tile}`);
       const change = recent.take(date);
       if (!row) {
         if (change?.prev) setGhost(change.prev);
@@ -211,7 +217,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
     const t = setTimeout(() => {
       autoDone.current = true;
       cancelNow = afterScroll(() => {
-        document.getElementById(id)?.querySelector(".now-line, .activity--now")
+        document.getElementById(id)?.querySelector(".tl-now, .tl-entry--now")
           ?.scrollIntoView({ block: "center", behavior: scrollBehavior() });
       });
       jumpRef.current(id);
@@ -258,7 +264,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
           <Fragment key={id}>
           {ghostAt === i && ghostDay}
           <DayCard rowId={id} day={d} isToday={isDestToday(d, nowMs)} changedFrom={diff?.date === d.date ? diff.prev : undefined} days={days} dayNumber={i} legColor={legColors[i]} weather={weather[d.date]}
-            groups={groups} ticks={ticks} expanded={isOpen(id)} gapsOnly={gapsView} gaps={dayGaps?.[d.date]} onExpandedChange={() => {
+            groups={groups} ticks={ticks} tiles={tiles} expanded={isOpen(id)} gapsOnly={gapsView} gaps={dayGaps?.[d.date]} onExpandedChange={() => {
               if (gapsView) {
                 setGapsCollapsed(current => {
                   const next = new Set(current);
