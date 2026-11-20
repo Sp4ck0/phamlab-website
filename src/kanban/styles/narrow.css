@@ -78,35 +78,14 @@
     user-select: none;
     -webkit-user-select: none;
   }
-  .card__move,
-  .card__movebar button {
-    min-height: 44px;
-    padding: 0 16px;
-    background: var(--paper-2);
-    border: 1px solid var(--rule-firm);
-    border-radius: 999px;
-    color: var(--ink);
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-  }
-  .card__move {
-    margin-left: auto;
-    flex: none;
-  }
-  .card__movebar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid var(--rule);
-  }
 
   /* While dragging: the tile shrinks and fades so the lane and tray stay visible. */
-  .card[data-dragging] {
-    transform: scale(0.5);
-    transform-origin: center;
+  /* dnd-kit pins `transform` on the dragged element with !important, so shrink it with the
+     separate `scale` property, anchored where it was grabbed (dnd-kit's origin variable). The
+     doubled attribute selector out-ranks dnd-kit's own `[style*='scale']` rule. */
+  .card[data-dragging][data-dragging] {
+    scale: 0.5 !important;
+    transform-origin: var(--dnd-transform-origin, center) !important;
     opacity: 0.85;
   }
 

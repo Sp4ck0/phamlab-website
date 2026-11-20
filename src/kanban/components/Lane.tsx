@@ -18,12 +18,11 @@ interface Props {
    */
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
-  /** Phone layout: the tabs name the lane, and each tile gets a Move button. */
+  /** Phone layout: the tabs name the lane. */
   compact?: boolean;
-  onMove: (id: string, to: LaneId) => void;
 }
 
-export function Lane({ lane, board, onOpen, onStartAdd, hasDraft, expanded, onExpandedChange, compact, onMove }: Props) {
+export function Lane({ lane, board, onOpen, onStartAdd, hasDraft, expanded, onExpandedChange, compact }: Props) {
   const meta = boardLanes(board).find((l) => l.id === lane)!;
   const { ref, isDropTarget } = useDroppable({
     id: lane,
@@ -53,15 +52,7 @@ export function Lane({ lane, board, onOpen, onStartAdd, hasDraft, expanded, onEx
           const card = board.cards[id];
           if (!card) return null;
           return (
-            <CardTile
-              key={id}
-              card={card}
-              index={index}
-              lane={lane}
-              board={board}
-              onOpen={onOpen}
-              onMove={compact ? onMove : undefined}
-            />
+            <CardTile key={id} card={card} index={index} lane={lane} board={board} onOpen={onOpen} />
           );
         })}
 
