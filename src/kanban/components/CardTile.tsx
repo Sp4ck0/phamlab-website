@@ -1,8 +1,8 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useSortable } from '@dnd-kit/react/sortable';
 import type { Board, Card, LaneId, PersonId } from '../types';
 import { BOARD_COPY, PEOPLE } from '../types';
-import { dayLabel, isMine, progress, replyAuthor } from '../lib';
+import { boardLanes, dayLabel, isMine, progress, replyAuthor } from '../lib';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -17,9 +17,12 @@ interface Props {
   lane: LaneId;
   board: Board;
   onOpen: (id: string) => void;
+  /** Phone layout only: when set, the tile shows a Move button that lists the other lanes. */
+  onMove?: (id: string, to: LaneId) => void;
 }
 
-export function CardTile({ card, index, lane, board, onOpen }: Props) {
+export function CardTile({ card, index, lane, board, onOpen, onMove }: Props) {
+  const [moving, setMoving] = useState(false);
   const { ref, isDragging } = useSortable({
     id: card.id,
     index,
@@ -64,6 +67,8 @@ export function CardTile({ card, index, lane, board, onOpen }: Props) {
         const start = down.current;
         down.current = null;
         if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 6) return;
+        // The Move controls live inside the tile; tapping them must not open it.
+        if ((e.target as HTMLElement).closest('.card__move, .card__movebar')) return;
         onOpen(card.id);
       }}
       onKeyDown={(e) => {
@@ -159,7 +164,37 @@ export function CardTile({ card, index, lane, board, onOpen }: Props) {
             </span>
           </span>
         )}
+
+        {onMove && (
+          <button
+            type="button"
+            className="card__move"
+            aria-expanded={moving}
+            onClick={() => setMoving((m) => !m)}
+          >
+            Move ▸
+          </button>
+        )}
       </footer>
+
+      {onMove && moving && (
+        <div className="card__movebar" role="group" aria-label="Move to">
+          {boardLanes(board)
+            .filter((l) => l.id !== lane)
+            .map((l) => (
+              <button
+                key={l.id}
+                type="button"
+                onClick={() => {
+                  setMoving(false);
+                  onMove(card.id, l.id);
+                }}
+              >
+                {l.name}
+              </button>
+            ))}
+        </div>
+      )}
     </article>
   );
 }

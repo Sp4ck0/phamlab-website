@@ -10,7 +10,9 @@ import { serverMessage } from "../lib/serverError";
 import { useKanbanBoard, useKanbanCard } from "../kanban/useKanbanBoard";
 import { useRememberTab } from "../hooks/useRememberTab";
 import { useAiCardFocus } from "../hooks/useAiFocus";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 import { Lane } from "../kanban/components/Lane";
+import { LaneTabs, TAB_PREFIX } from "../kanban/components/LaneTabs";
 import { CardDrawer } from "../kanban/components/CardDrawer";
 import { NewCardPane } from "../kanban/components/NewCardPane";
 import { NotifyMenu } from "../kanban/components/NotifyMenu";
@@ -68,6 +70,10 @@ export function KanbanPage() {
     clearActionError,
   } = useKanbanBoard(boardId as Id<"kanban_boards"> | undefined, { allDone });
   useRememberTab(authorized && board ? `/kanban/${boardId}` : null);
+  // Phones show one lane at a time, picked from a row of tabs (same breakpoint
+  // as styles/narrow.css).
+  const narrow = useMediaQuery("(max-width: 720px)");
+  const [pickedLane, setPickedLane] = useState<LaneId | null>(null);
 
   const [openId, setOpenId] = useState<string | null>(null);
   // The board only holds tile summaries; the open card is loaded whole.
@@ -148,6 +154,8 @@ export function KanbanPage() {
   const lanes = dragLanes ?? board.lanes;
   const displayBoard = dragLanes ? { ...board, lanes } : board;
   const unread = board.unreadOrder;
+  const laneList = boardLanes(board);
+  const activeLane = laneList.some((l) => l.id === pickedLane) ? (pickedLane as LaneId) : laneList[0].id;
 
   const startAdd = (lane: LaneId) => {
     setDraft((d) =>
@@ -199,10 +207,26 @@ export function KanbanPage() {
             }),
             KeyboardSensor,
           ]}
-          onDragOver={(event) => setDragLanes(move(lanes, event))}
+          onDragOver={(event) => {
+            // Over a lane tab there is nothing to reorder; the drop decides.
+            if (String(event.operation.target?.id ?? "").startsWith(TAB_PREFIX)) return;
+            setDragLanes(move(lanes, event));
+          }}
           onDragEnd={(event) => {
             if (event.canceled) {
               setDragLanes(null);
+              return;
+            }
+            // Dropped on a lane tab: send the card to the top of that lane.
+            const target = String(event.operation.target?.id ?? "");
+            if (target.startsWith(TAB_PREFIX)) {
+              const to = target.slice(TAB_PREFIX.length) as LaneId;
+              const id = String(event.operation.source?.id ?? "");
+              setDragLanes(null);
+              if (id && board.cards[id]) {
+                moveToLane(id, to);
+                setPickedLane(to);
+              }
               return;
             }
             const next = move(lanes, event);
@@ -264,20 +288,37 @@ export function KanbanPage() {
               </p>
             )}
 
+            {narrow && <LaneTabs board={displayBoard} active={activeLane} onPick={setPickedLane} />}
+
             <main className="board">
-              {boardLanes(board).map((l) => (
-                <Lane
-                  key={l.id}
-                  lane={l.id}
-                  board={displayBoard}
-                  onOpen={setOpenId}
-                  onStartAdd={startAdd}
-                  hasDraft={draft?.lane === l.id}
-                  expanded={allDone}
-                  onExpandedChange={setAllDone}
-                />
-              ))}
+              {laneList
+                .filter((l) => !narrow || l.id === activeLane)
+                .map((l) => (
+                  <Lane
+                    key={l.id}
+                    lane={l.id}
+                    board={displayBoard}
+                    onOpen={setOpenId}
+                    onStartAdd={startAdd}
+                    hasDraft={draft?.lane === l.id}
+                    expanded={allDone}
+                    onExpandedChange={setAllDone}
+                    compact={narrow}
+                    onMove={moveToLane}
+                  />
+                ))}
             </main>
+
+            {narrow && !openId && !paneOpen && (
+              <button
+                type="button"
+                className="fab"
+                aria-label={draft ? "Go to draft" : "Write a new card"}
+                onClick={() => startAdd(draft?.lane ?? activeLane)}
+              >
+                {draft ? "✎" : "+"}
+              </button>
+            )}
 
             <NewCardPane
               board={displayBoard}

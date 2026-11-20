@@ -2,27 +2,155 @@
 /* ── Narrow screens ──────────────────────────────────────────── */
 
 @media (max-width: 720px) {
-  /* The pane is full width here, so the handle overlaps its left edge. */
+  /* The pane is full width here, so the handle would sit over its edge; the
+     pane has its own minimize button. */
   .newcard-handle {
-    right: auto;
-    left: 0;
-    border: 1px solid var(--rule-firm);
-    border-left: none;
-    border-radius: 0 10px 10px 0;
-    box-shadow: 6px 0 20px var(--shadow);
+    display: none;
   }
 
   .top {
     padding: 14px 16px 12px;
   }
+
+  /* One lane at a time, chosen from the tabs. */
+  .lanetabs {
+    display: flex;
+    gap: 6px;
+    padding: 8px 12px;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--rule);
+    scrollbar-width: none;
+  }
+  .lanetab {
+    flex: 1 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 44px;
+    padding: 0 14px;
+    background: var(--paper-2);
+    border: 1px solid transparent;
+    border-radius: 999px;
+    color: var(--ink-soft);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .lanetab[aria-selected='true'] {
+    background: var(--card);
+    border-color: var(--rule-firm);
+    color: var(--ink);
+    box-shadow: 0 1px 2px var(--shadow);
+  }
+  /* A card is being dragged over this tab. */
+  .lanetab[data-over] {
+    border-color: var(--ink);
+    color: var(--ink);
+  }
+  .lanetab__count {
+    font-size: 12px;
+    opacity: 0.7;
+  }
+
   .board {
-    scroll-snap-type: x mandatory;
+    overflow-x: hidden;
   }
   .lane {
-    flex: 0 0 84vw;
-    min-width: 84vw;
-    scroll-snap-align: start;
+    flex: 1 1 auto;
+    min-width: 0;
   }
+  /* The tab already names the lane and counts its cards. */
+  .lane[data-compact] .lane__name,
+  .lane[data-compact] .lane__count {
+    display: none;
+  }
+  .lane[data-compact] .lane__head {
+    padding: 10px 16px;
+  }
+  .lane[data-compact] .lane__blurb {
+    margin: 0;
+    max-width: none;
+  }
+  /* Room under the last card for the floating + button and the home bar. */
+  .lane__body {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+
+  /* A long-press starts a drag here, not iOS's text selection or callout menu. */
+  .card {
+    -webkit-touch-callout: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .card__move,
+  .card__movebar button {
+    min-height: 44px;
+    padding: 0 16px;
+    background: var(--paper-2);
+    border: 1px solid var(--rule-firm);
+    border-radius: 999px;
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .card__move {
+    margin-left: auto;
+    flex: none;
+  }
+  .card__movebar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--rule);
+  }
+
+  /* Floating add button, reachable with a thumb. */
+  .fab {
+    position: fixed;
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    width: 56px;
+    height: 56px;
+    border: none;
+    border-radius: 50%;
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 28px;
+    line-height: 1;
+    box-shadow: 0 6px 18px var(--shadow);
+    cursor: pointer;
+    z-index: 30;
+  }
+
+  /* Tap targets: Apple's 44pt minimum. */
+  .seg button,
+  .drawer__close,
+  .lane__add,
+  .lane__more,
+  .nudge {
+    min-height: 44px;
+  }
+  .seg button {
+    padding: 6px 14px;
+  }
+  .drawer__close {
+    min-width: 44px;
+  }
+
+  /* 16px inputs: iOS Safari zooms the page in on anything smaller. */
+  .field textarea,
+  .field input,
+  .field select,
+  .drawer__title,
+  .actions input,
+  .actions__new {
+    font-size: 16px;
+  }
+
   .drawer__inner {
     padding: 20px 18px 36px;
   }

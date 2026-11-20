@@ -173,6 +173,12 @@
   background: var(--ink);
 }
 
+/* Lane picker: more than three lanes won't fit one pill on a phone. */
+.seg--lanes {
+  flex-wrap: wrap;
+  border-radius: 18px;
+}
+
 .who {
   display: flex;
   gap: 26px;
