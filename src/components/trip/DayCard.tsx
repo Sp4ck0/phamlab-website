@@ -246,13 +246,13 @@ export function DayCard({
   let actIndex = 0;
   const actRows: ActRow[] = pairRewrites(actChanges).map((c) => ({ ...c, ai: c.state === "gone" ? -1 : actIndex++ }));
   const summaryChanged = !!old && (old.highlight || old.note) !== (d.highlight || d.note);
-  const noPlan = !(d.acts && d.acts.length) && !(d.flights && d.flights.length) && d.tag !== "transit";
 
   // The day as one ordered list of tiles (lib/timeline.ts). Under Only gaps the activities and the tour are left out.
   const entries = buildTimeline({
     date: d.date, hotels: hotelChanges, flights: flightChanges, acts: gapsOnly ? [] : actRows, gaps: transportGaps, tour: !gapsOnly && !!d.tourDetails, items: dayItems,
-    // Nothing planned: under Only gaps, the day's open plan task; otherwise a day with no activities and no transport.
-    plan: gapsOnly ? !!gaps?.plan : actRows.length === 0 && noPlan,
+    // Nothing planned: the day's open plan task, in every view (the same rule as Action Items and
+    // Only gaps), so dismissing it there hides the tile here too.
+    plan: !!gaps?.plan,
   });
   // Where the current time falls among the timed tiles (activities and timed transport).
   const nowPos = isToday ? nowPosition(d, now, timelineSpans(entries, d)) : null;
@@ -351,7 +351,7 @@ export function DayCard({
         key: entry.key, ghost: false, defaultOpen: false,
         tile: {
           icon: "🗓️", title: "Nothing planned yet", expandable: false, className: "tl-gap tl-plan miss",
-          meta: gapsOnly ? "Add activities to this day, or dismiss it in Action Items." : "Add activities to this day.",
+          meta: "Add activities to this day, or dismiss it in Action Items.",
           headerEnd: <TileStatePill state="needed" label="Not planned" />,
           children: null,
         },
