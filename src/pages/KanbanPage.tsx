@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { DragDropProvider, KeyboardSensor, PointerSensor } from "@dnd-kit/react";
 import { PointerActivationConstraints } from "@dnd-kit/dom";
@@ -18,7 +18,7 @@ import { CardDrawer } from "../kanban/components/CardDrawer";
 import { NewCardPane } from "../kanban/components/NewCardPane";
 import { NotifyMenu } from "../kanban/components/NotifyMenu";
 import { BOARD_COPY } from "../kanban/types";
-import { boardLanes, laneOf, useDue, viewerSeat } from "../kanban/lib";
+import { boardLanes, laneOf, swipeDirection, useDue, viewerSeat } from "../kanban/lib";
 import type { Board, LaneId, NewCardDraft } from "../kanban/types";
 import "../kanban/kanban.css";
 
@@ -77,6 +77,9 @@ export function KanbanPage() {
   const [pickedLane, setPickedLane] = useState<LaneId | null>(null);
   // True while a dragged tile is over a move-tray target (the tile shrinks then).
   const [overMove, setOverMove] = useState(false);
+  // Which way the last lane change went, for the slide-in; and where a touch began, for swiping.
+  const [slide, setSlide] = useState<"next" | "prev" | null>(null);
+  const touchStart = useRef<{ x: number; y: number; t: number } | null>(null);
 
   const [openId, setOpenId] = useState<string | null>(null);
   // The board only holds tile summaries; the open card is loaded whole.
@@ -159,6 +162,28 @@ export function KanbanPage() {
   const unread = board.unreadOrder;
   const laneList = boardLanes(board);
   const activeLane = laneList.some((l) => l.id === pickedLane) ? (pickedLane as LaneId) : laneList[0].id;
+  // Switch the visible lane (phones), remembering the direction for the slide-in.
+  const goLane = (to: LaneId) => {
+    const from = laneList.findIndex((l) => l.id === activeLane);
+    const next = laneList.findIndex((l) => l.id === to);
+    if (next === from || next < 0) return;
+    setSlide(next > from ? "next" : "prev");
+    setPickedLane(to);
+  };
+  const swipeTouch = (e: React.TouchEvent, phase: "start" | "end") => {
+    const t = phase === "start" ? e.touches[0] : e.changedTouches[0];
+    if (!t) return;
+    const point = { x: t.clientX, y: t.clientY, t: Date.now() };
+    if (phase === "start") {
+      touchStart.current = e.touches.length === 1 ? point : null;
+      return;
+    }
+    const start = touchStart.current;
+    touchStart.current = null;
+    const dir = start && swipeDirection(start, point);
+    const to = dir && laneList[laneList.findIndex((l) => l.id === activeLane) + (dir === "next" ? 1 : -1)];
+    if (to) goLane(to.id);
+  };
 
   const startAdd = (lane: LaneId) => {
     setDraft((d) =>
@@ -210,6 +235,10 @@ export function KanbanPage() {
             }),
             KeyboardSensor,
           ]}
+          onDragStart={() => {
+            // A drag is not a swipe, however fast the finger moves.
+            touchStart.current = null;
+          }}
           onDragOver={(event) => {
             // Over the move tray there is nothing to reorder; the drop decides.
             if (String(event.operation.target?.id ?? "").startsWith(MOVE_PREFIX)) return;
@@ -228,7 +257,7 @@ export function KanbanPage() {
               setDragLanes(null);
               if (id && board.cards[id]) {
                 moveToLane(id, to);
-                setPickedLane(to);
+                goLane(to);
               }
               return;
             }
@@ -291,9 +320,15 @@ export function KanbanPage() {
               </p>
             )}
 
-            {narrow && <LaneTabs board={displayBoard} active={activeLane} onPick={setPickedLane} />}
+            {narrow && <LaneTabs board={displayBoard} active={activeLane} onPick={goLane} />}
 
-            <main className="board">
+            <main
+              className="board"
+              data-slide={narrow ? slide ?? undefined : undefined}
+              onTouchStart={narrow ? (e) => swipeTouch(e, "start") : undefined}
+              onTouchEnd={narrow ? (e) => swipeTouch(e, "end") : undefined}
+              onTouchCancel={() => (touchStart.current = null)}
+            >
               {laneList
                 .filter((l) => !narrow || l.id === activeLane)
                 .map((l) => (
