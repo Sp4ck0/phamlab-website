@@ -130,7 +130,7 @@ export function allDayUrl(a: { title: string; startDate: string; endDate: string
 
 // ---- titles ---------------------------------------------------------------
 
-const TAG_EMOJI: Record<string, string> = {
+export const TAG_EMOJI: Record<string, string> = {
   Food: "🍜", Sightsee: "📸", Activity: "🎟️", Transport: "🚕", Boat: "⛴️", Trek: "🥾", Nature: "🌿",
   Shopping: "🛍️", Evening: "🌙", Sunset: "🌅", Event: "🎉", Venue: "🏟️", Rest: "💆", Hotel: "🏨",
   Flight: "✈️", Note: "📝", Optional: "✨",
@@ -138,7 +138,7 @@ const TAG_EMOJI: Record<string, string> = {
 export const MODE_EMOJI: Record<TransportMode, string> = { flight: "✈️", train: "🚆", bus: "🚌", ferry: "⛴️" };
 const DEFAULT_MINUTES: Record<string, number> = { Food: 90, Sightsee: 120, Activity: 120 };
 
-const plain = (html: string) => new DOMParser().parseFromString(html, "text/html").body.textContent?.trim() || "";
+export const plain = (html: string) => new DOMParser().parseFromString(html, "text/html").body.textContent?.trim() || "";
 // Older data writes airport pairs as "SEA-NRT"; treat that as "SEA → NRT".
 const hyphenAirports = (route: string) => route.replace(/\b([A-Z]{3})-([A-Z]{3})\b/g, "$1 → $2");
 const arrow = (route: string) => hyphenAirports(route).replace(/\s*(?:→|->|–|—)\s*|\s+to\s+/gi, " → ").trim();

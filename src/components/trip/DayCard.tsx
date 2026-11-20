@@ -1,11 +1,16 @@
-import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useState } from "react";
 import type { Act, ActionItem, Group, LegColor, Place, ResolvedDay, Status, Task, Vote } from "../../lib/types";
-import { changeClass, diffLines, type Change, type ChangeState } from "../../lib/changeDiff";
+import { diffLines, type Change } from "../../lib/changeDiff";
 import { focusOnMapKey, googleMapsUrl, inlinePlaces } from "../../lib/mapPoints";
 import { DOW, MON, actParts, fmtShort, gapLabel, mergeFlightsByRoute, mergeHotelsByName } from "../../lib/tripLogic";
 import type { FlightGroup, HotelGroup } from "../../lib/tripLogic";
-import { FlightBox } from "./FlightBox";
-import { HotelCard, HotelSlim } from "./HotelCard";
+import { TransportBody } from "./TransportBody";
+import { HotelBody } from "./HotelCard";
+import { hotelHeader, transportHeader } from "../../lib/tileHeaders";
+import { ALL_DAY, TileStatePill, TimelineTile, type TimelineTileProps, type TileState } from "./TimelineTile";
+import { StatusToggle } from "./StatusToggle";
+import { buildTimeline, timelineSpans, type ActRow, type TimelineEntry } from "../../lib/timeline";
+import type { TileOpen } from "../../hooks/useTileOpen";
 import { countdownText, nextUp } from "../../lib/nextUp";
 import { useNow } from "../../lib/useNow";
 import { gapMinutes, stayInfo } from "../../lib/stay";
@@ -13,14 +18,15 @@ import { TaskRow } from "./TaskRow";
 import { TourBox } from "./TourBox";
 import { WeatherBadge } from "./WeatherBadge";
 import { AddToCalendar } from "./AddToCalendar";
-import { actUrl, zoneNow } from "../../lib/calendar";
-import { NOW_EMOJI, dayZone, nowPosition, untilText, viewerHint } from "../../lib/nowMarker";
+import { TAG_EMOJI, actUrl, plain, zoneNow } from "../../lib/calendar";
+import { NOW_EMOJI, dayZone, nowPosition, untilText, viewerHint, type NowPosition } from "../../lib/nowMarker";
 import { sanitizeHtml } from "../../lib/sanitizeHtml";
 import type { DayWeather } from "../../lib/weather";
 import { useParams } from "react-router-dom";
 import { PRIORITY_LABELS, voteTally } from "../../lib/tasks";
 import type { DayGaps } from "../../lib/tasks";
 import { useShowAiFocus } from "../../hooks/useAiFocus";
+import { useUntilFound } from "../../hooks/useUntilFound";
 import { ShareLinkButton } from "./ShareLinkButton";
 import { ActivityEditor } from "./ActivityEditor";
 import { tileDomId } from "../../lib/tileId";
@@ -40,18 +46,6 @@ const actKey = (a: Act) => JSON.stringify(a);
 const flightKey = (g: FlightGroup) => JSON.stringify([g.mode, g.route, g.title, g.price, g.detail, g.legs, g.layovers, g.segments]);
 const hotelKey = (g: HotelGroup) => JSON.stringify([g.name, g.address, g.placeId, g.detail, g.checkIn, g.checkOut]);
 const unchanged = <T,>(items: T[]): Change<T>[] => items.map((item) => ({ item, state: "same" }));
-
-// A line that changed gets a wrapper to animate (new: glow; gone: a struck-through
-// ghost of what it was, inert); an untouched one renders bare.
-function mark(state: ChangeState, key: string, node: ReactNode) {
-  if (state === "same") return node;
-  const ghost = state === "gone" ? { inert: true, "aria-hidden": true } : {};
-  return (
-    <div key={key} className={changeClass(state).trim()} {...ghost}>
-      {node}
-    </div>
-  );
-}
 
 // An edited line comes out of diffLines as old rows ("gone") then new rows. Pair
 // them in order so the new row can show the old wording's words in place
@@ -90,6 +84,8 @@ interface Props {
   gapsOnly?: boolean;
   gaps?: DayGaps;
   onExpandedChange: () => void;
+  // Which timeline tiles are open (the reader's choices, a link's reveal), kept above the days.
+  tiles: TileOpen;
   onToggle: (ids: string[], status: Status) => void;
   dayActionItems: ActionItem[];
   // Considerations that cover this day (day / range scope; open or chosen), shown
@@ -119,6 +115,7 @@ export function DayCard({
   gapsOnly = false,
   gaps,
   onExpandedChange,
+  tiles,
   onToggle,
   dayActionItems,
   dayConsiderations,
@@ -135,15 +132,15 @@ export function DayCard({
   const now = useNow();
   const up = days ? nextUp(days, now) : null;
   const upText = (ids: string[]) => (up && ids.includes(up.id) ? countdownText(up, now) : undefined);
-  const nowPos = isToday ? nowPosition(d, now) : null;
   const zone = dayZone(d);
   const mine = isToday ? viewerHint(now, zone) : null;
   const clock = isToday && zone ? zoneNow(now, zone).hhmm : null;
-  // A full-width line between rows (or above/below the list). During an activity the line is drawn inside that row instead.
-  const nowLine = (pos: Exclude<NonNullable<typeof nowPos>, { kind: "during" }>, key: string) => (
-    <li className="now-line" key={key} aria-label="Current time">
-      <span className="now-emoji" aria-hidden="true">{NOW_EMOJI}</span>
-      <span className="now-line-label">
+  // "Now" on the rail, between two tiles (or above/below them). During a timed tile it is drawn inside that tile instead.
+  const nowLine = (pos: Exclude<NowPosition, { kind: "during" }>, key: string) => (
+    <li className="tl-now" key={key} aria-label="Current time">
+      <span className="tl-time">{pos.hhmm}</span>
+      <span className="tl-rail" aria-hidden="true"><span className="tl-now-dot" /></span>
+      <span className="tl-now-label">
         Now {pos.hhmm}
         {pos.kind === "after" ? " · that's the plan for today"
           : pos.kind === "untimed" ? (actRows.length ? " · today's plans have no times" : " · no activities listed")
@@ -153,85 +150,180 @@ export function DayCard({
     </li>
   );
   const collapsed = !expanded;
-  // A collapsed panel is hidden="until-found": still in the page, so Ctrl+F finds its text.
-  // The browser fires beforematch on it just before revealing a match; open the day to keep it shown.
-  const panelRef = useRef<HTMLDivElement>(null);
-  const expandedRef = useRef(expanded);
-  const onExpandedChangeRef = useRef(onExpandedChange);
-  expandedRef.current = expanded;
-  onExpandedChangeRef.current = onExpandedChange;
-  // React 19 renders hidden="until-found" as a plain hidden, so set it on the element itself.
-  useLayoutEffect(() => {
-    const panel = panelRef.current;
-    if (!panel) return;
-    if (expanded) panel.removeAttribute("hidden");
-    else panel.setAttribute("hidden", "until-found");
-  }, [expanded]);
+  // A collapsed panel is hidden="until-found": still in the page, so Ctrl+F finds its text,
+  // and a match opens the day.
+  const panelRef = useUntilFound(expanded, onExpandedChange);
   // The body stays mounted while collapsed; don't reopen it mid-edit.
   useEffect(() => {
     if (!expanded) setEditingAct(null);
   }, [expanded]);
-  useEffect(() => {
-    const panel = panelRef.current;
-    if (!panel) return;
-    const reveal = () => {
-      if (!expandedRef.current) onExpandedChangeRef.current();
-    };
-    panel.addEventListener("beforematch", reveal);
-    return () => panel.removeEventListener("beforematch", reveal);
-  }, []);
-  const hotels = d.hotels;
   const flightGroups = mergeFlightsByRoute(d.flights, d.date, ticks);
-  const hotelGroups = mergeHotelsByName(hotels, ticks);
-  // On a transition day, the hotel being checked out of renders before the
-  // flight tile, and the hotel being checked into (or one just being stayed
-  // in) renders after — matches the day's actual chronology. Only split
-  // into separate rows when there's an actual flight to insert between them
-  // (e.g. a drive/transfer day with no Flight entry keeps both hotels on
-  // one row).
-  const hasFlights = flightGroups.length > 0;
+  const hotelGroups = mergeHotelsByName(d.hotels, ticks);
   // After an AI edit each list is merged with how it was before: what changed is
   // marked new, and what was removed (or reworded) stays as a ghost for a moment.
   const flightChanges = old ? diffLines(mergeFlightsByRoute(old.flights, old.date, ticks), flightGroups, flightKey) : unchanged(flightGroups);
   const hotelChanges = old ? diffLines(mergeHotelsByName(old.hotels, ticks), hotelGroups, hotelKey) : unchanged(hotelGroups);
-  const isCheckout = (g: HotelGroup) => hasFlights && g.checkOut && !g.checkIn;
   // Under Only gaps, booked hotels and transport still show as context for planning; only open ones are labelled.
-  const checkoutHotels = hotelChanges.filter((c) => isCheckout(c.item));
-  const otherHotels = hotelChanges.filter((c) => !isCheckout(c.item));
   const transportGaps = gapsOnly ? gaps?.transport ?? [] : [];
-  // Under Only gaps, a booked transport tile that still lacks a required field says so
-  // (its `details` task, until it is dismissed). A merged tile matches any of its rows.
-  const missingDetails = (g: FlightGroup) =>
-    gapsOnly && (gaps?.details ?? []).some((t) => g.ids.some((id) => t.key === `details:${id}`));
-  // A "maybe" row is not a gap, so it carries no reason.
-  const flightGapReason = (g: FlightGroup) =>
-    g.tentative ? undefined : gapsOnly && g.statuses.includes("needed") ? "Not booked" : missingDetails(g) ? "Missing details" : undefined;
+  // A booked transport tile that still lacks a required field has an open `details` task
+  // (until it is dismissed). A merged tile matches any of its rows.
+  const missingDetails = (g: FlightGroup) => (gaps?.details ?? []).some((t) => g.ids.some((id) => t.key === `details:${id}`));
   // Under Only gaps, a to-do or consideration that is done or settled is not a gap.
   const shownConsiderations = gapsOnly ? dayConsiderations.filter((t) => !t.done) : dayConsiderations;
   const shownActionItems = gapsOnly ? dayActionItems.filter((item) => !actionItemsDone[item.id]) : dayActionItems;
   const actChanges = old ? diffLines(old.acts ?? [], d.acts ?? [], actKey) : unchanged(d.acts ?? []);
   // Edit buttons, share links and ids use an activity's real index; a ghost has none.
   let actIndex = 0;
-  const actRows = pairRewrites(actChanges).map((c) => ({ ...c, ai: c.state === "gone" ? -1 : actIndex++ }));
+  const actRows: ActRow[] = pairRewrites(actChanges).map((c) => ({ ...c, ai: c.state === "gone" ? -1 : actIndex++ }));
   const summaryChanged = !!old && (old.highlight || old.note) !== (d.highlight || d.note);
   const noPlan = !(d.acts && d.acts.length) && !(d.flights && d.flights.length) && d.tag !== "transit";
 
-  // A ghost (a removed hotel) has no id, so it can't clash with its replacement's.
-  const renderHotelCard = ({ item: g, state }: Change<HotelGroup>, key: string | number) => {
-    const s: Status = g.statuses.includes("needed") ? "needed" : "booked";
-    const stay = days ? stayInfo(days, dayNumber, g.name) : null;
-    // Moving hotels today: how long between leaving the other one and getting into this one.
-    const leaving = g.checkIn ? hotelGroups.find((o) => o !== g && o.checkOut && !o.checkIn && o.name !== g.name) : undefined;
-    const wait = leaving ? gapMinutes(leaving.checkOutTime, g.checkInTime) : null;
-    const gapAfter = leaving && wait !== null ? { name: leaving.name, minutes: wait, checkOutTime: leaving.checkOutTime } : undefined;
-    const props = {
-      g, status: s, stay, gapAfter, groups, date: d.date, days, dayNumber, gapsOnly, onToggle, nextUp: upText(g.srcs),
-      tileId: state === "gone" ? undefined : tileDomId(rowId, g.srcs[0]),
+  // The day as one ordered list of tiles (lib/timeline.ts). Under Only gaps the activities and the tour are left out.
+  const entries = buildTimeline({
+    date: d.date, hotels: hotelChanges, flights: flightChanges, acts: gapsOnly ? [] : actRows, gaps: transportGaps, tour: !gapsOnly && !!d.tourDetails,
+  });
+  // Where the current time falls among the timed tiles (activities and timed transport).
+  const nowPos = isToday ? nowPosition(d, now, timelineSpans(entries, d)) : null;
+  // The tile under way right now: a "Now" pill and a progress line along its header.
+  const nowBits = (key: string) =>
+    nowPos?.kind === "during" && nowPos.key === key
+      ? {
+          pill: <span className="now-pill">Now</span>,
+          progress: (
+            <span className="now-progress" aria-hidden="true" style={{ ["--p" as string]: `${Math.round(nowPos.progress * 100)}%` }}><span className="now-progress-emoji">{NOW_EMOJI}</span></span>
+          ),
+        }
+      : null;
+  // The first activity a "now" line with no timed activity to sit beside goes above.
+  const firstActKey = entries.find((e) => e.kind === "activity" && e.row.ai >= 0)?.key;
+
+  // How one tile reads: its header, whether it starts open (unresolved ones do: not booked, missing
+  // details, nothing entered), and what it shows when open. A removed ghost has no element id.
+  type Described = { key: string; ghost: boolean; defaultOpen: boolean; forceOpen?: boolean; tile: Omit<TimelineTileProps, "open" | "onToggle" | "onReveal"> };
+  const describe = (entry: Exclude<TimelineEntry, { kind: "tour" }>): Described => {
+    if (entry.kind === "hotel") {
+      const { item: g, state } = entry.change;
+      const s: Status = g.statuses.includes("needed") ? "needed" : "booked";
+      const stay = days ? stayInfo(days, dayNumber, g.name) : null;
+      // Moving hotels today: how long between leaving the other one and getting into this one.
+      const leaving = g.checkIn ? hotelGroups.find((o) => o !== g && o.checkOut && !o.checkIn && o.name !== g.name) : undefined;
+      const wait = leaving ? gapMinutes(leaving.checkOutTime, g.checkInTime) : null;
+      const gapAfter = leaving && wait !== null ? { name: leaving.name, minutes: wait, checkOutTime: leaving.checkOutTime } : undefined;
+      const unresolved = s === "needed" && !g.tentative;
+      const pill: TileState = g.tentative ? "maybe" : s;
+      const { title, meta } = hotelHeader(g, stay);
+      return {
+        key: entry.key, ghost: state === "gone", defaultOpen: unresolved,
+        tile: {
+          domId: entry.domKey && tileDomId(rowId, entry.domKey), time: ALL_DAY, icon: "🏨", title, meta, change: state, warn: unresolved,
+          className: `tl-hotel${unresolved ? " miss" : ""}`, nextUpLine: upText(g.srcs),
+          headerEnd: (
+            <>
+              <TileStatePill state={pill} label={pill === "needed" && !g.name ? "Not chosen" : undefined} />
+              <StatusToggle ids={g.srcs} status={s} onToggle={onToggle} />
+            </>
+          ),
+          children: <HotelBody g={g} status={s} stay={stay} gapAfter={gapAfter} groups={groups} date={d.date} days={days} dayNumber={dayNumber} />,
+        },
+      };
+    }
+    if (entry.kind === "transport") {
+      const { item: g, state } = entry.change;
+      const s: Status = g.statuses.includes("needed") ? "needed" : "booked";
+      const detailsMissing = !g.tentative && missingDetails(g);
+      const unresolved = !g.tentative && (s === "needed" || detailsMissing);
+      const pill: TileState = g.tentative ? "maybe" : s === "needed" ? "needed" : detailsMissing ? "details" : "booked";
+      const { icon, title, meta } = transportHeader(g);
+      const live = nowBits(entry.key);
+      return {
+        key: entry.key, ghost: state === "gone", defaultOpen: unresolved,
+        tile: {
+          domId: entry.domKey && tileDomId(rowId, entry.domKey), time: entry.time, icon, title, meta, change: state, warn: unresolved,
+          className: `tl-transport${s === "needed" && !g.tentative ? " miss" : ""}${g.tentative ? " maybe" : ""}`, nextUpLine: upText(g.ids),
+          now: !!live, progress: live?.progress,
+          headerEnd: (
+            <>
+              {live?.pill}
+              <TileStatePill state={pill} />
+              <StatusToggle ids={g.ids} status={s} onToggle={onToggle} />
+            </>
+          ),
+          children: <TransportBody group={g} groups={groups} day={d} dayNumber={dayNumber} />,
+        },
+      };
+    }
+    if (entry.kind === "gap") {
+      return {
+        key: entry.key, ghost: false, defaultOpen: true,
+        tile: {
+          icon: "↔️", title: entry.task.title, warn: true, className: "tl-gap miss", headerEnd: <TileStatePill state="needed" label="None entered" />,
+          children: <div className="cmeta">Add it to the itinerary, or dismiss it in Action Items.</div>,
+        },
+      };
+    }
+    const { item: a, state, ai, prev } = entry.row;
+    const { tag, text, places } = actParts(a);
+    const gone = state === "gone";
+    const editing = !gone && editingAct === ai && !!onEditActivity;
+    const live = nowBits(entry.key);
+    // A place named in the sentence is linked in place; the rest follow as chips.
+    // Sanitize first: inlinePlaces adds its own show-on-map buttons, which the sanitizer would strip.
+    const { html, rest } = inlinePlaces(sanitizeHtml(text), places);
+    // The header carries the sentence as plain text; the body repeats it only when it has links or places to show.
+    const rich = /<[a-z]/i.test(html) || rest.length > 0;
+    const title = plain(text);
+    return {
+      key: entry.key, ghost: gone, defaultOpen: false, forceOpen: editing,
+      tile: {
+        domId: entry.domKey && tileDomId(rowId, entry.domKey), time: entry.time, icon: (tag && TAG_EMOJI[tag]) || "📍", meta: tag, change: state, now: !!live,
+        title: prev ? <InlineDiff prev={sanitizeHtml(actParts(prev).text)} next={sanitizeHtml(text)}>{title}</InlineDiff> : title,
+        headerEnd: live?.pill,
+        progress: live?.progress,
+        children: gone ? null : editing ? (
+          <ActivityEditor
+            initial={text}
+            initialPlaces={places}
+            onCancel={() => setEditingAct(null)}
+            onSave={async (next, nextPlaces) => {
+              await onEditActivity(d.date, ai, text, next, nextPlaces);
+              setEditingAct(null);
+            }}
+          />
+        ) : (
+          <>
+            {rich && (
+              <div className="activity-text" onClick={focusInlinePlace}>
+                <span dangerouslySetInnerHTML={{ __html: html }} />
+                {rest.map((p, pi) => (
+                  <span key={pi} style={{ marginLeft: 8 }}>
+                    <a href={googleMapsUrl(p)} target="_blank" rel="noopener noreferrer">
+                      📍 {p.name}
+                    </a>
+                    <ShowOnMap place={p} />
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="tl-actions">
+              {onEditActivity && (
+                <button type="button" className="icon-btn act-edit" aria-label={`Edit activity: ${text}`} onClick={() => setEditingAct(ai)}>
+                  <PencilIcon />
+                </button>
+              )}
+              <ShareLinkButton param={{ day: d.date, tile: `act:${ai}` }} label={`Share link to activity: ${text}`} />
+              <AddToCalendar url={actUrl(a, d, dayNumber, ai)} />
+            </div>
+          </>
+        ),
+      },
     };
-    // A middle night of a booked stay is one slim line, not a full card repeated every night.
-    const slim = state === "same" && s === "booked" && !g.tentative && g.carriedAll && !g.checkIn && !g.checkOut && !!stay;
-    return mark(state, `h${key}`, slim ? <HotelSlim key={key} {...props} /> : <HotelCard key={key} {...props} />);
   };
+  const described = entries.map((e) => (e.kind === "tour" ? null : describe(e)));
+  // Open state is kept per trip, so an id carries the day's date.
+  const idOf = (key: string) => `${d.date}#${key}`;
+  const isOpenTile = (x: Described) => !!x.forceOpen || tiles.isOpen(idOf(x.key), x.defaultOpen);
+  const liveTiles = described.filter((x): x is Described => !!x && !x.ghost);
+  const anyClosed = liveTiles.some((x) => !isOpenTile(x));
 
   return (
     <section
@@ -276,120 +368,57 @@ export function DayCard({
           )
         )}
       </button>
+      {expanded && liveTiles.length > 1 && (
+        <button
+          type="button"
+          className="day-tiles-btn"
+          aria-label={`${anyClosed ? "Expand" : "Collapse"} all tiles on Day ${dayNumber}`}
+          onClick={() => tiles.setMany(liveTiles.map((x) => idOf(x.key)), anyClosed)}
+        >
+          {anyClosed ? "Expand all" : "Collapse all"}
+        </button>
+      )}
       <ShareLinkButton param={{ day: d.date }} label={`Share link to Day ${dayNumber}`} />
       </h2>
 
       <div ref={panelRef} id={`${rowId}-panel`} aria-labelledby={`${rowId}-trigger`}>
         <>
-          {flightChanges.map(({ item: g, state }, gi) =>
-            mark(state, `fbm${gi}`, (
-              <FlightBox key={`fb${gi}`} group={g} groups={groups} onToggle={onToggle} day={d} dayNumber={dayNumber} tileId={state === "gone" ? undefined : tileDomId(rowId, g.ids[0])} gapReason={flightGapReason(g)} nextUp={upText(g.ids)} />
-            ))
-          )}
-
-          {(checkoutHotels.length > 0 || otherHotels.length > 0 || transportGaps.length > 0) && (
-            <div className="cards" style={{ marginBottom: 14 }}>
-              {checkoutHotels.map((c, gi) => renderHotelCard(c, `co${gi}`))}
-              {otherHotels.map((c, gi) => renderHotelCard(c, gi))}
-              {transportGaps.map((t) => (
-                <div className="card miss" key={t.key}>
-                  <div className="ctop">
-                    <span className="ctype">Transport</span>
-                    <span className="gap-reason">None entered</span>
-                  </div>
-                  <div className="cmain todo">{t.title}</div>
-                  <div className="cmeta">Add it to the itinerary, or dismiss it in Action Items.</div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {!gapsOnly && actRows.length === 0 && nowPos?.kind === "untimed" && <ul className="activity-list">{nowLine(nowPos, "now")}</ul>}
-
-          {gapsOnly ? (
-            gaps?.plan && <p className="day-subtitle"><span className="gap-reason">Nothing planned</span></p>
-          ) : actRows.length > 0 ? (
-            <ul className="activity-list">
-              {actRows.map(({ item: a, state, ai, prev }, ri) => {
-                const { tag, time, text, places } = actParts(a);
-                const lineBefore = nowPos && ((nowPos.kind === "before" || nowPos.kind === "between") ? nowPos.beforeIndex === ai : nowPos.kind === "untimed" && ri === 0);
-                const lineAfter = nowPos?.kind === "after" && nowPos.afterIndex === ai;
-                const inProgress = nowPos?.kind === "during" && nowPos.index === ai;
-                if (state === "gone") {
-                  // What it said before the edit: struck through, then folded away.
+          {(entries.length > 0 || (!gapsOnly && actRows.length === 0 && nowPos?.kind === "untimed")) && (
+            <ol className="tl">
+              {entries.map((e, i) => {
+                if (e.kind === "tour") {
                   return (
-                    <li className="activity chg-gone" key={`gone${ri}`} inert aria-hidden="true">
-                      {tag && <span className="act-tag">{tag}</span>}
-                      <span className="activity-text">
-                        {time && <span className="activity-time">{time}</span>}
-                        <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(text) }} />
-                      </span>
+                    <li key="tour" className="tl-entry tl-entry--plain">
+                      <div className="tl-plain"><TourBox tourDetails={d.tourDetails!} /></div>
                     </li>
                   );
                 }
-                // A place named in the sentence is linked in place; the rest follow as chips.
-                // Sanitize first: inlinePlaces adds its own show-on-map buttons, which the sanitizer would strip.
-                const { html, rest } = inlinePlaces(sanitizeHtml(text), places);
-                if (editingAct === ai && onEditActivity) {
-                  return (
-                    <li className="activity" key={ai}>
-                      <ActivityEditor
-                        initial={text}
-                        initialPlaces={places}
-                        onCancel={() => setEditingAct(null)}
-                        onSave={async (next, nextPlaces) => {
-                          await onEditActivity(d.date, ai, text, next, nextPlaces);
-                          setEditingAct(null);
-                        }}
-                      />
-                    </li>
-                  );
-                }
+                const x = described[i]!;
+                const id = idOf(x.key);
+                // A line at the current time sits between tiles; during a timed tile it is drawn inside that tile instead.
+                const lineBefore = nowPos &&
+                  ((nowPos.kind === "before" || nowPos.kind === "between") ? nowPos.beforeKey === e.key : nowPos.kind === "untimed" && e.key === firstActKey);
+                const lineAfter = nowPos?.kind === "after" && nowPos.afterKey === e.key;
                 return (
-                  <Fragment key={ai}>
-                  {lineBefore && nowPos && nowPos.kind !== "during" && nowLine(nowPos, "now")}
-                  <li className={`activity${prev ? " chg-row" : changeClass(state)}${inProgress ? " activity--now" : ""}`} id={tileDomId(rowId, `act:${ai}`)}>
-                    {inProgress && nowPos?.kind === "during" && <span className="now-progress" aria-hidden="true" style={{ ["--p" as string]: `${Math.round(nowPos.progress * 100)}%` }}><span className="now-progress-emoji">{NOW_EMOJI}</span></span>}
-                    {tag && <span className="act-tag">{tag}</span>}
-                    <span className="activity-text" onClick={focusInlinePlace}>
-                      {time && <span className="activity-time">{time}</span>}
-                      {inProgress && <span className="now-pill">Now</span>}
-                      {prev ? (
-                        <InlineDiff prev={sanitizeHtml(actParts(prev).text)} next={sanitizeHtml(text)}>
-                          <span dangerouslySetInnerHTML={{ __html: html }} />
-                        </InlineDiff>
-                      ) : (
-                        <span dangerouslySetInnerHTML={{ __html: html }} />
-                      )}
-                      {rest.map((p, pi) => (
-                        <span key={pi} style={{ marginLeft: 8 }}>
-                          <a href={googleMapsUrl(p)} target="_blank" rel="noopener noreferrer">
-                            📍 {p.name}
-                          </a>
-                          <ShowOnMap place={p} />
-                        </span>
-                      ))}
-                    </span>
-                    {onEditActivity && (
-                      <button type="button" className="icon-btn act-edit" aria-label={`Edit activity: ${text}`} onClick={() => setEditingAct(ai)}>
-                        <PencilIcon />
-                      </button>
-                    )}
-                    <ShareLinkButton param={{ day: d.date, tile: `act:${ai}` }} label={`Share link to activity: ${text}`} />
-                    <AddToCalendar url={actUrl(a, d, dayNumber, ai)} />
-                  </li>
-                  {lineAfter && nowLine(nowPos, "now")}
+                  <Fragment key={e.key}>
+                    {lineBefore && nowPos && nowPos.kind !== "during" && nowLine(nowPos, "now")}
+                    <TimelineTile {...x.tile} open={isOpenTile(x)} onToggle={() => tiles.toggle(id, x.defaultOpen)} onReveal={() => tiles.reveal(id)} />
+                    {lineAfter && nowLine(nowPos, "now")}
                   </Fragment>
                 );
               })}
-            </ul>
-          ) : noPlan ? (
+              {!gapsOnly && actRows.length === 0 && nowPos?.kind === "untimed" && nowLine(nowPos, "now")}
+            </ol>
+          )}
+
+          {gapsOnly ? (
+            gaps?.plan && <p className="day-subtitle"><span className="gap-reason">Nothing planned</span></p>
+          ) : actRows.length === 0 && noPlan ? (
             <p className="day-subtitle" style={{ color: "var(--danger)", fontStyle: "italic" }}>
               Not decided yet
             </p>
           ) : null}
 
-          {!gapsOnly && d.tourDetails && <TourBox tourDetails={d.tourDetails} />}
           {!gapsOnly && d.callout && (
             <div className={`note${old && !old.callout && old.callout !== d.callout ? " chg-new" : ""}`}>
               {old?.callout && old.callout !== d.callout ? (

@@ -14,10 +14,10 @@ const acts = [
 
 test('before, during, between and after, read from the destination clock', () => {
   const d = day(acts);
-  assert.deepEqual(nowPosition(d, bkk('07:10')), { kind: 'before', beforeIndex: 0, hhmm: '07:10', next: { hhmm: '09:00', inMin: 110 } });
-  assert.deepEqual(nowPosition(d, bkk('09:30')), { kind: 'during', index: 0, hhmm: '09:30', progress: 1 / 3 });
-  assert.deepEqual(nowPosition(d, bkk('15:00')), { kind: 'between', beforeIndex: 2, hhmm: '15:00', next: { hhmm: '16:00', inMin: 60 } });
-  assert.deepEqual(nowPosition(d, bkk('22:00')), { kind: 'after', afterIndex: 2, hhmm: '22:00' });
+  assert.deepEqual(nowPosition(d, bkk('07:10')), { kind: 'before', beforeKey: 'act:0', hhmm: '07:10', next: { hhmm: '09:00', inMin: 110 } });
+  assert.deepEqual(nowPosition(d, bkk('09:30')), { kind: 'during', key: 'act:0', hhmm: '09:30', progress: 1 / 3 });
+  assert.deepEqual(nowPosition(d, bkk('15:00')), { kind: 'between', beforeKey: 'act:2', hhmm: '15:00', next: { hhmm: '16:00', inMin: 60 } });
+  assert.deepEqual(nowPosition(d, bkk('22:00')), { kind: 'after', afterKey: 'act:2', hhmm: '22:00' });
 });
 
 test('an activity ends exactly at its end: that minute is between, not during', () => {
@@ -63,4 +63,16 @@ test('untilText', () => {
   assert.equal(untilText(110), '1h 50m');
   assert.equal(untilText(120), '2h');
   assert.equal(untilText(28), '28m');
+});
+
+test('spans other than activities place "now" too: a transport tile under way is during, keyed by its own key', () => {
+  const d = day(acts);
+  const spans = [{ key: 'act:0', start: 9 * 60, end: 10 * 60 + 30 }, { key: 'ferry', start: 11 * 60, end: 11 * 60 + 45 }, { key: 'act:1', start: 12 * 60, end: 14 * 60 }];
+  assert.deepEqual(nowPosition(d, bkk('11:15'), spans), { kind: 'during', key: 'ferry', hhmm: '11:15', progress: 1 / 3 });
+  assert.deepEqual(nowPosition(d, bkk('10:45'), spans).beforeKey, 'ferry');
+  // A moment (no arrival known) is never "during": just a point to be before or after.
+  const point = [{ key: 'train', start: 8 * 60, end: 8 * 60 }];
+  assert.deepEqual(nowPosition(d, bkk('08:00'), point), { kind: 'after', afterKey: 'train', hhmm: '08:00' });
+  assert.deepEqual(nowPosition(d, bkk('07:00'), [...point].reverse()).kind, 'before');
+  assert.deepEqual(nowPosition(d, bkk('10:00'), []), { kind: 'untimed', hhmm: '10:00' });
 });
