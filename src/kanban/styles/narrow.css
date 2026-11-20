@@ -55,6 +55,31 @@
     flex: 1 1 auto;
     min-width: 0;
   }
+  /* Swiping or tapping a tab slides the new lane in from the side it lies on. The lane is
+     remounted per lane (keyed), so this plays once per change and leaves no transform behind. */
+  .board[data-slide='next'] .lane {
+    animation: lane-from-right 0.18s ease-out;
+  }
+  .board[data-slide='prev'] .lane {
+    animation: lane-from-left 0.18s ease-out;
+  }
+  @keyframes lane-from-right {
+    from {
+      transform: translateX(28px);
+      opacity: 0.4;
+    }
+  }
+  @keyframes lane-from-left {
+    from {
+      transform: translateX(-28px);
+      opacity: 0.4;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .board[data-slide] .lane {
+      animation: none;
+    }
+  }
   /* The tab already names the lane and counts its cards. */
   .lane[data-compact] .lane__name,
   .lane[data-compact] .lane__count {

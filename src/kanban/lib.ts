@@ -19,6 +19,20 @@ export function boardLanes(board: Board) {
   return BOARD_COPY[board.type].lanes.map((l) => ({ ...l, ...board.laneLabels?.[l.id] }));
 }
 
+/**
+ * Is this touch a quick, mostly-horizontal flick? Left is "next", right is "previous".
+ * Slow touches (a long-press drag) and mostly-vertical ones (scrolling) are not swipes.
+ */
+export function swipeDirection(
+  start: { x: number; y: number; t: number },
+  end: { x: number; y: number; t: number }
+): "next" | "prev" | null {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  if (end.t - start.t > 600 || Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return null;
+  return dx < 0 ? "next" : "prev";
+}
+
 /** One entry in a card's conversation thread. */
 export type Reply = Card["log"][number];
 
