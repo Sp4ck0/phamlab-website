@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import type { ItineraryRow } from "../../lib/itineraryState";
 import { DOW, MON } from "../../lib/tripLogic";
 
@@ -10,8 +10,25 @@ export function DayNav({ rows, todayId, onJump }: { rows: ItineraryRow[]; todayI
     const n = nav.current, b = todayBtn.current;
     if (n && b) n.scrollLeft = b.offsetLeft - (n.clientWidth - b.offsetWidth) / 2;
   }, [todayId]);
+  // A mouse wheel sends vertical deltas, which a horizontal-only strip ignores. While the pointer is
+  // over the bar, turn them into sideways scrolling; at either end let the page scroll as usual.
+  // Native listener: React's onWheel is passive, so it couldn't preventDefault.
+  const shell = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const s = shell.current, n = nav.current;
+    if (!s || !n) return;
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+      const max = n.scrollWidth - n.clientWidth;
+      if ((e.deltaY < 0 && n.scrollLeft <= 0) || (e.deltaY > 0 && n.scrollLeft >= max - 1)) return;
+      e.preventDefault();
+      n.scrollLeft += e.deltaY;
+    };
+    s.addEventListener("wheel", onWheel, { passive: false });
+    return () => s.removeEventListener("wheel", onWheel);
+  }, []);
   return (
-    <div className="daynav-shell">
+    <div className="daynav-shell" ref={shell}>
       <nav className="daynav" aria-label="Jump to itinerary day" ref={nav}>
         {rows.map(({ id, day: d }, i) => id === todayId ? (
           <button type="button" key={id} ref={todayBtn} className="daynav-today" aria-current="date" onClick={() => onJump(id)}>
