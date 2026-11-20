@@ -167,6 +167,12 @@ a{color:inherit}
 .notif-chip:hover{color:var(--text-primary);border-color:var(--text-muted)}
 .notif-chip[aria-pressed="true"]{background:var(--accent-1-tint);border-color:var(--accent-1);color:var(--text-primary)}
 .notif-chips .notify__note{font-size:12px;color:var(--text-muted);align-self:center}
+.notif-help{display:block;font-size:13px;color:var(--text-secondary)}
+.notif-help summary{cursor:pointer;color:var(--accent-1);font-weight:600}
+.notif-help p{margin:8px 0 0}
+.notif-help h4{margin:12px 0 4px;font-size:13px;color:var(--text-primary)}
+.notif-help ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.notif-help strong{color:var(--text-primary)}
 .notif-steps summary{cursor:pointer;color:var(--accent-1)}
 .notif-steps ol{margin:8px 0;padding-left:20px;display:grid;gap:4px}
 .notif-steps p{margin:8px 0 0}
