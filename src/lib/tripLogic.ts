@@ -319,20 +319,48 @@ export function assignLegColors(days: Pick<Day, "city" | "to" | "tag" | "event" 
 export interface RouteStop {
   label: string;
   color: string;
+  // Days spent here (days whose city is this stop). Empty for a departure
+  // from home (a first day that moves on with no hotel) and for a final
+  // arrival, which get no headcount.
+  dates: string[];
+  // Who is on the trip on any of those days, and who joined/left since the
+  // previous stop that has dates.
+  who: Group[];
+  joined: Group[];
+  left: Group[];
 }
 
 // Unique consecutive city waypoints for the hero's route stepper.
-export function deriveRoute(days: Pick<Day, "city" | "to">[], legColors: LegColor[]): RouteStop[] {
+export function deriveRoute(
+  days: (Pick<Day, "city" | "to"> & Partial<Pick<Day, "date" | "hotels">>)[],
+  legColors: LegColor[],
+  groups: Group[] = []
+): RouteStop[] {
   const stops: RouteStop[] = [];
+  const push = (label: string, color: string) => stops.push({ label, color, dates: [], who: [], joined: [], left: [] });
   days.forEach((d, i) => {
     const color = legColors[i]?.color || ROTATING_ACCENTS[0].color;
     const last = stops[stops.length - 1];
-    if (!last || last.label !== d.city) stops.push({ label: d.city, color });
+    if (!last || last.label !== d.city) push(d.city, color);
+    if (d.date) stops[stops.length - 1].dates.push(d.date);
     if (d.to) {
       const last2 = stops[stops.length - 1];
-      if (!last2 || last2.label !== d.to) stops.push({ label: d.to, color });
+      if (!last2 || last2.label !== d.to) push(d.to, color);
     }
   });
+  const first = days[0];
+  if (first?.to && Array.isArray(first.hotels) && first.hotels.length === 0 && stops[0].dates.length === 1) stops[0].dates = [];
+  let prev: Group[] | null = null;
+  for (const s of stops) {
+    if (!s.dates.length) continue;
+    s.who = groups.filter((g) => s.dates.some((date) => presence(g, date)));
+    if (prev) {
+      const before: Group[] = prev;
+      s.joined = s.who.filter((g) => !before.includes(g));
+      s.left = before.filter((g) => !s.who.includes(g));
+    }
+    prev = s.who;
+  }
   return stops;
 }
 

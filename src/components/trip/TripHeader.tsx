@@ -5,7 +5,6 @@ import { assignLegColors, dateRangeFromDays, deriveRoute, renderCountdown } from
 import { ExportMenu } from "./ExportMenu";
 import { RouteStepper } from "./RouteStepper";
 import { Roster } from "./Roster";
-import { StatTiles } from "./StatTiles";
 
 export function TripHeader({
   kicker,
@@ -30,28 +29,23 @@ export function TripHeader({
 }) {
   const { slug } = useParams<{ slug: string }>();
   const legColors = assignLegColors(days);
-  const route = deriveRoute(days, legColors);
+  const route = deriveRoute(days, legColors, groups);
   const cities = new Set(days.map((d) => d.city));
   const flightLegs = days.reduce((sum, d) => sum + (d.flights?.length || 0), 0);
 
-  const stats = [
-    { value: String(days.length), label: `Days` },
-    { value: String(cities.size), label: "Cities / stops" },
-    highlightStat || { value: renderCountdown(days), label: "Countdown" },
-    { value: String(flightLegs), label: "Travel legs" },
-  ];
+  const highlight = highlightStat ? `★ ${highlightStat.label} · ${highlightStat.value}` : renderCountdown(days);
 
   return (
     <header className="hero" style={{ position: "relative" }}>
       <p className="eyebrow">{kicker}</p>
       <h1>{title}</h1>
       <p className="subdate">
-        {dateRangeFromDays(days, dateRangeLabel)} · {days.length} days
+        {dateRangeFromDays(days, dateRangeLabel)} · {days.length} days · {cities.size} cities · {flightLegs} legs
       </p>
+      {highlight && <p className="hero-chip">{highlight}</p>}
 
       <RouteStepper stops={route} />
       <Roster groups={groups} />
-      <StatTiles stats={stats} />
       <div className="view-row">
         <button ref={filterRef} type="button" className="btn" aria-pressed={onlyGaps} onClick={() => onOnlyGapsChange(!onlyGaps)}>
           {onlyGaps ? "Show all days" : "Only gaps"}
