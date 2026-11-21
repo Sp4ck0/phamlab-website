@@ -54,9 +54,8 @@ export interface TimelineTileProps {
   now?: boolean;
   /** A thin progress bar for the tile under way; drawn along the bottom of the header. */
   progress?: ReactNode;
-  /** Its places with a Google Place ID: the first shows as a small photo in the header ("+N" for
-   *  the rest), its photographer's credit in the menu. Asked for (via placePhoto) once the tile
-   *  nears the screen. */
+  /** Its places with a Google Place ID: the first shows as a small photo in the header, its
+   *  photographer's credit in the menu. Asked for (via placePhoto) once the tile nears the screen. */
   photoPlaces?: TilePlace[];
   placePhoto?: PlacePhotoFetcher;
   children: ReactNode;
@@ -80,7 +79,6 @@ export function TimelineTile({
   const gone = change === "gone";
   const tileRef = useRef<HTMLDivElement>(null);
   const shown = usePlacePhoto(tileRef, photoPlaces?.[0], gone ? undefined : placePhoto);
-  const morePlaces = shown ? (photoPlaces?.length ?? 1) - 1 : 0;
   // The credit Google asks for, in the menu like the day header's: the photographer's page, or
   // without one, "Photo by …" for a moment.
   const credit = shown?.photo.credit;
@@ -159,7 +157,6 @@ export function TimelineTile({
           {shown && (
             <span className="tl-photos" aria-hidden="true">
               <img src={shown.photo.url} alt="" decoding="async" />
-              {morePlaces > 0 && <span className="tl-photos-more">+{morePlaces}</span>}
             </span>
           )}
           <span className="tl-more">{!gone && items && <TileMenu label={name} items={items} />}</span>
