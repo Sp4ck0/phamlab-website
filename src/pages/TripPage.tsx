@@ -21,6 +21,10 @@ import { assignLegColors } from "../lib/tripLogic";
 import { dayGaps, gapDates } from "../lib/tasks";
 import { deriveTaskPoints, derivePoints, deriveRouteAddresses, deriveWeatherStops } from "../lib/mapPoints";
 import { NotFoundOrDenied } from "./NotFoundOrDenied";
+import { useAction } from "convex/react";
+import { api } from "@convex/api";
+import { useAccessCode } from "../hooks/useAccessCode";
+import { cachedPhotos } from "../lib/cityPhoto";
 
 export function TripPage() {
   return <TripEntryBoundary><TripPageEntry /></TripEntryBoundary>;
@@ -48,6 +52,10 @@ function TripPageEntry() {
   const gapsByDate = useMemo(() => dayGaps(tasks), [tasks]);
   const { addItem, updateItem, removeItem, promoteItem } = useActionItemEdits(slug || "");
   // Every stored item by id: an itinerary entry approved from one shows its wording and votes as History.
+  // Day headers' city photos: one request per city while the page is open.
+  const getCityPhoto = useAction(api.cityPhotos.getCityPhoto);
+  const { code } = useAccessCode();
+  const cityPhoto = useMemo(() => cachedPhotos((city, country) => getCityPhoto({ slug: slug || "", code, city, country })), [getCityPhoto, slug, code]);
   const itemTasks = useMemo(() => Object.fromEntries(tasks.filter((t) => t.key.startsWith("item:")).map((t) => [t.key.slice("item:".length), t])), [tasks]);
   const { updateActivity } = useActivityEdits(slug || "");
   const weather = useTripWeather(slug);
@@ -120,6 +128,7 @@ function TripPageEntry() {
           onEditActivity={updateActivity}
           itemTasks={itemTasks}
           onPromote={promoteItem}
+          cityPhoto={cityPhoto}
         />
       </Fragment>
 

@@ -1093,3 +1093,36 @@ test('a day with an open plan task shows a "Nothing planned yet" tile on the rai
   const dismissed = mount(React.createElement(DayCard, { ...props, day: { ...day, acts: [] }, expanded: true, gaps: { ...plan, plan: false } }));
   try { assert.equal(dismissed.container.querySelector('.tl-plan'), null); } finally { dismissed.close(); }
 });
+
+test('the day header: the city photo with its credit once in view, Day N of M · country, the place and the weather', async () => {
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const { cachedPhotos } = await import('../../lib/cityPhoto.ts');
+  // jsdom has no IntersectionObserver: report the header as visible straight away.
+  globalThis.IntersectionObserver = class { constructor(cb) { this.cb = cb; } observe() { this.cb([{ isIntersecting: true }]); } disconnect() {} };
+  const asked = [];
+  const fetcher = cachedPhotos(async (city, country) => { asked.push(`${city}|${country}`); return { url: 'https://example.com/synthetic.jpg', credit: { name: 'Synthetic Photographer', uri: 'https://example.com/p' } }; });
+  const days = resolveDays({ days: [{ ...day, country: 'TH' }, { ...day, date: '2040-01-03', country: 'TH', to: 'Synthetic Town' }] });
+  const weather = { date: day.date, kind: 'forecast', code: 2, tMax: 31, tMin: 24, precipProb: 29, fetchedAt: 0 };
+  const view = mount(React.createElement(React.Fragment, null,
+    React.createElement(DayCard, { ...props, rowId: 'a', day: days[0], days, dayNumber: 0, weather, cityPhoto: fetcher }),
+    React.createElement(DayCard, { ...props, rowId: 'b', day: days[1], days, dayNumber: 1, cityPhoto: fetcher })));
+  try {
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    const [first, second] = view.container.querySelectorAll('section.day-card');
+    const photo = first.querySelector('.day-photo');
+    assert.ok(photo.classList.contains('has-photo') && photo.style.backgroundImage.includes('https://example.com/synthetic.jpg'));
+    assert.equal(photo.querySelector('.day-photo-credit a').textContent, 'Photo: Synthetic Photographer'); // the credit Google requires
+    assert.deepEqual(asked, [`${day.city}|TH`]); // the same city twice is one request
+    assert.equal(first.querySelector('.day-num').textContent, 'Day 0 of 1 · Thailand');
+    assert.equal(first.querySelector('.day-place').textContent, day.city);
+    assert.equal(second.querySelector('.day-place').textContent, `${day.city} → Synthetic Town`);
+    assert.equal(first.querySelector('.weather-block-temps').textContent, '88° / 75°'); // in the settings' unit (F here)
+    assert.equal(first.querySelector('.weather-block-label').textContent, 'Partly cloudy · 29% rain');
+  } finally { view.close(); delete globalThis.IntersectionObserver; }
+  // No photo source: the leg's colour, no credit.
+  const plain = mount(React.createElement(DayCard, { ...props, day: days[0], days }));
+  try {
+    assert.ok(!plain.container.querySelector('.day-photo').classList.contains('has-photo'));
+    assert.equal(plain.container.querySelector('.day-photo-credit'), null);
+  } finally { plain.close(); }
+});

@@ -1,8 +1,8 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import type { Act, ActionItem, Group, LegColor, Place, ResolvedDay, Status, Task, Vote } from "../../lib/types";
 import { diffLines, type Change } from "../../lib/changeDiff";
-import { focusOnMap, googleMapsUrl, placeKey } from "../../lib/mapPoints";
-import { DOW, MON, actParts, fmtShort, gapLabel, mergeFlightsByRoute, mergeHotelsByName } from "../../lib/tripLogic";
+import { MAPS_PIN_ICON, focusOnMap, googleMapsUrl, placeKey } from "../../lib/mapPoints";
+import { COUNTRY, DOW, MON, actParts, fmtShort, gapLabel, mergeFlightsByRoute, mergeHotelsByName } from "../../lib/tripLogic";
 import type { FlightGroup, HotelGroup } from "../../lib/tripLogic";
 import { TransportBody } from "./TransportBody";
 import { HotelBody } from "./HotelCard";
@@ -19,7 +19,8 @@ import { countdownText, nextUp } from "../../lib/nextUp";
 import { useNow } from "../../lib/useNow";
 import { gapMinutes, phoneHref, stayInfo } from "../../lib/stay";
 import { TourBox } from "./TourBox";
-import { WeatherBadge } from "./WeatherBadge";
+import { WeatherBlock } from "./WeatherBadge";
+import type { CityPhoto, CityPhotoFetcher } from "../../lib/cityPhoto";
 import { MODE_EMOJI, TAG_EMOJI, actUrl, hotelUrl, plain, zoneNow } from "../../lib/calendar";
 import { NOW_EMOJI, dayZone, nowPosition, untilText, viewerHint, type NowPosition } from "../../lib/nowMarker";
 import { sanitizeHtml } from "../../lib/sanitizeHtml";
@@ -96,6 +97,8 @@ interface Props {
   itemTasks?: Record<string, Task>;
   // "Add to itinerary": approves an item into the days (convex actionItems.promoteActionItem).
   onPromote?: (id: string, date: string) => Promise<unknown>;
+  // A photo of the day's city for its header; without it the header shows the leg's colour.
+  cityPhoto?: CityPhotoFetcher;
 }
 
 // "Add to itinerary" on an item tile, with its own busy state and the server's reason when it can't.
@@ -154,6 +157,7 @@ export function DayCard({
   onEditActivity,
   itemTasks,
   onPromote,
+  cityPhoto,
 }: Props) {
   const [editingAct, setEditingAct] = useState<number | null>(null);
   const { slug } = useParams<{ slug: string }>();
@@ -178,6 +182,21 @@ export function DayCard({
     </li>
   );
   const collapsed = !expanded;
+  // The city's photo, asked for once the day's header scrolls into view (each city once per page).
+  const headRef = useRef<HTMLHeadingElement>(null);
+  const [photo, setPhoto] = useState<CityPhoto | null>(null);
+  useEffect(() => {
+    const el = headRef.current;
+    if (!el || !cityPhoto || typeof IntersectionObserver === "undefined") return;
+    let live = true;
+    const seen = new IntersectionObserver((hits) => {
+      if (!hits.some((h) => h.isIntersecting)) return;
+      seen.disconnect();
+      void cityPhoto(d.city, d.country).then((p) => live && setPhoto(p));
+    }, { rootMargin: "300px 0px" });
+    seen.observe(el);
+    return () => { live = false; seen.disconnect(); };
+  }, [cityPhoto, d.city, d.country]);
   // A collapsed panel is hidden="until-found": still in the page, so Ctrl+F finds its text,
   // and a match opens the day.
   const panelRef = useUntilFound(expanded, onExpandedChange);
@@ -536,21 +555,32 @@ export function DayCard({
       id={rowId}
       style={{ ["--leg-color" as string]: legColor.color, ["--leg-tint" as string]: legColor.tint }}
     >
-      <h2 className="day-heading">
+      <h2 className="day-heading" ref={headRef}>
+      {/* The city's photo, fading into the card; the leg's colour until it loads (or when there is none). */}
+      <span className={`day-photo${photo ? " has-photo" : ""}`} style={photo ? { backgroundImage: `url("${photo.url.replace(/"/g, "%22")}")` } : undefined}>
+        {photo?.credit && (
+          <span className="day-photo-credit">
+            {photo.credit.uri ? <a href={photo.credit.uri} target="_blank" rel="noopener noreferrer">Photo: {photo.credit.name}</a> : <>Photo: {photo.credit.name}</>}
+          </span>
+        )}
+      </span>
       <button id={`${rowId}-trigger`} type="button" className="day-head day-head-btn" aria-expanded={expanded} aria-controls={`${rowId}-panel`} onClick={onExpandedChange}>
         <span className="day-title-group">
-          <span className="day-num">Day {dayNumber}</span>
+          <span className="day-num">
+            Day {dayNumber}{days && days.length > 1 ? ` of ${days.length - 1}` : ""}
+            {COUNTRY[d.country] ? ` · ${COUNTRY[d.country]}` : ""}
+          </span>
           <span className="day-date">
             {DOW[d._d.getDay()]}, {MON[d._d.getMonth()]} {d._d.getDate()}
+          </span>
+          <span className="day-place">
+            <span aria-hidden="true" dangerouslySetInnerHTML={{ __html: MAPS_PIN_ICON }} />
+            {d.city}{d.to ? ` → ${d.to}` : ""}
           </span>
         </span>
         <span className="day-head-right">
           {isToday && <span className="today-badge">Today{clock ? ` · ${clock}` : ""}</span>}
-          <WeatherBadge weather={weather} />
-          <span className="leg-badge">
-            <span className="dot" />
-            {legColor.label}
-          </span>
+          <WeatherBlock weather={weather} />
           <svg
             className="day-chevron"
             data-collapsed={collapsed ? "true" : undefined}
@@ -573,6 +603,7 @@ export function DayCard({
           )
         )}
       </button>
+      <span className="day-tools">
       {expanded && liveTiles.length > 1 && (
         <button
           type="button"
@@ -587,6 +618,7 @@ export function DayCard({
         </button>
       )}
       <ShareLinkButton param={{ day: d.date }} label={`Share link to Day ${dayNumber}`} />
+      </span>
       </h2>
 
       <div ref={panelRef} id={`${rowId}-panel`} aria-labelledby={`${rowId}-trigger`}>
