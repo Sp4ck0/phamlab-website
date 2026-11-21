@@ -1122,11 +1122,9 @@ test('a day with an open plan task shows a "Not planned" tile on the rail in the
   try { assert.equal(dismissed.container.querySelector('.tl-plan'), null); } finally { dismissed.close(); }
 });
 
-test('the day header: the city photo with its credit once in view, Day N of M · country, the place and the weather', async () => {
+test('the day header: the city photo with its credit (asked for on load, not on scroll), Day N of M · country, the place and the weather', async () => {
   const { resolveDays } = await import('../../lib/tripLogic.ts');
   const { cachedPhotos } = await import('../../lib/cityPhoto.ts');
-  // jsdom has no IntersectionObserver: report the header as visible straight away.
-  globalThis.IntersectionObserver = class { constructor(cb) { this.cb = cb; } observe() { this.cb([{ isIntersecting: true }]); } disconnect() {} };
   const asked = [];
   const fetcher = cachedPhotos(async (city, country) => { asked.push(`${city}|${country}`); return { url: 'https://example.com/synthetic.jpg', credit: { name: 'Synthetic Photographer', uri: 'https://example.com/p' } }; });
   const days = resolveDays({ days: [{ ...day, country: 'TH' }, { ...day, date: '2040-01-03', country: 'TH', to: 'Synthetic Town' }] });
@@ -1149,7 +1147,7 @@ test('the day header: the city photo with its credit once in view, Day N of M ·
     assert.equal(second.querySelector('.day-place').textContent, `${day.city} → Synthetic Town`);
     assert.equal(first.querySelector('.weather-block-temps').textContent, '88° / 75°'); // in the settings' unit (F here)
     assert.equal(first.querySelector('.weather-block-label').textContent, 'Partly cloudy · 29% rain');
-  } finally { view.close(); delete globalThis.IntersectionObserver; }
+  } finally { view.close(); }
   // No photo source: the leg's colour, no credit.
   const plain = mount(React.createElement(DayCard, { ...props, day: days[0], days }));
   try {
