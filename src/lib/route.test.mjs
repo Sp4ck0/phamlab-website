@@ -1,7 +1,7 @@
 // Synthetic-only checks for deriveRoute: stops, the days spent at each, and who is there.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { deriveRoute } from './tripLogic.ts';
+import { byStay, deriveRoute } from './tripLogic.ts';
 
 const g = (id, from, to) => ({ id, name: id.toUpperCase(), members: 1, color: '#000', from, to });
 const A = g('a');
@@ -52,4 +52,9 @@ test('without dates or groups it is just the labels (print view)', () => {
   const stops = deriveRoute(days.map(({ city, to }) => ({ city, to })), []);
   assert.deepEqual(stops.map((s) => s.label), ['Home', 'Alpha', 'Beta', 'Gamma', 'Home']);
   assert.ok(stops.every((s) => s.who.length === 0));
+});
+
+test('travelers sort by join date, then leave date, then name', () => {
+  const people = [g('late', '2030-01-05'), g('zed'), g('mid', '2030-01-02', '2030-01-04'), g('early', undefined, '2030-01-03'), g('amy')];
+  assert.equal(names(people.sort(byStay)), 'early,amy,zed,mid,late');
 });

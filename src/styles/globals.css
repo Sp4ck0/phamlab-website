@@ -239,7 +239,6 @@ button.route-chip[aria-expanded=true]{box-shadow:inset 0 0 0 1.5px var(--text-mu
 .route-who{margin:-14px 0 22px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--card)}
 .route-who__head{font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px}
 .route-who .roster-list{margin-bottom:0}
-.route-who__change{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:8px;font-size:13px;font-weight:600}
 .route-who__in{color:var(--good)}
 .route-who__out{color:var(--danger)}
 .hero-chip{display:inline-block;margin:-12px 0 18px;padding:4px 10px;border-radius:999px;background:var(--chip-bg);font-size:13px;font-weight:600;color:var(--text-primary)}

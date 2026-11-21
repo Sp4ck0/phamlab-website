@@ -1,11 +1,11 @@
 import type { Group } from "../../lib/types";
-import { fmtShort } from "../../lib/tripLogic";
+import { byStay, fmtShort } from "../../lib/tripLogic";
 
 const span = (g: Group) =>
   g.from && g.to ? `${fmtShort(g.from)} – ${fmtShort(g.to)}` : g.from ? `from ${fmtShort(g.from)}` : g.to ? `until ${fmtShort(g.to)}` : "";
 
 export function Roster({ groups }: { groups: Group[] }) {
-  const sorted = [...groups].sort((a, b) => a.name.localeCompare(b.name));
+  const sorted = [...groups].sort(byStay);
   if (!sorted.length) return null;
   return (
     <details className="roster">
