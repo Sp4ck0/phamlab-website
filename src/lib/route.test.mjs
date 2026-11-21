@@ -1,7 +1,7 @@
 // Synthetic-only checks for deriveRoute: stops, the days spent at each, and who is there.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { byStay, deriveRoute } from './tripLogic.ts';
+import { byStay, deriveCountries, deriveRoute } from './tripLogic.ts';
 
 const g = (id, from, to) => ({ id, name: id.toUpperCase(), members: 1, color: '#000', from, to });
 const A = g('a');
@@ -57,4 +57,22 @@ test('without dates or groups it is just the labels (print view)', () => {
 test('whole-trip travelers first, then by join date, leave date and name', () => {
   const people = [g('late', '2030-01-05'), g('zed'), g('mid', '2030-01-02', '2030-01-04'), g('early', undefined, '2030-01-03'), g('amy')];
   assert.equal(names(people.sort(byStay)), 'amy,zed,early,mid,late');
+});
+
+test('stops fold into countries with their own headcount and joined/left', () => {
+  const withCountry = [
+    { date: '2030-01-01', city: 'Home', country: 'US', to: 'Alpha', toCountry: 'TH', hotels: [] },
+    { date: '2030-01-02', city: 'Alpha', country: 'TH', to: 'Beta', toCountry: 'TH', hotels: [{ name: 'x' }] },
+    { date: '2030-01-03', city: 'Beta', country: 'TH', to: 'Gamma', toCountry: 'VN' },
+    { date: '2030-01-04', city: 'Gamma', country: 'VN' },
+    { date: '2030-01-05', city: 'Gamma', country: 'VN', to: 'Home', toCountry: 'US' },
+  ];
+  const countries = deriveCountries(deriveRoute(withCountry, [], groups), groups);
+  assert.deepEqual(countries.map((c) => c.label), ['United States', 'Thailand', 'Vietnam', 'United States']);
+  assert.deepEqual(countries[1].stops.map((s) => s.label), ['Alpha', 'Beta']);
+  assert.deepEqual(countries[1].dates, ['2030-01-02', '2030-01-03']);
+  assert.equal(names(countries[1].who), 'a,b');
+  assert.equal(names(countries[2].joined), 'c');
+  assert.equal(names(countries[2].left), 'b');
+  assert.equal(countries[0].who.length + countries[3].who.length, 0);
 });

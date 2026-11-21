@@ -1,7 +1,7 @@
 import { useParams } from "react-router-dom";
 import type { RefObject } from "react";
 import type { Day, Group, HighlightStat } from "../../lib/types";
-import { assignLegColors, dateRangeFromDays, deriveRoute, renderCountdown } from "../../lib/tripLogic";
+import { assignLegColors, dateRangeFromDays, deriveCountries, deriveRoute, renderCountdown } from "../../lib/tripLogic";
 import { ExportMenu } from "./ExportMenu";
 import { RouteStepper } from "./RouteStepper";
 import { Roster } from "./Roster";
@@ -44,7 +44,7 @@ export function TripHeader({
       </p>
       {highlight && <p className="hero-chip">{highlight}</p>}
 
-      <RouteStepper stops={route} />
+      <RouteStepper countries={deriveCountries(route, groups)} />
       <Roster groups={groups} />
       <div className="view-row">
         <button ref={filterRef} type="button" className="btn" aria-pressed={onlyGaps} onClick={() => onOnlyGapsChange(!onlyGaps)}>
