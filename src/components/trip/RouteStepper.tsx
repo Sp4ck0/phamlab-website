@@ -1,18 +1,21 @@
 import { useState, type ReactNode } from "react";
 import { byStay, fmtShort, type CountryStop, type RouteStop } from "../../lib/tripLogic";
 
-function Chip({ icon, label, count, pressed, onClick }: { icon: ReactNode; label: string; count: number; pressed: boolean; onClick: () => void }) {
+// `iconOnly` shows just the icon and count; the label stays as the accessible name.
+function Chip({ icon, label, count, pressed, onClick, iconOnly }: { icon: ReactNode; label: string; count: number; pressed: boolean; onClick: () => void; iconOnly?: boolean }) {
+  const name = iconOnly ? undefined : label;
+  const a11y = iconOnly ? { "aria-label": count ? `${label}, ${count} ${count === 1 ? "person" : "people"}` : label, title: label } : {};
   if (!count)
     return (
-      <span className="route-chip">
+      <span className="route-chip" role={iconOnly ? "img" : undefined} {...a11y}>
         {icon}
-        {label}
+        {name}
       </span>
     );
   return (
-    <button type="button" className="route-chip" aria-expanded={pressed} onClick={onClick}>
+    <button type="button" className="route-chip" aria-expanded={pressed} onClick={onClick} {...a11y}>
       {icon}
-      {label}
+      {name}
       <span className="route-count">{count}</span>
     </button>
   );
@@ -44,6 +47,7 @@ export function RouteStepper({ countries }: { countries: CountryStop[] }) {
               count={c.who.length}
               pressed={open === i}
               onClick={() => toggle(i)}
+              iconOnly={!!c.emoji}
             />
           </span>
         ))}
