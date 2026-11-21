@@ -19,14 +19,16 @@ export function loadGoogleMaps(): Promise<typeof google> {
       resolve(window.google);
       return;
     }
-    // Deliberately omit loading=async: with it, onload fires once the base
-    // loader is ready but before the `libraries=geocoding,marker` chunks finish,
-    // so google.maps.Geocoder isn't guaranteed to exist yet. The classic
-    // synchronous mode blocks onload until every requested library is loaded.
+    // With loading=async the script's onload comes before the API is usable;
+    // the `callback` is the ready signal. Then importLibrary resolves once each
+    // library is in and fills in google.maps.* (Map, Geocoder, marker.*, …).
+    (window as unknown as Record<string, () => void>).__phamlabMapsReady = () => {
+      Promise.all(["core", "maps", "geocoding", "marker"].map((lib) => google.maps.importLibrary(lib)))
+        .then(() => resolve(window.google), reject);
+    };
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=geocoding,marker`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&loading=async&callback=__phamlabMapsReady`;
     script.async = true;
-    script.onload = () => resolve(window.google);
     script.onerror = () => reject(new Error("Failed to load Google Maps"));
     document.head.appendChild(script);
   });
