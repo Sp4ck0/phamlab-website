@@ -346,7 +346,7 @@ export function DayCard({
       return {
         key: entry.key, ghost: false, defaultOpen: false,
         tile: {
-          icon: "🗓️", title: "Nothing planned yet", expandable: false, className: "tl-gap tl-plan miss",
+          icon: "🗓️", title: "Nothing planned yet", expandable: false, warn: true, className: "tl-gap tl-plan miss",
           meta: "Add activities to this day, or dismiss it in Action Items.",
           headerEnd: <TileStatePill state="needed" label="Not planned" />,
           children: null,

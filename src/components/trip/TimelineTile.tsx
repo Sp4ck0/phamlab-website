@@ -38,7 +38,7 @@ export interface TimelineTileProps {
   headerEnd?: ReactNode;
   /** The tile's one main control (the booked check, a to-do's checkbox), in a fixed slot so it lines up on every tile. */
   control?: ReactNode;
-  /** Something here is unresolved; a dot on its rail icon shows while the tile is closed. */
+  /** Something here is unresolved; a dot on its rail icon shows while the tile is closed (always, on a tile that doesn't open). */
   warn?: boolean;
   open: boolean;
   onToggle: () => void;
@@ -99,7 +99,7 @@ export function TimelineTile({
       <span className="tl-time" data-all-day={time === ALL_DAY ? "true" : undefined}>{time}</span>
       <span className="tl-rail">
         <span className="tl-dot" aria-hidden="true" title={iconLabel}>{icon}</span>
-        {expandable && warn && !open && <span className="tl-warn" role="img" aria-label="Needs attention" title="Needs attention" />}
+        {warn && (!expandable || !open) && <span className="tl-warn" role="img" aria-label="Needs attention" title="Needs attention" />}
       </span>
       <div className={`tl-tile${open && expandable ? " is-open" : ""}${expandable ? "" : " tl-flat"}${className ? ` ${className}` : ""}${changeClass(change)}`}>
         {/* The toggle button is the keyboard control; this click handler only widens the click target. */}
