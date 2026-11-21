@@ -364,7 +364,7 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 .timeline{margin-top:12px;position:relative}
 .day-card{
   position:relative;background:var(--card);border:1px solid var(--border);border-radius:16px;
-  padding:0;margin-bottom:8px;
+  padding:0;margin-bottom:24px;
   border-left:5px solid var(--leg-color,var(--accent-1));scroll-margin-top:66px;
 }
 /* Day header: the city's photo | the day, date and place, the weather | expand-all and share. */
@@ -388,7 +388,9 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
   text-align:left;cursor:pointer;scroll-margin-top:76px;border-radius:0;
 }
 .day-head-btn:hover{background:var(--page)}
-.day-head-btn:focus-visible,.daynav button:focus-visible{outline:3px solid var(--accent-1);outline-offset:2px}
+.daynav button:focus-visible{outline:3px solid var(--accent-1);outline-offset:2px}
+/* Inside the card's edge, with rounded corners, so the ring never cuts across the card's own border. */
+.day-head-btn:focus-visible{outline:3px solid var(--accent-1);outline-offset:-3px;border-radius:10px}
 .day-head-right{grid-column:2;grid-row:1;display:flex;align-items:center;gap:12px;min-width:0}
 .day-summary{grid-column:1 / -1;grid-row:2;font-size:13px;line-height:1.4;color:var(--text-secondary);overflow-wrap:anywhere;min-width:0}
 .day-place{display:inline-flex;align-items:center;gap:5px;font-size:14px;font-weight:500;color:var(--text-primary);overflow-wrap:anywhere}
@@ -449,8 +451,9 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 /* Unresolved and closed: a small badge on the card's icon, so it never moves the header. */
 .tl-warn{position:absolute;z-index:2;top:-1px;right:-3px;width:9px;height:9px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 2px var(--card)}
 .tl-head .now-progress{border-radius:0 0 11px 11px}
-/* The chevron in a notch in the bottom border: decorative, the whole card is the control. */
-.tl-notch{position:absolute;z-index:1;left:50%;bottom:0;transform:translate(-50%,50%);display:grid;place-items:center;width:38px;height:20px;border:1px solid var(--border);border-radius:999px;background:var(--card);color:var(--text-muted);pointer-events:none}
+/* The chevron in a notch in the bottom border: decorative for screen readers, but part of the card, so a tap
+   on any of it (including the half below the border) toggles the card like the rest of it. */
+.tl-notch{position:absolute;z-index:1;left:50%;bottom:0;transform:translate(-50%,50%);display:grid;place-items:center;width:38px;height:20px;border:1px solid var(--border);border-radius:999px;background:var(--card);color:var(--text-muted)}
 .tl-tile.is-open .tl-notch{border-color:color-mix(in srgb,var(--accent-1) 40%,var(--border));color:var(--accent-1)}
 .tl-tile.miss .tl-notch{border-color:var(--warn)}
 .tl-chev{transition:transform .22s ease}
@@ -513,8 +516,12 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 .itinerary-status{font-size:13px;color:var(--text-secondary)}
 .itinerary-status:empty{margin:0}
 .itinerary-empty{padding:12px 0 20px}
-.day-chevron{transition:transform .16s ease;color:var(--text-muted);flex:none}
-.day-chevron[data-collapsed="true"]{transform:rotate(-90deg)}
+/* The day's chevron in a notch in its bottom border, like a card's: down closed, up open. */
+.day-notch{position:absolute;z-index:2;left:50%;bottom:0;transform:translate(-50%,50%);display:grid;place-items:center;width:48px;height:24px;border:1px solid var(--border);border-radius:999px;background:var(--card);color:var(--text-muted);cursor:pointer}
+@media (hover:hover){.day-notch:hover{color:var(--text-primary)}}
+.day-card--today .day-notch{border-color:var(--accent-1);color:var(--accent-1)}
+.day-chev{transition:transform .22s ease}
+.day-notch[data-open] .day-chev{transform:rotate(180deg)}
 .day-title-group{grid-column:1;grid-row:1;display:flex;flex-direction:column;gap:3px;min-width:0}
 .day-num{font-size:12.5px;font-weight:500;color:var(--text-secondary)}
 .day-date{font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.15;color:var(--text-primary)}
@@ -890,7 +897,8 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
   .day-heading{display:block;position:relative}
   .day-photo{position:absolute;top:0;left:0;right:0;height:92px;min-height:0;border-radius:11px 11px 0 0}
   .day-photo::after{background:linear-gradient(180deg,rgba(0,0,0,.05) 20%,rgba(0,0,0,.62))}
-  .day-heading .day-head-btn{position:relative;z-index:1;padding:0}
+  /* width:100%: a button sizes to its content, so a short summary would pull the weather and chevron left. */
+  .day-heading .day-head-btn{position:relative;z-index:1;padding:0;width:100%;border-radius:11px 11px 0 0}
   .day-head-btn:hover{background:transparent}
   .day-head{grid-template-columns:minmax(0,1fr) auto;grid-template-rows:1fr auto auto auto;gap:0}
   .day-title-group{grid-column:1;grid-row:1 / 4;min-height:92px;justify-content:flex-end;gap:0;padding:8px 12px 7px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7)}
@@ -904,8 +912,7 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
   .weather-block-icon{font-size:17px}
   .weather-block-temps{font-size:14px;color:#fff}
   .weather-block-label{flex-basis:100%;font-size:11.5px;max-width:none;white-space:nowrap;color:rgba(255,255,255,.92)}
-  .day-chevron{grid-column:2;grid-row:4;align-self:center;justify-self:end;margin:0 14px 0 0}
-  .day-summary{grid-column:1;grid-row:4;font-size:12.5px;line-height:1.35;padding:6px 12px 8px}
+  .day-summary{grid-column:1 / -1;grid-row:4;font-size:12.5px;line-height:1.35;padding:6px 12px 18px} /* room above the bottom chevron */
   .day-tools{position:absolute;top:0;right:2px;z-index:2;flex-direction:row;padding:0}
   .day-tools .icon-btn,.day-tools .tl-menu-btn{color:#fff;opacity:.95;filter:drop-shadow(0 1px 2px rgba(0,0,0,.7))}
   .day-card > div:not([hidden]){padding:2px 10px 12px}
@@ -940,7 +947,7 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
   .trip-note{max-height:calc(100dvh - 40px);padding-bottom:calc(12px + env(safe-area-inset-bottom))}
 }
 body:has(.print-doc){padding:0}
-@media(prefers-reduced-motion:reduce){.day-chevron{transition:none}}
+@media(prefers-reduced-motion:reduce){.day-chev{transition:none}}
 @media print{
   .sidenav,.status,.navtoggle,.navbackdrop,.navhandle,.mobile-topbar{display:none}
 }

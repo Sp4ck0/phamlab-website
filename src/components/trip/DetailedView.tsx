@@ -74,7 +74,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
     const retained = new Set(rows.map(row => row.id));
     setState({ days: shown, rows, serial, expanded: new Set([...state.expanded].filter(id => retained.has(id))) });
   }
-  const [pending, setPending] = useState<{ id: string } | null>(null);
+  const [pending, setPending] = useState<{ id: string; focus: boolean } | null>(null);
   const [message, setMessage] = useState("");
   const focusedRow = useRef<string | null>(null);
   const focusedControl = useRef<HTMLElement | null>(null);
@@ -133,7 +133,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
     }
     const trigger = target && document.getElementById(`${target.id}-trigger`);
     if (trigger && pendingOpen) {
-      trigger.focus({ preventScroll: true });
+      if (pending.focus) trigger.focus({ preventScroll: true });
       trigger.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
     } else {
       setMessage("That day is no longer available. Choose a day from the navigation.");
@@ -141,7 +141,9 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
     setPending(null);
   }, [state, onlyGaps, ticks, pending, pendingOpen, filterRef, visible, onOnlyGapsChange]);
 
-  function jump(id: string) {
+  // focus: a jump the reader asked for (a date chip, a link) moves keyboard focus to the day;
+  // landing on today when the page opens doesn't (it would draw a focus ring nobody asked for).
+  function jump(id: string, focus = true) {
     const index = state.rows.findIndex(row => row.id === id);
     if (index < 0) {
       setMessage("That day is no longer available. Choose a day from the navigation.");
@@ -154,7 +156,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
     } else setMessage("");
     setState(current => ({ ...current, expanded: new Set([...current.expanded, id]) }));
     setGapsCollapsed(current => { const next = new Set(current); next.delete(id); return next; });
-    setPending({ id }); // A new intent also makes repeat jumps work.
+    setPending({ id, focus }); // A new intent also makes repeat jumps work.
   }
 
   // The AI or a shared link pointed at a day, or at one tile on it: open and
@@ -201,7 +203,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
         if (!tile && change?.prev && !change.gone) setDiff({ date, prev: change.prev });
         else flash(el);
       });
-      jump(row.id);
+      jump(row.id, false); // the flash shows where; no focus ring on top of it
     }, SETTLE_MS);
     return () => clearTimeout(t);
     // jump is recreated every render and only reads this render's state.
@@ -227,7 +229,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
         document.getElementById(id)?.querySelector(".tl-now, .tl-entry--now")
           ?.scrollIntoView({ block: "center", behavior: scrollBehavior() });
       });
-      jumpRef.current(id);
+      jumpRef.current(id, false);
     }, SETTLE_MS + 100);
     const cancel = () => { autoDone.current = true; clearTimeout(t); cancelNow(); };
     const events = ["pointerdown", "wheel", "touchstart", "keydown"] as const;
