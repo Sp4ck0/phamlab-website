@@ -123,7 +123,7 @@ test('unified list independently toggles duplicate occurrences and jumps reveal 
     assert.equal(view.container.querySelectorAll('.day-head-btn[aria-expanded]').length, 1);
     const jumps = view.container.querySelectorAll('nav button');
     assert.equal(jumps.length, 2);
-    assert.notEqual(jumps[0].textContent, jumps[1].textContent);
+    assert.notEqual(jumps[0].getAttribute('aria-label'), jumps[1].getAttribute('aria-label')); // the day number tells two same-date days apart
     act(() => jumps[0].click());
     triggers = [...view.container.querySelectorAll('.day-head-btn[aria-expanded]')];
     assert.equal(triggers.length, 2);
@@ -426,7 +426,7 @@ test('a hotel tile shows the whole stay on every night: both times, nights, a do
   let view = render(0);
   try {
     const card = view.container.querySelector('.tl-hotel');
-    assert.ok(card.querySelector('.tl-title a').textContent.includes('📍 Synthetic Hotel')); // the pin stays, as the header's title
+    assert.ok(card.querySelector('.tl-title a svg.maps-pin') && card.querySelector('.tl-title a').textContent.includes('Synthetic Hotel')); // the pin stays, as the header's title
     assert.equal(card.querySelector('.cmain'), null); // and isn't repeated in the body
     const strip = card.querySelector('.stay-strip');
     assert.ok(strip.textContent.includes('3 nights') && strip.textContent.includes('Mon, Jan 2 · 15:00') && strip.textContent.includes('Thu, Jan 5 · 12:00')); // both times on the check-in tile
@@ -528,7 +528,7 @@ test('moving hotels on one day says how long it is between check-out and check-i
   const view = mount(React.createElement(DayCard, { ...props, day: days[1], days, dayNumber: 1, expanded: true, onToggle() {} }));
   try {
     const into = [...view.container.querySelectorAll('.tl-hotel')].find((c) => c.textContent.includes('Synthetic Hotel B'));
-    assert.ok(into.querySelector('.stay-gap').textContent.includes('4h between check-out at 📍 Synthetic Hotel A (11:00) and check-in here'));
+    assert.ok(into.querySelector('.stay-gap').textContent.includes('4h between check-out at Synthetic Hotel A (11:00) and check-in here'));
     const leaving = [...view.container.querySelectorAll('.tl-hotel')].find((c) => c.textContent.includes('Synthetic Hotel A') && !c.textContent.includes('Synthetic Hotel B'));
     assert.ok(!leaving.querySelector('.stay-gap')); // only the tile you are arriving at
   } finally { view.close(); }
@@ -1046,7 +1046,9 @@ test('an activity is one row: its sentence with linked places and its actions in
     assert.equal(tile.querySelector('.tl-toggle, .tl-chev, .tl-body'), null); // no chevron, no body
     assert.equal(tile.querySelector('.tl-meta'), null); // no "Food" line: the icon says it
     const link = tile.querySelector('.tl-title a');
-    assert.equal(link.textContent.trim(), '📍 Synthetic Cafe'); // the name is the Maps link
+    assert.equal(link.textContent.trim(), 'Synthetic Cafe'); // the name is the Maps link
+    assert.ok(link.querySelector('svg.maps-pin')); // with the pin icon before it
+    assert.ok(tile.querySelector('.map-focus svg')); // and the show-on-map button after it
     assert.equal(tile.querySelector('.tl-title').textContent.split('Synthetic Cafe').length, 2); // and appears once, not as text and link
     assert.ok(tile.querySelector('.tl-head .share-btn') && tile.querySelector('.tl-head .act-edit'));
     act(() => tile.querySelector('.act-edit').click()); // editing opens it, with the editor

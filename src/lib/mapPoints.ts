@@ -72,14 +72,22 @@ export function focusOnMap(place: Place) {
 }
 
 // Crosshair icon for the show-on-map button (also used inside inlinePlaces' HTML).
+// Show on the trip map (in the page): a folded map with a pin.
 export const MAP_FOCUS_ICON =
-  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">' +
-  '<circle cx="12" cy="12" r="6.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>';
+  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<path d="M3 7l5-1.8 6 2 7-2.2v12.5l-7 2.2-6-2-5 1.8z"/><path d="M8 5.2v12.5M14 7.2v12.5"/>' +
+  '<path d="M16.5 12.6s-3-3-3-5.3a3 3 0 0 1 6 0c0 2.3-3 5.3-3 5.3z" style="fill:var(--card)"/><circle cx="16.5" cy="7.3" r="1.1"/></svg>';
+
+// Open in Google Maps: an outline pin on its ground ring, before the place's name in the link.
+export const MAPS_PIN_ICON =
+  '<svg class="maps-pin" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<path d="M12 19s-6-6-6-10.6a6 6 0 0 1 12 0C18 13 12 19 12 19z"/><circle cx="12" cy="8.6" r="2.3"/>' +
+  '<path d="M8.4 17.6C5.9 18 4.5 18.7 4.5 19.5c0 1.2 3.4 2 7.5 2s7.5-.8 7.5-2c0-.8-1.4-1.5-3.9-1.9"/></svg>';
 
 const escapeAttr = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
 // Turns the first mention of each place's name in an activity's text into its
-// 📍 link, right where it is written. Places whose name isn't in the sentence
+// Maps link (pin icon), right where it is written. Places whose name isn't in the sentence
 // (an event "at" a venue the text doesn't name) come back in `rest`, for the
 // caller to show as chips after the text. Only plain text is searched, never
 // inside tags or an existing link, and the text keeps its own spelling. The
@@ -109,7 +117,7 @@ export function inlinePlaces(text: string, places: Place[] = []): { html: string
       const button = key
         ? `<button type="button" class="map-focus" data-map-key="${escapeAttr(key)}" title="Show ${escapeAttr(p.name)} on the trip map" aria-label="Show ${escapeAttr(p.name)} on the trip map">${MAP_FOCUS_ICON}</button>`
         : "";
-      parts[i] = `${parts[i].slice(0, at)}<a href="${href}" target="_blank" rel="noopener noreferrer">📍 ${shown}</a>${button}${parts[i].slice(at + name.length)}`;
+      parts[i] = `${parts[i].slice(0, at)}<a href="${href}" target="_blank" rel="noopener noreferrer">${MAPS_PIN_ICON}${shown}</a>${button}${parts[i].slice(at + name.length)}`;
       done = true;
     }
     if (done) html = parts.join("");

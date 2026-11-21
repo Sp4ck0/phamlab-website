@@ -30,7 +30,7 @@ import { useUntilFound } from "../../hooks/useUntilFound";
 import { ShareLinkButton } from "./ShareLinkButton";
 import { ActivityEditor } from "./ActivityEditor";
 import { tileDomId } from "../../lib/tileId";
-import { PencilIcon, ShowOnMap } from "./taskParts";
+import { MapsPin, PencilIcon, ShowOnMap } from "./taskParts";
 import { InlineDiff } from "./InlineDiff";
 
 // Show-on-map buttons inside an activity's sentence are plain HTML (see inlinePlaces),
@@ -293,7 +293,7 @@ export function DayCard({
           domId: entry.domKey && tileDomId(rowId, entry.domKey), time: ALL_DAY, icon: "🏨", meta, change: state, warn: unresolved,
           title: linked ? (
             <>
-              <a href={googleMapsUrl(place)} target="_blank" rel="noopener noreferrer">📍 {title}</a>
+              <a href={googleMapsUrl(place)} target="_blank" rel="noopener noreferrer"><MapsPin />{title}</a>
               <ShowOnMap place={place} />
             </>
           ) : title,
@@ -395,7 +395,7 @@ export function DayCard({
             {rest.map((p, pi) => (
               <span key={pi} style={p === bare && !prev ? undefined : { marginLeft: 8 }}>
                 <a href={googleMapsUrl(p)} target="_blank" rel="noopener noreferrer">
-                  📍 {p.name}
+                  <MapsPin />{p.name}
                 </a>
                 <ShowOnMap place={p} />
               </span>

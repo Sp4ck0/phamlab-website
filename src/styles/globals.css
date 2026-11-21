@@ -329,16 +329,18 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 /* ── day quick-nav ───────────────────────────── */
 .daynav-shell{
   position:sticky;top:0;z-index:20;background:var(--page);
-  padding:14px 0 10px;margin-top:18px;border-bottom:1px solid var(--gridline);
+  padding:8px 0 6px;margin-top:12px;border-bottom:1px solid var(--gridline);
 }
-.daynav{display:flex;gap:8px;overflow-x:auto;padding:2px 0;scrollbar-width:none}
+.daynav{display:flex;gap:6px;overflow-x:auto;padding:2px 0;scrollbar-width:none}
 .daynav::-webkit-scrollbar{display:none}
 .daynav button{
-  flex:none;text-decoration:none;font-size:12.5px;font-weight:700;color:var(--text-secondary);
-  background:var(--card);border:1px solid var(--border);padding:7px 11px;border-radius:999px;
+  flex:none;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;min-width:54px;
+  text-decoration:none;font-size:12.5px;font-weight:700;line-height:1.15;color:var(--text-secondary);
+  background:var(--card);border:1px solid var(--border);padding:4px 9px;border-radius:10px;
   font-family:inherit;cursor:pointer;min-height:36px;
 }
-.daynav button .d{color:var(--text-muted);font-weight:600}
+.daynav button .dn-dow{font-size:10.5px;font-weight:600;color:var(--text-muted)}
+.daynav button.daynav-today .dn-dow{color:inherit;opacity:.85}
 .daynav button.daynav-today{background:var(--accent-1);border-color:var(--accent-1);color:#fff}
 .daynav button.daynav-jump{display:none}
 .today-badge{
@@ -373,6 +375,9 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 .day-head-right{grid-column:3;grid-row:1;display:inline-flex;align-items:center;flex-wrap:wrap;gap:8px;min-width:0}
 .day-summary{grid-column:2;grid-row:1;font-size:13.5px;color:var(--text-secondary);overflow-wrap:anywhere;min-width:0}
 .day-card > div:not([hidden]){padding:4px 16px 16px}
+/* A closed panel or tile body stays in the page (hidden="until-found", so find-in-page reaches it)
+   but must take no space: iOS Safari otherwise keeps its full height as a blank gap. */
+.day-card > div[hidden],.tl-body[hidden]{height:0;overflow:hidden;padding:0;margin:0;border:0}
 
 /* ── day timeline (TimelineTile): one rail of tiles, each an accordion ──
    time label | marker on the rail | tile. A closed tile is its header alone; opening one
@@ -417,6 +422,7 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 .tl-actions-inline .icon-btn{opacity:.7;width:28px;height:28px}
 .tl-actions-inline .act-edit{opacity:.7}
 .tl-actions-inline a.gcal-btn{margin-left:2px}
+.tl-when{display:none}
 .tl-title{max-width:100%;font-size:14.5px;font-weight:600;line-height:1.35;color:var(--text-primary);overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 .tl-tile.is-open .tl-title{display:block;-webkit-line-clamp:unset}
 .tl-meta{font-size:12.5px;line-height:1.35;color:var(--text-secondary);overflow-wrap:anywhere}
@@ -788,7 +794,10 @@ footer code{background:var(--chip-bg);padding:2px 6px;border-radius:4px;color:va
 /* ── trip map ───────────────────────────── */
 .trip-map-wrap{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;transition:box-shadow .3s}
 .trip-map-wrap.is-focused{box-shadow:0 0 0 3px var(--accent-1)}
-/* Small crosshair button after a place's 📍 link: show that place on the trip map. */
+/* The pin before a place's name in a Google Maps link. */
+.maps-pin-wrap{display:inline}
+svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none}
+/* Small folded-map button after a place's Maps link: show that place on the trip map. */
 .map-focus{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;margin:0 2px 0 4px;padding:3px;border:0;border-radius:6px;background:none;color:var(--text-muted);cursor:pointer;line-height:0}
 .map-focus:hover{color:var(--accent-1);background:var(--accent-1-tint)}
 .map-focus:focus-visible{outline:2px solid var(--accent-1);outline-offset:1px;color:var(--accent-1)}
@@ -852,15 +861,37 @@ footer code{background:var(--chip-bg);padding:2px 6px;border-radius:4px;color:va
   /* Today, pinned at the left edge of the scrolling strip; a fade shows there is more to the right. */
   .daynav{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent)}
   .daynav button.daynav-jump{display:inline-flex;align-items:center;position:sticky;left:0;z-index:1;background:var(--accent-1-tint);border-color:var(--accent-1);color:var(--accent-1)}
-  .daynav button{min-height:44px}
+  .daynav button{min-height:40px}
 }
 @media(max-width:640px){
   .wrap{padding:0 16px 60px}
   h1{font-size:24px}
-  .day-head{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
-  .day-head-right{grid-column:2;justify-content:flex-end}
-  .day-summary{grid-column:1 / -1;grid-row:2}
-  .day-head-right .leg-badge{overflow-wrap:anywhere}
+  /* Day header, compact: the day and date | the time, weather and city | the summary in one small row. */
+  .day-head-btn{position:relative;padding:10px 12px}
+  .day-head{grid-template-columns:auto minmax(0,1fr);gap:6px 12px}
+  .day-title-group{grid-column:1;grid-row:1;padding-right:12px;border-right:1px solid var(--gridline);align-self:stretch;justify-content:center}
+  .day-num{font-size:10px}
+  .day-date{font-size:14px;white-space:nowrap}
+  .day-head-right{grid-column:2;grid-row:1;display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;justify-content:flex-start}
+  .day-head-right .today-badge,.day-head-right .weather-badge{padding:0;background:transparent;border:0;font-size:12.5px;font-weight:600;color:var(--text-primary)}
+  .day-head-right .weather-badge.weather-typical{color:var(--text-muted)}
+  .day-head-right .leg-badge{flex-basis:100%;padding:0;background:transparent;font-size:13px;overflow-wrap:anywhere}
+  .day-chevron{position:absolute;right:10px;bottom:12px}
+  .day-summary{grid-column:1 / -1;grid-row:2;font-size:12.5px;line-height:1.35;padding:6px 22px 0 0;border-top:1px solid var(--gridline)}
+  .day-card > div:not([hidden]){padding:2px 10px 12px}
+  /* Tiles span the card: no time column or rail. The icon and time sit at the top of each tile,
+     and a short line between consecutive tiles, under their icons, keeps it reading as a timeline. */
+  .tl-entry,.tl-now{display:block;position:relative}
+  .tl-entry>.tl-time,.tl-entry>.tl-rail,.tl-now>.tl-time,.tl-now>.tl-rail{display:none}
+  .tl-tile,.tl-entry--plain .tl-plain{margin-bottom:10px}
+  .tl>.tl-entry:not(:last-child)::after{content:"";position:absolute;left:18px;bottom:0;height:10px;width:2px;background:var(--gridline)}
+  .tl-when{display:inline-flex;align-items:center;gap:6px;margin-bottom:2px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-muted);font-variant-numeric:tabular-nums}
+  .tl-when-icon{position:relative;font-size:13px;line-height:1;letter-spacing:0}
+  .tl-entry--now .tl-when{color:var(--now)}
+  .tl-entry--warn .tl-when-icon::after{content:"";position:absolute;top:-3px;right:-4px;width:7px;height:7px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 2px var(--card)}
+  .tl-heading{padding-left:10px}
+  .tl-now{margin:0 0 10px}
+  .tl-now-label{margin-top:0}
   .trip-map{height:260px}
   .map-focus{padding:9px;margin:-9px -5px -9px -2px}
   .action-items,.overview-list,.alert,.trip-map-wrap{border-radius:12px}

@@ -11,7 +11,7 @@ import { HotelFacts } from "./HotelFacts";
 import { Linkify } from "./Linkify";
 import { ShareLinkButton } from "./ShareLinkButton";
 import { StayStrip } from "./StayStrip";
-import { ShowOnMap } from "./taskParts";
+import { MapsPin, ShowOnMap } from "./taskParts";
 import { TbdLine } from "./TbdLine";
 import { WhoPill } from "./WhoPill";
 
@@ -53,7 +53,7 @@ export function HotelBody({ g, status: s, stay, gapAfter, groups, date, days, da
             {!placeholder ? (
               <>
                 <a href={googleMapsUrl(place)} target="_blank" rel="noopener noreferrer">
-                  📍 {nm}
+                  <MapsPin />{nm}
                 </a>
                 <ShowOnMap place={place} />
               </>
@@ -67,7 +67,7 @@ export function HotelBody({ g, status: s, stay, gapAfter, groups, date, days, da
           {stay && <StayStrip stay={stay} checkInTime={g.checkInTime} checkOutTime={g.checkOutTime} />}
           {gapAfter && (
             <div className="stay-gap">
-              {fmtDuration(gapAfter.minutes)} between check-out at 📍 {gapAfter.name}{gapAfter.checkOutTime ? ` (${fmtHm(gapAfter.checkOutTime)})` : ""} and check-in here
+              {fmtDuration(gapAfter.minutes)} between check-out at {gapAfter.name}{gapAfter.checkOutTime ? ` (${fmtHm(gapAfter.checkOutTime)})` : ""} and check-in here
             </div>
           )}
           <HotelFacts g={g} stay={stay} status={s} />
