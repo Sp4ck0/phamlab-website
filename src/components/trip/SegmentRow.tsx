@@ -29,9 +29,10 @@ export function SegmentRow({ seg, mode, day, dayNumber = 0, first, last, calenda
   const mins = durationMin(seg);
   const plus = hasTime(seg.arrive) ? dayOffset(seg) : 0;
   const chips = [seg.aircraft, seg.cabin, seg.seat].filter(Boolean);
-  // The day under a place when it isn't the card's own day, or when there is no time to say it.
-  const depDate = seg.depart && ((day && seg.depart.slice(0, 10) !== day.date) || !hasTime(seg.depart)) ? fmtDate(seg.depart) : "";
+  // The day under a place when it isn't the card's own day, or when there is no time to say it;
+  // and under both places when the arrival is on another day, so the two ends read alike.
   const arrDate = seg.arrive && (plus !== 0 || !hasTime(seg.arrive)) ? fmtDate(seg.arrive) : "";
+  const depDate = seg.depart && ((day && seg.depart.slice(0, 10) !== day.date) || !hasTime(seg.depart) || !!arrDate) ? fmtDate(seg.depart) : "";
   const flexible = !seg.depart && seg.window ? `Any day ${fmtWindow(seg.window)}` : "";
   const url = day ? segmentUrl(seg, mode, day, dayNumber, { first, last }) : null;
 
@@ -40,11 +41,9 @@ export function SegmentRow({ seg, mode, day, dayNumber = 0, first, last, calenda
       m === "flight" ? (
         <div className="seg-place">{p}{terminal ? ` · ${terminal}` : ""}</div>
       ) : (
-        // A train, ferry or bus: the place keeps its room, and the platform, pier or stop sits under it.
-        <>
-          <div className="seg-place">{p}</div>
-          {terminal && <div className="seg-terminal">{terminalText(m, terminal)}</div>}
-        </>
+        // A train, ferry or bus: its platform, pier or stop goes on a line under the row (it can be
+        // long, "Ticket gate 5A (may change)", and would push the arrow and arrival over).
+        <div className="seg-place">{p}</div>
       )
     ) : (
       <div className="seg-place seg-undecided">Not decided</div>
@@ -94,6 +93,12 @@ export function SegmentRow({ seg, mode, day, dayNumber = 0, first, last, calenda
           {arrDate && <div className="seg-date">{arrDate}</div>}
         </div>
       </div>
+      {m !== "flight" && (seg.fromTerminal || seg.toTerminal) && (
+        <div className="seg-gates">
+          {seg.fromTerminal && <span className="seg-terminal">{terminalText(m, seg.fromTerminal)}</span>}
+          {seg.toTerminal && <span className="seg-terminal">Arrival: {terminalText(m, seg.toTerminal)}</span>}
+        </div>
+      )}
       {seg.note && <div className="seg-note">{seg.note}</div>}
     </div>
   );
