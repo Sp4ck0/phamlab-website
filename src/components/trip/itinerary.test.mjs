@@ -1165,7 +1165,7 @@ test('the day header: the city photo with its credit once it nears the screen, D
   } finally { plain.close(); }
 });
 
-test('a tile with places shows its first place\'s photo ("+N" for the rest) once it nears the screen, the credit in its menu; tiles in view together are one request', async () => {
+test('a tile with places shows one photo, its first place\'s, once it nears the screen, the credit in its menu; tiles in view together are one request', async () => {
   const { resolveDays } = await import('../../lib/tripLogic.ts');
   const { batchedPhotos } = await import('../../lib/cityPhoto.ts');
   const places = ['A', 'B', 'C', 'D'].map((x) => ({ name: `Synthetic ${x}`, placeId: `SYN${x}` }));
@@ -1192,12 +1192,11 @@ test('a tile with places shows its first place\'s photo ("+N" for the rest) once
     const tile = (text) => [...view.container.querySelectorAll('.tl-entry')].find((e) => e.textContent.includes(text));
     const tour = tile('Synthetic tour');
     assert.deepEqual([...tour.querySelectorAll('.tl-photos img')].map((i) => i.getAttribute('src')), ['https://example.com/SYNA.jpg']);
-    assert.equal(tour.querySelector('.tl-photos-more').textContent, '+3'); // a place listed twice counts once
+    assert.equal(tour.querySelector('.tl-photos').textContent, ''); // just the photo: no count of its other places
     assert.ok(tour.querySelector('.tl-head').classList.contains('has-photos'));
     assert.equal(menuItem(openMenu(tour), 'See photo credit').getAttribute('href'), 'https://example.com/p');
     const walk = tile('Synthetic walk');
     assert.equal(walk.querySelector('.tl-photos img').getAttribute('src'), 'https://example.com/SYNE.jpg');
-    assert.equal(walk.querySelector('.tl-photos-more'), null);
     const lunch = tile('Synthetic lunch');
     assert.equal(lunch.querySelector('.tl-photos'), null); // an address alone has no photo
     assert.ok(!lunch.querySelector('.tl-head').classList.contains('has-photos'));
