@@ -7,9 +7,10 @@ export const ALL_DAY = "All day";
 
 export type TileState = "booked" | "needed" | "maybe" | "details";
 
-/** The booking state in words, for a tile header: not booked, a maybe, or booked but missing details. Booked shows as a check. */
+/** The booking state in words, for a tile header: not booked, a maybe, or booked but missing details. Booked needs no
+ *  mark: every other state has one (and a not-booked card its dashed amber border), so a plain card is a booked one. */
 export function TileStatePill({ state, label }: { state: TileState; label?: string }) {
-  if (state === "booked") return <span className="status" data-s="booked" role="img" aria-label="Booked" title="Booked" />;
+  if (state === "booked") return null;
   if (state === "maybe") return <span className="maybe-pill">Maybe</span>;
   return <span className="tx-state open">{label ?? (state === "needed" ? "Not booked" : "Missing details")}</span>;
 }
