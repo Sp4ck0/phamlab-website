@@ -4,14 +4,15 @@ import path from 'path'
 
 // GitHub Pages can't send response headers, so the CSP ships as a <meta> tag.
 // Build-only: the dev server's HMR/preamble needs inline scripts and ws://.
-// Hosts: Convex (data + auth), Google Maps (script, tiles, geocoding).
+// Hosts: Convex (data + auth), Google Maps (script, tiles, geocoding, and the
+// Roboto/Google Sans fonts its controls load from Google Fonts).
 const CSP = [
   "default-src 'self'",
   "script-src 'self' https://maps.googleapis.com https://maps.gstatic.com",
-  "style-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "img-src 'self' data: blob: https:",
   "media-src 'self' blob: https:",
-  "font-src 'self' data:",
+  "font-src 'self' data: https://fonts.gstatic.com",
   "worker-src 'self' blob:",
   "connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://*.convex.site https://maps.googleapis.com",
   "object-src 'none'",
