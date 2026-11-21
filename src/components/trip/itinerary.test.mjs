@@ -1210,3 +1210,18 @@ test('the "⋯" menu: arrow keys move through it, Escape closes it back to its b
   } finally { view.close(); }
 });
 
+test('an overnight train: its gate goes on a line under the row, and both ends show their date', async () => {
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const seg = { from: 'Synthetic North', to: 'Synthetic Central', carrier: 'Synthetic Rail', number: 'D1', depart: '2040-01-02T19:59', arrive: '2040-01-03T07:04', fromTerminal: 'Ticket gate 5A (may change)', durationMin: 665 };
+  const days = resolveDays({ days: [{ ...day, flights: [{ who: 'all', route: 'Synthetic North → Synthetic Central', mode: 'train', status: 'booked', segments: [seg] }], hotels: [] }] });
+  const view = mount(React.createElement(DayCard, { ...props, day: days[0], days, expanded: true }));
+  try {
+    const row = view.container.querySelector('.seg');
+    const [dep, arr] = row.querySelectorAll('.seg-main .seg-end');
+    assert.ok(!dep.querySelector('.seg-terminal')); // not under the departure place, where it pushed the arrow over
+    assert.equal(row.querySelector(':scope > .seg-gates .seg-terminal').textContent, 'Ticket gate 5A (may change)');
+    assert.equal(dep.querySelector('.seg-date').textContent, 'Mon, Jan 2'); // the departure day, like the arrival's
+    assert.equal(arr.querySelector('.seg-date').textContent, 'Tue, Jan 3');
+  } finally { view.close(); }
+});
+
