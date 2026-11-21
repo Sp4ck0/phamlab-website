@@ -36,15 +36,27 @@ export function DayNav({ rows, todayId, onJump }: { rows: ItineraryRow[]; todayI
             ↩ Today
           </button>
         )}
-        {rows.map(({ id, day: d }, i) => id === todayId ? (
-          <button type="button" key={id} ref={todayBtn} className="daynav-today" aria-current="date" onClick={() => onJump(id)}>
-            <span className="d">Today ·</span> {MON[d._d.getMonth()]} {d._d.getDate()}
-          </button>
-        ) : (
-          <button type="button" key={id} onClick={() => onJump(id)}>
-            <span className="d">Day {i} · {DOW[d._d.getDay()]}</span> {MON[d._d.getMonth()]} {d._d.getDate()}
-          </button>
-        ))}
+        {rows.map(({ id, day: d }, i) => {
+          const date = `${MON[d._d.getMonth()]} ${d._d.getDate()}`;
+          const dow = DOW[d._d.getDay()];
+          const today = id === todayId;
+          // Compact chips: the date over the weekday. The day number is in the label and tooltip.
+          return (
+            <button
+              type="button"
+              key={id}
+              ref={today ? todayBtn : undefined}
+              className={today ? "daynav-today" : undefined}
+              aria-current={today ? "date" : undefined}
+              aria-label={`${today ? "Today, " : ""}Day ${i}, ${dow} ${date}`}
+              title={`Day ${i}`}
+              onClick={() => onJump(id)}
+            >
+              <span className="dn-date">{date}</span>
+              <span className="dn-dow">{dow}</span>
+            </button>
+          );
+        })}
       </nav>
     </div>
   );

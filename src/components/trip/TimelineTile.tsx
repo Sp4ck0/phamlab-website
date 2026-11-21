@@ -74,8 +74,14 @@ export function TimelineTile({
     if ((e.target as HTMLElement).closest("button, a, input, label, select, textarea")) return;
     onToggle();
   };
+  const showWarn = !!warn && (!expandable || !open);
   const heading = (
     <>
+      {/* Phones drop the time column and the rail: the icon and time sit at the top of the tile instead. */}
+      <span className="tl-when" aria-hidden="true">
+        <span className="tl-when-icon">{icon}</span>
+        {time && <span className="tl-when-time">{time}</span>}
+      </span>
       <span className="tl-title">{title}</span>
       {(meta || nextUpLine) && (
         <span className="tl-meta">
@@ -92,14 +98,14 @@ export function TimelineTile({
   );
   return (
     <li
-      className={`tl-entry${now ? " tl-entry--now" : ""}${nextUpLine ? " next-up" : ""}`}
+      className={`tl-entry${now ? " tl-entry--now" : ""}${nextUpLine ? " next-up" : ""}${showWarn ? " tl-entry--warn" : ""}`}
       id={domId}
       {...(gone ? { inert: true, "aria-hidden": true } : {})}
     >
       <span className="tl-time" data-all-day={time === ALL_DAY ? "true" : undefined}>{time}</span>
       <span className="tl-rail">
         <span className="tl-dot" aria-hidden="true" title={iconLabel}>{icon}</span>
-        {warn && (!expandable || !open) && <span className="tl-warn" role="img" aria-label="Needs attention" title="Needs attention" />}
+        {showWarn && <span className="tl-warn" role="img" aria-label="Needs attention" title="Needs attention" />}
       </span>
       <div className={`tl-tile${open && expandable ? " is-open" : ""}${expandable ? "" : " tl-flat"}${className ? ` ${className}` : ""}${changeClass(change)}`}>
         {/* The toggle button is the keyboard control; this click handler only widens the click target. */}

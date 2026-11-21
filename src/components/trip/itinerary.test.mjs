@@ -123,7 +123,7 @@ test('unified list independently toggles duplicate occurrences and jumps reveal 
     assert.equal(view.container.querySelectorAll('.day-head-btn[aria-expanded]').length, 1);
     const jumps = view.container.querySelectorAll('nav button');
     assert.equal(jumps.length, 2);
-    assert.notEqual(jumps[0].textContent, jumps[1].textContent);
+    assert.notEqual(jumps[0].getAttribute('aria-label'), jumps[1].getAttribute('aria-label')); // the day number tells two same-date days apart
     act(() => jumps[0].click());
     triggers = [...view.container.querySelectorAll('.day-head-btn[aria-expanded]')];
     assert.equal(triggers.length, 2);
