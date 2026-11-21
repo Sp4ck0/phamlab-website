@@ -568,13 +568,7 @@ export function DayCard({
     >
       <h2 className="day-heading" ref={headRef}>
       {/* The city's photo, fading into the card; the leg's colour until it loads (or when there is none). */}
-      <span className={`day-photo${photo ? " has-photo" : ""}`} style={photo ? { backgroundImage: `url("${photo.url.replace(/"/g, "%22")}")` } : undefined}>
-        {photo?.credit && (
-          <span className="day-photo-credit">
-            {photo.credit.uri ? <a href={photo.credit.uri} target="_blank" rel="noopener noreferrer">Photo: {photo.credit.name}</a> : <>Photo: {photo.credit.name}</>}
-          </span>
-        )}
-      </span>
+      <span className={`day-photo${photo ? " has-photo" : ""}`} style={photo ? { backgroundImage: `url("${photo.url.replace(/"/g, "%22")}")` } : undefined} />
       <button id={`${rowId}-trigger`} type="button" className="day-head day-head-btn" aria-expanded={expanded} aria-controls={`${rowId}-panel`} onClick={onExpandedChange}>
         <span className="day-title-group">
           <span className="day-num">
@@ -630,6 +624,12 @@ export function DayCard({
       )}
       <ShareLinkButton param={{ day: d.date }} label={`Share link to Day ${dayNumber}`} />
       </span>
+      {/* Google requires the photographer's name with the photo: a small line under the header, off the photo. */}
+      {photo?.credit && (
+        <span className="day-photo-credit">
+          {photo.credit.uri ? <a href={photo.credit.uri} target="_blank" rel="noopener noreferrer">Photo: {photo.credit.name}</a> : <>Photo: {photo.credit.name}</>}
+        </span>
+      )}
       </h2>
 
       <div ref={panelRef} id={`${rowId}-panel`} aria-labelledby={`${rowId}-trigger`}>

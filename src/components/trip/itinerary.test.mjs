@@ -1111,7 +1111,8 @@ test('the day header: the city photo with its credit once in view, Day N of M ·
     const [first, second] = view.container.querySelectorAll('section.day-card');
     const photo = first.querySelector('.day-photo');
     assert.ok(photo.classList.contains('has-photo') && photo.style.backgroundImage.includes('https://example.com/synthetic.jpg'));
-    assert.equal(photo.querySelector('.day-photo-credit a').textContent, 'Photo: Synthetic Photographer'); // the credit Google requires
+    assert.equal(photo.querySelector('.day-photo-credit'), null); // the credit sits under the header, not on the photo
+    assert.equal(first.querySelector('.day-heading > .day-photo-credit a').textContent, 'Photo: Synthetic Photographer'); // the credit Google requires
     assert.deepEqual(asked, [`${day.city}|TH`]); // the same city twice is one request
     assert.equal(first.querySelector('.day-num').textContent, 'Day 0 of 1 · Thailand');
     assert.equal(first.querySelector('.day-place').textContent, day.city);
