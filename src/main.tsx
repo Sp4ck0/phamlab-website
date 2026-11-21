@@ -40,6 +40,10 @@ if ("serviceWorker" in navigator) {
   });
 }
 
+// No page zoom on phones. iOS Safari ignores user-scalable=no, so its pinch gesture is blocked
+// here; maps handle their own pinch from touch events, which this leaves alone.
+document.addEventListener("gesturestart", (e) => e.preventDefault(), { passive: false });
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ConvexAuthProvider client={convex}>

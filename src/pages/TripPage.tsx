@@ -61,7 +61,10 @@ function TripPageEntry() {
     if (firstTab.current) { firstTab.current = false; return; }
     const saved = scrolls.current[tab];
     const bar = tabsRef.current;
-    const top = saved ?? (bar ? Math.min(window.scrollY, bar.getBoundingClientRect().top + window.scrollY - 64) : window.scrollY);
+    const panel = document.getElementById(tripPanelId(tab));
+    const pinned = bar && getComputedStyle(bar).position === "sticky";
+    const above = pinned ? bar.getBoundingClientRect().bottom + 8 : 64;
+    const top = saved ?? (panel ? Math.min(window.scrollY, panel.getBoundingClientRect().top + window.scrollY - above) : window.scrollY);
     window.scrollTo({ top: Math.max(0, top), behavior: "instant" });
   }, [tab]);
   // The agenda and map stay mounted once shown, so coming back is instant; the map loads on first visit.
@@ -136,104 +139,107 @@ function TripPageEntry() {
 
   return (
     <PageShell>
-      <TripHeader
-        kicker={trip.kicker}
-        title={trip.title}
-        dateRangeLabel={trip.dateRangeLabel}
-        days={trip.days}
-        highlightStat={trip.highlightStat}
-        groups={trip.groups}
-        filterRef={filterRef}
-        onlyGaps={onlyGaps}
-        onOnlyGapsChange={setOnlyGaps}
-      />
-
-      <div ref={tabsRef}>
-        <TripTabs tab={tab} onChange={setTab} />
-      </div>
-
-      <div role="tabpanel" id={tripPanelId("agenda")} aria-labelledby={tripTabId("agenda")} hidden={tab !== "agenda"}>
-        <AlertsPanel
-          tasks={tasks}
-          items={trip.actionItems || []}
+      <div className="trip-page">
+        <TripHeader
+          kicker={trip.kicker}
+          title={trip.title}
+          dateRangeLabel={trip.dateRangeLabel}
+          days={trip.days}
+          highlightStat={trip.highlightStat}
           groups={trip.groups}
-          tripStart={trip.days[0]?.date ?? today}
-          tripEnd={trip.days[trip.days.length - 1]?.date ?? today}
-          onSetDone={setDone}
-          onSetDue={setDue}
-          onAddItem={addItem}
-          onUpdateItem={updateItem}
-          onRemoveItem={removeItem}
+          filterRef={filterRef}
+          onlyGaps={onlyGaps}
+          onOnlyGapsChange={setOnlyGaps}
         />
 
-        <Fragment key={trip._id}>
-          <DetailedView
-            days={resolvedDays}
-            legColors={legColors}
-            weather={weather}
+        {/* Phones: moved to the top of the page and pinned under the site menu (CSS). */}
+        <div className="trip-tabs-bar" ref={tabsRef}>
+          <TripTabs tab={tab} onChange={setTab} />
+        </div>
+
+        <div role="tabpanel" id={tripPanelId("agenda")} aria-labelledby={tripTabId("agenda")} hidden={tab !== "agenda"}>
+          <AlertsPanel
+            tasks={tasks}
+            items={trip.actionItems || []}
             groups={trip.groups}
-            ticks={ticks}
-            onlyGaps={onlyGaps}
-            isGap={isGap}
-            dayGaps={gapsByDate}
-            onToggle={toggle}
-            onOnlyGapsChange={setOnlyGaps}
-            filterRef={filterRef}
-            actionItems={(trip.actionItems || []).filter((i) => i.kind !== "consider")}
-            considerations={tasks.filter((t) => t.kind === "consider" && t.outcome !== "dropped")}
+            tripStart={trip.days[0]?.date ?? today}
+            tripEnd={trip.days[trip.days.length - 1]?.date ?? today}
+            onSetDone={setDone}
+            onSetDue={setDue}
+            onAddItem={addItem}
+            onUpdateItem={updateItem}
+            onRemoveItem={removeItem}
+          />
+
+          <Fragment key={trip._id}>
+            <DetailedView
+              days={resolvedDays}
+              legColors={legColors}
+              weather={weather}
+              groups={trip.groups}
+              ticks={ticks}
+              onlyGaps={onlyGaps}
+              isGap={isGap}
+              dayGaps={gapsByDate}
+              onToggle={toggle}
+              onOnlyGapsChange={setOnlyGaps}
+              filterRef={filterRef}
+              actionItems={(trip.actionItems || []).filter((i) => i.kind !== "consider")}
+              considerations={tasks.filter((t) => t.kind === "consider" && t.outcome !== "dropped")}
+              pendingVotes={pendingVotes}
+              onVote={vote}
+              actionItemsDone={done}
+              onToggleActionItem={toggleActionItem}
+              onEditActivity={updateActivity}
+              itemTasks={itemTasks}
+              onPromote={promoteItem}
+              cityPhoto={cityPhoto}
+            />
+          </Fragment>
+
+          <ActionItems
+            tasks={tasks}
+            items={trip.actionItems || []}
+            groups={trip.groups}
+            onSetDone={setDone}
+            today={today}
+            defaultDue={trip.days[0]?.date ?? today}
+            onSetDue={setDue}
+            tripStart={trip.days[0]?.date ?? today}
+            tripEnd={trip.days[trip.days.length - 1]?.date ?? today}
+            onAddItem={addItem}
+            onUpdateItem={updateItem}
+            onRemoveItem={removeItem}
             pendingVotes={pendingVotes}
             onVote={vote}
-            actionItemsDone={done}
-            onToggleActionItem={toggleActionItem}
-            onEditActivity={updateActivity}
-            itemTasks={itemTasks}
-            onPromote={promoteItem}
-            cityPhoto={cityPhoto}
+            onSetOutcome={setOutcome}
           />
-        </Fragment>
 
-        <ActionItems
-          tasks={tasks}
-          items={trip.actionItems || []}
-          groups={trip.groups}
-          onSetDone={setDone}
-          today={today}
-          defaultDue={trip.days[0]?.date ?? today}
-          onSetDue={setDue}
-          tripStart={trip.days[0]?.date ?? today}
-          tripEnd={trip.days[trip.days.length - 1]?.date ?? today}
-          onAddItem={addItem}
-          onUpdateItem={updateItem}
-          onRemoveItem={removeItem}
-          pendingVotes={pendingVotes}
-          onVote={vote}
-          onSetOutcome={setOutcome}
-        />
+          <footer>
+            Trip content is stored in Convex — ask to have a change made rather than editing code. Check-offs are saved
+            for everyone with access to this trip.
+          </footer>
+        </div>
+        {(seen.map || tab === "map") && (
+          <div role="tabpanel" id={tripPanelId("map")} aria-labelledby={tripTabId("map")} hidden={tab !== "map"}>
+            <TripMap
+              points={mapPlanPoints}
+              days={resolvedDays}
+              route={deriveRouteAddresses(resolvedDays)}
+              weatherStops={weatherStops}
+              candidates={deriveTaskPoints(tasks, mapPlanPoints)}
+              considerations={tasks.filter((t) => !!t.places?.length)}
+            />
+          </div>
+        )}
+        {tab === "notes" && (
+          <div role="tabpanel" id={tripPanelId("notes")} aria-labelledby={tripTabId("notes")}>
+            <TripNote slug={slug || ""} inline />
+          </div>
+        )}
 
-        <footer>
-          Trip content is stored in Convex — ask to have a change made rather than editing code. Check-offs are saved
-          for everyone with access to this trip.
-        </footer>
+        {tab !== "notes" && <TripNote slug={slug || ""} />}
       </div>
-      {(seen.map || tab === "map") && (
-        <div role="tabpanel" id={tripPanelId("map")} aria-labelledby={tripTabId("map")} hidden={tab !== "map"}>
-          <TripMap
-            points={mapPlanPoints}
-            days={resolvedDays}
-            route={deriveRouteAddresses(resolvedDays)}
-            weatherStops={weatherStops}
-            candidates={deriveTaskPoints(tasks, mapPlanPoints)}
-            considerations={tasks.filter((t) => !!t.places?.length)}
-          />
-        </div>
-      )}
-      {tab === "notes" && (
-        <div role="tabpanel" id={tripPanelId("notes")} aria-labelledby={tripTabId("notes")}>
-          <TripNote slug={slug || ""} inline />
-        </div>
-      )}
-
-      {tab !== "notes" && <TripNote slug={slug || ""} />}
     </PageShell>
   );
 }

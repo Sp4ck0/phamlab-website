@@ -752,7 +752,7 @@ test('a booked train, ferry or bus has a mode and state header, the operator as 
   // Only an https ticket link is ever rendered.
   const bad = resolveDays({ days: [{ ...day, flights: [{ ...row, ticketUrl: 'javascript:alert(1)' }], hotels: [] }] });
   const view2 = mount(React.createElement(DayCard, { ...props, day: bad[0], days: bad, expanded: true }));
-  try { assert.equal(menuItem(openMenu(view2.container), 'Ticket'), undefined); } finally { view2.close(); }
+  try { assert.equal(menuItem(openMenu(view2.container.querySelector('.tl-entry')), 'Ticket'), undefined); } finally { view2.close(); }
 });
 
 test('an unbooked train shows its route as the title, a route search; the check mark books it; the flight tile is unchanged', async () => {
@@ -1111,8 +1111,10 @@ test('the day header: the city photo with its credit once in view, Day N of M ·
     const [first, second] = view.container.querySelectorAll('section.day-card');
     const photo = first.querySelector('.day-photo');
     assert.ok(photo.classList.contains('has-photo') && photo.style.backgroundImage.includes('https://example.com/synthetic.jpg'));
-    assert.equal(photo.querySelector('.day-photo-credit'), null); // the credit sits under the header, not on the photo
-    assert.equal(first.querySelector('.day-heading > .day-photo-credit a').textContent, 'Photo: Synthetic Photographer'); // the credit Google requires
+    const dayMenu = openMenu(first.querySelector('.day-tools'));
+    assert.equal(menuItem(dayMenu, 'Photo by Synthetic Photographer').getAttribute('href'), 'https://example.com/p'); // the credit Google asks for, in the day's menu
+    assert.ok(menuItem(dayMenu, 'Copy link'));
+    assert.equal(photo.textContent, ''); // nothing written on the photo
     assert.deepEqual(asked, [`${day.city}|TH`]); // the same city twice is one request
     assert.equal(first.querySelector('.day-num').textContent, 'Day 0 of 1 · Thailand');
     assert.equal(first.querySelector('.day-place').textContent, day.city);
@@ -1124,7 +1126,7 @@ test('the day header: the city photo with its credit once in view, Day N of M ·
   const plain = mount(React.createElement(DayCard, { ...props, day: days[0], days }));
   try {
     assert.ok(!plain.container.querySelector('.day-photo').classList.contains('has-photo'));
-    assert.equal(plain.container.querySelector('.day-photo-credit'), null);
+    assert.ok(!openMenu(plain.container.querySelector('.day-tools')).some((i) => i.textContent.startsWith('Photo by')));
   } finally { plain.close(); }
 });
 
