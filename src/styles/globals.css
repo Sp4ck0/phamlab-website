@@ -832,6 +832,11 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
 .map-focus:hover{color:var(--accent-1);background:var(--accent-1-tint)}
 .map-focus:focus-visible{outline:2px solid var(--accent-1);outline-offset:1px;color:var(--accent-1)}
 .trip-map{width:100%;height:360px}
+.map-pin{display:block;cursor:pointer}
+.map-pin-dot{box-sizing:border-box;border:2px solid #fff;border-radius:50%}
+/* "Show on map": the pin hops a few times once the camera lands. */
+.map-pin.is-bouncing{animation:map-pin-bounce .35s ease-in-out 4 alternate}
+@keyframes map-pin-bounce{to{transform:translateY(-12px)}}
 /* Clickable weather pill: a real button on the map's overlay layer, floated above its city pin. */
 .map-weather-pill{
   position:absolute;transform:translate(-50%,calc(-100% - 14px));

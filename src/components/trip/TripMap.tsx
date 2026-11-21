@@ -8,7 +8,7 @@ import { fmtShort } from "../../lib/tripLogic";
 import { summarizeStay, temp, weatherIcon, weatherText } from "../../lib/weather";
 import { useGeocodedPoints } from "../../hooks/useGeocodedPoints";
 import { useSettings, type TempUnit } from "../../hooks/useSettings";
-import { loadGoogleMaps } from "../../lib/googleMaps";
+import { MAP_ID, loadGoogleMaps } from "../../lib/googleMaps";
 
 const ARROW_SPACING_PX = 28;
 // Weather pills float this far above their city pin (matches .map-weather-pill's transform);
@@ -53,8 +53,8 @@ function ringIcon(chosen: boolean): string {
 // A category's pin: its emoji on a white-rimmed disc in the category color.
 // Drawn on a canvas and centered from the glyph's measured bounds: SVG text
 // baselines (dominant-baseline) are not honored consistently on iOS Safari.
-const emojiIcons = new Map<string, google.maps.Icon>();
-function emojiIcon(emoji: string, color: string): google.maps.Icon {
+const emojiIcons = new Map<string, string>();
+function emojiIcon(emoji: string, color: string): string {
   const key = emoji + color;
   const cached = emojiIcons.get(key);
   if (cached) return cached;
@@ -77,10 +77,31 @@ function emojiIcon(emoji: string, color: string): google.maps.Icon {
   const m = ctx.measureText(emoji);
   const y = size / 2 + (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
   ctx.fillText(emoji, size / 2, y);
-  const icon = { url: canvas.toDataURL("image/png"), anchor: new google.maps.Point(size / 2, size / 2), scaledSize: new google.maps.Size(size, size) };
+  const icon = canvas.toDataURL("image/png");
   emojiIcons.set(key, icon);
   return icon;
 }
+
+// A pin's look as an element for an advanced marker: an image, or (no image) a
+// white-rimmed dot in `color`.
+function pinElement(size: number, url?: string, color?: string): HTMLElement {
+  const el = url ? Object.assign(document.createElement("img"), { src: url, alt: "" }) : document.createElement("div");
+  el.className = url ? "map-pin" : "map-pin map-pin-dot";
+  el.style.width = el.style.height = `${size}px`;
+  if (color) el.style.background = color;
+  return el;
+}
+
+type Pin = google.maps.marker.AdvancedMarkerElement;
+// Centered on its point, like the old icons (an advanced marker's default is bottom-center).
+function makePin(map: google.maps.Map, position: google.maps.LatLngLiteral, title: string, content: HTMLElement, onClick: () => void, zIndex?: number): Pin {
+  const pin = new google.maps.marker.AdvancedMarkerElement({ map, position, title, content, zIndex, anchorTop: "-50%", gmpClickable: true });
+  pin.addEventListener("gmp-click", onClick);
+  pinClicks.set(pin, onClick);
+  return pin;
+}
+// What a tap on each pin does, so "show on map" can do the same.
+const pinClicks = new WeakMap<Pin, () => void>();
 
 // Web Mercator in 0..1 world units, so a camera flight can interpolate between places.
 function toWorld(p: google.maps.LatLngLiteral) {
@@ -187,15 +208,15 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
   const { points: geocodedWeather } = useGeocodedPoints(weatherStops);
   const { points: geocodedCandidates } = useGeocodedPoints(candidates);
   const [showCandidates, setShowCandidates] = useState(true);
-  const candidateMarkers = useRef<google.maps.Marker[]>([]);
+  const candidateMarkers = useRef<Pin[]>([]);
   // Read at click time, so a vote that lands later shows in the popup without rebuilding the pins.
   const considerationById = useRef(new Map<string, Task>());
   considerationById.current = new Map(considerations.map((t) => [t.key.slice("item:".length), t]));
   const mapRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   // Pins by place key, so a "show on map" button elsewhere on the page can find its pin.
-  const planPins = useRef(new Map<string, google.maps.Marker>());
-  const candidatePins = useRef(new Map<string, google.maps.Marker>());
+  const planPins = useRef(new Map<string, Pin>());
+  const candidatePins = useRef(new Map<string, Pin>());
   const candidateKeys = useRef(new Set<string>());
   candidateKeys.current = new Set(geocodedCandidates.map(placeKey).filter((k): k is string => !!k));
   // A focus request for a ring whose layer is switched off: served once the rings are drawn.
@@ -208,7 +229,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
   // One info window shared by every pin and pill, so opening one closes the last.
   const infoWindow = useRef<InfoCard | null>(null);
   const [mapReady, setMapReady] = useState(false);
-  const markers = useRef<google.maps.Marker[]>([]);
+  const markers = useRef<Pin[]>([]);
   const weatherOverlays = useRef<google.maps.OverlayView[]>([]);
   const polyline = useRef<google.maps.Polyline | null>(null);
   const frame = useRef<number | null>(null);
@@ -287,6 +308,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
       if (!mapInstance.current) {
         mapInstance.current = new google.maps.Map(mapRef.current, {
           zoom: 13,
+          mapId: MAP_ID,
         });
         const info = createInfoCard();
         mapInstance.current.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(info.el);
@@ -296,29 +318,16 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
       }
       const map = mapInstance.current;
 
-      markers.current.forEach((m) => m.setMap(null));
+      markers.current.forEach((m) => (m.map = null));
       markers.current = [];
       planPins.current.clear();
 
       const bounds = new google.maps.LatLngBounds();
       geocoded.forEach((p) => {
         const position = { lat: p.lat, lng: p.lng };
-        const marker = new google.maps.Marker({
-          map,
-          position,
-          title: p.name,
-          icon: CATEGORY_EMOJI[p.category]
-            ? emojiIcon(CATEGORY_EMOJI[p.category]!, CATEGORY_COLORS[p.category])
-            : {
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 8,
-                fillColor: CATEGORY_COLORS[p.category],
-                fillOpacity: 1,
-                strokeColor: "#ffffff",
-                strokeWeight: 2,
-              },
-        });
-        marker.addListener("click", () => {
+        const emoji = CATEGORY_EMOJI[p.category];
+        const look = emoji ? pinElement(30, emojiIcon(emoji, CATEGORY_COLORS[p.category])) : pinElement(18, undefined, CATEGORY_COLORS[p.category]);
+        const marker = makePin(map, position, p.name, look, () => {
           const stop = p.category === "city" ? stopsByAddress.current.get(p.address ?? "") : undefined;
           // City dots are just a place on the route; every other pin is a real place worth opening in Google Maps.
           const link = p.category === "city" ? undefined : googleMapsUrl(p);
@@ -483,14 +492,8 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
     if (!mapReady || !map || !showCandidates) return;
     const made = geocodedCandidates.map((p) => {
       const chosen = p.candidate === "chosen";
-      const marker = new google.maps.Marker({
-        map,
-        position: { lat: p.lat, lng: p.lng },
-        title: `${p.name} (${chosen ? "chosen" : "under consideration"})`,
-        icon: { url: ringIcon(chosen), anchor: new google.maps.Point(13, 13), scaledSize: new google.maps.Size(26, 26) },
-        zIndex: 1,
-      });
-      marker.addListener("click", () => {
+      const title = `${p.name} (${chosen ? "chosen" : "under consideration"})`;
+      const marker = makePin(map, { lat: p.lat, lng: p.lng }, title, pinElement(26, ringIcon(chosen)), () => {
         const task = considerationById.current.get(p.id.split("|")[1] ?? "");
         const live =
           task?.kind === "consider"
@@ -498,7 +501,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
             : `To-do${task?.done ? " (done)" : ""}`;
         const votes = task?.votes ? ` · 👍 ${task.votes.yes.length} · 👎 ${task.votes.no.length}` : "";
         openInfo(map, infoHtml(p.name, `${live}${task ? `: ${task.title}` : ""}${votes}`, tempUnitRef.current, undefined, googleMapsUrl(p), jumpTargetFor(jumpTargets.current, p)), marker);
-      });
+      }, 1);
       const key = placeKey(p);
       if (key) candidatePins.current.set(key, marker);
       return marker;
@@ -511,7 +514,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
       focusHandler.current(key);
     }
     return () => {
-      made.forEach((m) => m.setMap(null));
+      made.forEach((m) => (m.map = null));
       candidateMarkers.current = [];
       pins.clear();
     };
@@ -538,19 +541,19 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
 
     const reveal = () => {
       if (!map || !pin) return;
-      const position = pin.getPosition();
-      if (!position) return;
+      if (!pin.position) return;
       const open = () => {
-        google.maps.event.trigger(pin, "click");
+        pinClicks.get(pin)?.();
         setFlash(true);
         window.clearTimeout(flashTimer.current);
         flashTimer.current = window.setTimeout(() => setFlash(false), 1200);
-        if (!reduced) {
-          pin.setAnimation(google.maps.Animation.BOUNCE);
-          window.setTimeout(() => pin.setAnimation(null), 1400);
+        const look = pin.content as HTMLElement | null;
+        if (!reduced && look) {
+          look.classList.add("is-bouncing");
+          window.setTimeout(() => look.classList.remove("is-bouncing"), 1400);
         }
       };
-      const target = { lat: position.lat(), lng: position.lng() };
+      const target = new google.maps.LatLng(pin.position as google.maps.LatLngLiteral).toJSON();
       const targetZoom = Math.max(map.getZoom() ?? 0, 16);
       flight.current?.();
       if (reduced) {
@@ -587,7 +590,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
   function openInfo(
     _map: google.maps.Map,
     { header, body }: { header: HTMLElement; body: string },
-    _at?: google.maps.Marker | google.maps.LatLngLiteral,
+    _at?: Pin | google.maps.LatLngLiteral,
     _liftPx = 0,
   ) {
     infoWindow.current?.show(header, body);

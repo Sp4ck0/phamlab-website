@@ -3,6 +3,10 @@
 // each inject their own <script> tag.
 let loadPromise: Promise<typeof google> | null = null;
 
+// Advanced markers only draw on a map with a Map ID (Google Cloud console →
+// Map Management). DEMO_MAP_ID is Google's stand-in until one is set.
+export const MAP_ID = (import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string | undefined) || "DEMO_MAP_ID";
+
 export function loadGoogleMaps(): Promise<typeof google> {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
   if (!apiKey) {
@@ -16,11 +20,11 @@ export function loadGoogleMaps(): Promise<typeof google> {
       return;
     }
     // Deliberately omit loading=async: with it, onload fires once the base
-    // loader is ready but before the `libraries=geocoding` chunk finishes,
+    // loader is ready but before the `libraries=geocoding,marker` chunks finish,
     // so google.maps.Geocoder isn't guaranteed to exist yet. The classic
     // synchronous mode blocks onload until every requested library is loaded.
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=geocoding`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=geocoding,marker`;
     script.async = true;
     script.onload = () => resolve(window.google);
     script.onerror = () => reject(new Error("Failed to load Google Maps"));
