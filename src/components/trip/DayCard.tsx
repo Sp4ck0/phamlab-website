@@ -149,7 +149,6 @@ export function DayCard({
       </span>
     </li>
   );
-  const collapsed = !expanded;
   // The city's photo, asked for once the day's header scrolls into view (each city once per page).
   const headRef = useRef<HTMLHeadingElement>(null);
   const [photo, setPhoto] = useState<CityPhoto | null>(null);
@@ -598,17 +597,6 @@ export function DayCard({
         <span className="day-head-right">
           {isToday && <span className="today-badge">Today{clock ? ` · ${clock}` : ""}</span>}
           <WeatherBlock weather={weather} />
-          <svg
-            className="day-chevron"
-            data-collapsed={collapsed ? "true" : undefined}
-            width="14"
-            height="14"
-            viewBox="0 0 14 14"
-            fill="none"
-            aria-hidden="true"
-          >
-            <path d="M3.5 5.25L7 8.75l3.5-3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
         </span>
         {(d.highlight || d.note) && (
           summaryChanged && old && (old.highlight || old.note) ? (
@@ -621,23 +609,13 @@ export function DayCard({
         )}
       </button>
       <span className="day-tools">
-      {expanded && liveTiles.length > 1 && (
-        <button
-          type="button"
-          className="day-tiles-btn icon-btn"
-          title={anyClosed ? "Expand all" : "Collapse all"}
-          aria-label={`${anyClosed ? "Expand" : "Collapse"} all tiles on Day ${dayNumber}`}
-          onClick={() => tiles.setMany(liveTiles.map((x) => idOf(x.key)), anyClosed)}
-        >
-          <svg className="day-tiles-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-            <path d={anyClosed ? "M3.5 3.5L7 7l3.5-3.5M3.5 7.5L7 11l3.5-3.5" : "M3.5 10.5L7 7l3.5 3.5M3.5 6.5L7 3l3.5 3.5"} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-      )}
-      {/* The day's ⋯ menu: its link, and the photographer's credit for the photo (Google asks for it). */}
+      {/* The day's one ⋯ menu: open or close all its cards, its link, and the photographer's credit (Google asks for it). */}
       <TileMenu
         label={`More for Day ${dayNumber}`}
         items={[
+          ...(expanded && liveTiles.length > 1
+            ? [{ label: anyClosed ? "Expand all" : "Collapse all", icon: anyClosed ? ("expand" as const) : ("collapse" as const), onSelect: () => tiles.setMany(liveTiles.map((x) => idOf(x.key)), anyClosed) }]
+            : []),
           copyItem({ day: d.date }),
           ...(photo?.credit
             ? [photo.credit.uri ? { label: `Photo by ${photo.credit.name}`, icon: "photo" as const, href: photo.credit.uri } : { label: `Photo by ${photo.credit.name}`, icon: "photo" as const, onSelect: () => {} }]
@@ -699,6 +677,13 @@ export function DayCard({
 
         </>
       </div>
+      {/* The day's chevron, in its bottom border: down closed, up open. A tap on it opens or closes the
+          day like its header (the header is the keyboard and screen-reader control). */}
+      <span className="day-notch" data-open={expanded || undefined} aria-hidden="true" onClick={onExpandedChange}>
+        <svg className="day-chev" width="16" height="16" viewBox="0 0 14 14" fill="none">
+          <path d="M3.5 5.25L7 8.75l3.5-3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </span>
     </section>
   );
 }

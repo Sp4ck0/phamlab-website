@@ -924,14 +924,24 @@ test('Expand all / Collapse all opens and closes the tiles of that one day only'
     for (const b of view.container.querySelectorAll('.day-head-btn')) act(() => b.click());
     const [first, second] = dayCards(view.container);
     assert.deepEqual([tileStates(first), tileStates(second)], [['false', 'false'], ['false', 'false']]);
-    const all = first.querySelector('.day-tiles-btn');
-    assert.equal(all.getAttribute('title'), 'Expand all'); // an icon: the words are its tooltip and label
-    assert.equal(all.textContent, '');
-    act(() => all.click());
+    // In the day's one ⋯ menu (the only button in its header besides the header itself).
+    const tools = first.querySelector('.day-tools');
+    assert.equal(tools.querySelectorAll('button').length, 1);
+    const expandAll = menuItem(openMenu(tools), 'Expand all');
+    await act(async () => expandAll.click());
     assert.deepEqual([tileStates(first), tileStates(second)], [['true', 'true'], ['false', 'false']]);
-    assert.equal(all.getAttribute('title'), 'Collapse all');
-    act(() => all.click());
+    const collapseAll = menuItem(openMenu(tools), 'Collapse all');
+    await act(async () => collapseAll.click());
     assert.deepEqual(tileStates(first), ['false', 'false']);
+    // The chevron sits in the day's bottom border and opens or closes the day like its header.
+    const head = first.querySelector('.day-head-btn');
+    const notch = first.querySelector(':scope > .day-notch');
+    assert.equal(notch.getAttribute('aria-hidden'), 'true');
+    assert.equal(first.querySelector('.day-heading .day-chevron'), null); // not in the header any more
+    act(() => notch.dispatchEvent(new window.MouseEvent('click', { bubbles: true })));
+    assert.equal(head.getAttribute('aria-expanded'), 'false');
+    act(() => notch.dispatchEvent(new window.MouseEvent('click', { bubbles: true })));
+    assert.equal(head.getAttribute('aria-expanded'), 'true');
   } finally { view.close(); localStorage.clear(); }
 });
 

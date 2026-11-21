@@ -19,6 +19,8 @@ export const MENU_ICONS = {
   yes: svg('<path d="M7 11v9H4v-9z"/><path d="M7 11l4-8a2 2 0 0 1 2 2v4h5a2 2 0 0 1 2 2.3l-1.2 6A2 2 0 0 1 16.8 19H7"/>'),
   no: svg('<path d="M7 13V4H4v9z"/><path d="M7 13l4 8a2 2 0 0 0 2-2v-4h5a2 2 0 0 0 2-2.3l-1.2-6A2 2 0 0 0 16.8 5H7"/>'),
   add: svg('<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>'),
+  expand: svg('<path d="M7 6l5 5 5-5M7 13l5 5 5-5"/>'),
+  collapse: svg('<path d="M7 11l5-5 5 5M7 18l5-5 5 5"/>'),
   photo: svg('<rect x="3" y="6" width="18" height="14" rx="2"/><path d="M8 6l1.5-2h5L16 6"/><circle cx="12" cy="13" r="3.5"/>'),
 } as const;
 
