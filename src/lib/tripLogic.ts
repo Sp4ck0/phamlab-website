@@ -36,6 +36,12 @@ export function presence(g: Group | undefined, dateStr: string): boolean {
   return (!g.from || dateStr >= g.from) && (!g.to || dateStr <= g.to);
 }
 
+// Order travelers by when they join, then when they leave: no `from` is the
+// start of the trip, no `to` the end; ties by name.
+export function byStay(a: Group, b: Group): number {
+  return (a.from ?? "").localeCompare(b.from ?? "") || (a.to ?? "\uffff").localeCompare(b.to ?? "\uffff") || a.name.localeCompare(b.name);
+}
+
 export function presentGroups(groups: Group[], date: string): Group[] {
   return groups.filter((g) => presence(g, date));
 }
