@@ -11,13 +11,15 @@ interface Props {
   dayNumber?: number;
   first?: boolean;
   last?: boolean;
+  /** The hop's "Add to Google Calendar" button; off on a timeline card, whose menu has it. */
+  calendar?: boolean;
 }
 
 // One hop as a boarding-pass row: who flies it on top, then departure ▸ arrival
 // with the duration between. A hop that isn't planned yet draws the same row with
 // blank slots: "--:--" for a time not decided, "Not decided" for a place, and the
 // day (or the flexible window) where there is one.
-export function SegmentRow({ seg, mode, day, dayNumber = 0, first, last }: Props) {
+export function SegmentRow({ seg, mode, day, dayNumber = 0, first, last, calendar = true }: Props) {
   const m = seg.mode || mode || "flight";
   const name = (seg.airline && AIRLINES[seg.airline]?.name) || seg.carrier || seg.airline || "";
   // A flight shows "CI 21"; a train, ferry or bus shows its operator, then its number if it has one ("Sample Rail · G123").
@@ -69,7 +71,7 @@ export function SegmentRow({ seg, mode, day, dayNumber = 0, first, last }: Props
         </span>
         <span className="seg-chips">
           {chips.map((c) => <span key={c} className="seg-chip">{c}</span>)}
-          <AddToCalendar url={url} />
+          {calendar && <AddToCalendar url={url} />}
         </span>
       </div>
       <div className="seg-main">

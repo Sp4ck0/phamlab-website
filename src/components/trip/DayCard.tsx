@@ -11,17 +11,16 @@ import { copyShareLink } from "../../lib/shareLink";
 import { TileMenu, type TileMenuItem } from "./TileMenu";
 import { routeSearchUrl } from "../../lib/segments";
 import { ALL_DAY, TileStatePill, TimelineTile, type TimelineTileProps, type TileState } from "./TimelineTile";
-import { StatusToggle } from "./StatusToggle";
 import { buildTimeline, timelineSpans, type ActRow, type DayItem, type TimelineEntry } from "../../lib/timeline";
 import { serverMessage } from "../../lib/serverError";
 import type { TileOpen } from "../../hooks/useTileOpen";
 import { countdownText, nextUp } from "../../lib/nextUp";
 import { useNow } from "../../lib/useNow";
-import { gapMinutes, phoneHref, stayInfo } from "../../lib/stay";
+import { gapMinutes, hotelSearchUrl, phoneHref, stayInfo } from "../../lib/stay";
 import { TourBox } from "./TourBox";
 import { WeatherBlock } from "./WeatherBadge";
 import type { CityPhoto, CityPhotoFetcher } from "../../lib/cityPhoto";
-import { MODE_EMOJI, TAG_EMOJI, actUrl, hotelUrl, plain, zoneNow } from "../../lib/calendar";
+import { MODE_EMOJI, TAG_EMOJI, actUrl, hotelUrl, legUrl, plain, segmentUrl, zoneNow } from "../../lib/calendar";
 import { NOW_EMOJI, dayZone, nowPosition, untilText, viewerHint, type NowPosition } from "../../lib/nowMarker";
 import { sanitizeHtml } from "../../lib/sanitizeHtml";
 import type { DayWeather } from "../../lib/weather";
@@ -98,36 +97,6 @@ interface Props {
   onPromote?: (id: string, date: string) => Promise<unknown>;
   // A photo of the day's city for its header; without it the header shows the leg's colour.
   cityPhoto?: CityPhotoFetcher;
-}
-
-// "Add to itinerary" on an item tile, with its own busy state and the server's reason when it can't.
-function ApproveButton({ onApprove, label }: { onApprove: () => Promise<unknown>; label: string }) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  return (
-    <>
-      <button
-        type="button"
-        className="tl-approve"
-        disabled={busy}
-        aria-label={label}
-        onClick={async () => {
-          setBusy(true);
-          setError("");
-          try {
-            await onApprove();
-          } catch (e) {
-            setError(serverMessage(e, "Couldn't add it — try again."));
-          } finally {
-            setBusy(false);
-          }
-        }}
-      >
-        {busy ? "Adding…" : "Add to itinerary"}
-      </button>
-      {error && <span className="ai-error" role="alert">{error}</span>}
-    </>
-  );
 }
 
 export function DayCard({
@@ -294,12 +263,28 @@ export function DayCard({
   // How one tile reads: its header, whether it starts open (unresolved ones do: not booked, missing
   // details, nothing entered), and what it shows when open. A removed ghost has no element id.
   type Described = { key: string; ghost: boolean; defaultOpen: boolean; forceOpen?: boolean; tile: Omit<TimelineTileProps, "open" | "onToggle" | "onReveal"> };
-  // The pieces of a tile's "⋯" menu and its Maps pin.
-  const copyItem = (param: Record<string, string>): TileMenuItem => ({ label: "Copy link", onSelect: () => copyShareLink(slug, param) });
-  const calendarItem = (url: string | null): TileMenuItem[] => (url ? [{ label: "Add to Google Calendar", href: url }] : []);
+  // The pieces of a card's "⋯" menu, which holds every action the card has.
+  const copyItem = (param: Record<string, string>): TileMenuItem => ({ label: "Copy link", icon: "link", onSelect: () => copyShareLink(slug, param) });
+  const calendarItem = (url: string | null, label = "Add to Google Calendar"): TileMenuItem[] => (url ? [{ label, icon: "calendar", href: url }] : []);
   const onMapItems = (places: Place[]): TileMenuItem[] =>
-    places.flatMap((p) => (placeKey(p) ? [{ label: places.length > 1 ? `Show ${p.name} on the trip map` : "Show on the trip map", onSelect: () => focusOnMap(p) }] : []));
-  const pinFor = (p?: Place) => (p?.name ? { href: googleMapsUrl(p), label: `Open ${p.name} in Google Maps` } : undefined);
+    places.flatMap((p) => (placeKey(p) ? [{ label: places.length > 1 ? `Show ${p.name} on the trip map` : "Show on the trip map", icon: "map" as const, onSelect: () => focusOnMap(p) }] : []));
+  // Opens a place in Google Maps (what the row's pin button did).
+  const mapsItem = (p: Place | undefined, label = "Open in Google Maps"): TileMenuItem[] => (p?.name ? [{ label, icon: "pin", href: googleMapsUrl(p) }] : []);
+  // The booked toggle (the check that used to sit on the row).
+  const bookedItem = (ids: string[], s: Status): TileMenuItem => ({
+    label: s === "booked" ? "Mark as not booked" : "Mark as booked",
+    icon: s === "booked" ? "uncheck" : "check",
+    onSelect: () => onToggle(ids, s),
+  });
+  // Each hop's "Add to Google Calendar" (the buttons that used to sit on the hop rows).
+  const transportCalendarItems = (g: FlightGroup): TileMenuItem[] => {
+    const { legs, segments } = segmentsOf(g);
+    const name = (from?: string, to?: string) => (segments.length + legs.length > 1 && from && to ? `Add ${from} → ${to} to Google Calendar` : "Add to Google Calendar");
+    return [
+      ...segments.flatMap((seg, i) => calendarItem(segmentUrl(seg, g.mode, d, dayNumber, { first: i === 0, last: i === segments.length - 1 }), name(seg.from, seg.to))),
+      ...legs.flatMap((leg, i) => calendarItem(legUrl(leg, i, legs.length, g.mode, d, dayNumber, g.detail), legs.length > 1 ? `Add ${leg.route} to Google Calendar` : "Add to Google Calendar")),
+    ];
+  };
   const describe = (entry: Exclude<TimelineEntry, { kind: "tour" }>): Described => {
     if (entry.kind === "hotel") {
       const { item: g, state } = entry.change;
@@ -320,16 +305,19 @@ export function DayCard({
         tile: {
           domId: entry.domKey && tileDomId(rowId, entry.domKey), time: ALL_DAY, icon: "🏨", meta, change: state, warn: unresolved,
           title,
-          pin: chosen ? pinFor(place) : undefined,
           menu: [
+            bookedItem(g.srcs, s),
+            ...(chosen ? mapsItem(place) : []),
             copyItem({ day: d.date, tile: g.srcs[0] }),
-            ...(g.phone ? [{ label: `Call ${g.phone}`, href: phoneHref(g.phone), sameTab: true }] : []),
+            ...(g.phone ? [{ label: `Call ${g.phone}`, icon: "phone" as const, href: phoneHref(g.phone), sameTab: true }] : []),
             ...calendarItem(days ? hotelUrl(g.name, g.address, days, dayNumber) : null),
             ...(chosen ? onMapItems([place]) : []),
+            ...(s === "needed" && !g.tentative && !chosen && g.area
+              ? [{ label: "Search hotels here", icon: "search" as const, href: hotelSearchUrl(g.area, stay?.checkIn, stay?.checkOut) }]
+              : []),
           ],
           className: `tl-hotel${unresolved ? " miss" : ""}`, nextUpLine: upText(g.srcs),
           headerEnd: <TileStatePill state={pill} label={pill === "needed" && !g.name ? "Not chosen" : undefined} />,
-          control: <StatusToggle ids={g.srcs} status={s} onToggle={onToggle} />,
           children: (
             <>
               <HotelBody g={g} status={s} stay={stay} gapAfter={gapAfter} groups={groups} date={d.date} days={days} dayNumber={dayNumber} actions={false} />
@@ -358,9 +346,11 @@ export function DayCard({
           className: `tl-transport${s === "needed" && !g.tentative ? " miss" : ""}${g.tentative ? " maybe" : ""}`, nextUpLine: upText(g.ids),
           now: !!live, progress: live?.progress,
           menu: [
+            bookedItem(g.ids, s),
             copyItem({ day: d.date, tile: g.ids[0] }),
-            ...(ticket ? [{ label: "Ticket", href: ticket }] : []),
-            ...(search ? [{ label: "Search this route", href: search }] : []),
+            ...(ticket ? [{ label: "Ticket", icon: "ticket" as const, href: ticket }] : []),
+            ...(search ? [{ label: "Search this route", icon: "search" as const, href: search }] : []),
+            ...transportCalendarItems(g),
           ],
           headerEnd: (
             <>
@@ -368,7 +358,6 @@ export function DayCard({
               <TileStatePill state={pill} />
             </>
           ),
-          control: <StatusToggle ids={g.ids} status={s} onToggle={onToggle} />,
           children: (
             <>
               <TransportBody group={g} groups={groups} day={d} dayNumber={dayNumber} actions={false} />
@@ -404,7 +393,7 @@ export function DayCard({
     const gone = state === "gone";
     const editing = !gone && editingAct === ai && !!onEditActivity;
     const live = nowBits(entry.key);
-    // The sentence is the row's title; its first place opens from the pin, the rest from the menu.
+    // The sentence is the row's title; its places open from the menu.
     // There is nothing more to open, so the row has no chevron: it opens only for the editor, or
     // for the History of an approved suggestion.
     const hist = history(typeof a === "string" ? undefined : a.fromItem);
@@ -419,12 +408,12 @@ export function DayCard({
         label: title,
         expandable: editing || !!hist,
         title: prev ? <InlineDiff prev={sanitizeHtml(actParts(prev).text)} next={sanitizeHtml(text)}>{title}</InlineDiff> : title,
-        pin: pinFor(named[0]),
         menu: [
-          ...(onEditActivity ? [{ label: "Edit", onSelect: () => setEditingAct(ai) }] : []),
+          ...(onEditActivity ? [{ label: "Edit", icon: "edit" as const, onSelect: () => setEditingAct(ai) }] : []),
+          ...mapsItem(named[0], named.length > 1 ? `Open ${named[0]?.name} in Google Maps` : undefined),
           copyItem({ day: d.date, tile: `act:${ai}` }),
           ...calendarItem(actUrl(a, d, dayNumber, ai)),
-          ...named.slice(1).map((p) => ({ label: `Open ${p.name} in Google Maps`, href: googleMapsUrl(p) })),
+          ...named.slice(1).flatMap((p) => mapsItem(p, `Open ${p.name} in Google Maps`)),
           ...onMapItems(named),
         ],
         headerEnd: live?.pill,
@@ -472,25 +461,51 @@ export function DayCard({
     const range = start && end && end !== start ? `${fmtShort(start)} – ${fmtShort(end)}` : undefined;
     const who = task?.who ?? todo?.who;
     const priority = task?.priority ?? todo?.priority;
+    // A consideration's header shows the tally; voting is in its menu. A settled item keeps its
+    // tally but voting is over.
     let headerEnd;
+    const voteItems: TileMenuItem[] = [];
     if (consider) {
       const { mine, yes, no } = voteTally(task!, pendingVotes[id]);
       const pick = (v: Vote) => onVote(id, mine === v ? null : v);
       headerEnd = (
-        <span className="vote-bar" role="group" aria-label={`Vote on ${title}`}>
-          {/* A settled item keeps its tally but voting is over. */}
-          <button type="button" className="vote-btn" data-vote="yes" aria-pressed={mine === "yes"} disabled={!!task!.outcome} onClick={() => pick("yes")}>
-            👍 <b>{yes}</b>
-          </button>
-          <button type="button" className="vote-btn" data-vote="no" aria-pressed={mine === "no"} disabled={!!task!.outcome} onClick={() => pick("no")}>
-            👎 <b>{no}</b>
-          </button>
+        <span className="vote-tally" role="img" aria-label={`${yes} yes, ${no} no${mine ? `, you voted ${mine}` : ""}`}>
+          <span data-mine={mine === "yes" || undefined}>👍 <b>{yes}</b></span>
+          <span data-mine={mine === "no" || undefined}>👎 <b>{no}</b></span>
         </span>
       );
+      voteItems.push(
+        { label: mine === "yes" ? "Take back my yes vote" : "Vote yes", icon: "yes", disabled: !!task!.outcome, onSelect: () => pick("yes") },
+        { label: mine === "no" ? "Take back my no vote" : "Vote no", icon: "no", disabled: !!task!.outcome, onSelect: () => pick("no") },
+      );
     }
-    const control = consider ? undefined : (
-      <input type="checkbox" className="tl-check" checked={done} onChange={() => onToggleActionItem(id)} aria-label={`Done: ${title}`} />
-    );
+    const doneItem: TileMenuItem[] = consider ? [] : [{ label: done ? "Mark as not done" : "Mark as done", icon: done ? "uncheck" : "check", onSelect: () => onToggleActionItem(id) }];
+    const approveItem: TileMenuItem[] =
+      open && onPromote && (proposes || consider)
+        ? [{
+            label: "Add to itinerary",
+            icon: "add",
+            onSelect: async () => {
+              try {
+                await onPromote(id, d.date);
+                return "Added to the itinerary";
+              } catch (e) {
+                return serverMessage(e, "Couldn't add it — try again.");
+              }
+            },
+          }]
+        : [];
+    // A proposed hotel's or transport's own links (its Maps page, each hop's calendar).
+    const draftItems: TileMenuItem[] = !proposes
+      ? []
+      : proposes.type === "hotel"
+        ? (() => {
+            const place = { name: proposes.entry.name, address: proposes.entry.address, placeId: proposes.entry.placeId };
+            return isPlaceholderHotel(proposes.entry) ? [] : [...mapsItem(place, `Open ${place.name} in Google Maps`), ...onMapItems([place])];
+          })()
+        : proposes.type === "transport"
+          ? transportCalendarItems({ ...proposes.entry, who: [proposes.entry.who].flat(), ids: [`item:${id}`], statuses: [proposes.entry.status] })
+          : [];
     const draftBody = (() => {
       if (!proposes) return null;
       if (proposes.type === "hotel") {
@@ -515,16 +530,19 @@ export function DayCard({
       key: entry.key, ghost: false, defaultOpen: open,
       tile: {
         domId: tileDomId(rowId, entry.domKey), time: entry.time, icon, title, warn: open,
-        pin: pinFor((task?.places ?? todo?.places ?? [])[0]),
         menu: [
+          ...doneItem,
+          ...voteItems,
+          ...approveItem,
+          ...mapsItem((task?.places ?? todo?.places ?? [])[0]),
           // Jumps to this item in the Action Items or Under consideration list.
-          { label: "Open in list", onSelect: () => { if (slug) showFocus({ slug, target: { kind: "actionItem", id }, nonce: `${Date.now()}` }); } },
+          { label: "Open in list", icon: "list", onSelect: () => { if (slug) showFocus({ slug, target: { kind: "actionItem", id }, nonce: `${Date.now()}` }); } },
           copyItem({ task: `item:${id}` }),
+          ...draftItems,
         ],
         meta: [status, what, range, who ? gapLabel(who, groups, start ?? d.date)?.label : undefined, priority ? `${PRIORITY_LABELS[priority]} priority` : undefined].filter(Boolean).join(" · "),
         className: `tl-item${consider ? " tl-consider" : ""}${done ? " is-done" : ""}`,
         headerEnd,
-        control,
         children: (
           <>
             {(titleHasLinks || detail) && (
@@ -540,11 +558,6 @@ export function DayCard({
               </div>
             )}
             {linked && <p className="cmeta tl-linked">In the itinerary.</p>}
-            {open && onPromote && (proposes || consider) && (
-              <div className="tl-actions">
-                <ApproveButton label={`Add ${title} to the itinerary`} onApprove={() => onPromote(id, d.date)} />
-              </div>
-            )}
           </>
         ),
       },
@@ -627,7 +640,7 @@ export function DayCard({
         items={[
           copyItem({ day: d.date }),
           ...(photo?.credit
-            ? [photo.credit.uri ? { label: `Photo by ${photo.credit.name}`, href: photo.credit.uri } : { label: `Photo by ${photo.credit.name}`, onSelect: () => {} }]
+            ? [photo.credit.uri ? { label: `Photo by ${photo.credit.name}`, icon: "photo" as const, href: photo.credit.uri } : { label: `Photo by ${photo.credit.name}`, icon: "photo" as const, onSelect: () => {} }]
             : []),
         ]}
       />
