@@ -1122,18 +1122,27 @@ test('a day with an open plan task shows a "Not planned" tile on the rail in the
   try { assert.equal(dismissed.container.querySelector('.tl-plan'), null); } finally { dismissed.close(); }
 });
 
-test('the day header: the city photo with its credit (asked for on load, not on scroll), Day N of M · country, the place and the weather', async () => {
+test('the day header: the city photo with its credit once it nears the screen, Day N of M · country, the place and the weather', async () => {
   const { resolveDays } = await import('../../lib/tripLogic.ts');
-  const { cachedPhotos } = await import('../../lib/cityPhoto.ts');
+  const { batchedPhotos } = await import('../../lib/cityPhoto.ts');
   const asked = [];
-  const fetcher = cachedPhotos(async (city, country) => { asked.push(`${city}|${country}`); return { url: 'https://example.com/synthetic.jpg', credit: { name: 'Synthetic Photographer', uri: 'https://example.com/p' } }; });
+  const one = batchedPhotos((c) => `${c.city}|${c.country}`, async (cities) => {
+    asked.push(cities.map((c) => `${c.city}|${c.country}`));
+    return cities.map(() => ({ url: 'https://example.com/synthetic.jpg', credit: { name: 'Synthetic Photographer', uri: 'https://example.com/p' } }));
+  }, 0);
+  const fetcher = (city, country) => one({ city, country });
   const days = resolveDays({ days: [{ ...day, country: 'TH' }, { ...day, date: '2040-01-03', country: 'TH', to: 'Synthetic Town' }] });
   const weather = { date: day.date, kind: 'forecast', code: 2, tMax: 31, tMin: 24, precipProb: 29, fetchedAt: 0 };
+  // Off screen: no photo is asked for.
+  const observers = [];
+  globalThis.IntersectionObserver = class { constructor(cb) { this.cb = cb; observers.push(this); } observe() {} disconnect() {} };
   const view = mount(React.createElement(React.Fragment, null,
     React.createElement(DayCard, { ...props, rowId: 'a', day: days[0], days, dayNumber: 0, weather, cityPhoto: fetcher }),
     React.createElement(DayCard, { ...props, rowId: 'b', day: days[1], days, dayNumber: 1, cityPhoto: fetcher })));
   try {
     await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    assert.deepEqual(asked, []);
+    await act(async () => { observers.forEach((o) => o.cb([{ isIntersecting: true }])); await new Promise((r) => setTimeout(r, 0)); });
     const [first, second] = view.container.querySelectorAll('section.day-card');
     const photo = first.querySelector('.day-photo');
     assert.ok(photo.classList.contains('has-photo') && photo.style.backgroundImage.includes('https://example.com/synthetic.jpg'));
@@ -1141,13 +1150,13 @@ test('the day header: the city photo with its credit (asked for on load, not on 
     assert.equal(menuItem(dayMenu, 'See photo credit').getAttribute('href'), 'https://example.com/p'); // the credit Google asks for: the photographer's page
     assert.ok(menuItem(dayMenu, 'Copy link'));
     assert.equal(photo.textContent, ''); // nothing written on the photo
-    assert.deepEqual(asked, [`${day.city}|TH`]); // the same city twice is one request
+    assert.deepEqual(asked, [[`${day.city}|TH`]]); // the same city twice is asked for once
     assert.equal(first.querySelector('.day-num').textContent, 'Day 0 of 1 · Thailand');
     assert.equal(first.querySelector('.day-place').textContent, day.city);
     assert.equal(second.querySelector('.day-place').textContent, `${day.city} → Synthetic Town`);
     assert.equal(first.querySelector('.weather-block-temps').textContent, '88° / 75°'); // in the settings' unit (F here)
     assert.equal(first.querySelector('.weather-block-label').textContent, 'Partly cloudy · 29% rain');
-  } finally { view.close(); }
+  } finally { view.close(); delete globalThis.IntersectionObserver; }
   // No photo source: the leg's colour, no credit.
   const plain = mount(React.createElement(DayCard, { ...props, day: days[0], days }));
   try {
@@ -1156,20 +1165,21 @@ test('the day header: the city photo with its credit (asked for on load, not on 
   } finally { plain.close(); }
 });
 
-test('a tile with places shows their photos (first three, "+N" for the rest) once it nears the screen, their credits in its menu', async () => {
+test('a tile with places shows its first place\'s photo ("+N" for the rest) once it nears the screen, the credit in its menu; tiles in view together are one request', async () => {
   const { resolveDays } = await import('../../lib/tripLogic.ts');
-  const { cachedPhotos } = await import('../../lib/cityPhoto.ts');
+  const { batchedPhotos } = await import('../../lib/cityPhoto.ts');
   const places = ['A', 'B', 'C', 'D'].map((x) => ({ name: `Synthetic ${x}`, placeId: `SYN${x}` }));
   const acts = [
     { time: '10:00', text: 'Synthetic tour', places: [places[0], places[0], ...places.slice(1)] },
+    { time: '11:00', text: 'Synthetic walk', places: [{ name: 'Synthetic E', placeId: 'SYNE' }] },
     { time: '12:00', text: 'Synthetic lunch', places: [{ name: 'Synthetic Spot', address: 'Synthetic street' }] },
   ];
   const days = resolveDays({ days: [{ ...day, acts }] });
   const asked = [];
-  const fetcher = cachedPhotos(async (placeId) => {
-    asked.push(placeId);
-    return placeId === 'SYNB' ? null : { url: `https://example.com/${placeId}.jpg`, credit: { name: `Photographer ${placeId}`, uri: 'https://example.com/p' } };
-  });
+  const fetcher = batchedPhotos((placeId) => placeId, async (placeIds) => {
+    asked.push(placeIds);
+    return placeIds.map((placeId) => ({ url: `https://example.com/${placeId}.jpg`, credit: { name: `Photographer ${placeId}`, uri: 'https://example.com/p' } }));
+  }, 0);
   // Tiles start off screen: nothing is asked for until the observer says one is near.
   const observers = [];
   globalThis.IntersectionObserver = class { constructor(cb) { this.cb = cb; observers.push(this); } observe() {} disconnect() {} };
@@ -1178,15 +1188,16 @@ test('a tile with places shows their photos (first three, "+N" for the rest) onc
     await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
     assert.deepEqual(asked, []);
     await act(async () => { observers.forEach((o) => o.cb([{ isIntersecting: true }])); await new Promise((r) => setTimeout(r, 0)); });
-    assert.deepEqual(asked, ['SYNA', 'SYNB', 'SYNC']); // a place listed twice is one; the fourth isn't asked for
+    assert.deepEqual(asked, [['SYNA', 'SYNE']]); // one request for both tiles, only each one's first place
     const tile = (text) => [...view.container.querySelectorAll('.tl-entry')].find((e) => e.textContent.includes(text));
     const tour = tile('Synthetic tour');
-    assert.deepEqual([...tour.querySelectorAll('.tl-photos img')].map((i) => i.getAttribute('src')), ['https://example.com/SYNA.jpg', 'https://example.com/SYNC.jpg']); // B has none
-    assert.equal(tour.querySelector('.tl-photos-more').textContent, '+1');
+    assert.deepEqual([...tour.querySelectorAll('.tl-photos img')].map((i) => i.getAttribute('src')), ['https://example.com/SYNA.jpg']);
+    assert.equal(tour.querySelector('.tl-photos-more').textContent, '+3'); // a place listed twice counts once
     assert.ok(tour.querySelector('.tl-head').classList.contains('has-photos'));
-    const menu = openMenu(tour);
-    assert.equal(menuItem(menu, 'See photo credit: Synthetic A').getAttribute('href'), 'https://example.com/p');
-    assert.ok(menuItem(menu, 'See photo credit: Synthetic C'));
+    assert.equal(menuItem(openMenu(tour), 'See photo credit').getAttribute('href'), 'https://example.com/p');
+    const walk = tile('Synthetic walk');
+    assert.equal(walk.querySelector('.tl-photos img').getAttribute('src'), 'https://example.com/SYNE.jpg');
+    assert.equal(walk.querySelector('.tl-photos-more'), null);
     const lunch = tile('Synthetic lunch');
     assert.equal(lunch.querySelector('.tl-photos'), null); // an address alone has no photo
     assert.ok(!lunch.querySelector('.tl-head').classList.contains('has-photos'));
