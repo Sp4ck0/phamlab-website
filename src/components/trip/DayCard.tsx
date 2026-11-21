@@ -372,8 +372,8 @@ export function DayCard({
       return {
         key: entry.key, ghost: false, defaultOpen: false,
         tile: {
-          icon: "🗓️", title: "Nothing planned yet", expandable: false, warn: true, className: "tl-gap tl-plan miss",
-          headerEnd: <TileStatePill state="needed" label="Not planned" />,
+          // One line: the amber label is the title (a title saying the same thing again was redundant).
+          icon: "🗓️", title: <TileStatePill state="needed" label="Not planned" />, label: "Not planned", expandable: false, warn: true, className: "tl-gap tl-plan miss",
           children: null,
         },
       };

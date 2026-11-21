@@ -445,7 +445,6 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 .tl-end{grid-column:3;display:inline-flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:6px 8px}
 .tl-end:empty{display:none}
 .tl-end .now-pill{margin-right:0}
-.tl-end .status{position:relative;top:auto;right:auto;cursor:default}
 .vote-tally{display:inline-flex;gap:10px;font-size:13px;color:var(--text-secondary);white-space:nowrap}
 .vote-tally [data-mine]{color:var(--accent-1)}
 .tl-more{grid-column:4;grid-row:1;align-self:start;display:grid;place-items:center;margin-top:-4px}
@@ -511,8 +510,6 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
   .tl-time{left:8px}
   .tl-more{grid-column:4;grid-row:1 / span 2}
   .tl-end{grid-column:2 / 4;grid-row:2;justify-content:flex-start;padding:2px 0 2px}
-  /* A lone booked check is small enough to stay beside the title. */
-  .tl-end:has(> .status:only-child){grid-column:3;grid-row:1;padding:0}
   .tl-body:not([hidden]){padding:10px 8px 18px}
   .tl-menu-list>*{padding:12px}
 }

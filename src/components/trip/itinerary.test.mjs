@@ -648,7 +648,7 @@ test('Only gaps opens each day and shows just the open items, each with why it i
     assert.ok(cardWith('Synthetic booked route') && !cardWith('Synthetic booked route').textContent.includes('Not booked'));
     assert.ok(cardWith('Synthetic open lodging').textContent.includes('Not booked'));
     assert.ok(!text.includes('Synthetic activity') && !text.includes('Synthetic callout'));
-    assert.ok(text.includes('Nothing planned yet') && text.includes('None entered') && text.includes('Synthetic A → Synthetic B'));
+    assert.ok(text.includes('Not planned') && text.includes('None entered') && text.includes('Synthetic A → Synthetic B'));
     // An empty day is a row on the rail like any other tile, not a loose line of text.
     const empty = view.container.querySelector('.tl-plan');
     assert.ok(empty && empty.closest('li.tl-entry') && empty.classList.contains('tl-flat'));
@@ -741,7 +741,7 @@ test('a booked train, ferry or bus has a mode and state header, the operator as 
     assert.equal(box.querySelector('.ctype').textContent, 'Train');
     assert.equal(box.closest('.tl-entry').querySelector('.tl-dot').textContent, '🚆'); // the mode's icon is the marker on the rail
     assert.equal(box.querySelector('.tx-state'), null); // booked needs no words: the check says it
-    assert.equal(box.querySelector('.status').dataset.s, 'booked');
+    assert.ok(!box.querySelector('.tl-end')?.textContent); // booked: a plain card, no mark
     assert.equal(box.querySelector('.tx-title'), null); // the operator in the row is the title
     assert.ok(box.querySelector('.seg-carrier').textContent.includes('Synthetic Rail'));
     assert.equal(box.querySelector('.seg-terminal').textContent, 'Platform 4');
@@ -750,7 +750,7 @@ test('a booked train, ferry or bus has a mode and state header, the operator as 
     assert.equal(menuItem(items, 'Ticket').getAttribute('href'), 'https://example.com/ticket');
     assert.ok(menuItem(items, 'Mark as not booked')); // booked: the menu can only un-book it
     assert.equal(menuItem(items, 'Search this route'), undefined);
-    assert.equal(box.querySelector('button.status'), null); // the check is a state, not a button
+    assert.ok(!box.querySelector('.status')); // no check: a plain card is a booked one
   } finally { view.close(); }
   // Only an https ticket link is ever rendered.
   const bad = resolveDays({ days: [{ ...day, flights: [{ ...row, ticketUrl: 'javascript:alert(1)' }], hotels: [] }] });
@@ -783,7 +783,7 @@ test('an unbooked train shows its route as the title, a route search; its menu b
     // A flight keeps its own title; booked, its header has just the check, and it has no booking links.
     assert.equal(plane.querySelector('.ctype'), null);
     assert.equal(plane.querySelector('.tx-state'), null);
-    assert.equal(plane.querySelector('.status').dataset.s, 'booked');
+    assert.ok(!plane.querySelector('.tl-end')?.textContent); // booked: nothing beside the title
     assert.ok(!openMenu(plane).some((i) => i.textContent === 'Ticket' || i.textContent === 'Search this route'));
   } finally { view.close(); }
 });
@@ -1106,13 +1106,13 @@ test('an activity approved from a suggestion opens to its History; a card opens 
   } finally { view.close(); }
 });
 
-test('a day with an open plan task shows a "Nothing planned yet" tile on the rail in the normal view too; a dismissed one shows none', () => {
+test('a day with an open plan task shows a "Not planned" tile on the rail in the normal view too; a dismissed one shows none', () => {
   const plan = { plan: true, transport: [], details: [] };
   const view = mount(React.createElement(DayCard, { ...props, day: { ...day, acts: [] }, expanded: true, gaps: plan }));
   try {
     const tile = view.container.querySelector('.tl-plan');
     assert.ok(tile && tile.closest('li.tl-entry'));
-    assert.equal(tile.querySelector('.tl-title').textContent, 'Nothing planned yet');
+    assert.equal(tile.querySelector('.tl-title').textContent, 'Not planned'); // said once: the amber label is the title
     assert.equal(tile.querySelector('.tl-toggle, .tl-body'), null); // nothing to open
     assert.ok(tile.querySelector('.tl-dot .tl-warn')); // and the amber badge on its icon, like other open items
     assert.equal(view.container.querySelector('.day-subtitle'), null); // no loose "Not decided yet" line
@@ -1175,12 +1175,14 @@ test('opening a day re-marks its closed tiles as closed (Safari otherwise keeps 
   } finally { window.Element.prototype.setAttribute = real; view.close(); }
 });
 
-test('Nothing planned yet is one line: no hint under the title', () => {
+test('the Not planned card is one line: the label is its title, said once', () => {
   const view = mount(React.createElement(DayCard, { ...props, day: { ...day, acts: [] }, expanded: true, gaps: { plan: true, transport: [], details: [] } }));
   try {
     const tile = view.container.querySelector('.tl-plan');
     assert.equal(tile.querySelector('.tl-meta'), null);
     assert.equal(tile.querySelector('.tx-state').textContent, 'Not planned');
+    assert.equal(tile.querySelectorAll('.tx-state').length, 1);
+    assert.ok(!tile.textContent.includes('Nothing planned yet'));
   } finally { view.close(); }
 });
 
