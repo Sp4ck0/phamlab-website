@@ -4,7 +4,6 @@ import type { Day, Group, HighlightStat } from "../../lib/types";
 import { assignLegColors, dateRangeFromDays, deriveCountries, deriveRoute, renderCountdown } from "../../lib/tripLogic";
 import { ExportMenu } from "./ExportMenu";
 import { RouteStepper } from "./RouteStepper";
-import { Roster } from "./Roster";
 
 export function TripHeader({
   kicker,
@@ -45,7 +44,6 @@ export function TripHeader({
       {highlight && <p className="hero-chip">{highlight}</p>}
 
       <RouteStepper countries={deriveCountries(route, groups)} />
-      <Roster groups={groups} />
       <div className="view-row">
         <button ref={filterRef} type="button" className="btn" aria-pressed={onlyGaps} onClick={() => onOnlyGapsChange(!onlyGaps)}>
           {onlyGaps ? "Show all days" : "Only gaps"}
