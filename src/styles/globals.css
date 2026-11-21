@@ -15,6 +15,8 @@
   --border:         rgba(11,11,11,0.10);
   --chip-bg:        #f0efec;
   --sidenav-w:      250px;
+  /* How strongly a tile's place photo shows behind its header: softer on a light card, where dark text sits over it. */
+  --tl-photo-strength: .45;
 
   /* 5 rotating "city" accents + 2 reserved semantic accents (event day /
      multi-leg transit day), each with a tint for chip backgrounds. */
@@ -34,6 +36,7 @@
 @media (prefers-color-scheme: dark) {
   :root:where(:not([data-theme="light"])) {
     color-scheme: dark;
+    --tl-photo-strength: .8;
     --page:           #0d0d0d;
     --card:           #1f1f1e;
     --text-primary:   #ffffff;
@@ -59,6 +62,7 @@
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
+  --tl-photo-strength: .8;
   --page:           #0d0d0d;
   --card:           #1f1f1e;
   --text-primary:   #ffffff;
@@ -456,12 +460,18 @@ button.route-chip[aria-expanded=true]{box-shadow:inset 0 0 0 1.5px var(--text-mu
 .vote-tally{display:inline-flex;gap:10px;font-size:13px;color:var(--text-secondary);white-space:nowrap}
 .vote-tally [data-mine]{color:var(--accent-1)}
 .tl-more{grid-column:3;grid-row:1;align-self:start;display:grid;place-items:center;margin-top:-4px}
-/* A tile's place photo: small, before the "⋯". A column of its own, only when there is one. */
-.tl-head.has-photos{grid-template-columns:minmax(0,1fr) auto auto 44px}
-.tl-head.has-photos .tl-more{grid-column:4}
-.tl-photos{grid-column:3;grid-row:1;display:inline-flex;align-items:center}
-.tl-photos>*{flex:none;width:40px;height:40px;border-radius:8px;box-shadow:0 0 0 2px var(--card)}
-.tl-photos img{object-fit:cover;background:var(--border)}
+/* A tile's place photo, behind its header and fading into the card (a mask, so it blends into any
+   tile background). Closed: an edge on the right. Static: wider and softer. Open: a banner across the
+   header that also fades out before the body. The header's content stays above it (isolation). */
+.tl-head.has-photo{isolation:isolate}
+.tl-photo{position:absolute;z-index:-1;top:0;right:0;bottom:0;width:46%;border-radius:inherit;background:center/cover no-repeat;
+  opacity:var(--tl-photo-strength);pointer-events:none;transition:width .25s ease,opacity .25s ease;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 75%);mask-image:linear-gradient(90deg,transparent,#000 75%)}
+.tl-flat .tl-photo{width:60%;opacity:calc(var(--tl-photo-strength) * .75)}
+.tl-tile.is-open .tl-head.has-photo{min-height:96px}
+.tl-tile.is-open .tl-photo{width:72%;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 55%),linear-gradient(180deg,#000 50%,transparent);-webkit-mask-composite:source-in;
+  mask-image:linear-gradient(90deg,transparent,#000 55%),linear-gradient(180deg,#000 50%,transparent);mask-composite:intersect}
 .tl-menu-btn{width:44px;height:44px;color:var(--text-secondary)}
 /* Unresolved and closed: a small badge on the card's icon pill, so it never moves the header. */
 .tl-warn{position:absolute;z-index:2;top:-1px;right:-3px;width:9px;height:9px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 2px var(--card)}
@@ -515,7 +525,7 @@ button.route-chip[aria-expanded=true]{box-shadow:inset 0 0 0 1.5px var(--text-mu
 /* Day header: open or close every tile of the day. */
 /* An icon like the day's share button beside it; "Expand all" / "Collapse all" is its tooltip and label. */
 .day-tiles-btn{flex:none}
-@media(prefers-reduced-motion:reduce){.tl-chev,.tl-tile{transition:none}.tl-body:not([hidden]){animation:none}}
+@media(prefers-reduced-motion:reduce){.tl-chev,.tl-tile,.tl-photo{transition:none}.tl-body:not([hidden]){animation:none}}
 @media(max-width:640px){
   /* Phones: the same card, tighter; pills and the tally drop under the title. */
   .tl-head{grid-template-columns:minmax(0,1fr) auto 44px;column-gap:7px;min-height:50px;padding:4px 0 4px 8px}
@@ -527,11 +537,9 @@ button.route-chip[aria-expanded=true]{box-shadow:inset 0 0 0 1.5px var(--text-mu
   .tl-pins{left:8px}
   .tl-more{grid-column:3;grid-row:1 / span 2}
   .tl-end{grid-column:1 / 3;grid-row:2;justify-content:flex-start;padding:2px 0 2px}
-  /* The pills drop under the title, so the photos take their column beside it. */
-  .tl-head.has-photos{grid-template-columns:minmax(0,1fr) auto 44px}
-  .tl-head.has-photos .tl-more{grid-column:3}
-  .tl-photos{grid-column:2}
-  .tl-photos>*{width:34px;height:34px;border-radius:7px}
+  /* A narrow card: the photo takes a little more of it, so it reads as a photo. */
+  .tl-photo{width:52%}
+  .tl-tile.is-open .tl-head.has-photo{min-height:84px}
   .tl-body:not([hidden]){padding:10px 8px 18px}
   .tl-menu-list>*{padding:12px}
 }

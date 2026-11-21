@@ -1191,15 +1191,21 @@ test('a tile with places shows one photo, its first place\'s, once it nears the 
     assert.deepEqual(asked, [['SYNA', 'SYNE']]); // one request for both tiles, only each one's first place
     const tile = (text) => [...view.container.querySelectorAll('.tl-entry')].find((e) => e.textContent.includes(text));
     const tour = tile('Synthetic tour');
-    assert.deepEqual([...tour.querySelectorAll('.tl-photos img')].map((i) => i.getAttribute('src')), ['https://example.com/SYNA.jpg']);
-    assert.equal(tour.querySelector('.tl-photos').textContent, ''); // just the photo: no count of its other places
-    assert.ok(tour.querySelector('.tl-head').classList.contains('has-photos'));
+    // One photo, a decorative layer behind the header (its fade is CSS), on a static tile like any other.
+    const photos = [...tour.querySelectorAll('.tl-photo')];
+    assert.equal(photos.length, 1);
+    assert.ok(photos[0].style.backgroundImage.includes('https://example.com/SYNA.jpg'));
+    assert.equal(photos[0].getAttribute('aria-hidden'), 'true');
+    assert.equal(photos[0].textContent, ''); // just the photo: no count of its other places
+    assert.equal(tour.querySelector('.tl-head').firstElementChild, photos[0]);
+    assert.ok(tour.querySelector('.tl-head').classList.contains('has-photo'));
+    assert.ok(tour.querySelector('.tl-tile').classList.contains('tl-flat'));
     assert.equal(menuItem(openMenu(tour), 'See photo credit').getAttribute('href'), 'https://example.com/p');
     const walk = tile('Synthetic walk');
-    assert.equal(walk.querySelector('.tl-photos img').getAttribute('src'), 'https://example.com/SYNE.jpg');
+    assert.ok(walk.querySelector('.tl-photo').style.backgroundImage.includes('https://example.com/SYNE.jpg'));
     const lunch = tile('Synthetic lunch');
-    assert.equal(lunch.querySelector('.tl-photos'), null); // an address alone has no photo
-    assert.ok(!lunch.querySelector('.tl-head').classList.contains('has-photos'));
+    assert.equal(lunch.querySelector('.tl-photo'), null); // an address alone has no photo
+    assert.ok(!lunch.querySelector('.tl-head').classList.contains('has-photo'));
   } finally { view.close(); delete globalThis.IntersectionObserver; }
 });
 
