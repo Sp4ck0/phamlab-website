@@ -329,6 +329,12 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
         if (key) planPins.current.set(key, marker);
         bounds.extend(position);
       });
+      if (pendingFocus.current && planPins.current.has(pendingFocus.current)) {
+        const key = pendingFocus.current;
+        pendingFocus.current = null;
+        // After this effect has finished setting up the map (bounds, route) so the focus isn't undone.
+        window.setTimeout(() => focusHandler.current(key), 0);
+      }
 
       if (frame.current !== null) cancelAnimationFrame(frame.current);
       frame.current = null;
@@ -517,6 +523,11 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
     const wrap = wrapRef.current;
     const map = mapInstance.current;
     if (!wrap) return;
+    // Asked before the map has drawn its pins (it was just opened in its tab): finish once they are.
+    if (!map || planPins.current.size === 0) {
+      pendingFocus.current = key;
+      return;
+    }
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const pin = planPins.current.get(key) ?? candidatePins.current.get(key);
     // A ring on a hidden layer: turn the layer on, and finish when its pins are drawn.

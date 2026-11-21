@@ -1,5 +1,5 @@
-import { Fragment, useMemo, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
 import { PageShell } from "../components/layout/PageShell";
 import { TripHeader } from "../components/trip/TripHeader";
 import { AlertsPanel } from "../components/trip/AlertsPanel";
@@ -19,7 +19,10 @@ import { useTripWeather } from "../hooks/useTripWeather";
 import { todayISO } from "../lib/dueDates";
 import { assignLegColors } from "../lib/tripLogic";
 import { dayGaps, gapDates } from "../lib/tasks";
-import { deriveTaskPoints, derivePoints, deriveRouteAddresses, deriveWeatherStops } from "../lib/mapPoints";
+import { MAP_FOCUS_EVENT, deriveTaskPoints, derivePoints, deriveRouteAddresses, deriveWeatherStops, focusOnMapKey } from "../lib/mapPoints";
+import { TripTabs } from "../components/trip/TripTabs";
+import { TRIP_TABS, tripPanelId, tripTabId, type TripTab } from "../lib/tripTabs";
+import { useAiFocus } from "../hooks/useAiFocus";
 import { NotFoundOrDenied } from "./NotFoundOrDenied";
 import { useAction } from "convex/react";
 import { api } from "@convex/api";
@@ -36,6 +39,46 @@ function TripPageEntry() {
   useRememberTab(trip ? `/trip/${slug}` : null);
 
   const [onlyGaps, setOnlyGaps] = useState(false);
+
+  // Agenda / Map / Notes, kept in the URL (?tab=) so a reload or a shared link keeps the view.
+  const [params, setParams] = useSearchParams();
+  const asked = params.get("tab") as TripTab | null;
+  const tab: TripTab = asked && TRIP_TABS.includes(asked) ? asked : "agenda";
+  const tabRef = useRef(tab);
+  tabRef.current = tab;
+  const setTab = useCallback(
+    (next: TripTab) =>
+      setParams((p) => {
+        const q = new URLSearchParams(p);
+        if (next === "agenda") q.delete("tab");
+        else q.set("tab", next);
+        return q;
+      }, { replace: true }),
+    [setParams]
+  );
+  // "Show on the trip map" from the agenda: open the Map tab, then hand it the place once it is there.
+  const pendingMapKey = useRef<string | null>(null);
+  useEffect(() => {
+    const onFocus = (e: Event) => {
+      if (tabRef.current === "map") return;
+      pendingMapKey.current = (e as CustomEvent<string>).detail;
+      setTab("map");
+    };
+    window.addEventListener(MAP_FOCUS_EVENT, onFocus);
+    return () => window.removeEventListener(MAP_FOCUS_EVENT, onFocus);
+  }, [setTab]);
+  useEffect(() => {
+    if (tab !== "map" || !pendingMapKey.current) return;
+    const key = pendingMapKey.current;
+    pendingMapKey.current = null;
+    focusOnMapKey(key);
+  }, [tab]);
+  // A shared link, the AI or the map's "See in itinerary" points at a day, tile or task: show the agenda.
+  const pointers = [useAiFocus("day").focus, useAiFocus("tile").focus, useAiFocus("task").focus, useAiFocus("actionItem").focus];
+  const pointed = pointers.find(Boolean)?.nonce;
+  useEffect(() => {
+    if (pointed && tabRef.current !== "agenda") setTab("agenda");
+  }, [pointed, setTab]);
   const filterRef = useRef<HTMLButtonElement>(null);
 
   const resolvedDays = useResolvedDays(trip);
@@ -93,78 +136,92 @@ function TripPageEntry() {
         onOnlyGapsChange={setOnlyGaps}
       />
 
-      <AlertsPanel
-        tasks={tasks}
-        items={trip.actionItems || []}
-        groups={trip.groups}
-        tripStart={trip.days[0]?.date ?? today}
-        tripEnd={trip.days[trip.days.length - 1]?.date ?? today}
-        onSetDone={setDone}
-        onSetDue={setDue}
-        onAddItem={addItem}
-        onUpdateItem={updateItem}
-        onRemoveItem={removeItem}
-      />
+      <TripTabs tab={tab} onChange={setTab} />
 
-      <Fragment key={trip._id}>
-        <DetailedView
-          days={resolvedDays}
-          legColors={legColors}
-          weather={weather}
-          groups={trip.groups}
-          ticks={ticks}
-          onlyGaps={onlyGaps}
-          isGap={isGap}
-          dayGaps={gapsByDate}
-          onToggle={toggle}
-          onOnlyGapsChange={setOnlyGaps}
-          filterRef={filterRef}
-          actionItems={(trip.actionItems || []).filter((i) => i.kind !== "consider")}
-          considerations={tasks.filter((t) => t.kind === "consider" && t.outcome !== "dropped")}
-          pendingVotes={pendingVotes}
-          onVote={vote}
-          actionItemsDone={done}
-          onToggleActionItem={toggleActionItem}
-          onEditActivity={updateActivity}
-          itemTasks={itemTasks}
-          onPromote={promoteItem}
-          cityPhoto={cityPhoto}
-        />
-      </Fragment>
+      {tab === "agenda" && (
+        <div role="tabpanel" id={tripPanelId("agenda")} aria-labelledby={tripTabId("agenda")}>
+          <AlertsPanel
+            tasks={tasks}
+            items={trip.actionItems || []}
+            groups={trip.groups}
+            tripStart={trip.days[0]?.date ?? today}
+            tripEnd={trip.days[trip.days.length - 1]?.date ?? today}
+            onSetDone={setDone}
+            onSetDue={setDue}
+            onAddItem={addItem}
+            onUpdateItem={updateItem}
+            onRemoveItem={removeItem}
+          />
 
-      <TripMap
-        points={mapPlanPoints}
-        days={resolvedDays}
-        route={deriveRouteAddresses(resolvedDays)}
-        weatherStops={weatherStops}
-        candidates={deriveTaskPoints(tasks, mapPlanPoints)}
-        considerations={tasks.filter((t) => !!t.places?.length)}
-      />
+          <Fragment key={trip._id}>
+            <DetailedView
+              days={resolvedDays}
+              legColors={legColors}
+              weather={weather}
+              groups={trip.groups}
+              ticks={ticks}
+              onlyGaps={onlyGaps}
+              isGap={isGap}
+              dayGaps={gapsByDate}
+              onToggle={toggle}
+              onOnlyGapsChange={setOnlyGaps}
+              filterRef={filterRef}
+              actionItems={(trip.actionItems || []).filter((i) => i.kind !== "consider")}
+              considerations={tasks.filter((t) => t.kind === "consider" && t.outcome !== "dropped")}
+              pendingVotes={pendingVotes}
+              onVote={vote}
+              actionItemsDone={done}
+              onToggleActionItem={toggleActionItem}
+              onEditActivity={updateActivity}
+              itemTasks={itemTasks}
+              onPromote={promoteItem}
+              cityPhoto={cityPhoto}
+            />
+          </Fragment>
 
-      <ActionItems
-        tasks={tasks}
-        items={trip.actionItems || []}
-        groups={trip.groups}
-        onSetDone={setDone}
-        today={today}
-        defaultDue={trip.days[0]?.date ?? today}
-        onSetDue={setDue}
-        tripStart={trip.days[0]?.date ?? today}
-        tripEnd={trip.days[trip.days.length - 1]?.date ?? today}
-        onAddItem={addItem}
-        onUpdateItem={updateItem}
-        onRemoveItem={removeItem}
-        pendingVotes={pendingVotes}
-        onVote={vote}
-        onSetOutcome={setOutcome}
-      />
+          <ActionItems
+            tasks={tasks}
+            items={trip.actionItems || []}
+            groups={trip.groups}
+            onSetDone={setDone}
+            today={today}
+            defaultDue={trip.days[0]?.date ?? today}
+            onSetDue={setDue}
+            tripStart={trip.days[0]?.date ?? today}
+            tripEnd={trip.days[trip.days.length - 1]?.date ?? today}
+            onAddItem={addItem}
+            onUpdateItem={updateItem}
+            onRemoveItem={removeItem}
+            pendingVotes={pendingVotes}
+            onVote={vote}
+            onSetOutcome={setOutcome}
+          />
 
-      <footer>
-        Trip content is stored in Convex — ask to have a change made rather than editing code. Check-offs are saved
-        for everyone with access to this trip.
-      </footer>
+          <footer>
+            Trip content is stored in Convex — ask to have a change made rather than editing code. Check-offs are saved
+            for everyone with access to this trip.
+          </footer>
+        </div>
+      )}
+      {tab === "map" && (
+        <div role="tabpanel" id={tripPanelId("map")} aria-labelledby={tripTabId("map")}>
+          <TripMap
+            points={mapPlanPoints}
+            days={resolvedDays}
+            route={deriveRouteAddresses(resolvedDays)}
+            weatherStops={weatherStops}
+            candidates={deriveTaskPoints(tasks, mapPlanPoints)}
+            considerations={tasks.filter((t) => !!t.places?.length)}
+          />
+        </div>
+      )}
+      {tab === "notes" && (
+        <div role="tabpanel" id={tripPanelId("notes")} aria-labelledby={tripTabId("notes")}>
+          <TripNote slug={slug || ""} inline />
+        </div>
+      )}
 
-      <TripNote slug={slug || ""} />
+      {tab !== "notes" && <TripNote slug={slug || ""} />}
     </PageShell>
   );
 }

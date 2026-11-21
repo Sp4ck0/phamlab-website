@@ -40,7 +40,7 @@ export function DayNav({ rows, todayId, onJump }: { rows: ItineraryRow[]; todayI
           const date = `${MON[d._d.getMonth()]} ${d._d.getDate()}`;
           const dow = DOW[d._d.getDay()];
           const today = id === todayId;
-          // Compact chips: the date over the weekday. The day number is in the label and tooltip.
+          // Chips: the weekday over the date. The day number is in the label and tooltip.
           return (
             <button
               type="button"
@@ -52,8 +52,8 @@ export function DayNav({ rows, todayId, onJump }: { rows: ItineraryRow[]; todayI
               title={`Day ${i}`}
               onClick={() => onJump(id)}
             >
-              <span className="dn-date">{date}</span>
               <span className="dn-dow">{dow}</span>
+              <span className="dn-date">{date}</span>
             </button>
           );
         })}
