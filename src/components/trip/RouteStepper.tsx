@@ -1,49 +1,73 @@
-import { useState } from "react";
-import { byStay, fmtShort, type RouteStop } from "../../lib/tripLogic";
+import { useState, type ReactNode } from "react";
+import { byStay, fmtShort, type CountryStop, type RouteStop } from "../../lib/tripLogic";
 
-// The route, each stop with how many people are there; tap a stop to see who.
-// Names in green joined since the stop before; names in red left.
-export function RouteStepper({ stops }: { stops: RouteStop[] }) {
+function Chip({ icon, label, count, pressed, onClick }: { icon: ReactNode; label: string; count: number; pressed: boolean; onClick: () => void }) {
+  if (!count)
+    return (
+      <span className="route-chip">
+        {icon}
+        {label}
+      </span>
+    );
+  return (
+    <button type="button" className="route-chip" aria-expanded={pressed} onClick={onClick}>
+      {icon}
+      {label}
+      <span className="route-count">{count}</span>
+    </button>
+  );
+}
+
+const dot = (color: string) => <span className="dot" style={{ background: color }} />;
+
+// The route by country, each with how many people are there. Tap a country to
+// see its cities and who is there; tap a city to narrow to it. Names in green
+// joined since the country (or city) before; names in red left.
+export function RouteStepper({ countries }: { countries: CountryStop[] }) {
   const [open, setOpen] = useState<number | null>(null);
-  const stop = open !== null ? stops[open] : null;
+  const [city, setCity] = useState<number | null>(null);
+  const country = open !== null ? countries[open] : null;
+  const shown: CountryStop | RouteStop | null = country && city !== null ? country.stops[city] : country;
+  const toggle = (i: number) => {
+    setOpen(open === i ? null : i);
+    setCity(null);
+  };
   return (
     <>
       <div className="route">
-        {stops.map((s, i) => (
+        {countries.map((c, i) => (
           <span key={i} style={{ display: "contents" }}>
             {i > 0 && <span className="route-arrow">→</span>}
-            {s.who.length ? (
-              <button
-                type="button"
-                className="route-chip"
-                aria-expanded={open === i}
-                onClick={() => setOpen(open === i ? null : i)}
-              >
-                <span className="dot" style={{ background: s.color }} />
-                {s.label}
-                <span className="route-count">{s.who.length}</span>
-              </button>
-            ) : (
-              <span className="route-chip">
-                <span className="dot" style={{ background: s.color }} />
-                {s.label}
-              </span>
-            )}
+            <Chip
+              icon={c.emoji ? <span className="route-flag">{c.emoji}</span> : dot(c.stops[0].color)}
+              label={c.label}
+              count={c.who.length}
+              pressed={open === i}
+              onClick={() => toggle(i)}
+            />
           </span>
         ))}
       </div>
-      {stop && (
+      {country && shown && (
         <div className="route-who">
+          <div className="route route-cities">
+            {country.stops.map((s, i) => (
+              <span key={i} style={{ display: "contents" }}>
+                {i > 0 && <span className="route-arrow">→</span>}
+                <Chip icon={dot(s.color)} label={s.label} count={s.who.length} pressed={city === i} onClick={() => setCity(city === i ? null : i)} />
+              </span>
+            ))}
+          </div>
           <div className="route-who__head">
-            {stop.label} · {fmtShort(stop.dates[0])}
-            {stop.dates.length > 1 && ` – ${fmtShort(stop.dates[stop.dates.length - 1])}`}
-            {` · ${stop.who.length} ${stop.who.length === 1 ? "person" : "people"}`}
+            {shown.label} · {fmtShort(shown.dates[0])}
+            {shown.dates.length > 1 && ` – ${fmtShort(shown.dates[shown.dates.length - 1])}`}
+            {` · ${shown.who.length} ${shown.who.length === 1 ? "person" : "people"}`}
           </div>
           <div className="roster-list">
-            {[...[...stop.who].sort(byStay), ...[...stop.left].sort(byStay)].map((g) => (
+            {[...[...shown.who].sort(byStay), ...[...shown.left].sort(byStay)].map((g) => (
               <span className="roster-person" key={g.id}>
-                <span className="dot" style={{ background: g.color }} />
-                <span className={stop.left.includes(g) ? "route-who__out" : stop.joined.includes(g) ? "route-who__in" : undefined}>
+                {dot(g.color)}
+                <span className={shown.left.includes(g) ? "route-who__out" : shown.joined.includes(g) ? "route-who__in" : undefined}>
                   {g.name}
                 </span>
               </span>

@@ -327,6 +327,8 @@ export function assignLegColors(days: Pick<Day, "city" | "to" | "tag" | "event" 
 export interface RouteStop {
   label: string;
   color: string;
+  // ISO country code of this stop, when the day says.
+  country?: string;
   // Days spent here (days whose city is this stop). Empty for a departure
   // from home (a first day that moves on with no hotel) and for a final
   // arrival, which get no headcount.
@@ -338,28 +340,19 @@ export interface RouteStop {
   left: Group[];
 }
 
-// Unique consecutive city waypoints for the hero's route stepper.
-export function deriveRoute(
-  days: (Pick<Day, "city" | "to"> & Partial<Pick<Day, "date" | "hotels">>)[],
-  legColors: LegColor[],
-  groups: Group[] = []
-): RouteStop[] {
-  const stops: RouteStop[] = [];
-  const push = (label: string, color: string) => stops.push({ label, color, dates: [], who: [], joined: [], left: [] });
-  days.forEach((d, i) => {
-    const color = legColors[i]?.color || ROTATING_ACCENTS[0].color;
-    const last = stops[stops.length - 1];
-    if (!last || last.label !== d.city) push(d.city, color);
-    if (d.date) stops[stops.length - 1].dates.push(d.date);
-    if (d.to) {
-      const last2 = stops[stops.length - 1];
-      if (!last2 || last2.label !== d.to) push(d.to, color);
-    }
-  });
-  const first = days[0];
-  if (first?.to && Array.isArray(first.hotels) && first.hotels.length === 0 && stops[0].dates.length === 1) stops[0].dates = [];
+// Consecutive route stops in the same country, with the same headcount fields
+// (who/joined/left relative to the previous country).
+export interface CountryStop extends Omit<RouteStop, "color" | "country"> {
+  code?: string;
+  emoji: string;
+  stops: RouteStop[];
+}
+
+type Headcount = Pick<RouteStop, "dates" | "who" | "joined" | "left">;
+
+function fillWho(items: Headcount[], groups: Group[]) {
   let prev: Group[] | null = null;
-  for (const s of stops) {
+  for (const s of items) {
     if (!s.dates.length) continue;
     s.who = groups.filter((g) => s.dates.some((date) => presence(g, date)));
     if (prev) {
@@ -369,7 +362,58 @@ export function deriveRoute(
     }
     prev = s.who;
   }
+}
+
+// Unique consecutive city waypoints for the hero's route stepper.
+export function deriveRoute(
+  days: (Pick<Day, "city" | "to"> & Partial<Pick<Day, "date" | "hotels" | "country" | "toCountry">>)[],
+  legColors: LegColor[],
+  groups: Group[] = []
+): RouteStop[] {
+  const stops: RouteStop[] = [];
+  const push = (label: string, color: string, country?: string) =>
+    stops.push({ label, color, country, dates: [], who: [], joined: [], left: [] });
+  days.forEach((d, i) => {
+    const color = legColors[i]?.color || ROTATING_ACCENTS[0].color;
+    const last = stops[stops.length - 1];
+    if (!last || last.label !== d.city) push(d.city, color, d.country);
+    if (d.date) stops[stops.length - 1].dates.push(d.date);
+    if (d.to) {
+      const last2 = stops[stops.length - 1];
+      if (!last2 || last2.label !== d.to) push(d.to, color, d.toCountry);
+    }
+  });
+  const first = days[0];
+  if (first?.to && Array.isArray(first.hotels) && first.hotels.length === 0 && stops[0].dates.length === 1) stops[0].dates = [];
+  fillWho(stops, groups);
   return stops;
+}
+
+// The route folded to countries: consecutive stops in one country become one.
+// A stop with no country stands alone under its city name.
+export function deriveCountries(stops: RouteStop[], groups: Group[] = []): CountryStop[] {
+  const out: CountryStop[] = [];
+  for (const s of stops) {
+    const last = out[out.length - 1];
+    if (last && s.country && last.code === s.country) {
+      last.stops.push(s);
+      last.dates.push(...s.dates);
+      continue;
+    }
+    const flag = flagEmoji(s.country);
+    out.push({
+      code: s.country,
+      label: flag?.label ?? s.label,
+      emoji: flag?.emoji ?? "",
+      stops: [s],
+      dates: [...s.dates],
+      who: [],
+      joined: [],
+      left: [],
+    });
+  }
+  fillWho(out, groups);
+  return out;
 }
 
 export function fmtShort(iso: string) {
