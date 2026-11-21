@@ -113,7 +113,10 @@ function TripPageEntry() {
   // Day headers' city photos: one request per city while the page is open.
   const getCityPhoto = useAction(api.cityPhotos.getCityPhoto);
   const { code } = useAccessCode();
-  const cityPhoto = useMemo(() => cachedPhotos((city, country) => getCityPhoto({ slug: slug || "", code, city, country })), [getCityPhoto, slug, code]);
+  const cityPhoto = useMemo(() => cachedPhotos((city: string, country: string) => getCityPhoto({ slug: slug || "", code, city, country })), [getCityPhoto, slug, code]);
+  // Tiles' place photos: one request per place while the page is open.
+  const getPlacePhoto = useAction(api.cityPhotos.getPlacePhoto);
+  const placePhoto = useMemo(() => cachedPhotos((placeId: string) => getPlacePhoto({ slug: slug || "", code, placeId })), [getPlacePhoto, slug, code]);
   const itemTasks = useMemo(() => Object.fromEntries(tasks.filter((t) => t.key.startsWith("item:")).map((t) => [t.key.slice("item:".length), t])), [tasks]);
   const { updateActivity } = useActivityEdits(slug || "");
   const weather = useTripWeather(slug);
@@ -194,6 +197,7 @@ function TripPageEntry() {
               itemTasks={itemTasks}
               onPromote={promoteItem}
               cityPhoto={cityPhoto}
+              placePhoto={placePhoto}
             />
           </Fragment>
 

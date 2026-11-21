@@ -19,7 +19,8 @@ import { useNow } from "../../lib/useNow";
 import { gapMinutes, hotelSearchUrl, phoneHref, stayInfo } from "../../lib/stay";
 import { TourBox } from "./TourBox";
 import { WeatherBlock } from "./WeatherBadge";
-import type { CityPhoto, CityPhotoFetcher } from "../../lib/cityPhoto";
+import type { CityPhoto, CityPhotoFetcher, PlacePhotoFetcher } from "../../lib/cityPhoto";
+import type { TilePlace } from "../../hooks/usePlacePhotos";
 import { MODE_EMOJI, TAG_EMOJI, actUrl, hotelUrl, legUrl, plain, segmentUrl, zoneNow } from "../../lib/calendar";
 import { NOW_EMOJI, dayZone, nowPosition, untilText, viewerHint, type NowPosition } from "../../lib/nowMarker";
 import { sanitizeHtml } from "../../lib/sanitizeHtml";
@@ -39,6 +40,11 @@ const actKey = (a: Act) => JSON.stringify(a);
 const flightKey = (g: FlightGroup) => JSON.stringify([g.mode, g.route, g.title, g.price, g.detail, g.legs, g.layovers, g.segments]);
 const hotelKey = (g: HotelGroup) => JSON.stringify([g.name, g.address, g.placeId, g.detail, g.checkIn, g.checkOut]);
 const unchanged = <T,>(items: T[]): Change<T>[] => items.map((item) => ({ item, state: "same" }));
+// A tile's places that can show a photo (those with a Google Place ID), each once.
+const photoPlacesOf = (places: Place[] | undefined): TilePlace[] => {
+  const seen = new Set<string>();
+  return (places ?? []).flatMap((p) => (p.placeId && !seen.has(p.placeId) && seen.add(p.placeId) ? [{ name: p.name, placeId: p.placeId }] : []));
+};
 
 // An edited line comes out of diffLines as old rows ("gone") then new rows. Pair
 // them in order so the new row can show the old wording's words in place
@@ -97,6 +103,8 @@ interface Props {
   onPromote?: (id: string, date: string) => Promise<unknown>;
   // A photo of the day's city for its header; without it the header shows the leg's colour.
   cityPhoto?: CityPhotoFetcher;
+  // A photo of a place on a tile (a hotel, an activity's or an item's place with a Place ID).
+  placePhoto?: PlacePhotoFetcher;
 }
 
 export function DayCard({
@@ -126,6 +134,7 @@ export function DayCard({
   itemTasks,
   onPromote,
   cityPhoto,
+  placePhoto,
 }: Props) {
   const [editingAct, setEditingAct] = useState<number | null>(null);
   const { slug } = useParams<{ slug: string }>();
@@ -310,6 +319,7 @@ export function DayCard({
               : []),
           ],
           className: `tl-hotel${unresolved ? " miss" : ""}`, nextUpLine: upText(g.srcs),
+          photoPlaces: chosen ? photoPlacesOf([place]) : undefined,
           headerEnd: <TileStatePill state={pill} label={pill === "needed" && !g.name ? "Not chosen" : undefined} />,
           children: (
             <>
@@ -411,6 +421,7 @@ export function DayCard({
         ],
         headerEnd: live?.pill,
         progress: live?.progress,
+        photoPlaces: photoPlacesOf(named),
         children: editing ? (
           <ActivityEditor
             initial={text}
@@ -536,6 +547,7 @@ export function DayCard({
         meta: [status, what, range, who ? gapLabel(who, groups, start ?? d.date)?.label : undefined, priority ? `${PRIORITY_LABELS[priority]} priority` : undefined].filter(Boolean).join(" · "),
         className: `tl-item${consider ? " tl-consider" : ""}${done ? " is-done" : ""}`,
         headerEnd,
+        photoPlaces: photoPlacesOf(task?.places ?? todo?.places),
         children: (
           <>
             {(titleHasLinks || detail) && (
@@ -648,7 +660,7 @@ export function DayCard({
                 return (
                   <Fragment key={e.key}>
                     {lineBefore && nowPos && nowPos.kind !== "during" && nowLine(nowPos, "now")}
-                    <TimelineTile {...x.tile} open={isOpenTile(x)} onToggle={() => tiles.toggle(id, x.defaultOpen)} onReveal={() => tiles.reveal(id)} />
+                    <TimelineTile {...x.tile} placePhoto={placePhoto} open={isOpenTile(x)} onToggle={() => tiles.toggle(id, x.defaultOpen)} onReveal={() => tiles.reveal(id)} />
                     {lineAfter && nowLine(nowPos, "now")}
                   </Fragment>
                 );

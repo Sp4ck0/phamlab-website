@@ -15,7 +15,7 @@ import { reconcileRows } from "../../lib/itineraryState";
 import { DayNav } from "./DayNav";
 import { DayCard } from "./DayCard";
 import type { DayWeather } from "../../lib/weather";
-import type { CityPhotoFetcher } from "../../lib/cityPhoto";
+import type { CityPhotoFetcher, PlacePhotoFetcher } from "../../lib/cityPhoto";
 import { isDestToday } from "../../lib/nowMarker";
 import { useNow } from "../../lib/useNow";
 
@@ -49,11 +49,13 @@ interface Props {
   onPromote?: (id: string, date: string) => Promise<unknown>;
   // A photo of each day's city for its header.
   cityPhoto?: CityPhotoFetcher;
+  // A photo of a place on a tile.
+  placePhoto?: PlacePhotoFetcher;
 }
 
 // Unified itinerary; name retained to keep the detail renderer's consumer small.
 export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps, isGap, dayGaps, onOnlyGapsChange, filterRef,
-  onToggle, actionItems, considerations, pendingVotes, onVote, actionItemsDone, onToggleActionItem, onEditActivity, itemTasks, onPromote, cityPhoto }: Props) {
+  onToggle, actionItems, considerations, pendingVotes, onVote, actionItemsDone, onToggleActionItem, onEditActivity, itemTasks, onPromote, cityPhoto, placePhoto }: Props) {
   const prefix = useId();
   const nowMs = useNow();
   // A day the AI just edited keeps showing its old content until the page is
@@ -290,7 +292,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
             }} onToggle={onToggle} dayActionItems={actionItems.filter(item => item.date !== undefined && item.date <= d.date && d.date <= (item.endDate ?? item.date))}
             dayConsiderations={considerations.filter(t => t.scope.kind !== "trip" && coversDay(t.scope, d.date))}
             pendingVotes={pendingVotes} onVote={onVote}
-            actionItemsDone={actionItemsDone} onToggleActionItem={onToggleActionItem} onEditActivity={editActivity} itemTasks={itemTasks} onPromote={onPromote} cityPhoto={cityPhoto} />
+            actionItemsDone={actionItemsDone} onToggleActionItem={onToggleActionItem} onEditActivity={editActivity} itemTasks={itemTasks} onPromote={onPromote} cityPhoto={cityPhoto} placePhoto={placePhoto} />
           </Fragment>
         ))}
         {ghostAt === -1 && ghostDay}
