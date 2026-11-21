@@ -1,4 +1,4 @@
-import { useId, type MouseEvent, type ReactNode } from "react";
+import { useId, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { changeClass, type ChangeState } from "../../lib/changeDiff";
 import { useUntilFound } from "../../hooks/useUntilFound";
 import { TileMenu, type TileMenuItem } from "./TileMenu";
@@ -25,7 +25,8 @@ export interface TimelineTileProps {
   /** What the icon stands for ("Food"), as its tooltip. */
   iconLabel?: string;
   title: ReactNode;
-  /** False for a static card: just its header, no chevron, no body, no toggling. */
+  /** False for a static card: just its header, no chevron, no body, no toggling. A static card whose
+   *  title is cut off (two lines, then "…") still opens, to show the whole title. */
   expandable?: boolean;
   /** One line of essentials under the title. */
   meta?: ReactNode;
@@ -62,7 +63,7 @@ const OWN_CLICK = "button, a, input, label, select, textarea, summary, [role=men
 // in its bottom border: down when closed, up when open. Tapping anywhere on an expandable card
 // toggles it, except on a control of its own; the title is the keyboard toggle (aria-expanded).
 // The body always stays in the page, so find-in-page reaches a closed card and opens it
-// (hidden="until-found").
+// (hidden="until-found"). A static card whose title is cut off opens too, to show all of it.
 export function TimelineTile({
   domId, time, icon, iconLabel, title, expandable = true, meta, headerEnd, menu, label, warn, open, onToggle, onReveal,
   change = "same", className, nextUpLine, now, progress, children,
@@ -70,16 +71,31 @@ export function TimelineTile({
   const bodyId = useId();
   const bodyRef = useUntilFound(open, onReveal ?? onToggle);
   const gone = change === "gone";
+  // A static card's title clamped to two lines: measured while closed (open, it shows in full).
+  const titleRef = useRef<HTMLSpanElement>(null);
+  const [clipped, setClipped] = useState(false);
+  const canOpen = expandable || clipped;
+  const titleKey = typeof title === "string" ? title : label;
+  useLayoutEffect(() => {
+    const el = titleRef.current;
+    if (expandable || gone || open || !el) return;
+    const check = () => setClipped(el.scrollHeight > el.clientHeight + 1);
+    check();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [expandable, gone, open, canOpen, titleKey]);
   const cardClick = (e: MouseEvent<HTMLElement>) => {
     if ((e.target as HTMLElement).closest(OWN_CLICK)) return;
     // Selecting text to copy it isn't a tap.
     if (window.getSelection?.()?.toString()) return;
     onToggle();
   };
-  const showWarn = !!warn && (!expandable || !open);
+  const showWarn = !!warn && (!canOpen || !open);
   const heading = (
     <>
-      <span className="tl-title">{title}</span>
+      <span className="tl-title" ref={titleRef}>{title}</span>
       {(meta || nextUpLine) && (
         <span className="tl-meta">
           {nextUpLine && <span className="next-up-line">{nextUpLine}</span>}
@@ -96,8 +112,8 @@ export function TimelineTile({
       {...(gone ? { inert: true, "aria-hidden": true } : {})}
     >
       <div
-        className={`tl-tile${open && expandable ? " is-open" : ""}${expandable ? "" : " tl-flat"}${className ? ` ${className}` : ""}${changeClass(change)}`}
-        onClick={expandable ? cardClick : undefined}
+        className={`tl-tile${open && canOpen ? " is-open" : ""}${canOpen ? "" : " tl-flat"}${className ? ` ${className}` : ""}${changeClass(change)}`}
+        onClick={canOpen ? cardClick : undefined}
       >
         {time && <span className="tl-time" data-all-day={time === ALL_DAY ? "true" : undefined}>{time}</span>}
         <div className="tl-head">
@@ -105,7 +121,7 @@ export function TimelineTile({
             <span aria-hidden="true">{icon}</span>
             {showWarn && <span className="tl-warn" role="img" aria-label="Needs attention" title="Needs attention" />}
           </span>
-          {expandable ? (
+          {canOpen ? (
             <button type="button" className="tl-toggle" aria-expanded={open} aria-controls={bodyId} onClick={onToggle}>
               {heading}
             </button>
@@ -116,13 +132,13 @@ export function TimelineTile({
           <span className="tl-more">{!gone && menu && <TileMenu label={name} items={menu} />}</span>
           {progress}
         </div>
-        {expandable && (
+        {canOpen && (
           <div className="tl-body" id={bodyId} ref={bodyRef}>
             {children}
           </div>
         )}
         {/* Decorative: the whole card is the control. */}
-        {expandable && (
+        {canOpen && (
           <span className="tl-notch" aria-hidden="true">
             <svg className="tl-chev" width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M3.5 5.25L7 8.75l3.5-3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
