@@ -144,7 +144,9 @@ export function TimelineTile({
             {time && <span className="tl-time" data-all-day={time === ALL_DAY ? "true" : undefined}>{time}</span>}
           </span>
         )}
-        <div className={`tl-head${shown ? " has-photos" : ""}`}>
+        <div className={`tl-head${shown ? " has-photo" : ""}`}>
+          {/* Decorative, behind the header and fading into the card: the place is named in the title. */}
+          {shown && <span className="tl-photo" aria-hidden="true" style={{ backgroundImage: `url("${shown.photo.url.replace(/"/g, "%22")}")` }} />}
           {canOpen ? (
             <button type="button" className="tl-toggle" aria-expanded={open} aria-controls={bodyId} onClick={onToggle}>
               {heading}
@@ -153,12 +155,6 @@ export function TimelineTile({
             <div className="tl-heading">{heading}</div>
           )}
           {headerEnd && <span className="tl-end">{headerEnd}</span>}
-          {/* Decorative: the places are named in the title and the menu. */}
-          {shown && (
-            <span className="tl-photos" aria-hidden="true">
-              <img src={shown.photo.url} alt="" decoding="async" />
-            </span>
-          )}
           <span className="tl-more">{!gone && items && <TileMenu label={name} items={items} />}</span>
           {progress}
         </div>
