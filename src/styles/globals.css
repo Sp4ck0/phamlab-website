@@ -907,6 +907,7 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
   /* Phones: the Agenda / Map / Notes bar sits at the top of the trip page, pinned under the site
      menu (56px); the date strip pins under it, and jump targets clear both. */
   .trip-page{display:flex;flex-direction:column}
+  .trip-page:not([data-tab="agenda"]) > .trip-summary{display:none}
   .trip-tabs-bar{order:-1;position:sticky;top:56px;z-index:22;background:var(--page);padding:6px 0}
   .trip-tabs{margin:0}
   .trip-tab{min-height:34px;padding:4px 8px}

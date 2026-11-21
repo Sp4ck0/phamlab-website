@@ -142,7 +142,9 @@ function TripPageEntry() {
 
   return (
     <PageShell>
-      <div className="trip-page">
+      <div className="trip-page" data-tab={tab}>
+        {/* Phones show the trip summary on the Agenda tab only (CSS): the map and the note start under the tabs. */}
+        <div className="trip-summary">
         <TripHeader
           kicker={trip.kicker}
           title={trip.title}
@@ -154,6 +156,7 @@ function TripPageEntry() {
           onlyGaps={onlyGaps}
           onOnlyGapsChange={setOnlyGaps}
         />
+        </div>
 
         {/* Phones: moved to the top of the page and pinned under the site menu (CSS). */}
         <div className="trip-tabs-bar" ref={tabsRef}>
