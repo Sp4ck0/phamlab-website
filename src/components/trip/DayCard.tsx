@@ -8,7 +8,7 @@ import { TransportBody } from "./TransportBody";
 import { HotelBody } from "./HotelCard";
 import { hotelHeader, isPlaceholderHotel, segmentsOf, transportHeader } from "../../lib/tileHeaders";
 import { copyShareLink } from "../../lib/shareLink";
-import { type TileMenuItem } from "./TileMenu";
+import { TileMenu, type TileMenuItem } from "./TileMenu";
 import { routeSearchUrl } from "../../lib/segments";
 import { ALL_DAY, TileStatePill, TimelineTile, type TimelineTileProps, type TileState } from "./TimelineTile";
 import { StatusToggle } from "./StatusToggle";
@@ -30,7 +30,6 @@ import { PRIORITY_LABELS, voteTally } from "../../lib/tasks";
 import type { DayGaps } from "../../lib/tasks";
 import { useShowAiFocus } from "../../hooks/useAiFocus";
 import { useUntilFound } from "../../hooks/useUntilFound";
-import { ShareLinkButton } from "./ShareLinkButton";
 import { ActivityEditor } from "./ActivityEditor";
 import { tileDomId } from "../../lib/tileId";
 import { InlineDiff } from "./InlineDiff";
@@ -622,14 +621,17 @@ export function DayCard({
           </svg>
         </button>
       )}
-      <ShareLinkButton param={{ day: d.date }} label={`Share link to Day ${dayNumber}`} />
+      {/* The day's ⋯ menu: its link, and the photographer's credit for the photo (Google asks for it). */}
+      <TileMenu
+        label={`More for Day ${dayNumber}`}
+        items={[
+          copyItem({ day: d.date }),
+          ...(photo?.credit
+            ? [photo.credit.uri ? { label: `Photo by ${photo.credit.name}`, href: photo.credit.uri } : { label: `Photo by ${photo.credit.name}`, onSelect: () => {} }]
+            : []),
+        ]}
+      />
       </span>
-      {/* Google requires the photographer's name with the photo: a small line under the header, off the photo. */}
-      {photo?.credit && (
-        <span className="day-photo-credit">
-          {photo.credit.uri ? <a href={photo.credit.uri} target="_blank" rel="noopener noreferrer">Photo: {photo.credit.name}</a> : <>Photo: {photo.credit.name}</>}
-        </span>
-      )}
       </h2>
 
       <div ref={panelRef} id={`${rowId}-panel`} aria-labelledby={`${rowId}-trigger`}>

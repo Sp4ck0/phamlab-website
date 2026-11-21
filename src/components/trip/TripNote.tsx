@@ -15,9 +15,11 @@ export function TripNote({ slug, inline = false }: { slug: string; inline?: bool
   const open = inline || opened;
   const area = useRef<HTMLTextAreaElement>(null);
 
+  // The floating pad takes focus when someone opens it; the Notes tab doesn't (on a phone that
+  // would pop the keyboard up just for looking at the note).
   useEffect(() => {
-    if (open) area.current?.focus();
-  }, [open]);
+    if (opened) area.current?.focus();
+  }, [opened]);
 
   if (!note.loaded) return null;
 
