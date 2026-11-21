@@ -388,7 +388,9 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
   text-align:left;cursor:pointer;scroll-margin-top:76px;border-radius:0;
 }
 .day-head-btn:hover{background:var(--page)}
-.day-head-btn:focus-visible,.daynav button:focus-visible{outline:3px solid var(--accent-1);outline-offset:2px}
+.daynav button:focus-visible{outline:3px solid var(--accent-1);outline-offset:2px}
+/* Inside the card's edge, with rounded corners, so the ring never cuts across the card's own border. */
+.day-head-btn:focus-visible{outline:3px solid var(--accent-1);outline-offset:-3px;border-radius:10px}
 .day-head-right{grid-column:2;grid-row:1;display:flex;align-items:center;gap:12px;min-width:0}
 .day-summary{grid-column:1 / -1;grid-row:2;font-size:13px;line-height:1.4;color:var(--text-secondary);overflow-wrap:anywhere;min-width:0}
 .day-place{display:inline-flex;align-items:center;gap:5px;font-size:14px;font-weight:500;color:var(--text-primary);overflow-wrap:anywhere}
@@ -449,8 +451,9 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 /* Unresolved and closed: a small badge on the card's icon, so it never moves the header. */
 .tl-warn{position:absolute;z-index:2;top:-1px;right:-3px;width:9px;height:9px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 2px var(--card)}
 .tl-head .now-progress{border-radius:0 0 11px 11px}
-/* The chevron in a notch in the bottom border: decorative, the whole card is the control. */
-.tl-notch{position:absolute;z-index:1;left:50%;bottom:0;transform:translate(-50%,50%);display:grid;place-items:center;width:38px;height:20px;border:1px solid var(--border);border-radius:999px;background:var(--card);color:var(--text-muted);pointer-events:none}
+/* The chevron in a notch in the bottom border: decorative for screen readers, but part of the card, so a tap
+   on any of it (including the half below the border) toggles the card like the rest of it. */
+.tl-notch{position:absolute;z-index:1;left:50%;bottom:0;transform:translate(-50%,50%);display:grid;place-items:center;width:38px;height:20px;border:1px solid var(--border);border-radius:999px;background:var(--card);color:var(--text-muted)}
 .tl-tile.is-open .tl-notch{border-color:color-mix(in srgb,var(--accent-1) 40%,var(--border));color:var(--accent-1)}
 .tl-tile.miss .tl-notch{border-color:var(--warn)}
 .tl-chev{transition:transform .22s ease}
@@ -891,7 +894,7 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
   .day-photo{position:absolute;top:0;left:0;right:0;height:92px;min-height:0;border-radius:11px 11px 0 0}
   .day-photo::after{background:linear-gradient(180deg,rgba(0,0,0,.05) 20%,rgba(0,0,0,.62))}
   /* width:100%: a button sizes to its content, so a short summary would pull the weather and chevron left. */
-  .day-heading .day-head-btn{position:relative;z-index:1;padding:0;width:100%}
+  .day-heading .day-head-btn{position:relative;z-index:1;padding:0;width:100%;border-radius:11px 11px 0 0}
   .day-head-btn:hover{background:transparent}
   .day-head{grid-template-columns:minmax(0,1fr) auto;grid-template-rows:1fr auto auto auto;gap:0}
   .day-title-group{grid-column:1;grid-row:1 / 4;min-height:92px;justify-content:flex-end;gap:0;padding:8px 12px 7px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7)}

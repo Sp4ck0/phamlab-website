@@ -949,10 +949,12 @@ test('a tile the AI or a shared link points at opens, scrolls and blinks; tiles 
     act(() => section.querySelector('.day-head-btn').click());
     const toggle = (text) => tileToggle(section, (t) => t.textContent.includes(text));
     act(() => toggle('Synthetic two').click()); // the reader opens one
+    document.activeElement?.blur();
     act(() => out.show({ slug: 'synthetic', target: { kind: 'tile', date: day.date, tile: flightId(day.date, one) }, nonce: 'n1' }));
     await act(async () => { await new Promise((r) => setTimeout(r, 900)); }); // settle, then the scroll fallback
     assert.equal(toggle('Synthetic one').getAttribute('aria-expanded'), 'true');
     assert.ok(toggle('Synthetic one').closest('li.tl-entry').classList.contains('ai-focus-flash'));
+    assert.ok(document.activeElement === document.body); // the blink shows where; focus (and its ring) doesn't move
     assert.equal(toggle('Synthetic two').getAttribute('aria-expanded'), 'true'); // untouched
     assert.equal(toggle('Synthetic Hotel').getAttribute('aria-expanded'), 'false'); // untouched
     assert.equal(localStorage.getItem('tiles:synthetic'), JSON.stringify({ [`${day.date}#${flightId(day.date, two)}`]: true })); // the reveal is not saved
@@ -1085,6 +1087,10 @@ test('an activity approved from a suggestion opens to its History; a card opens 
     act(() => hotel.querySelector('.tl-time').dispatchEvent(new window.MouseEvent('click', { bubbles: true })));
     assert.equal(toggle.getAttribute('aria-expanded'), 'true'); // anywhere else on the card opens it
     assert.equal(hotel.querySelector('.tl-notch').getAttribute('aria-hidden'), 'true'); // the chevron is decoration
+    act(() => hotel.querySelector('.tl-notch').dispatchEvent(new window.MouseEvent('click', { bubbles: true })));
+    assert.equal(toggle.getAttribute('aria-expanded'), 'false'); // but a tap on it toggles the card
+    act(() => hotel.querySelector('.tl-notch svg').dispatchEvent(new window.MouseEvent('click', { bubbles: true })));
+    assert.equal(toggle.getAttribute('aria-expanded'), 'true');
     act(() => hotel.querySelector('.tl-body').dispatchEvent(new window.MouseEvent('click', { bubbles: true })));
     assert.equal(toggle.getAttribute('aria-expanded'), 'false'); // and from its body it closes
   } finally { view.close(); }
