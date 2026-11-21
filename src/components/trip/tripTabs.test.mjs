@@ -13,6 +13,7 @@ globalThis.document = dom.window.document;
 globalThis.HTMLElement = dom.window.HTMLElement;
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const { TripTabs } = await import('./TripTabs.tsx');
+const { tabFromHash, withTab } = await import('../../lib/tripTabs.ts');
 
 function mount(element) {
   const container = document.createElement('div');
@@ -45,4 +46,14 @@ test('a click or the arrow keys change the tab, wrapping at the ends', () => {
     act(() => view.container.querySelectorAll('[role=tab]')[1].click());
     assert.deepEqual(picked, ['map', 'notes', 'notes', 'map']);
   } finally { view.close(); }
+});
+
+test('the tab lives in the hash route\'s query, other parameters kept; the agenda is the default and leaves no ?tab=', () => {
+  assert.equal(tabFromHash('?tab=map&day=2040-01-02'), 'map');
+  assert.equal(tabFromHash('?tab=bogus'), 'agenda');
+  assert.equal(tabFromHash(''), 'agenda');
+  const base = 'https://example.com/site/#/trip/synthetic?day=2040-01-02';
+  assert.equal(withTab(base, 'notes'), 'https://example.com/site/#/trip/synthetic?day=2040-01-02&tab=notes');
+  assert.equal(withTab(withTab(base, 'map'), 'agenda'), base);
+  assert.equal(withTab('https://example.com/site/#/trip/synthetic', 'map'), 'https://example.com/site/#/trip/synthetic?tab=map');
 });
