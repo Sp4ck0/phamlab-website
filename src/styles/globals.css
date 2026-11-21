@@ -890,7 +890,8 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
   .day-heading{display:block;position:relative}
   .day-photo{position:absolute;top:0;left:0;right:0;height:92px;min-height:0;border-radius:11px 11px 0 0}
   .day-photo::after{background:linear-gradient(180deg,rgba(0,0,0,.05) 20%,rgba(0,0,0,.62))}
-  .day-heading .day-head-btn{position:relative;z-index:1;padding:0}
+  /* width:100%: a button sizes to its content, so a short summary would pull the weather and chevron left. */
+  .day-heading .day-head-btn{position:relative;z-index:1;padding:0;width:100%}
   .day-head-btn:hover{background:transparent}
   .day-head{grid-template-columns:minmax(0,1fr) auto;grid-template-rows:1fr auto auto auto;gap:0}
   .day-title-group{grid-column:1;grid-row:1 / 4;min-height:92px;justify-content:flex-end;gap:0;padding:8px 12px 7px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7)}
