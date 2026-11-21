@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { PageShell } from "../components/layout/PageShell";
 import { TripHeader } from "../components/trip/TripHeader";
@@ -21,7 +21,7 @@ import { assignLegColors } from "../lib/tripLogic";
 import { dayGaps, gapDates } from "../lib/tasks";
 import { MAP_FOCUS_EVENT, deriveTaskPoints, derivePoints, deriveRouteAddresses, deriveWeatherStops, focusOnMapKey } from "../lib/mapPoints";
 import { TripTabs } from "../components/trip/TripTabs";
-import { TRIP_TABS, tripPanelId, tripTabId, type TripTab } from "../lib/tripTabs";
+import { tabFromHash, tripPanelId, tripTabId, withTab, type TripTab } from "../lib/tripTabs";
 import { useAiFocus } from "../hooks/useAiFocus";
 import { NotFoundOrDenied } from "./NotFoundOrDenied";
 import { useAction } from "convex/react";
@@ -40,22 +40,34 @@ function TripPageEntry() {
 
   const [onlyGaps, setOnlyGaps] = useState(false);
 
-  // Agenda / Map / Notes, kept in the URL (?tab=) so a reload or a shared link keeps the view.
-  const [params, setParams] = useSearchParams();
-  const asked = params.get("tab") as TripTab | null;
-  const tab: TripTab = asked && TRIP_TABS.includes(asked) ? asked : "agenda";
+  // Agenda / Map / Notes. The choice is mirrored into the URL (?tab=) so a reload or a shared link
+  // keeps the view, but quietly: through the router it would count as a new page, which scrolls to
+  // the top and rebuilds the whole trip page.
+  const [params] = useSearchParams();
+  const [tab, setTabState] = useState<TripTab>(() => tabFromHash(`?${params.toString()}`));
   const tabRef = useRef(tab);
   tabRef.current = tab;
-  const setTab = useCallback(
-    (next: TripTab) =>
-      setParams((p) => {
-        const q = new URLSearchParams(p);
-        if (next === "agenda") q.delete("tab");
-        else q.set("tab", next);
-        return q;
-      }, { replace: true }),
-    [setParams]
-  );
+  // Each tab keeps its own scroll position; one not opened yet starts with the tab bar in view.
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const scrolls = useRef<Partial<Record<TripTab, number>>>({});
+  const setTab = useCallback((next: TripTab) => {
+    if (next === tabRef.current) return;
+    scrolls.current[tabRef.current] = window.scrollY;
+    setTabState(next);
+    window.history.replaceState(window.history.state, "", withTab(window.location.href, next));
+  }, []);
+  const firstTab = useRef(true);
+  useLayoutEffect(() => {
+    if (firstTab.current) { firstTab.current = false; return; }
+    const saved = scrolls.current[tab];
+    const bar = tabsRef.current;
+    const top = saved ?? (bar ? Math.min(window.scrollY, bar.getBoundingClientRect().top + window.scrollY - 64) : window.scrollY);
+    window.scrollTo({ top: Math.max(0, top), behavior: "instant" });
+  }, [tab]);
+  // The agenda and map stay mounted once shown, so coming back is instant; the map loads on first visit.
+  // (The note stays unmounted when hidden: the floating note is shown then, and two editors of one note would diverge.)
+  const [seen, setSeen] = useState<Partial<Record<TripTab, true>>>({ agenda: true });
+  useEffect(() => { if (!seen[tab]) setSeen((s) => ({ ...s, [tab]: true })); }, [tab, seen]);
   // "Show on the trip map" from the agenda: open the Map tab, then hand it the place once it is there.
   const pendingMapKey = useRef<string | null>(null);
   useEffect(() => {
@@ -136,75 +148,75 @@ function TripPageEntry() {
         onOnlyGapsChange={setOnlyGaps}
       />
 
-      <TripTabs tab={tab} onChange={setTab} />
+      <div ref={tabsRef}>
+        <TripTabs tab={tab} onChange={setTab} />
+      </div>
 
-      {tab === "agenda" && (
-        <div role="tabpanel" id={tripPanelId("agenda")} aria-labelledby={tripTabId("agenda")}>
-          <AlertsPanel
-            tasks={tasks}
-            items={trip.actionItems || []}
+      <div role="tabpanel" id={tripPanelId("agenda")} aria-labelledby={tripTabId("agenda")} hidden={tab !== "agenda"}>
+        <AlertsPanel
+          tasks={tasks}
+          items={trip.actionItems || []}
+          groups={trip.groups}
+          tripStart={trip.days[0]?.date ?? today}
+          tripEnd={trip.days[trip.days.length - 1]?.date ?? today}
+          onSetDone={setDone}
+          onSetDue={setDue}
+          onAddItem={addItem}
+          onUpdateItem={updateItem}
+          onRemoveItem={removeItem}
+        />
+
+        <Fragment key={trip._id}>
+          <DetailedView
+            days={resolvedDays}
+            legColors={legColors}
+            weather={weather}
             groups={trip.groups}
-            tripStart={trip.days[0]?.date ?? today}
-            tripEnd={trip.days[trip.days.length - 1]?.date ?? today}
-            onSetDone={setDone}
-            onSetDue={setDue}
-            onAddItem={addItem}
-            onUpdateItem={updateItem}
-            onRemoveItem={removeItem}
-          />
-
-          <Fragment key={trip._id}>
-            <DetailedView
-              days={resolvedDays}
-              legColors={legColors}
-              weather={weather}
-              groups={trip.groups}
-              ticks={ticks}
-              onlyGaps={onlyGaps}
-              isGap={isGap}
-              dayGaps={gapsByDate}
-              onToggle={toggle}
-              onOnlyGapsChange={setOnlyGaps}
-              filterRef={filterRef}
-              actionItems={(trip.actionItems || []).filter((i) => i.kind !== "consider")}
-              considerations={tasks.filter((t) => t.kind === "consider" && t.outcome !== "dropped")}
-              pendingVotes={pendingVotes}
-              onVote={vote}
-              actionItemsDone={done}
-              onToggleActionItem={toggleActionItem}
-              onEditActivity={updateActivity}
-              itemTasks={itemTasks}
-              onPromote={promoteItem}
-              cityPhoto={cityPhoto}
-            />
-          </Fragment>
-
-          <ActionItems
-            tasks={tasks}
-            items={trip.actionItems || []}
-            groups={trip.groups}
-            onSetDone={setDone}
-            today={today}
-            defaultDue={trip.days[0]?.date ?? today}
-            onSetDue={setDue}
-            tripStart={trip.days[0]?.date ?? today}
-            tripEnd={trip.days[trip.days.length - 1]?.date ?? today}
-            onAddItem={addItem}
-            onUpdateItem={updateItem}
-            onRemoveItem={removeItem}
+            ticks={ticks}
+            onlyGaps={onlyGaps}
+            isGap={isGap}
+            dayGaps={gapsByDate}
+            onToggle={toggle}
+            onOnlyGapsChange={setOnlyGaps}
+            filterRef={filterRef}
+            actionItems={(trip.actionItems || []).filter((i) => i.kind !== "consider")}
+            considerations={tasks.filter((t) => t.kind === "consider" && t.outcome !== "dropped")}
             pendingVotes={pendingVotes}
             onVote={vote}
-            onSetOutcome={setOutcome}
+            actionItemsDone={done}
+            onToggleActionItem={toggleActionItem}
+            onEditActivity={updateActivity}
+            itemTasks={itemTasks}
+            onPromote={promoteItem}
+            cityPhoto={cityPhoto}
           />
+        </Fragment>
 
-          <footer>
-            Trip content is stored in Convex — ask to have a change made rather than editing code. Check-offs are saved
-            for everyone with access to this trip.
-          </footer>
-        </div>
-      )}
-      {tab === "map" && (
-        <div role="tabpanel" id={tripPanelId("map")} aria-labelledby={tripTabId("map")}>
+        <ActionItems
+          tasks={tasks}
+          items={trip.actionItems || []}
+          groups={trip.groups}
+          onSetDone={setDone}
+          today={today}
+          defaultDue={trip.days[0]?.date ?? today}
+          onSetDue={setDue}
+          tripStart={trip.days[0]?.date ?? today}
+          tripEnd={trip.days[trip.days.length - 1]?.date ?? today}
+          onAddItem={addItem}
+          onUpdateItem={updateItem}
+          onRemoveItem={removeItem}
+          pendingVotes={pendingVotes}
+          onVote={vote}
+          onSetOutcome={setOutcome}
+        />
+
+        <footer>
+          Trip content is stored in Convex — ask to have a change made rather than editing code. Check-offs are saved
+          for everyone with access to this trip.
+        </footer>
+      </div>
+      {(seen.map || tab === "map") && (
+        <div role="tabpanel" id={tripPanelId("map")} aria-labelledby={tripTabId("map")} hidden={tab !== "map"}>
           <TripMap
             points={mapPlanPoints}
             days={resolvedDays}

@@ -5,6 +5,17 @@ import { DOW, MON } from "../../lib/tripLogic";
 export function DayNav({ rows, todayId, onJump }: { rows: ItineraryRow[]; todayId?: string; onJump: (rowId: string) => void }) {
   const nav = useRef<HTMLElement>(null);
   const todayBtn = useRef<HTMLButtonElement>(null);
+  // Chips snap to whole buttons after a swipe; on phones they line up just right of the sticky
+  // Today button, so none sits half under it.
+  const jumpBtn = useRef<HTMLButtonElement>(null);
+  useLayoutEffect(() => {
+    const n = nav.current, j = jumpBtn.current;
+    if (!n) return;
+    const pad = () => { n.style.scrollPaddingLeft = j && j.offsetWidth ? `${j.offsetWidth + 6}px` : ""; };
+    pad();
+    window.addEventListener("resize", pad);
+    return () => window.removeEventListener("resize", pad);
+  }, [todayId]);
   // Bring today's pill into view along the strip only; scrollIntoView would also move the page.
   useLayoutEffect(() => {
     const n = nav.current, b = todayBtn.current;
@@ -32,7 +43,7 @@ export function DayNav({ rows, todayId, onJump }: { rows: ItineraryRow[]; todayI
       <nav className="daynav" aria-label="Jump to itinerary day" ref={nav}>
         {/* Phones: stays at the strip's left edge so today is one tap away from any day. */}
         {todayId && (
-          <button type="button" className="daynav-jump" onClick={() => onJump(todayId)}>
+          <button type="button" className="daynav-jump" ref={jumpBtn} onClick={() => onJump(todayId)}>
             ↩ Today
           </button>
         )}
