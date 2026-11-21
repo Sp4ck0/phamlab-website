@@ -1126,3 +1126,29 @@ test('the day header: the city photo with its credit once in view, Day N of M ·
     assert.equal(plain.container.querySelector('.day-photo-credit'), null);
   } finally { plain.close(); }
 });
+
+test('opening a day re-marks its closed tiles as closed (Safari otherwise keeps their full height), and they stay searchable', async () => {
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const days = resolveDays({ days: [{ ...day, hotels: [{ who: 'all', name: 'Synthetic Hotel', status: 'booked' }] }] });
+  const view = mount(React.createElement(DayCard, { ...props, day: days[0], days, expanded: false }));
+  const marks = [];
+  const real = window.Element.prototype.setAttribute;
+  window.Element.prototype.setAttribute = function (name, value) {
+    if (name === 'hidden' && this.classList?.contains('tl-body')) marks.push(value);
+    return real.call(this, name, value);
+  };
+  try {
+    act(() => view.root.render(React.createElement(DayCard, { ...props, day: days[0], days, expanded: true })));
+    assert.deepEqual(marks, ['until-found']); // the closed hotel tile, re-marked as the day opened
+    assert.equal(view.container.querySelector('.tl-hotel .tl-body').getAttribute('hidden'), 'until-found'); // still closed, still searchable
+  } finally { window.Element.prototype.setAttribute = real; view.close(); }
+});
+
+test('Nothing planned yet is one line: no hint under the title', () => {
+  const view = mount(React.createElement(DayCard, { ...props, day: { ...day, acts: [] }, expanded: true, gaps: { plan: true, transport: [], details: [] } }));
+  try {
+    const tile = view.container.querySelector('.tl-plan');
+    assert.equal(tile.querySelector('.tl-meta'), null);
+    assert.equal(tile.querySelector('.tx-state').textContent, 'Not planned');
+  } finally { view.close(); }
+});

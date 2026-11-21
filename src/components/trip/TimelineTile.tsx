@@ -79,11 +79,6 @@ export function TimelineTile({
   const showWarn = !!warn && (!expandable || !open);
   const heading = (
     <>
-      {/* Phones drop the time and icon columns: they sit in a small line above the title instead. */}
-      <span className="tl-when" aria-hidden="true">
-        <span className="tl-when-icon">{icon}</span>
-        {time && <span className="tl-when-time">{time}</span>}
-      </span>
       <span className="tl-title">{title}</span>
       {(meta || nextUpLine) && (
         <span className="tl-meta">
