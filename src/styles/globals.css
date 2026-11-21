@@ -794,7 +794,10 @@ footer code{background:var(--chip-bg);padding:2px 6px;border-radius:4px;color:va
 /* ── trip map ───────────────────────────── */
 .trip-map-wrap{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;transition:box-shadow .3s}
 .trip-map-wrap.is-focused{box-shadow:0 0 0 3px var(--accent-1)}
-/* Small crosshair button after a place's 📍 link: show that place on the trip map. */
+/* The pin before a place's name in a Google Maps link. */
+.maps-pin-wrap{display:inline}
+svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none}
+/* Small folded-map button after a place's Maps link: show that place on the trip map. */
 .map-focus{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;margin:0 2px 0 4px;padding:3px;border:0;border-radius:6px;background:none;color:var(--text-muted);cursor:pointer;line-height:0}
 .map-focus:hover{color:var(--accent-1);background:var(--accent-1-tint)}
 .map-focus:focus-visible{outline:2px solid var(--accent-1);outline-offset:1px;color:var(--accent-1)}

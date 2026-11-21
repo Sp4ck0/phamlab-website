@@ -1,10 +1,10 @@
 import { useParams } from "react-router-dom";
 import type { Place, TaskScope } from "../../lib/types";
 import { dow } from "../../lib/tasks";
-import { MAP_FOCUS_ICON, focusOnMap, googleMapsUrl, placeKey } from "../../lib/mapPoints";
+import { MAPS_PIN_ICON, MAP_FOCUS_ICON, focusOnMap, googleMapsUrl, placeKey } from "../../lib/mapPoints";
 import { useShowAiFocus } from "../../hooks/useAiFocus";
 
-// Icon button after a place's 📍 link: scrolls to the trip map and opens that
+// Icon button after a place's Maps link: scrolls to the trip map and opens that
 // pin. Renders nothing for a place the map can't pin (no Place ID or address).
 export function ShowOnMap({ place }: { place: Place }) {
   if (!placeKey(place)) return null;
@@ -14,7 +14,7 @@ export function ShowOnMap({ place }: { place: Place }) {
   );
 }
 
-// 📍 links to each place in Google Maps (exact listing when it has a Place ID).
+// Pin-icon links to each place in Google Maps (exact listing when it has a Place ID).
 export function PlaceLinks({ places }: { places: Place[] }) {
   return (
     <>
@@ -22,7 +22,7 @@ export function PlaceLinks({ places }: { places: Place[] }) {
         <span key={i}>
           {i > 0 && " · "}
           <a href={googleMapsUrl(p)} target="_blank" rel="noopener noreferrer">
-            📍 {p.name}
+            <MapsPin />{p.name}
           </a>
           <ShowOnMap place={p} />
         </span>
@@ -69,4 +69,9 @@ export function ScopeLinks({ scope }: { scope: TaskScope }) {
     </button>
   );
   return scope.kind === "day" ? link(scope.date) : <>{link(scope.start)} – {link(scope.end)}</>;
+}
+
+// The pin before a place's name in a link that opens Google Maps.
+export function MapsPin() {
+  return <span className="maps-pin-wrap" dangerouslySetInnerHTML={{ __html: MAPS_PIN_ICON }} />;
 }
