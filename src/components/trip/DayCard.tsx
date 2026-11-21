@@ -618,7 +618,9 @@ export function DayCard({
             : []),
           copyItem({ day: d.date }),
           ...(photo?.credit
-            ? [photo.credit.uri ? { label: `Photo by ${photo.credit.name}`, icon: "photo" as const, href: photo.credit.uri } : { label: `Photo by ${photo.credit.name}`, icon: "photo" as const, onSelect: () => {} }]
+            ? [photo.credit.uri
+                ? { label: "See photo credit", icon: "photo" as const, href: photo.credit.uri }
+                : { label: "See photo credit", icon: "photo" as const, onSelect: () => `Photo by ${photo.credit!.name}` }]
             : []),
         ]}
       />

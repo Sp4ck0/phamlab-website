@@ -1140,7 +1140,7 @@ test('the day header: the city photo with its credit once in view, Day N of M ·
     const photo = first.querySelector('.day-photo');
     assert.ok(photo.classList.contains('has-photo') && photo.style.backgroundImage.includes('https://example.com/synthetic.jpg'));
     const dayMenu = openMenu(first.querySelector('.day-tools'));
-    assert.equal(menuItem(dayMenu, 'Photo by Synthetic Photographer').getAttribute('href'), 'https://example.com/p'); // the credit Google asks for, in the day's menu
+    assert.equal(menuItem(dayMenu, 'See photo credit').getAttribute('href'), 'https://example.com/p'); // the credit Google asks for: the photographer's page
     assert.ok(menuItem(dayMenu, 'Copy link'));
     assert.equal(photo.textContent, ''); // nothing written on the photo
     assert.deepEqual(asked, [`${day.city}|TH`]); // the same city twice is one request
@@ -1154,7 +1154,7 @@ test('the day header: the city photo with its credit once in view, Day N of M ·
   const plain = mount(React.createElement(DayCard, { ...props, day: days[0], days }));
   try {
     assert.ok(!plain.container.querySelector('.day-photo').classList.contains('has-photo'));
-    assert.ok(!openMenu(plain.container.querySelector('.day-tools')).some((i) => i.textContent.startsWith('Photo by')));
+    assert.ok(!openMenu(plain.container.querySelector('.day-tools')).some((i) => i.textContent === 'See photo credit'));
   } finally { plain.close(); }
 });
 
