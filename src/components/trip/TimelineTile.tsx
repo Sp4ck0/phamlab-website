@@ -1,6 +1,8 @@
 import { useId, type MouseEvent, type ReactNode } from "react";
 import { changeClass, type ChangeState } from "../../lib/changeDiff";
 import { useUntilFound } from "../../hooks/useUntilFound";
+import { MAPS_PIN_ICON } from "../../lib/mapPoints";
+import { TileMenu, type TileMenuItem } from "./TileMenu";
 
 export const ALL_DAY = "All day";
 
@@ -16,29 +18,28 @@ export function TileStatePill({ state, label }: { state: TileState; label?: stri
 export interface TimelineTileProps {
   /** Element id, so a shared link or AI focus can scroll to and flash this tile (a removed ghost has none). */
   domId?: string;
-  /** The time label: "09:30", ALL_DAY, or nothing when the tile has no time. */
+  /** The time pill: "09:30", ALL_DAY, or nothing when the tile has no time. */
   time?: string;
-  /** The tile's type marker on the rail. */
+  /** The tile's type icon, before its title. */
   icon: ReactNode;
-  /** What the marker stands for ("Food"), as its tooltip. */
+  /** What the icon stands for ("Food"), as its tooltip. */
   iconLabel?: string;
   title: ReactNode;
-  /**
-   * The tile's name as plain text, when `title` holds links (a hotel's Maps link, an
-   * activity's places). A link can't sit inside the toggle button, so the title is then
-   * plain content, the chevron becomes the button (named from this), and a click anywhere
-   * else on the header still opens the tile.
-   */
-  label?: string;
-  /** False for a tile with nothing more to show: just its header, no chevron, no body. */
+  /** False for a tile with nothing more to show: just its row, no chevron, no body. */
   expandable?: boolean;
   /** One line of essentials under the title. */
   meta?: ReactNode;
-  /** Pills, votes, an activity's buttons: right-aligned before the control. Siblings of the toggle, never inside it. */
+  /** Pills and votes: right-aligned before the control. Siblings of the toggle, never inside it. */
   headerEnd?: ReactNode;
   /** The tile's one main control (the booked check, a to-do's checkbox), in a fixed slot so it lines up on every tile. */
   control?: ReactNode;
-  /** Something here is unresolved; a dot on its rail icon shows while the tile is closed (always, on a tile that doesn't open). */
+  /** Opens the tile's place in Google Maps: the pin button on the right of the row. */
+  pin?: { href: string; label: string };
+  /** The tile's other actions, behind the "⋯" button. */
+  menu?: TileMenuItem[];
+  /** Plain name for the menu's label ("More actions: …"); defaults to the title when it is text. */
+  label?: string;
+  /** Something here is unresolved; a dot on its icon shows while the tile is closed (always, on a tile that doesn't open). */
   warn?: boolean;
   open: boolean;
   onToggle: () => void;
@@ -57,19 +58,20 @@ export interface TimelineTileProps {
   children: ReactNode;
 }
 
-// One tile on a day's timeline: a time label, a marker on the rail and an accordion.
-// The body always stays in the page, so find-in-page reaches a closed tile and
-// opens it (hidden="until-found"). Only the header toggles; the body's own
-// buttons and links never do.
+// One row of a day's agenda: a time pill, an icon and the title, then the same few
+// controls on the right of every row (the main control, the Maps pin, the "⋯" menu and the
+// chevron), each in a fixed slot so they line up down the day. The body always stays in the
+// page, so find-in-page reaches a closed tile and opens it (hidden="until-found"). Only the
+// header toggles; its buttons and links, and the body's, never do.
 export function TimelineTile({
-  domId, time, icon, iconLabel, title, label, expandable = true, meta, headerEnd, control, warn, open, onToggle, onReveal, change = "same", className, nextUpLine, now, progress, children,
+  domId, time, icon, iconLabel, title, expandable = true, meta, headerEnd, control, pin, menu, label, warn, open, onToggle, onReveal,
+  change = "same", className, nextUpLine, now, progress, children,
 }: TimelineTileProps) {
   const bodyId = useId();
   const bodyRef = useUntilFound(open, onReveal ?? onToggle);
   const gone = change === "gone";
-  // A click on the header's plain parts (the chevron, the space around the pills, a linked
-  // title's text) toggles too; a click on any control or link inside it does not. The
-  // toggle button handles its own click.
+  // A click on the header's plain parts (the time, the icon, the space around the pills)
+  // toggles too; a click on any control or link inside it does not.
   const headClick = (e: MouseEvent<HTMLElement>) => {
     if ((e.target as HTMLElement).closest("button, a, input, label, select, textarea")) return;
     onToggle();
@@ -77,7 +79,7 @@ export function TimelineTile({
   const showWarn = !!warn && (!expandable || !open);
   const heading = (
     <>
-      {/* Phones drop the time column and the rail: the icon and time sit at the top of the tile instead. */}
+      {/* Phones drop the time and icon columns: they sit in a small line above the title instead. */}
       <span className="tl-when" aria-hidden="true">
         <span className="tl-when-icon">{icon}</span>
         {time && <span className="tl-when-time">{time}</span>}
@@ -96,21 +98,22 @@ export function TimelineTile({
       <path d="M3.5 5.25L7 8.75l3.5-3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
+  const name = label ?? (typeof title === "string" ? title : "this");
   return (
     <li
       className={`tl-entry${now ? " tl-entry--now" : ""}${nextUpLine ? " next-up" : ""}${showWarn ? " tl-entry--warn" : ""}`}
       id={domId}
       {...(gone ? { inert: true, "aria-hidden": true } : {})}
     >
-      <span className="tl-time" data-all-day={time === ALL_DAY ? "true" : undefined}>{time}</span>
-      <span className="tl-rail">
-        <span className="tl-dot" aria-hidden="true" title={iconLabel}>{icon}</span>
-        {showWarn && <span className="tl-warn" role="img" aria-label="Needs attention" title="Needs attention" />}
-      </span>
       <div className={`tl-tile${open && expandable ? " is-open" : ""}${expandable ? "" : " tl-flat"}${className ? ` ${className}` : ""}${changeClass(change)}`}>
         {/* The toggle button is the keyboard control; this click handler only widens the click target. */}
         <div className="tl-head" onClick={expandable ? headClick : undefined}>
-          {expandable && label === undefined ? (
+          <span className="tl-time" data-all-day={time === ALL_DAY ? "true" : undefined}>{time}</span>
+          <span className="tl-dot" title={iconLabel}>
+            <span aria-hidden="true">{icon}</span>
+            {showWarn && <span className="tl-warn" role="img" aria-label="Needs attention" title="Needs attention" />}
+          </span>
+          {expandable ? (
             <button type="button" className="tl-toggle" aria-expanded={open} aria-controls={bodyId} onClick={onToggle}>
               {heading}
             </button>
@@ -118,13 +121,15 @@ export function TimelineTile({
             <div className="tl-heading">{heading}</div>
           )}
           {headerEnd && <span className="tl-end">{headerEnd}</span>}
-          {/* Fixed slots on every tile, filled or not, so checks and chevrons line up down the day. */}
+          {/* Fixed slots on every row, filled or not, so the controls line up down the day. */}
           <span className="tl-control">{control}</span>
-          {!expandable ? <span className="tl-chev-slot" aria-hidden="true" /> : label === undefined ? chevron : (
-            <button type="button" className="tl-toggle tl-chev-btn" aria-expanded={open} aria-controls={bodyId} aria-label={`${label}: details`} onClick={onToggle}>
-              {chevron}
-            </button>
-          )}
+          <span className="tl-pin">
+            {pin && (
+              <a className="icon-btn tl-pin-btn" href={pin.href} target="_blank" rel="noopener noreferrer" aria-label={pin.label} title={pin.label} dangerouslySetInnerHTML={{ __html: MAPS_PIN_ICON }} />
+            )}
+          </span>
+          <span className="tl-more">{!gone && menu && <TileMenu label={name} items={menu} />}</span>
+          {expandable ? chevron : <span className="tl-chev-slot" aria-hidden="true" />}
           {progress}
         </div>
         {expandable && (

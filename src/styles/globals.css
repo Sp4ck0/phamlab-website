@@ -326,6 +326,15 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
   .ov-arrow{display:none}
 }
 
+/* ── Agenda / Map / Notes tabs ───────────────────────────── */
+.trip-tabs{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;margin:16px 0 4px;padding:4px;background:var(--card);border:1px solid var(--border);border-radius:14px}
+.trip-tab{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:6px 10px;font:inherit;font-size:14px;font-weight:600;color:var(--text-secondary);background:transparent;border:0;border-radius:10px;cursor:pointer}
+.trip-tab:hover{color:var(--text-primary);background:var(--chip-bg)}
+.trip-tab[aria-selected="true"]{color:#fff;background:var(--accent-1);box-shadow:0 2px 10px color-mix(in srgb,var(--accent-1) 35%,transparent)}
+.trip-tab:focus-visible{outline:3px solid var(--accent-1);outline-offset:2px}
+.trip-tab-icon{display:inline-grid;place-items:center}
+.trip-tab-icon svg{width:18px;height:18px}
+.trip-tab[aria-selected="true"] .trip-tab-icon svg path[style]{fill:var(--accent-1)!important}
 /* ── day quick-nav ───────────────────────────── */
 .daynav-shell{
   position:sticky;top:0;z-index:20;background:var(--page);
@@ -334,13 +343,14 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 .daynav{display:flex;gap:6px;overflow-x:auto;padding:2px 0;scrollbar-width:none}
 .daynav::-webkit-scrollbar{display:none}
 .daynav button{
-  flex:none;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;min-width:54px;
-  text-decoration:none;font-size:12.5px;font-weight:700;line-height:1.15;color:var(--text-secondary);
-  background:var(--card);border:1px solid var(--border);padding:4px 9px;border-radius:10px;
-  font-family:inherit;cursor:pointer;min-height:36px;
+  flex:1 0 92px;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;
+  text-decoration:none;font-size:14px;font-weight:600;line-height:1.2;color:var(--text-primary);
+  background:var(--card);border:1px solid var(--border);padding:6px 10px;border-radius:12px;
+  font-family:inherit;cursor:pointer;min-height:44px;
 }
-.daynav button .dn-dow{font-size:10.5px;font-weight:600;color:var(--text-muted)}
-.daynav button.daynav-today .dn-dow{color:inherit;opacity:.85}
+.daynav button .dn-dow{font-size:12.5px;font-weight:600;color:var(--text-secondary)}
+.daynav button.daynav-today{font-weight:700}
+.daynav button.daynav-today .dn-dow{color:inherit;opacity:.9}
 .daynav button.daynav-today{background:var(--accent-1);border-color:var(--accent-1);color:#fff}
 .daynav button.daynav-jump{display:none}
 .today-badge{
@@ -356,8 +366,17 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
   padding:0;margin-bottom:8px;
   border-left:5px solid var(--leg-color,var(--accent-1));scroll-margin-top:66px;
 }
-.day-heading{margin:0;font:inherit;display:flex;align-items:center;gap:4px;padding-right:8px}
-.day-heading .day-head-btn{flex:1;min-width:0;width:auto}
+/* Day header: the city's photo | the day, date and place, the weather | expand-all and share. */
+.day-heading{margin:0;font:inherit;display:grid;grid-template-columns:clamp(120px,30%,240px) minmax(0,1fr) auto;align-items:stretch;padding:0}
+.day-photo{grid-column:1;grid-row:1;position:relative;min-height:112px;overflow:hidden;border-radius:11px 0 0 11px;
+  background:linear-gradient(135deg,var(--leg-color,var(--accent-1)),color-mix(in srgb,var(--leg-color,var(--accent-1)) 30%,var(--card)));
+  background-size:cover;background-position:center}
+.day-photo::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent 40%,var(--card));pointer-events:none}
+.day-photo-credit{position:absolute;left:8px;bottom:6px;z-index:1;max-width:85%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.day-photo-credit a{color:inherit;text-decoration:none}
+.day-photo-credit a:hover{text-decoration:underline}
+.day-heading .day-head-btn{grid-column:2;grid-row:1;min-width:0;width:auto}
+.day-tools{grid-column:3;grid-row:1;display:flex;align-items:flex-start;gap:2px;padding:10px 8px 0 0}
 /* share link button (ShareLinkButton): the "Link copied" note floats under it */
 .share-wrap{position:relative;display:inline-flex;flex:none}
 .share-status{position:absolute;top:100%;right:0;margin-top:2px;z-index:5;white-space:nowrap;pointer-events:none;font-size:12px;color:var(--text-secondary);background:var(--card);border:1px solid var(--border);border-radius:6px;padding:0 6px}
@@ -365,99 +384,94 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 .day-heading .icon-btn{opacity:.7}
 /* tile share + calendar buttons: pushed right in the card header, clear of the status dot (the .ctop padding) */
 .day-heading .icon-btn:hover,.day-heading .icon-btn:focus-visible{opacity:1}
-.day-head{display:grid;grid-template-columns:100px minmax(0,1fr) auto;align-items:center;gap:8px 14px;margin:0}
+.day-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 14px;margin:0}
 .day-head-btn{
-  width:100%;background:none;border:0;padding:13px 16px;font:inherit;color:inherit;
-  text-align:left;cursor:pointer;scroll-margin-top:76px;border-radius:10px;
+  width:100%;background:none;border:0;padding:12px 14px;font:inherit;color:inherit;
+  text-align:left;cursor:pointer;scroll-margin-top:76px;border-radius:0;
 }
 .day-head-btn:hover{background:var(--page)}
 .day-head-btn:focus-visible,.daynav button:focus-visible{outline:3px solid var(--accent-1);outline-offset:2px}
-.day-head-right{grid-column:3;grid-row:1;display:inline-flex;align-items:center;flex-wrap:wrap;gap:8px;min-width:0}
-.day-summary{grid-column:2;grid-row:1;font-size:13.5px;color:var(--text-secondary);overflow-wrap:anywhere;min-width:0}
+.day-head-right{grid-column:2;grid-row:1;display:flex;align-items:center;gap:12px;min-width:0}
+.day-summary{grid-column:1 / -1;grid-row:2;font-size:13px;line-height:1.4;color:var(--text-secondary);overflow-wrap:anywhere;min-width:0}
+.day-place{display:inline-flex;align-items:center;gap:5px;font-size:14px;font-weight:500;color:var(--text-primary);overflow-wrap:anywhere}
+.day-place svg.maps-pin{width:15px;height:15px;margin:0;color:var(--accent-1);flex:none}
+.weather-block{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:92px;text-align:center}
+.weather-block-icon{font-size:30px;line-height:1}
+.weather-block-temps{font-size:16px;font-weight:700;color:var(--text-primary);white-space:nowrap}
+.weather-block-label{font-size:12px;color:var(--text-secondary);white-space:nowrap}
+.weather-block.weather-typical{opacity:.75;font-style:italic}
 .day-card > div:not([hidden]){padding:4px 16px 16px}
 /* A closed panel or tile body stays in the page (hidden="until-found", so find-in-page reaches it)
    but must take no space: iOS Safari otherwise keeps its full height as a blank gap. */
 .day-card > div[hidden],.tl-body[hidden]{height:0;overflow:hidden;padding:0;margin:0;border:0}
 
-/* ── day timeline (TimelineTile): one rail of tiles, each an accordion ──
-   time label | marker on the rail | tile. A closed tile is its header alone; opening one
-   only pushes what is below it down, so nothing moves sideways. */
-.tl{list-style:none;margin:4px 0 0;padding:0}
-.tl-entry,.tl-now{display:grid;grid-template-columns:52px 26px minmax(0,1fr);column-gap:8px;scroll-margin-top:66px}
-.tl-time{padding-top:15px;text-align:right;font-size:12px;font-weight:700;line-height:1.2;color:var(--text-secondary);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
-.tl-time[data-all-day]{font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--text-muted)}
-.tl-rail{position:relative;display:flex;justify-content:center}
-.tl-rail::before{content:"";position:absolute;top:0;bottom:0;left:calc(50% - 1px);width:2px;background:var(--gridline)}
-.tl>:first-child .tl-rail::before{top:20px}
-.tl>:last-child .tl-rail::before{bottom:auto;height:20px}
-.tl>:only-child .tl-rail::before{display:none}
-.tl-dot{position:relative;z-index:1;margin-top:8px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:13px;line-height:1;background:var(--card);border:1.5px solid var(--gridline)}
-.tl-entry--now .tl-dot{border-color:var(--now);box-shadow:0 0 0 3px color-mix(in srgb,var(--now) 22%,transparent)}
-.tl-tile{min-width:0;margin-bottom:8px;background:var(--card);border:1px solid var(--border);border-radius:10px;transition:border-color .15s}
+/* ── day agenda (TimelineTile): one row per item, each an accordion ──
+   time pill | icon | title and meta | extras | control | Maps pin | ⋯ menu | chevron. The last
+   four slots are on every row, filled or not, so the controls line up down the day. A closed
+   row is its header alone; opening one only pushes what is below it down. */
+.tl{list-style:none;margin:0;padding:0}
+.tl-heading-row{display:flex;align-items:center;gap:8px;margin:4px 0 8px}
+.tl-heading-row h3{margin:0;font-size:15px;font-weight:700;color:var(--text-primary)}
+.tl-count{font-size:12px;font-weight:600;color:var(--text-secondary);border:1px solid var(--border);border-radius:999px;padding:1px 8px}
+.tl-entry,.tl-now{position:relative;scroll-margin-top:66px}
+.tl-tile{min-width:0;margin-bottom:6px;background:var(--card);border:1px solid var(--border);border-radius:12px;transition:border-color .15s}
 .tl-tile.is-open{border-color:color-mix(in srgb,var(--accent-1) 40%,var(--border))}
 .tl-tile.miss{border-style:dashed;border-color:var(--warn);background:var(--accent-transit-tint)}
 .day-card.gaps-only .tl-tile.miss{border-width:2px}
 .tl-tile.maybe{opacity:.88}
 .tl-entry.next-up{box-shadow:none}
 .tl-entry.next-up .tl-tile{box-shadow:0 0 0 2px var(--accent-1)}
-/* Header: the title button, then the state pills, the unresolved dot and the chevron. */
-/* Header columns: title | extras (pills, votes, buttons) | control (28px) | chevron (32px). The last two are
-   reserved on every tile, filled or not, so the check marks and chevrons form straight columns down the day. */
-.tl-head{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto 28px 32px;align-items:center;column-gap:6px;min-height:42px;padding-right:4px;border-radius:9px;cursor:pointer}
+.tl-head{position:relative;display:grid;grid-template-columns:62px 28px minmax(0,1fr) auto 28px 32px 32px 28px;align-items:center;column-gap:8px;min-height:50px;padding:0 6px 0 10px;border-radius:11px;cursor:pointer}
 @media (hover:hover){.tl-head:hover{background:color-mix(in srgb,var(--accent-1) 5%,transparent)}}
-.tl-toggle{grid-column:1;display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0;padding:8px 0 8px 12px;border:0;background:transparent;font:inherit;color:inherit;text-align:left;cursor:pointer;border-radius:9px}
-.tl-toggle:focus-visible{outline:2px solid var(--accent-1);outline-offset:-2px}
-/* A title with links is not inside a button: the chevron is the button, the rest of the header still opens the tile. */
-.tl-heading{grid-column:1;display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0;padding:8px 0 8px 12px}
-.tl-title a{color:var(--accent-1);text-decoration:underline}
-.tl-title .map-focus,.tl-title .map-btn{vertical-align:middle}
-.tl-chev-btn{grid-column:4;justify-self:center;display:grid;place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--text-muted);cursor:pointer}
-.tl-chev-btn .tl-chev{grid-column:auto}
-/* A tile with nothing to open: just its row, the whole sentence shown. */
+/* The time as a pill; "All day" in small caps; no time keeps the space so titles line up. */
+.tl-time{grid-column:1;justify-self:start;box-sizing:border-box;min-width:58px;text-align:center;padding:4px 8px;border-radius:999px;background:var(--accent-1-tint);color:var(--accent-1);font-size:13px;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tl-time:empty{visibility:hidden}
+.tl-time[data-all-day]{font-size:10px;letter-spacing:.04em;text-transform:uppercase;padding:5px 6px}
+.tl-entry--now .tl-time{background:var(--now);color:#fff}
+.tl-dot{grid-column:2;position:relative;display:grid;place-items:center;width:28px;height:28px;font-size:20px;line-height:1}
+.tl-toggle{grid-column:3;display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0;padding:8px 0;border:0;background:transparent;font:inherit;color:inherit;text-align:left;cursor:pointer;border-radius:9px}
+.tl-toggle:focus-visible{outline:2px solid var(--accent-1);outline-offset:2px}
+.tl-heading{grid-column:3;display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0;padding:8px 0}
 .tl-flat .tl-head{cursor:default}
 @media (hover:hover){.tl-flat .tl-head:hover{background:transparent}}
-.tl-flat .tl-title{display:block;-webkit-line-clamp:unset;font-weight:500}
-.tl-heading .tl-title.activity-text,.tl-heading .activity-text{flex:none}
-.tl-actions-inline{display:inline-flex;align-items:center;gap:2px}
-.tl-actions-inline .icon-btn{opacity:.7;width:28px;height:28px}
-.tl-actions-inline .act-edit{opacity:.7}
-.tl-actions-inline a.gcal-btn{margin-left:2px}
 .tl-when{display:none}
 .tl-title{max-width:100%;font-size:14.5px;font-weight:600;line-height:1.35;color:var(--text-primary);overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 .tl-tile.is-open .tl-title{display:block;-webkit-line-clamp:unset}
 .tl-meta{font-size:12.5px;line-height:1.35;color:var(--text-secondary);overflow-wrap:anywhere}
 .tl-meta .next-up-line{display:block;margin:0}
-.tl-end{grid-column:2;display:inline-flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:6px 8px}
-.tl-control{grid-column:3;display:grid;place-items:center}
-.tl-control .status{position:relative;top:auto;right:auto}
-.tl-chev-slot{grid-column:4}
+.tl-end{grid-column:4;display:inline-flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:6px 8px}
 .tl-end .now-pill{margin-right:0}
-/* Unresolved and closed: a small badge on the tile's rail icon, so it never moves the header. */
-.tl-warn{position:absolute;z-index:2;top:6px;left:calc(50% + 5px);width:9px;height:9px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 2px var(--card)}
-.tl-chev{grid-column:4;justify-self:center;color:var(--text-muted);transition:transform .16s}
+.tl-end:empty{display:none}
+.tl-control{grid-column:5;display:grid;place-items:center}
+.tl-control .status{position:relative;top:auto;right:auto}
+.tl-pin{grid-column:6;display:grid;place-items:center}
+.tl-more{grid-column:7;display:grid;place-items:center}
+.tl-chev,.tl-chev-slot{grid-column:8;justify-self:center}
+.tl-chev{color:var(--text-muted);transition:transform .16s}
 .tl-tile.is-open .tl-chev{transform:rotate(180deg)}
-.tl-head .now-progress{border-radius:0 0 9px 9px}
-/* Body: the tile's own content, then one row of actions in the same order on every tile. */
+.tl-pin-btn,.tl-menu-btn{width:32px;height:32px;color:var(--text-secondary)}
+.tl-pin-btn svg.maps-pin{width:18px;height:18px;margin:0}
+/* Unresolved and closed: a small badge on the row's icon, so it never moves the header. */
+.tl-warn{position:absolute;z-index:2;top:-1px;right:-3px;width:9px;height:9px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 2px var(--card)}
+.tl-head .now-progress{border-radius:0 0 11px 11px}
+/* The "⋯" menu. */
+.tl-menu{position:relative;display:inline-flex}
+.tl-menu-list{position:absolute;right:0;top:calc(100% + 4px);z-index:30;display:flex;flex-direction:column;min-width:210px;padding:4px;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.28)}
+.tl-menu-list>*{display:block;text-align:left;font:inherit;font-size:13.5px;font-weight:500;color:var(--text-primary);background:transparent;border:0;border-radius:6px;padding:8px 10px;text-decoration:none;cursor:pointer;white-space:nowrap}
+.tl-menu-list>*:hover,.tl-menu-list>*:focus-visible{background:var(--chip-bg);outline:none}
+/* Body: the tile's own content, then (for a suggestion) its main action. */
 .tl-body:not([hidden]){padding:10px 12px 12px;border-top:1px solid var(--gridline)}
 .tl-actions{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;margin-top:10px;padding-top:8px;border-top:1px solid var(--gridline)}
 .tl-actions:first-child{margin-top:0;padding-top:0;border-top:0}
-.tl-actions .icon-btn{opacity:.75;width:28px;height:28px}
-.tl-actions .icon-btn:hover,.tl-actions .icon-btn:focus-visible{opacity:1}
-.tl-actions .act-edit{opacity:.75;align-self:center}
-.tl-actions a.gcal-btn{margin-left:0}
 .tl-link{color:var(--accent-1);text-decoration:none;font-size:13px;font-weight:600}
 .tl-link:hover{text-decoration:underline}
 .tl-body>.activity-text{display:block;font-size:14.5px;line-height:1.5}
 .transport-top{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;margin-bottom:4px}
-/* Things that are not tiles: the tour box sits in the tile column; "now" is a line on the rail. */
-.tl-entry--plain .tl-plain{grid-column:3;margin-bottom:8px}
+/* Things that are not rows: the tour box; "now" is a red line across the agenda. */
+.tl-entry--plain .tl-plain{margin-bottom:6px}
 .tl-entry--plain .tl-plain details.tour-box{margin-top:0}
-.tl-now{align-items:start;margin:-2px 0 6px}
-.tl-now .tl-time{padding-top:0;color:var(--now)}
-.tl-now .tl-rail{align-items:flex-start}
-.tl-now-dot{position:relative;z-index:1;margin-top:3px;width:10px;height:10px;border-radius:50%;background:var(--now);box-shadow:0 0 0 3px var(--card)}
-.tl-now-label{border-top:2px solid var(--now);margin-top:7px;padding-top:4px;font-size:12px;font-weight:700;color:var(--now);font-variant-numeric:tabular-nums}
-/* To-dos and considerations on the timeline: a dashed edge says "not in the plan yet". */
+.tl-now{margin:2px 0 8px}
+.tl-now-label{display:block;border-top:2px solid var(--now);padding-top:4px;font-size:12px;font-weight:700;color:var(--now);font-variant-numeric:tabular-nums}
 .tl-tile.tl-item{border-style:dashed}
 .tl-tile.tl-item.is-done{opacity:.7}
 .tl-tile.tl-item.is-done:not(.tl-consider) .tl-title{text-decoration:line-through;text-decoration-color:var(--text-muted)}
@@ -480,23 +494,19 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 .day-tiles-btn{flex:none}
 @media(prefers-reduced-motion:reduce){.tl-chev,.tl-tile{transition:none}}
 @media(max-width:640px){
-  .tl-entry,.tl-now{grid-template-columns:38px 22px minmax(0,1fr);column-gap:6px}
-  .tl-time{font-size:11px;padding-top:14px}
-  .tl-time[data-all-day]{font-size:9px}
-  .tl-dot{width:22px;height:22px;font-size:11px;margin-top:10px}
-  /* The state pills drop under the title, so a long title never squeezes them. */
-  .tl-head{grid-template-columns:minmax(0,1fr) 28px 32px;padding-right:2px}
-  .tl-toggle{padding-left:10px}
+  /* Phones: the time and icon move into a small line above the title; pills and votes drop under it. */
+  .tl-head{grid-template-columns:minmax(0,1fr) 28px 32px 32px 28px;padding:0 2px 0 10px}
+  .tl-head>.tl-time,.tl-head>.tl-dot{display:none}
+  .tl-toggle,.tl-heading{grid-column:1}
   .tl-control{grid-column:2;grid-row:1}
-  .tl-chev,.tl-chev-btn,.tl-chev-slot{grid-column:3;grid-row:1}
-  .tl-warn{top:7px;left:calc(50% + 3px)}
-  .tl-actions-inline .icon-btn{width:36px;height:36px}
-  .tl-end{grid-column:1 / -1;grid-row:2;justify-content:flex-start;padding:0 0 8px 10px}
+  .tl-pin{grid-column:3;grid-row:1}
+  .tl-more{grid-column:4;grid-row:1}
+  .tl-chev,.tl-chev-slot{grid-column:5;grid-row:1}
+  .tl-end{grid-column:1 / -1;grid-row:2;justify-content:flex-start;padding:0 0 8px}
   .tl-body:not([hidden]){padding:10px}
-  .tl-actions .icon-btn{width:36px;height:36px}
-
   .tl-approve,.tl-end .vote-btn{min-height:44px}
   .tl-check{width:24px;height:24px}
+  .tl-menu-list>*{padding:12px}
 }
 .itinerary-status{font-size:13px;color:var(--text-secondary)}
 .itinerary-status:empty{margin:0}
@@ -504,8 +514,8 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
 .day-chevron{transition:transform .16s ease;color:var(--text-muted);flex:none}
 .day-chevron[data-collapsed="true"]{transform:rotate(-90deg)}
 .day-title-group{grid-column:1;grid-row:1;display:flex;flex-direction:column;gap:3px;min-width:0}
-.day-num{font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--text-muted);text-transform:uppercase}
-.day-date{font-size:14.5px;font-weight:700;letter-spacing:-.01em}
+.day-num{font-size:12.5px;font-weight:500;color:var(--text-secondary)}
+.day-date{font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.15;color:var(--text-primary)}
 .leg-badge{
   display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;
   padding:4px 10px;border-radius:999px;background:var(--leg-tint,var(--accent-1-tint));color:var(--leg-color,var(--accent-1));
@@ -866,32 +876,28 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
 @media(max-width:640px){
   .wrap{padding:0 16px 60px}
   h1{font-size:24px}
-  /* Day header, compact: the day and date | the time, weather and city | the summary in one small row. */
-  .day-head-btn{position:relative;padding:10px 12px}
-  .day-head{grid-template-columns:auto minmax(0,1fr);gap:6px 12px}
-  .day-title-group{grid-column:1;grid-row:1;padding-right:12px;border-right:1px solid var(--gridline);align-self:stretch;justify-content:center}
-  .day-num{font-size:10px}
-  .day-date{font-size:14px;white-space:nowrap}
-  .day-head-right{grid-column:2;grid-row:1;display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;justify-content:flex-start}
-  .day-head-right .today-badge,.day-head-right .weather-badge{padding:0;background:transparent;border:0;font-size:12.5px;font-weight:600;color:var(--text-primary)}
-  .day-head-right .weather-badge.weather-typical{color:var(--text-muted)}
-  .day-head-right .leg-badge{flex-basis:100%;padding:0;background:transparent;font-size:13px;overflow-wrap:anywhere}
-  .day-chevron{position:absolute;right:10px;bottom:12px}
-  .day-summary{grid-column:1 / -1;grid-row:2;font-size:12.5px;line-height:1.35;padding:6px 22px 0 0;border-top:1px solid var(--gridline)}
+  /* Day header on a phone: a narrow photo strip, a smaller date, the weather beside it; the tools stack. */
+  .day-heading{grid-template-columns:88px minmax(0,1fr) auto}
+  .day-photo{min-height:96px}
+  .day-head-btn{padding:10px}
+  .day-head{gap:4px 8px}
+  .day-num{font-size:11.5px}
+  .day-date{font-size:18px}
+  .day-place{font-size:13px}
+  .day-head-right{flex-direction:column;align-items:flex-end;gap:4px}
+  .day-head-right .today-badge{font-size:11px;padding:2px 8px}
+  .weather-block{min-width:0}
+  .weather-block-icon{font-size:22px}
+  .weather-block-temps{font-size:13.5px}
+  .weather-block-label{font-size:10.5px;white-space:normal;max-width:84px}
+  .day-summary{font-size:12.5px;line-height:1.35}
+  .day-tools{flex-direction:column;padding:6px 2px 0 0}
   .day-card > div:not([hidden]){padding:2px 10px 12px}
-  /* Tiles span the card: no time column or rail. The icon and time sit at the top of each tile,
-     and a short line between consecutive tiles, under their icons, keeps it reading as a timeline. */
-  .tl-entry,.tl-now{display:block;position:relative}
-  .tl-entry>.tl-time,.tl-entry>.tl-rail,.tl-now>.tl-time,.tl-now>.tl-rail{display:none}
-  .tl-tile,.tl-entry--plain .tl-plain{margin-bottom:10px}
-  .tl>.tl-entry:not(:last-child)::after{content:"";position:absolute;left:18px;bottom:0;height:10px;width:2px;background:var(--gridline)}
+  /* The icon and time sit in a small line above each row's title. */
   .tl-when{display:inline-flex;align-items:center;gap:6px;margin-bottom:2px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-muted);font-variant-numeric:tabular-nums}
   .tl-when-icon{position:relative;font-size:13px;line-height:1;letter-spacing:0}
   .tl-entry--now .tl-when{color:var(--now)}
   .tl-entry--warn .tl-when-icon::after{content:"";position:absolute;top:-3px;right:-4px;width:7px;height:7px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 2px var(--card)}
-  .tl-heading{padding-left:10px}
-  .tl-now{margin:0 0 10px}
-  .tl-now-label{margin-top:0}
   .trip-map{height:260px}
   .map-focus{padding:9px;margin:-9px -5px -9px -2px}
   .action-items,.overview-list,.alert,.trip-map-wrap{border-radius:12px}
@@ -1026,6 +1032,9 @@ textarea.ai-input{display:block;width:100%;resize:none;overflow:hidden;line-heig
 .trip-note-fab:hover{border-color:var(--text-muted)}
 .trip-note-dot{position:absolute;top:4px;right:4px;width:11px;height:11px;border-radius:50%;background:var(--accent-2);border:2px solid var(--card)}
 .trip-note{position:fixed;right:20px;bottom:20px;z-index:25;width:min(380px,calc(100vw - 32px));max-height:calc(100vh - 40px);display:flex;flex-direction:column;gap:8px;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.22)}
+/* The Notes tab: the same note, in the page instead of floating over it. */
+.trip-note.trip-note--inline{position:static;z-index:auto;width:auto;max-height:none;margin-top:12px;box-shadow:none}
+.trip-note--inline textarea{min-height:360px}
 .trip-note header{display:flex;align-items:center;justify-content:space-between}
 .trip-note-close{font:inherit;background:none;border:none;color:var(--text-muted);cursor:pointer;padding:4px 6px}
 .trip-note-close:hover{color:var(--text-primary)}

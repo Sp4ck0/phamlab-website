@@ -8,9 +8,11 @@ const MAX_LENGTH = 20_000;
 // action item nor an itinerary row. Edits stay a draft in this browser until
 // Save; the note itself is shared with everyone on the trip (and readable by
 // connected AI assistants).
-export function TripNote({ slug }: { slug: string }) {
+// `inline`: the Notes tab shows the note in the page, always open, instead of the floating button.
+export function TripNote({ slug, inline = false }: { slug: string; inline?: boolean }) {
   const note = useTripNote(slug);
-  const [open, setOpen] = useState(false);
+  const [opened, setOpen] = useState(false);
+  const open = inline || opened;
   const area = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -44,12 +46,14 @@ export function TripNote({ slug }: { slug: string }) {
   }
 
   return (
-    <section className="trip-note" aria-label="Trip notes" onKeyDown={onKeyDown}>
+    <section className={`trip-note${inline ? " trip-note--inline" : ""}`} aria-label="Trip notes" onKeyDown={onKeyDown}>
       <header>
         <strong>Trip notes</strong>
-        <button type="button" className="trip-note-close" onClick={() => setOpen(false)} aria-label="Close notes">
-          ✕
-        </button>
+        {!inline && (
+          <button type="button" className="trip-note-close" onClick={() => setOpen(false)} aria-label="Close notes">
+            ✕
+          </button>
+        )}
       </header>
       <p className="trip-note-blurb">
         Your edits are kept as a draft in this browser only. Nothing is shared until you press <b>Save</b>. Saved notes

@@ -32,6 +32,9 @@ const wrap = (element) => React.createElement(AiFocusProvider, null, React.creat
 // A DayCard whose tiles keep their open state, the way DetailedView does through useTileOpen.
 const { useTileOpen } = await import('../../hooks/useTileOpen.ts');
 function Stateful(p) { return React.createElement(DayCard, { ...p, tiles: useTileOpen('synthetic', !!p.gapsOnly) }); }
+// Opens the "⋯" menu inside `scope` (a row, or the only row in a view) and returns its items.
+const openMenu = (scope) => { act(() => scope.querySelector('.tl-menu-btn').click()); return [...scope.querySelectorAll('[role=menuitem]')]; };
+const menuItem = (items, label) => items.find((i) => i.textContent === label);
 const tileToggle = (container, test) => [...container.querySelectorAll('.tl-toggle')].find((b) => test(b.closest('.tl-tile')));
 function mount(element) {
   const container = document.createElement('div'); document.body.append(container);
@@ -244,11 +247,11 @@ test('reactive full payload updates preserve unique occurrences but reset ambigu
 test('live removal of a focused inner control keeps focus on its day header while the day remains', async () => {
   const { DetailedView } = await import('./DetailedView.tsx');
   const filter = document.createElement('button'); document.body.append(filter);
-  const shared = { days: [{ ...day, acts: ['<a href="https://example.com/synthetic">Synthetic link</a>'] }], legColors: [props.legColor], weather: {}, groups: [], ticks: {}, onlyGaps: false, onOnlyGapsChange() {}, filterRef: { current: filter }, onToggle() {}, actionItems: [], considerations: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} };
+  const shared = { days: [{ ...day, flights: [{ who: 'all', route: 'Synthetic A → Synthetic B', status: 'booked' }] }], legColors: [props.legColor], weather: {}, groups: [], ticks: {}, onlyGaps: false, onOnlyGapsChange() {}, filterRef: { current: filter }, onToggle() {}, actionItems: [], considerations: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} };
   const view = mount(React.createElement(DetailedView, shared));
   try {
     act(() => view.container.querySelector('.day-head-btn[aria-expanded]').click());
-    view.container.querySelector('.activity-text a').focus();
+    view.container.querySelector('.tl-transport .tl-menu-btn').focus(); // a control on a row the update removes
     act(() => view.root.render(React.createElement(DetailedView, { ...shared, days: [day] })));
     // The day is still shown, so focus lands on its header rather than the filter (#174).
     // Compare booleans: a failed assert.equal on jsdom elements inspects the whole DOM.
@@ -426,7 +429,8 @@ test('a hotel tile shows the whole stay on every night: both times, nights, a do
   let view = render(0);
   try {
     const card = view.container.querySelector('.tl-hotel');
-    assert.ok(card.querySelector('.tl-title a svg.maps-pin') && card.querySelector('.tl-title a').textContent.includes('Synthetic Hotel')); // the pin stays, as the header's title
+    assert.equal(card.querySelector('.tl-title').textContent, 'Synthetic Hotel');
+    assert.match(card.querySelector('.tl-pin-btn').getAttribute('href'), /google\.com\/maps/); // the pin on the row opens Google Maps
     assert.equal(card.querySelector('.cmain'), null); // and isn't repeated in the body
     const strip = card.querySelector('.stay-strip');
     assert.ok(strip.textContent.includes('3 nights') && strip.textContent.includes('Mon, Jan 2 · 15:00') && strip.textContent.includes('Thu, Jan 5 · 12:00')); // both times on the check-in tile
@@ -459,10 +463,9 @@ test('a hotel tile shows the cancellation deadline in its colour, a Call link, a
   let view = render({ ...base, freeCancelUntil: when(24 * 10) });
   try {
     assert.ok(chip(view).classList.contains('cx-ok') && /Free cancel until .*\(\d+ days\)/.test(chip(view).textContent));
-    const call = view.container.querySelector('.tl-actions a.call-btn[href^="tel:"]'); // in the tile's one action row
+    const call = menuItem(openMenu(view.container.querySelector('.tl-hotel')), 'Call +00 111 222 3333'); // in the row's "⋯" menu
     assert.equal(call.getAttribute('href'), 'tel:+001112223333');
-    assert.equal(call.textContent.trim(), '📞');
-    assert.ok(call.getAttribute('aria-label').startsWith('Call '));
+    assert.equal(call.getAttribute('target'), null); // a phone link stays in the same tab
     assert.equal(view.container.querySelector('.cmain a[href^="tel:"]'), null); // no longer beside the name
   } finally { view.close(); }
   view = render({ ...base, freeCancelUntil: when(30) });
@@ -742,15 +745,14 @@ test('a booked train, ferry or bus has a mode and state header, the operator as 
     assert.ok(box.querySelector('.seg-carrier').textContent.includes('Synthetic Rail'));
     assert.equal(box.querySelector('.seg-terminal').textContent, 'Platform 4');
     assert.ok([...box.querySelectorAll('.seg-chip')].some((c) => c.textContent === 'Coach 5 · 12A'));
-    const ticket = box.querySelector('.tl-actions a.tl-link');
-    assert.equal(ticket.textContent, 'Ticket');
-    assert.equal(ticket.getAttribute('href'), 'https://example.com/ticket');
-    assert.ok(![...box.querySelectorAll('.tl-actions button')].some((b) => /book/i.test(b.textContent + b.getAttribute('aria-label')))); // booked: nothing to book
+    const items = openMenu(box);
+    assert.equal(menuItem(items, 'Ticket').getAttribute('href'), 'https://example.com/ticket');
+    assert.ok(!items.some((i) => /book/i.test(i.textContent))); // booked: nothing to book
   } finally { view.close(); }
   // Only an https ticket link is ever rendered.
   const bad = resolveDays({ days: [{ ...day, flights: [{ ...row, ticketUrl: 'javascript:alert(1)' }], hotels: [] }] });
   const view2 = mount(React.createElement(DayCard, { ...props, day: bad[0], days: bad, expanded: true }));
-  try { assert.equal(view2.container.querySelector('.tl-link'), null); } finally { view2.close(); }
+  try { assert.equal(menuItem(openMenu(view2.container), 'Ticket'), undefined); } finally { view2.close(); }
 });
 
 test('an unbooked train shows its route as the title, a route search; the check mark books it; the flight tile is unchanged', async () => {
@@ -764,12 +766,13 @@ test('an unbooked train shows its route as the title, a route search; the check 
     const [train, plane] = view.container.querySelectorAll('.tl-transport');
     assert.equal(train.querySelector('.tx-state').textContent, 'Not booked');
     assert.equal(train.querySelector('.tl-title').textContent, 'Synthetic City → Synthetic Town');
-    // The free-form note comes after the to-be-decided row, and the action row (share, route search) closes the tile.
+    // The free-form note comes after the to-be-decided row and closes the tile; the links are in the "⋯" menu.
     const note = [...train.querySelectorAll('.fl-meta')].find((m) => m.textContent === 'Synthetic train note');
     assert.ok(note && (train.querySelector('.tbd').compareDocumentPosition(note) & 4)); // (following)
-    assert.ok(note.nextElementSibling === train.querySelector('.tl-actions'));
-    const search = train.querySelector('.tl-actions a.tl-link');
-    assert.ok(![...train.querySelectorAll('.tl-actions button')].some((b) => /book/i.test(b.textContent + b.getAttribute('aria-label')))); // no Mark as booked: the check mark does it
+    assert.ok(note.parentElement.lastElementChild === note);
+    const items = openMenu(train);
+    const search = menuItem(items, 'Search this route');
+    assert.ok(!items.some((i) => /book/i.test(i.textContent))); // no Mark as booked: the check mark does it
     assert.equal(search.textContent, 'Search this route');
     assert.equal(new URL(search.href).searchParams.get('travelmode'), 'transit');
     act(() => train.querySelector('.status').click());
@@ -778,7 +781,7 @@ test('an unbooked train shows its route as the title, a route search; the check 
     assert.equal(plane.querySelector('.ctype'), null);
     assert.equal(plane.querySelector('.tx-state'), null);
     assert.equal(plane.querySelector('.status').dataset.s, 'booked');
-    assert.equal(plane.querySelector('.tl-link'), null);
+    assert.ok(!openMenu(plane).some((i) => i.textContent === 'Ticket' || i.textContent === 'Search this route'));
   } finally { view.close(); }
 });
 
@@ -1036,8 +1039,8 @@ test('an entry approved from an item shows its History (wording and votes), and 
   } finally { view.close(); }
 });
 
-test('an activity is one row: its sentence with linked places and its actions in the header, nothing to open', () => {
-  const synthetic = { ...day, acts: [{ tag: 'Food', time: '12:00', text: 'Synthetic Cafe', places: [{ name: 'Synthetic Cafe', address: 'Synthetic street' }] }] };
+test('an activity is one row: time, icon and title, the Maps pin, and its actions in the "⋯" menu; nothing to open', () => {
+  const synthetic = { ...day, country: 'TH', acts: [{ tag: 'Food', time: '12:00', text: 'Synthetic Cafe', places: [{ name: 'Synthetic Cafe', address: 'Synthetic street' }] }] };
   const edits = [];
   const view = mount(React.createElement(DayCard, { ...props, day: synthetic, days: [synthetic], expanded: true, onEditActivity: async (...a) => { edits.push(a); } }));
   try {
@@ -1045,18 +1048,19 @@ test('an activity is one row: its sentence with linked places and its actions in
     assert.ok(tile.classList.contains('tl-flat'));
     assert.equal(tile.querySelector('.tl-toggle, .tl-chev, .tl-body'), null); // no chevron, no body
     assert.equal(tile.querySelector('.tl-meta'), null); // no "Food" line: the icon says it
-    const link = tile.querySelector('.tl-title a');
-    assert.equal(link.textContent.trim(), 'Synthetic Cafe'); // the name is the Maps link
-    assert.ok(link.querySelector('svg.maps-pin')); // with the pin icon before it
-    assert.ok(tile.querySelector('.map-focus svg')); // and the show-on-map button after it
-    assert.equal(tile.querySelector('.tl-title').textContent.split('Synthetic Cafe').length, 2); // and appears once, not as text and link
-    assert.ok(tile.querySelector('.tl-head .share-btn') && tile.querySelector('.tl-head .act-edit'));
-    act(() => tile.querySelector('.act-edit').click()); // editing opens it, with the editor
+    assert.equal(tile.querySelector('.tl-time').textContent, '12:00');
+    assert.equal(tile.querySelector('.tl-title').textContent, 'Synthetic Cafe');
+    const pin = tile.querySelector('.tl-pin-btn');
+    assert.match(pin.getAttribute('href'), /google\.com\/maps/);
+    assert.equal(pin.getAttribute('aria-label'), 'Open Synthetic Cafe in Google Maps');
+    const items = openMenu(tile);
+    assert.deepEqual(items.map((i) => i.textContent), ['Edit', 'Copy link', 'Add to Google Calendar', 'Show on the trip map']);
+    act(() => menuItem(items, 'Edit').click()); // editing opens it, with the editor
     assert.ok(view.container.querySelector('.tl-tile .tl-body .ai-editor'));
   } finally { view.close(); }
 });
 
-test('an activity approved from a suggestion opens to its History; a hotel opens from anywhere but its Maps link', () => {
+test('an activity approved from a suggestion opens to its History; a hotel opens from anywhere on its row but the Maps pin', () => {
   const synthetic = { ...day, acts: [{ text: 'Synthetic dinner', fromItem: 'x' }], hotels: [{ who: 'all', name: 'Synthetic Hotel', status: 'booked' }] };
   const task = consider('x', { title: 'Synthetic idea', done: true, outcome: 'chosen' });
   const view = mount(React.createElement(Stateful, { ...props, day: { ...synthetic, _d: day._d, hotels: [{ ...synthetic.hotels[0], src: `${day.date}|h|Synthetic Hotel|all`, checkIn: true, checkOut: true }] }, days: [synthetic], expanded: true, itemTasks: { x: task } }));
@@ -1064,12 +1068,13 @@ test('an activity approved from a suggestion opens to its History; a hotel opens
     const dinner = [...view.container.querySelectorAll('.tl-tile')].find((t) => t.textContent.includes('Synthetic dinner'));
     assert.ok(!dinner.classList.contains('tl-flat') && dinner.querySelector('.tl-body details.tl-history'));
     const hotel = view.container.querySelector('.tl-hotel');
-    const chev = hotel.querySelector('.tl-toggle');
-    assert.equal(chev.getAttribute('aria-label'), 'Synthetic Hotel: details'); // the chevron is the keyboard control
-    act(() => hotel.querySelector('.tl-title a').dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true })));
-    assert.equal(chev.getAttribute('aria-expanded'), 'false'); // the Maps link only opens Maps
-    act(() => hotel.querySelector('.tl-meta').dispatchEvent(new window.MouseEvent('click', { bubbles: true })));
-    assert.equal(chev.getAttribute('aria-expanded'), 'true'); // anywhere else on the header opens the tile
+    const toggle = hotel.querySelector('.tl-toggle');
+    act(() => hotel.querySelector('.tl-pin-btn').dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true })));
+    assert.equal(toggle.getAttribute('aria-expanded'), 'false'); // the pin only opens Maps
+    act(() => hotel.querySelector('.tl-menu-btn').click());
+    assert.equal(toggle.getAttribute('aria-expanded'), 'false'); // nor does the menu
+    act(() => hotel.querySelector('.tl-time').dispatchEvent(new window.MouseEvent('click', { bubbles: true })));
+    assert.equal(toggle.getAttribute('aria-expanded'), 'true'); // anywhere else on the row opens the tile
   } finally { view.close(); }
 });
 
@@ -1081,10 +1086,43 @@ test('a day with an open plan task shows a "Nothing planned yet" tile on the rai
     assert.ok(tile && tile.closest('li.tl-entry'));
     assert.equal(tile.querySelector('.tl-title').textContent, 'Nothing planned yet');
     assert.equal(tile.querySelector('.tl-toggle, .tl-body'), null); // nothing to open
-    assert.ok(tile.closest('li.tl-entry').querySelector('.tl-rail .tl-warn')); // and the amber badge on its icon, like other open items
+    assert.ok(tile.querySelector('.tl-dot .tl-warn')); // and the amber badge on its icon, like other open items
     assert.equal(view.container.querySelector('.day-subtitle'), null); // no loose "Not decided yet" line
   } finally { view.close(); }
   // Dismissed in Action Items (no open plan task): no tile, even though the day is empty.
   const dismissed = mount(React.createElement(DayCard, { ...props, day: { ...day, acts: [] }, expanded: true, gaps: { ...plan, plan: false } }));
   try { assert.equal(dismissed.container.querySelector('.tl-plan'), null); } finally { dismissed.close(); }
+});
+
+test('the day header: the city photo with its credit once in view, Day N of M · country, the place and the weather', async () => {
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const { cachedPhotos } = await import('../../lib/cityPhoto.ts');
+  // jsdom has no IntersectionObserver: report the header as visible straight away.
+  globalThis.IntersectionObserver = class { constructor(cb) { this.cb = cb; } observe() { this.cb([{ isIntersecting: true }]); } disconnect() {} };
+  const asked = [];
+  const fetcher = cachedPhotos(async (city, country) => { asked.push(`${city}|${country}`); return { url: 'https://example.com/synthetic.jpg', credit: { name: 'Synthetic Photographer', uri: 'https://example.com/p' } }; });
+  const days = resolveDays({ days: [{ ...day, country: 'TH' }, { ...day, date: '2040-01-03', country: 'TH', to: 'Synthetic Town' }] });
+  const weather = { date: day.date, kind: 'forecast', code: 2, tMax: 31, tMin: 24, precipProb: 29, fetchedAt: 0 };
+  const view = mount(React.createElement(React.Fragment, null,
+    React.createElement(DayCard, { ...props, rowId: 'a', day: days[0], days, dayNumber: 0, weather, cityPhoto: fetcher }),
+    React.createElement(DayCard, { ...props, rowId: 'b', day: days[1], days, dayNumber: 1, cityPhoto: fetcher })));
+  try {
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    const [first, second] = view.container.querySelectorAll('section.day-card');
+    const photo = first.querySelector('.day-photo');
+    assert.ok(photo.classList.contains('has-photo') && photo.style.backgroundImage.includes('https://example.com/synthetic.jpg'));
+    assert.equal(photo.querySelector('.day-photo-credit a').textContent, 'Photo: Synthetic Photographer'); // the credit Google requires
+    assert.deepEqual(asked, [`${day.city}|TH`]); // the same city twice is one request
+    assert.equal(first.querySelector('.day-num').textContent, 'Day 0 of 1 · Thailand');
+    assert.equal(first.querySelector('.day-place').textContent, day.city);
+    assert.equal(second.querySelector('.day-place').textContent, `${day.city} → Synthetic Town`);
+    assert.equal(first.querySelector('.weather-block-temps').textContent, '88° / 75°'); // in the settings' unit (F here)
+    assert.equal(first.querySelector('.weather-block-label').textContent, 'Partly cloudy · 29% rain');
+  } finally { view.close(); delete globalThis.IntersectionObserver; }
+  // No photo source: the leg's colour, no credit.
+  const plain = mount(React.createElement(DayCard, { ...props, day: days[0], days }));
+  try {
+    assert.ok(!plain.container.querySelector('.day-photo').classList.contains('has-photo'));
+    assert.equal(plain.container.querySelector('.day-photo-credit'), null);
+  } finally { plain.close(); }
 });

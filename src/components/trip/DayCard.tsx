@@ -1,12 +1,15 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import type { Act, ActionItem, Group, LegColor, Place, ResolvedDay, Status, Task, Vote } from "../../lib/types";
 import { diffLines, type Change } from "../../lib/changeDiff";
-import { focusOnMapKey, googleMapsUrl, inlinePlaces } from "../../lib/mapPoints";
-import { DOW, MON, actParts, fmtShort, gapLabel, mergeFlightsByRoute, mergeHotelsByName } from "../../lib/tripLogic";
+import { MAPS_PIN_ICON, focusOnMap, googleMapsUrl, placeKey } from "../../lib/mapPoints";
+import { COUNTRY, DOW, MON, actParts, fmtShort, gapLabel, mergeFlightsByRoute, mergeHotelsByName } from "../../lib/tripLogic";
 import type { FlightGroup, HotelGroup } from "../../lib/tripLogic";
 import { TransportBody } from "./TransportBody";
 import { HotelBody } from "./HotelCard";
-import { hotelHeader, isPlaceholderHotel, transportHeader } from "../../lib/tileHeaders";
+import { hotelHeader, isPlaceholderHotel, segmentsOf, transportHeader } from "../../lib/tileHeaders";
+import { copyShareLink } from "../../lib/shareLink";
+import { type TileMenuItem } from "./TileMenu";
+import { routeSearchUrl } from "../../lib/segments";
 import { ALL_DAY, TileStatePill, TimelineTile, type TimelineTileProps, type TileState } from "./TimelineTile";
 import { StatusToggle } from "./StatusToggle";
 import { buildTimeline, timelineSpans, type ActRow, type DayItem, type TimelineEntry } from "../../lib/timeline";
@@ -14,11 +17,11 @@ import { serverMessage } from "../../lib/serverError";
 import type { TileOpen } from "../../hooks/useTileOpen";
 import { countdownText, nextUp } from "../../lib/nextUp";
 import { useNow } from "../../lib/useNow";
-import { gapMinutes, stayInfo } from "../../lib/stay";
+import { gapMinutes, phoneHref, stayInfo } from "../../lib/stay";
 import { TourBox } from "./TourBox";
-import { WeatherBadge } from "./WeatherBadge";
-import { AddToCalendar } from "./AddToCalendar";
-import { MODE_EMOJI, TAG_EMOJI, actUrl, plain, zoneNow } from "../../lib/calendar";
+import { WeatherBlock } from "./WeatherBadge";
+import type { CityPhoto, CityPhotoFetcher } from "../../lib/cityPhoto";
+import { MODE_EMOJI, TAG_EMOJI, actUrl, hotelUrl, plain, zoneNow } from "../../lib/calendar";
 import { NOW_EMOJI, dayZone, nowPosition, untilText, viewerHint, type NowPosition } from "../../lib/nowMarker";
 import { sanitizeHtml } from "../../lib/sanitizeHtml";
 import type { DayWeather } from "../../lib/weather";
@@ -30,15 +33,7 @@ import { useUntilFound } from "../../hooks/useUntilFound";
 import { ShareLinkButton } from "./ShareLinkButton";
 import { ActivityEditor } from "./ActivityEditor";
 import { tileDomId } from "../../lib/tileId";
-import { MapsPin, PencilIcon, ShowOnMap } from "./taskParts";
 import { InlineDiff } from "./InlineDiff";
-
-// Show-on-map buttons inside an activity's sentence are plain HTML (see inlinePlaces),
-// so one delegated click handler on the activity text finds them.
-function focusInlinePlace(e: React.MouseEvent) {
-  const key = (e.target as HTMLElement).closest<HTMLElement>("button.map-focus[data-map-key]")?.dataset.mapKey;
-  if (key) focusOnMapKey(key);
-}
 
 // What a line is, for telling an edited line from an untouched one (not its
 // ids or ticks, which change without the content changing).
@@ -102,6 +97,8 @@ interface Props {
   itemTasks?: Record<string, Task>;
   // "Add to itinerary": approves an item into the days (convex actionItems.promoteActionItem).
   onPromote?: (id: string, date: string) => Promise<unknown>;
+  // A photo of the day's city for its header; without it the header shows the leg's colour.
+  cityPhoto?: CityPhotoFetcher;
 }
 
 // "Add to itinerary" on an item tile, with its own busy state and the server's reason when it can't.
@@ -160,6 +157,7 @@ export function DayCard({
   onEditActivity,
   itemTasks,
   onPromote,
+  cityPhoto,
 }: Props) {
   const [editingAct, setEditingAct] = useState<number | null>(null);
   const { slug } = useParams<{ slug: string }>();
@@ -171,11 +169,9 @@ export function DayCard({
   const zone = dayZone(d);
   const mine = isToday ? viewerHint(now, zone) : null;
   const clock = isToday && zone ? zoneNow(now, zone).hhmm : null;
-  // "Now" on the rail, between two tiles (or above/below them). During a timed tile it is drawn inside that tile instead.
+  // "Now" as a red line between two rows (or above/below them). During a timed row it is drawn inside that row instead.
   const nowLine = (pos: Exclude<NowPosition, { kind: "during" }>, key: string) => (
     <li className="tl-now" key={key} aria-label="Current time">
-      <span className="tl-time">{pos.hhmm}</span>
-      <span className="tl-rail" aria-hidden="true"><span className="tl-now-dot" /></span>
       <span className="tl-now-label">
         Now {pos.hhmm}
         {pos.kind === "after" ? " · that's the plan for today"
@@ -186,6 +182,21 @@ export function DayCard({
     </li>
   );
   const collapsed = !expanded;
+  // The city's photo, asked for once the day's header scrolls into view (each city once per page).
+  const headRef = useRef<HTMLHeadingElement>(null);
+  const [photo, setPhoto] = useState<CityPhoto | null>(null);
+  useEffect(() => {
+    const el = headRef.current;
+    if (!el || !cityPhoto || typeof IntersectionObserver === "undefined") return;
+    let live = true;
+    const seen = new IntersectionObserver((hits) => {
+      if (!hits.some((h) => h.isIntersecting)) return;
+      seen.disconnect();
+      void cityPhoto(d.city, d.country).then((p) => live && setPhoto(p));
+    }, { rootMargin: "300px 0px" });
+    seen.observe(el);
+    return () => { live = false; seen.disconnect(); };
+  }, [cityPhoto, d.city, d.country]);
   // A collapsed panel is hidden="until-found": still in the page, so Ctrl+F finds its text,
   // and a match opens the day.
   const panelRef = useUntilFound(expanded, onExpandedChange);
@@ -272,6 +283,12 @@ export function DayCard({
   // How one tile reads: its header, whether it starts open (unresolved ones do: not booked, missing
   // details, nothing entered), and what it shows when open. A removed ghost has no element id.
   type Described = { key: string; ghost: boolean; defaultOpen: boolean; forceOpen?: boolean; tile: Omit<TimelineTileProps, "open" | "onToggle" | "onReveal"> };
+  // The pieces of a tile's "⋯" menu and its Maps pin.
+  const copyItem = (param: Record<string, string>): TileMenuItem => ({ label: "Copy link", onSelect: () => copyShareLink(slug, param) });
+  const calendarItem = (url: string | null): TileMenuItem[] => (url ? [{ label: "Add to Google Calendar", href: url }] : []);
+  const onMapItems = (places: Place[]): TileMenuItem[] =>
+    places.flatMap((p) => (placeKey(p) ? [{ label: places.length > 1 ? `Show ${p.name} on the trip map` : "Show on the trip map", onSelect: () => focusOnMap(p) }] : []));
+  const pinFor = (p?: Place) => (p?.name ? { href: googleMapsUrl(p), label: `Open ${p.name} in Google Maps` } : undefined);
   const describe = (entry: Exclude<TimelineEntry, { kind: "tour" }>): Described => {
     if (entry.kind === "hotel") {
       const { item: g, state } = entry.change;
@@ -284,26 +301,27 @@ export function DayCard({
       const unresolved = s === "needed" && !g.tentative;
       const pill: TileState = g.tentative ? "maybe" : s;
       const { title, meta } = hotelHeader(g, stay);
-      // A chosen hotel's name is its Google Maps link, right in the header; the rest of the header opens the tile.
+      // A chosen hotel opens in Google Maps from the pin on its row; a placeholder has no place yet.
       const place = { name: g.name, address: g.address, placeId: g.placeId };
-      const linked = !isPlaceholderHotel(g);
+      const chosen = !isPlaceholderHotel(g);
       return {
         key: entry.key, ghost: state === "gone", defaultOpen: unresolved,
         tile: {
           domId: entry.domKey && tileDomId(rowId, entry.domKey), time: ALL_DAY, icon: "🏨", meta, change: state, warn: unresolved,
-          title: linked ? (
-            <>
-              <a href={googleMapsUrl(place)} target="_blank" rel="noopener noreferrer"><MapsPin />{title}</a>
-              <ShowOnMap place={place} />
-            </>
-          ) : title,
-          label: linked ? title : undefined,
+          title,
+          pin: chosen ? pinFor(place) : undefined,
+          menu: [
+            copyItem({ day: d.date, tile: g.srcs[0] }),
+            ...(g.phone ? [{ label: `Call ${g.phone}`, href: phoneHref(g.phone), sameTab: true }] : []),
+            ...calendarItem(days ? hotelUrl(g.name, g.address, days, dayNumber) : null),
+            ...(chosen ? onMapItems([place]) : []),
+          ],
           className: `tl-hotel${unresolved ? " miss" : ""}`, nextUpLine: upText(g.srcs),
           headerEnd: <TileStatePill state={pill} label={pill === "needed" && !g.name ? "Not chosen" : undefined} />,
           control: <StatusToggle ids={g.srcs} status={s} onToggle={onToggle} />,
           children: (
             <>
-              <HotelBody g={g} status={s} stay={stay} gapAfter={gapAfter} groups={groups} date={d.date} days={days} dayNumber={dayNumber} />
+              <HotelBody g={g} status={s} stay={stay} gapAfter={gapAfter} groups={groups} date={d.date} days={days} dayNumber={dayNumber} actions={false} />
               {history(g.fromItem)}
             </>
           ),
@@ -318,12 +336,21 @@ export function DayCard({
       const pill: TileState = g.tentative ? "maybe" : s === "needed" ? "needed" : detailsMissing ? "details" : "booked";
       const { icon, title, meta } = transportHeader(g);
       const live = nowBits(entry.key);
+      const first = segmentsOf(g).segments[0];
+      const ticket = g.ticketUrl?.startsWith("https://") ? g.ticketUrl : undefined;
+      const ground = !!g.mode && g.mode !== "flight";
+      const search = ground && s === "needed" && !g.tentative && first?.from && first.to ? routeSearchUrl(first.from, first.to) : undefined;
       return {
         key: entry.key, ghost: state === "gone", defaultOpen: unresolved,
         tile: {
           domId: entry.domKey && tileDomId(rowId, entry.domKey), time: entry.time, icon, title, meta, change: state, warn: unresolved,
           className: `tl-transport${s === "needed" && !g.tentative ? " miss" : ""}${g.tentative ? " maybe" : ""}`, nextUpLine: upText(g.ids),
           now: !!live, progress: live?.progress,
+          menu: [
+            copyItem({ day: d.date, tile: g.ids[0] }),
+            ...(ticket ? [{ label: "Ticket", href: ticket }] : []),
+            ...(search ? [{ label: "Search this route", href: search }] : []),
+          ],
           headerEnd: (
             <>
               {live?.pill}
@@ -333,7 +360,7 @@ export function DayCard({
           control: <StatusToggle ids={g.ids} status={s} onToggle={onToggle} />,
           children: (
             <>
-              <TransportBody group={g} groups={groups} day={d} dayNumber={dayNumber} />
+              <TransportBody group={g} groups={groups} day={d} dayNumber={dayNumber} actions={false} />
               {history(g.fromItem)}
             </>
           ),
@@ -367,57 +394,30 @@ export function DayCard({
     const gone = state === "gone";
     const editing = !gone && editingAct === ai && !!onEditActivity;
     const live = nowBits(entry.key);
-    // A place named in the sentence is linked in place; the rest follow as chips.
-    // Sanitize first: inlinePlaces adds its own show-on-map buttons, which the sanitizer would strip.
-    const { html, rest } = inlinePlaces(sanitizeHtml(text), places);
-    // The sentence, with its places linked, is the header: there is nothing more to open, so the tile is
-    // just that row with its actions. It opens only for an editor, or the History of an approved suggestion.
+    // The sentence is the row's title; its first place opens from the pin, the rest from the menu.
+    // There is nothing more to open, so the row has no chevron: it opens only for the editor, or
+    // for the History of an approved suggestion.
     const hist = history(typeof a === "string" ? undefined : a.fromItem);
     const title = plain(text);
-    // An activity that is just a place's name ("Some Cafe"): the pinned Maps link alone says it, not the name twice.
-    const bare = rest.find((p) => p.name.trim().toLowerCase() === title.trim().toLowerCase());
+    const named = (places ?? []).filter((p) => p.name);
     return {
       key: entry.key, ghost: gone, defaultOpen: false, forceOpen: editing,
       tile: {
-        domId: entry.domKey && tileDomId(rowId, entry.domKey), time: entry.time, // The tag (Food, Sightsee…) is the icon; its name is the icon's tooltip, not a second line.
+        domId: entry.domKey && tileDomId(rowId, entry.domKey), time: entry.time,
+        // The tag (Food, Sightsee…) is the icon; its name is the icon's tooltip, not a second line.
         icon: (tag && TAG_EMOJI[tag]) || "📍", iconLabel: tag, change: state, now: !!live,
         label: title,
         expandable: editing || !!hist,
-        title: (
-          <span className="activity-text" onClick={focusInlinePlace}>
-            {bare && !prev ? null : prev ? (
-              <InlineDiff prev={sanitizeHtml(actParts(prev).text)} next={sanitizeHtml(text)}>
-                <span dangerouslySetInnerHTML={{ __html: html }} />
-              </InlineDiff>
-            ) : (
-              <span dangerouslySetInnerHTML={{ __html: html }} />
-            )}
-            {rest.map((p, pi) => (
-              <span key={pi} style={p === bare && !prev ? undefined : { marginLeft: 8 }}>
-                <a href={googleMapsUrl(p)} target="_blank" rel="noopener noreferrer">
-                  <MapsPin />{p.name}
-                </a>
-                <ShowOnMap place={p} />
-              </span>
-            ))}
-          </span>
-        ),
-        headerEnd: (
-          <>
-            {live?.pill}
-            {!gone && (
-              <span className="tl-actions-inline">
-                {onEditActivity && (
-                  <button type="button" className="icon-btn act-edit" aria-label={`Edit activity: ${text}`} onClick={() => setEditingAct(ai)}>
-                    <PencilIcon />
-                  </button>
-                )}
-                <ShareLinkButton param={{ day: d.date, tile: `act:${ai}` }} label={`Share link to activity: ${text}`} />
-                <AddToCalendar url={actUrl(a, d, dayNumber, ai)} />
-              </span>
-            )}
-          </>
-        ),
+        title: prev ? <InlineDiff prev={sanitizeHtml(actParts(prev).text)} next={sanitizeHtml(text)}>{title}</InlineDiff> : title,
+        pin: pinFor(named[0]),
+        menu: [
+          ...(onEditActivity ? [{ label: "Edit", onSelect: () => setEditingAct(ai) }] : []),
+          copyItem({ day: d.date, tile: `act:${ai}` }),
+          ...calendarItem(actUrl(a, d, dayNumber, ai)),
+          ...named.slice(1).map((p) => ({ label: `Open ${p.name} in Google Maps`, href: googleMapsUrl(p) })),
+          ...onMapItems(named),
+        ],
+        headerEnd: live?.pill,
         progress: live?.progress,
         children: editing ? (
           <ActivityEditor
@@ -505,6 +505,12 @@ export function DayCard({
       key: entry.key, ghost: false, defaultOpen: open,
       tile: {
         domId: tileDomId(rowId, entry.domKey), time: entry.time, icon, title, warn: open,
+        pin: pinFor((task?.places ?? todo?.places ?? [])[0]),
+        menu: [
+          // Jumps to this item in the Action Items or Under consideration list.
+          { label: "Open in list", onSelect: () => { if (slug) showFocus({ slug, target: { kind: "actionItem", id }, nonce: `${Date.now()}` }); } },
+          copyItem({ task: `item:${id}` }),
+        ],
         meta: [status, what, range, who ? gapLabel(who, groups, start ?? d.date)?.label : undefined, priority ? `${PRIORITY_LABELS[priority]} priority` : undefined].filter(Boolean).join(" · "),
         className: `tl-item${consider ? " tl-consider" : ""}${done ? " is-done" : ""}`,
         headerEnd,
@@ -524,14 +530,11 @@ export function DayCard({
               </div>
             )}
             {linked && <p className="cmeta tl-linked">In the itinerary.</p>}
-            <div className="tl-actions">
-              {open && onPromote && (proposes || consider) && <ApproveButton label={`Add ${title} to the itinerary`} onApprove={() => onPromote(id, d.date)} />}
-              {/* Jumps to this item in the Action Items or Under consideration list. */}
-              <button type="button" className="tl-link tl-link-btn" onClick={() => slug && showFocus({ slug, target: { kind: "actionItem", id }, nonce: `${Date.now()}` })}>
-                Open in list
-              </button>
-              <ShareLinkButton param={{ task: `item:${id}` }} label={`Share link to ${title}`} />
-            </div>
+            {open && onPromote && (proposes || consider) && (
+              <div className="tl-actions">
+                <ApproveButton label={`Add ${title} to the itinerary`} onApprove={() => onPromote(id, d.date)} />
+              </div>
+            )}
           </>
         ),
       },
@@ -543,6 +546,8 @@ export function DayCard({
   const isOpenTile = (x: Described) => !!x.forceOpen || tiles.isOpen(idOf(x.key), x.defaultOpen);
   const liveTiles = described.filter((x): x is Described => !!x && !x.ghost && x.tile.expandable !== false);
   const anyClosed = liveTiles.some((x) => !isOpenTile(x));
+  // What the day's schedule holds: every row but removed ghosts and the "nothing planned" placeholder.
+  const scheduleCount = described.filter((x) => !!x && !x.ghost && x.key !== "plan").length + (entries.some((e) => e.kind === "tour") ? 1 : 0);
 
   return (
     <section
@@ -550,21 +555,32 @@ export function DayCard({
       id={rowId}
       style={{ ["--leg-color" as string]: legColor.color, ["--leg-tint" as string]: legColor.tint }}
     >
-      <h2 className="day-heading">
+      <h2 className="day-heading" ref={headRef}>
+      {/* The city's photo, fading into the card; the leg's colour until it loads (or when there is none). */}
+      <span className={`day-photo${photo ? " has-photo" : ""}`} style={photo ? { backgroundImage: `url("${photo.url.replace(/"/g, "%22")}")` } : undefined}>
+        {photo?.credit && (
+          <span className="day-photo-credit">
+            {photo.credit.uri ? <a href={photo.credit.uri} target="_blank" rel="noopener noreferrer">Photo: {photo.credit.name}</a> : <>Photo: {photo.credit.name}</>}
+          </span>
+        )}
+      </span>
       <button id={`${rowId}-trigger`} type="button" className="day-head day-head-btn" aria-expanded={expanded} aria-controls={`${rowId}-panel`} onClick={onExpandedChange}>
         <span className="day-title-group">
-          <span className="day-num">Day {dayNumber}</span>
+          <span className="day-num">
+            Day {dayNumber}{days && days.length > 1 ? ` of ${days.length - 1}` : ""}
+            {COUNTRY[d.country] ? ` · ${COUNTRY[d.country]}` : ""}
+          </span>
           <span className="day-date">
             {DOW[d._d.getDay()]}, {MON[d._d.getMonth()]} {d._d.getDate()}
+          </span>
+          <span className="day-place">
+            <span aria-hidden="true" dangerouslySetInnerHTML={{ __html: MAPS_PIN_ICON }} />
+            {d.city}{d.to ? ` → ${d.to}` : ""}
           </span>
         </span>
         <span className="day-head-right">
           {isToday && <span className="today-badge">Today{clock ? ` · ${clock}` : ""}</span>}
-          <WeatherBadge weather={weather} />
-          <span className="leg-badge">
-            <span className="dot" />
-            {legColor.label}
-          </span>
+          <WeatherBlock weather={weather} />
           <svg
             className="day-chevron"
             data-collapsed={collapsed ? "true" : undefined}
@@ -587,6 +603,7 @@ export function DayCard({
           )
         )}
       </button>
+      <span className="day-tools">
       {expanded && liveTiles.length > 1 && (
         <button
           type="button"
@@ -601,10 +618,17 @@ export function DayCard({
         </button>
       )}
       <ShareLinkButton param={{ day: d.date }} label={`Share link to Day ${dayNumber}`} />
+      </span>
       </h2>
 
       <div ref={panelRef} id={`${rowId}-panel`} aria-labelledby={`${rowId}-trigger`}>
         <>
+          {entries.length > 0 && (
+            <div className="tl-heading-row">
+              <h3>Schedule</h3>
+              <span className="tl-count">{scheduleCount} {scheduleCount === 1 ? "item" : "items"}</span>
+            </div>
+          )}
           {(entries.length > 0 || (!gapsOnly && actRows.length === 0 && nowPos?.kind === "untimed")) && (
             <ol className="tl">
               {entries.map((e, i) => {
