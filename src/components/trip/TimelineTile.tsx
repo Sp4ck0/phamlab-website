@@ -64,7 +64,7 @@ export interface TimelineTileProps {
 // Controls inside a card that keep their own click: tapping them never toggles the card.
 const OWN_CLICK = "button, a, input, label, select, textarea, summary, [role=menu]";
 
-// One card of a day's agenda. The time sits in a pill set into the top border, the "⋯" menu
+// One card of a day's agenda. Its icon and time sit in pills set into the top border, the "⋯" menu
 // (every action the card has) at the top right, and an expandable card has a chevron in a notch
 // in its bottom border: down when closed, up when open. Tapping anywhere on an expandable card
 // toggles it, except on a control of its own; the title is the keyboard toggle (aria-expanded).
@@ -124,7 +124,7 @@ export function TimelineTile({
   const name = label ?? (typeof title === "string" ? title : "this");
   return (
     <li
-      className={`tl-entry${now ? " tl-entry--now" : ""}${nextUpLine ? " next-up" : ""}${showWarn ? " tl-entry--warn" : ""}${time ? " tl-entry--timed" : ""}`}
+      className={`tl-entry${now ? " tl-entry--now" : ""}${nextUpLine ? " next-up" : ""}${showWarn ? " tl-entry--warn" : ""}${time || icon ? " tl-entry--pinned" : ""}`}
       id={domId}
       {...(gone ? { inert: true, "aria-hidden": true } : {})}
     >
@@ -133,12 +133,18 @@ export function TimelineTile({
         onClick={canOpen ? cardClick : undefined}
         ref={tileRef}
       >
-        {time && <span className="tl-time" data-all-day={time === ALL_DAY ? "true" : undefined}>{time}</span>}
-        <div className={`tl-head${photos.length ? " has-photos" : ""}`}>
-          <span className="tl-dot" title={iconLabel}>
-            <span aria-hidden="true">{icon}</span>
-            {showWarn && <span className="tl-warn" role="img" aria-label="Needs attention" title="Needs attention" />}
+        {(time || icon) && (
+          <span className="tl-pins">
+            {icon && (
+              <span className="tl-dot" title={iconLabel}>
+                <span aria-hidden="true">{icon}</span>
+                {showWarn && <span className="tl-warn" role="img" aria-label="Needs attention" title="Needs attention" />}
+              </span>
+            )}
+            {time && <span className="tl-time" data-all-day={time === ALL_DAY ? "true" : undefined}>{time}</span>}
           </span>
+        )}
+        <div className={`tl-head${photos.length ? " has-photos" : ""}`}>
           {canOpen ? (
             <button type="button" className="tl-toggle" aria-expanded={open} aria-controls={bodyId} onClick={onToggle}>
               {heading}
