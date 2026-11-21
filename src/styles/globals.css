@@ -455,6 +455,14 @@ button.route-chip[aria-expanded=true]{box-shadow:inset 0 0 0 1.5px var(--text-mu
 .vote-tally{display:inline-flex;gap:10px;font-size:13px;color:var(--text-secondary);white-space:nowrap}
 .vote-tally [data-mine]{color:var(--accent-1)}
 .tl-more{grid-column:4;grid-row:1;align-self:start;display:grid;place-items:center;margin-top:-4px}
+/* A tile's place photos: small, overlapping like avatars, before the "⋯". A column of their own, only when there are some. */
+.tl-head.has-photos{grid-template-columns:28px minmax(0,1fr) auto auto 44px}
+.tl-head.has-photos .tl-more{grid-column:5}
+.tl-photos{grid-column:4;grid-row:1;display:inline-flex;align-items:center}
+.tl-photos>*{flex:none;width:40px;height:40px;border-radius:8px;box-shadow:0 0 0 2px var(--card)}
+.tl-photos>*+*{margin-left:-14px}
+.tl-photos img{object-fit:cover;background:var(--border)}
+.tl-photos-more{display:grid;place-items:center;font-size:12px;font-weight:650;color:var(--text-secondary);background:var(--chip-bg)}
 .tl-menu-btn{width:44px;height:44px;color:var(--text-secondary)}
 /* Unresolved and closed: a small badge on the card's icon, so it never moves the header. */
 .tl-warn{position:absolute;z-index:2;top:-1px;right:-3px;width:9px;height:9px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 2px var(--card)}
@@ -520,6 +528,12 @@ button.route-chip[aria-expanded=true]{box-shadow:inset 0 0 0 1.5px var(--text-mu
   .tl-time{left:8px}
   .tl-more{grid-column:4;grid-row:1 / span 2}
   .tl-end{grid-column:2 / 4;grid-row:2;justify-content:flex-start;padding:2px 0 2px}
+  /* The pills drop under the title, so the photos take their column beside it. */
+  .tl-head.has-photos{grid-template-columns:22px minmax(0,1fr) auto 44px}
+  .tl-head.has-photos .tl-more{grid-column:4}
+  .tl-photos{grid-column:3}
+  .tl-photos>*{width:34px;height:34px;border-radius:7px}
+  .tl-photos>*+*{margin-left:-12px}
   .tl-body:not([hidden]){padding:10px 8px 18px}
   .tl-menu-list>*{padding:12px}
 }

@@ -1156,6 +1156,43 @@ test('the day header: the city photo with its credit (asked for on load, not on 
   } finally { plain.close(); }
 });
 
+test('a tile with places shows their photos (first three, "+N" for the rest) once it nears the screen, their credits in its menu', async () => {
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const { cachedPhotos } = await import('../../lib/cityPhoto.ts');
+  const places = ['A', 'B', 'C', 'D'].map((x) => ({ name: `Synthetic ${x}`, placeId: `SYN${x}` }));
+  const acts = [
+    { time: '10:00', text: 'Synthetic tour', places: [places[0], places[0], ...places.slice(1)] },
+    { time: '12:00', text: 'Synthetic lunch', places: [{ name: 'Synthetic Spot', address: 'Synthetic street' }] },
+  ];
+  const days = resolveDays({ days: [{ ...day, acts }] });
+  const asked = [];
+  const fetcher = cachedPhotos(async (placeId) => {
+    asked.push(placeId);
+    return placeId === 'SYNB' ? null : { url: `https://example.com/${placeId}.jpg`, credit: { name: `Photographer ${placeId}`, uri: 'https://example.com/p' } };
+  });
+  // Tiles start off screen: nothing is asked for until the observer says one is near.
+  const observers = [];
+  globalThis.IntersectionObserver = class { constructor(cb) { this.cb = cb; observers.push(this); } observe() {} disconnect() {} };
+  const view = mount(React.createElement(DayCard, { ...props, day: days[0], days, expanded: true, placePhoto: fetcher }));
+  try {
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    assert.deepEqual(asked, []);
+    await act(async () => { observers.forEach((o) => o.cb([{ isIntersecting: true }])); await new Promise((r) => setTimeout(r, 0)); });
+    assert.deepEqual(asked, ['SYNA', 'SYNB', 'SYNC']); // a place listed twice is one; the fourth isn't asked for
+    const tile = (text) => [...view.container.querySelectorAll('.tl-entry')].find((e) => e.textContent.includes(text));
+    const tour = tile('Synthetic tour');
+    assert.deepEqual([...tour.querySelectorAll('.tl-photos img')].map((i) => i.getAttribute('src')), ['https://example.com/SYNA.jpg', 'https://example.com/SYNC.jpg']); // B has none
+    assert.equal(tour.querySelector('.tl-photos-more').textContent, '+1');
+    assert.ok(tour.querySelector('.tl-head').classList.contains('has-photos'));
+    const menu = openMenu(tour);
+    assert.equal(menuItem(menu, 'See photo credit: Synthetic A').getAttribute('href'), 'https://example.com/p');
+    assert.ok(menuItem(menu, 'See photo credit: Synthetic C'));
+    const lunch = tile('Synthetic lunch');
+    assert.equal(lunch.querySelector('.tl-photos'), null); // an address alone has no photo
+    assert.ok(!lunch.querySelector('.tl-head').classList.contains('has-photos'));
+  } finally { view.close(); delete globalThis.IntersectionObserver; }
+});
+
 test('opening a day re-marks its closed tiles as closed (Safari otherwise keeps their full height), and they stay searchable', async () => {
   const { resolveDays } = await import('../../lib/tripLogic.ts');
   const days = resolveDays({ days: [{ ...day, hotels: [{ who: 'all', name: 'Synthetic Hotel', status: 'booked' }] }] });

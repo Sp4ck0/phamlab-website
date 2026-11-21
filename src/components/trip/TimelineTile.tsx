@@ -1,6 +1,8 @@
 import { useId, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { changeClass, type ChangeState } from "../../lib/changeDiff";
 import { useUntilFound } from "../../hooks/useUntilFound";
+import { MAX_TILE_PHOTOS, usePlacePhotos, type TilePlace } from "../../hooks/usePlacePhotos";
+import type { PlacePhotoFetcher } from "../../lib/cityPhoto";
 import { TileMenu, type TileMenuItem } from "./TileMenu";
 
 export const ALL_DAY = "All day";
@@ -52,6 +54,10 @@ export interface TimelineTileProps {
   now?: boolean;
   /** A thin progress bar for the tile under way; drawn along the bottom of the header. */
   progress?: ReactNode;
+  /** Its places with a Google Place ID: the first few show as small photos in the header, their
+   *  photographers' credits in the menu. Asked for (via placePhoto) once the tile nears the screen. */
+  photoPlaces?: TilePlace[];
+  placePhoto?: PlacePhotoFetcher;
   children: ReactNode;
 }
 
@@ -66,11 +72,22 @@ const OWN_CLICK = "button, a, input, label, select, textarea, summary, [role=men
 // (hidden="until-found"). A static card whose title is cut off opens too, to show all of it.
 export function TimelineTile({
   domId, time, icon, iconLabel, title, expandable = true, meta, headerEnd, menu, label, warn, open, onToggle, onReveal,
-  change = "same", className, nextUpLine, now, progress, children,
+  change = "same", className, nextUpLine, now, progress, photoPlaces, placePhoto, children,
 }: TimelineTileProps) {
   const bodyId = useId();
   const bodyRef = useUntilFound(open, onReveal ?? onToggle);
   const gone = change === "gone";
+  const tileRef = useRef<HTMLDivElement>(null);
+  const photos = usePlacePhotos(tileRef, photoPlaces, gone ? undefined : placePhoto);
+  const morePlaces = photos.length ? (photoPlaces?.length ?? 0) - MAX_TILE_PHOTOS : 0;
+  // The credit Google asks for, in the menu like the day header's: the photographer's page, or
+  // without one, "Photo by …" for a moment.
+  const credits: TileMenuItem[] = photos.flatMap(({ name, photo: { credit } }) => {
+    if (!credit) return [];
+    const label = photos.length > 1 ? `See photo credit: ${name}` : "See photo credit";
+    return [credit.uri ? { label, icon: "photo" as const, href: credit.uri } : { label, icon: "photo" as const, onSelect: () => `Photo by ${credit.name}` }];
+  });
+  const items = menu || credits.length ? [...(menu ?? []), ...credits] : undefined;
   // A static card's title clamped to two lines: measured while closed (open, it shows in full).
   const titleRef = useRef<HTMLSpanElement>(null);
   const [clipped, setClipped] = useState(false);
@@ -114,9 +131,10 @@ export function TimelineTile({
       <div
         className={`tl-tile${open && canOpen ? " is-open" : ""}${canOpen ? "" : " tl-flat"}${className ? ` ${className}` : ""}${changeClass(change)}`}
         onClick={canOpen ? cardClick : undefined}
+        ref={tileRef}
       >
         {time && <span className="tl-time" data-all-day={time === ALL_DAY ? "true" : undefined}>{time}</span>}
-        <div className="tl-head">
+        <div className={`tl-head${photos.length ? " has-photos" : ""}`}>
           <span className="tl-dot" title={iconLabel}>
             <span aria-hidden="true">{icon}</span>
             {showWarn && <span className="tl-warn" role="img" aria-label="Needs attention" title="Needs attention" />}
@@ -129,7 +147,14 @@ export function TimelineTile({
             <div className="tl-heading">{heading}</div>
           )}
           {headerEnd && <span className="tl-end">{headerEnd}</span>}
-          <span className="tl-more">{!gone && menu && <TileMenu label={name} items={menu} />}</span>
+          {/* Decorative: the places are named in the title and the menu. */}
+          {photos.length > 0 && (
+            <span className="tl-photos" aria-hidden="true">
+              {photos.map((p) => <img key={p.placeId} src={p.photo.url} alt="" decoding="async" />)}
+              {morePlaces > 0 && <span className="tl-photos-more">+{morePlaces}</span>}
+            </span>
+          )}
+          <span className="tl-more">{!gone && items && <TileMenu label={name} items={items} />}</span>
           {progress}
         </div>
         {canOpen && (
