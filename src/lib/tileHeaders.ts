@@ -32,6 +32,14 @@ export const segmentsOf = (group: FlightGroup) => {
   return { legs, derived, segments };
 };
 
+// A title that already names every place of the route ("Train — Guangzhou to Shenzhen" for
+// "Guangzhou → Shenzhen"): the line under it needn't say the route again.
+function titleNamesRoute(title: string, route: string): boolean {
+  const t = title.toLowerCase();
+  const places = route.split(/→|->/).map((p) => p.trim().toLowerCase()).filter(Boolean);
+  return places.length > 0 && places.every((p) => t.includes(p));
+}
+
 // What a transport tile's timeline header says while it is closed: the mode's icon,
 // the title (or route), and the first hop's carrier and number, with the route again
 // when a title took its place and the number of legs when there are several.
@@ -42,7 +50,7 @@ export function transportHeader(group: FlightGroup): { icon: string; title: stri
   const label = first ? (first.airline ? segmentLabel(first) : first.number ?? "") : "";
   const parts = [
     [named, label && label !== named ? label : ""].filter(Boolean).join(" · "),
-    group.title && group.title !== group.route ? group.route : "",
+    group.title && group.title !== group.route && !titleNamesRoute(group.title, group.route) ? group.route : "",
     segments.length > 1 ? `${segments.length} legs` : "",
     legs[0]?.time ?? "",
   ].filter(Boolean);

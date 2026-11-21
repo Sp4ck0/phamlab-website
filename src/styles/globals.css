@@ -476,6 +476,8 @@ button.route-chip[aria-expanded=true]{box-shadow:inset 0 0 0 1.5px var(--text-mu
 .tl-menu-icon svg{width:16px;height:16px}
 /* Body: the card's own content, revealed with a short fade. */
 .tl-body:not([hidden]){padding:10px 12px 18px;border-top:1px solid var(--gridline);animation:tl-reveal .22s ease-out}
+/* Opened only to show its whole title: no empty body under it. */
+.tl-tile .tl-body:empty:not([hidden]){padding:0;border:0}
 @keyframes tl-reveal{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 .tl-actions{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;margin-top:10px;padding-top:8px;border-top:1px solid var(--gridline)}
 .tl-actions:first-child{margin-top:0;padding-top:0;border-top:0}
@@ -591,14 +593,15 @@ details.tour-box[open] summary::after{content:"Hide"}
 .seg-mode{font-size:16px;line-height:1}
 .seg-chips{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
 .seg-chip{font-size:11.5px;font-weight:500;color:var(--text-secondary);border:1px solid var(--border);border-radius:999px;padding:1px 8px}
-.seg-main{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;column-gap:14px;margin-top:6px}
+/* Both ends from the top, so the two times sit on one line even when a long place name wraps on one side. */
+.seg-main{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:start;column-gap:14px;margin-top:6px}
 .seg-end{min-width:0}
 .seg-end-arr{text-align:right}
 .seg-time{font-size:22px;font-weight:700;color:var(--text-primary);font-variant-numeric:tabular-nums;line-height:1.15;white-space:nowrap}
 .seg-plus{font-size:11px;font-weight:700;color:var(--accent-1);margin-left:2px}
 .seg-place{font-size:13px;font-weight:600;color:var(--text-secondary);margin-top:1px}
 .seg-date{font-size:12px;color:var(--text-muted)}
-.seg-mid{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:56px}
+.seg-mid{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:56px;margin-top:4px}
 .seg-dur{font-size:12px;color:var(--text-muted);white-space:nowrap}
 .seg-line{align-self:stretch;height:0;border-top:2px solid var(--border);position:relative}
 .seg-line::after{content:"";position:absolute;right:-1px;top:-5px;border-left:7px solid var(--border);border-top:4px solid transparent;border-bottom:4px solid transparent}

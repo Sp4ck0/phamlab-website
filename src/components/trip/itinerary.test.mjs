@@ -1225,3 +1225,43 @@ test('an overnight train: its gate goes on a line under the row, and both ends s
   } finally { view.close(); }
 });
 
+test('a transport title that already names the route doesn\'t repeat it under it; one that doesn\'t still shows it', async () => {
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const rows = [
+    { who: 'all', route: 'Synthetic East → Synthetic West', title: 'Train — Synthetic East to Synthetic West', mode: 'train', status: 'needed' },
+    { who: 'all', route: 'Synthetic North → Synthetic South', title: 'Synthetic overnight train', mode: 'train', status: 'needed' },
+  ];
+  const days = resolveDays({ days: [{ ...day, flights: rows, hotels: [] }] });
+  const view = mount(React.createElement(DayCard, { ...props, day: days[0], days, expanded: true }));
+  try {
+    const [named, plain] = view.container.querySelectorAll('.tl-transport');
+    assert.ok(!(named.querySelector('.tl-meta')?.textContent ?? '').includes('Synthetic East → Synthetic West'));
+    assert.ok(plain.querySelector('.tl-meta').textContent.includes('Synthetic North → Synthetic South'));
+  } finally { view.close(); }
+});
+
+test('a static card whose title is cut off gets the chevron and opens to show the whole title; one that fits stays static', () => {
+  const proto = window.HTMLElement.prototype;
+  const sh = Object.getOwnPropertyDescriptor(proto, 'scrollHeight');
+  const ch = Object.getOwnPropertyDescriptor(proto, 'clientHeight');
+  // jsdom has no layout: a title containing "long" measures as clamped (taller than its two lines).
+  Object.defineProperty(proto, 'scrollHeight', { configurable: true, get() { return this.classList?.contains('tl-title') && this.textContent.includes('long') ? 80 : 40; } });
+  Object.defineProperty(proto, 'clientHeight', { configurable: true, get() { return 40; } });
+  const synthetic = { ...day, acts: [{ tag: 'Food', time: '12:00', text: 'Synthetic long lunch with a very long description' }, { tag: 'Food', time: '18:00', text: 'Synthetic dinner' }] };
+  const view = mount(React.createElement(Stateful, { ...props, day: synthetic, days: [synthetic], expanded: true }));
+  try {
+    const [lunch, dinner] = view.container.querySelectorAll('.tl-tile');
+    assert.ok(!lunch.classList.contains('tl-flat') && lunch.querySelector('.tl-notch')); // cut off: it opens
+    assert.ok(dinner.classList.contains('tl-flat') && !dinner.querySelector('.tl-notch')); // fits: static
+    const toggle = lunch.querySelector('.tl-toggle');
+    assert.equal(toggle.getAttribute('aria-expanded'), 'false');
+    act(() => lunch.dispatchEvent(new window.MouseEvent('click', { bubbles: true })));
+    assert.equal(toggle.getAttribute('aria-expanded'), 'true');
+    assert.ok(lunch.classList.contains('is-open')); // open: the title shows in full (no clamp)
+  } finally {
+    view.close();
+    if (sh) Object.defineProperty(proto, 'scrollHeight', sh); else delete proto.scrollHeight;
+    if (ch) Object.defineProperty(proto, 'clientHeight', ch); else delete proto.clientHeight;
+  }
+});
+
