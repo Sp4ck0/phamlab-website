@@ -51,12 +51,15 @@ export function HotelBody({ g, status: s, stay, gapAfter, groups, date, days, da
       <div className="hotel-main">
           {(placeholder || showName) && <div className={`cmain ${s === "needed" && !g.tentative ? "todo" : ""}`}>
             {!placeholder ? (
-              <>
-                <a href={googleMapsUrl(place)} target="_blank" rel="noopener noreferrer">
-                  <MapsPin />{nm}
-                </a>
-                <ShowOnMap place={place} />
-              </>
+              // On a timeline card its Maps link and map button are in the card's menu.
+              actions ? (
+                <>
+                  <a href={googleMapsUrl(place)} target="_blank" rel="noopener noreferrer">
+                    <MapsPin />{nm}
+                  </a>
+                  <ShowOnMap place={place} />
+                </>
+              ) : nm
             ) : (
               "Hotel to be decided"
             )}
@@ -73,7 +76,7 @@ export function HotelBody({ g, status: s, stay, gapAfter, groups, date, days, da
           <HotelFacts g={g} stay={stay} status={s} />
           {s === "needed" && (
             <TbdLine fields={missingHotelFields(g)} area={placeholder ? undefined : g.area}>
-              {!g.tentative && placeholder && g.area && (
+              {actions && !g.tentative && placeholder && g.area && (
                 <a href={hotelSearchUrl(g.area, stay?.checkIn, stay?.checkOut)} target="_blank" rel="noopener noreferrer">Search hotels here</a>
               )}
             </TbdLine>

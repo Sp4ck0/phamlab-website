@@ -181,18 +181,18 @@ test('identical day task labels are occurrence-safe and nested controls never to
   const element = React.createElement(React.Fragment, null, ...['one', 'two'].map(rowId => React.createElement(DayCard, { ...props, key: rowId, rowId, day: rich, expanded: true, dayActionItems: [item], onToggleActionItem: id => calls.push(id), onExpandedChange: () => calls.push('day-toggle') })));
   const view = mount(element);
   try {
-    // Each day's to-do is a tile with its own checkbox; ids stay unique across the two days.
-    const inputs = [...view.container.querySelectorAll('input[type=checkbox]')];
-    assert.equal(inputs.length, 2);
+    // Each day's to-do is a card ticked from its "⋯" menu; ids stay unique across the two days.
+    const todos = [...view.container.querySelectorAll('.tl-item')];
+    assert.equal(todos.length, 2);
     const ids = [...view.container.querySelectorAll('[id]')].map((e) => e.id);
     assert.equal(new Set(ids).size, ids.length);
-    assert.equal(inputs[1].getAttribute('aria-label'), 'Done: Synthetic task');
-    // Only the checkbox ticks the task; the tile's title opens and closes the tile, never the day.
-    const toggle = inputs[1].closest('.tl-tile').querySelector('.tl-toggle');
+    // Only the menu ticks the task; the card's title opens and closes the card, never the day.
+    const toggle = todos[1].querySelector('.tl-toggle');
     assert.ok(toggle.textContent.includes('Synthetic task'));
     act(() => toggle.click());
     assert.deepEqual(calls, []);
-    act(() => inputs[1].click());
+    const done = menuItem(openMenu(todos[1]), 'Mark as done');
+    act(() => done.click());
     assert.deepEqual(calls, [item.id]);
     const details = view.container.querySelector('details');
     details.open = true;
@@ -220,9 +220,9 @@ test('live gaps removal returns focus to filter while retaining hidden disclosur
   try {
     // Under Only gaps the day opens on its own.
     assert.equal(view.container.querySelector('.day-head-btn[aria-expanded]').getAttribute('aria-expanded'), 'true');
-    const status = view.container.querySelector('.status');
-    status.focus();
-    act(() => status.click());
+    const book = menuItem(openMenu(view.container.querySelector('.tl-transport')), 'Mark as booked');
+    book.focus();
+    await act(async () => book.click());
     assert.equal(view.container.querySelector('.day-card'), null);
     assert.equal(document.activeElement, view.container.querySelector('[data-filter]'));
     assert.ok(view.container.textContent.includes('No days match Only gaps'));
@@ -274,8 +274,9 @@ test('existing rich transport lodging activity and task detail capabilities rema
     }
     // An activity's tag is its icon; the tag's name is the icon's tooltip, not a second line.
     assert.ok([...view.container.querySelectorAll('.tl-dot')].some((dot) => dot.getAttribute('title') === 'Synthetic tag'));
-    assert.ok(view.container.querySelector('a[href^="https://www.google.com/maps/"]'));
-    act(() => view.container.querySelector('.tl-transport .status').click());
+    assert.match(menuItem(openMenu(view.container.querySelector('.tl-hotel')), 'Open in Google Maps').getAttribute('href'), /^https:\/\/www\.google\.com\/maps\//);
+    const book = menuItem(openMenu(view.container.querySelector('.tl-transport')), 'Mark as booked');
+    await act(async () => book.click());
     assert.deepEqual(calls[0], [[flightId(day.date, richFlight)], 'needed']);
     assert.equal(view.container.querySelector('.day-head-btn[aria-expanded]').getAttribute('aria-expanded'), 'true');
     assert.equal(days[1].hotels[0].src, days[0].hotels[0].src);
@@ -351,10 +352,10 @@ test('hotel tiles show their stay facts and a tap-to-reveal confirmation; a not-
     assert.equal(undecided.querySelector('.tx-state.open').textContent, 'Not booked'); // amber state text, like the proposal
     assert.ok(undecided.classList.contains('miss')); // the dashed amber tile
     assert.deepEqual([...undecided.querySelectorAll('.tbd-chip')].map((c) => c.textContent), ['hotel', 'check-in time', 'check-out time']);
-    const search = undecided.querySelector('.tbd .tbd-action a'); // on the same row as "to be decided"
-    assert.equal(search.textContent, 'Search hotels here');
+    assert.equal(undecided.querySelector('.tbd a'), null); // the search is in the card's menu, not inline
+    const search = menuItem(openMenu(undecided), 'Search hotels here');
     assert.ok(new URL(search.href).searchParams.get('q').startsWith('Hotels in Synthetic area'));
-    assert.equal(undecided.querySelector('.tile-links'), null); // no separate links row; booking is the check mark at the top right
+    assert.equal(undecided.querySelector('.tile-links'), null); // no separate links row
     const note = [...undecided.querySelectorAll('.cmeta')].find((m) => m.textContent === 'Synthetic free-form note');
     assert.ok(note.compareDocumentPosition(undecided.querySelector('.tbd')) & 2); // the note comes after the to-be-decided row (preceding bit)
     assert.ok(note.parentElement.lastElementChild === note); // and is the last thing in its column of the tile (a boolean: a failing element diff would hang the run)
@@ -415,7 +416,7 @@ test('a hop not planned yet is the same tile: blank time slots, a day or a windo
     assert.equal(view.container.querySelectorAll('.tl-gap').length, 0); // no transport row falls back to the old card
   } finally { view.close(); }
 });
-test('a hotel tile shows the whole stay on every night: both times, nights, a dot for tonight, per-night price, directions, and keeps the pin', async () => {
+test('a hotel tile shows the whole stay on every night: both times, nights, a dot for tonight, per-night price, directions, and opens in Google Maps', async () => {
   const { resolveDays } = await import('../../lib/tripLogic.ts');
   const stay = (extra = {}) => ({ who: 'all', name: 'Synthetic Hotel', address: 'Synthetic street', status: 'booked', ...extra });
   const raw = { days: [
@@ -430,7 +431,7 @@ test('a hotel tile shows the whole stay on every night: both times, nights, a do
   try {
     const card = view.container.querySelector('.tl-hotel');
     assert.equal(card.querySelector('.tl-title').textContent, 'Synthetic Hotel');
-    assert.match(card.querySelector('.tl-pin-btn').getAttribute('href'), /google\.com\/maps/); // the pin on the row opens Google Maps
+    assert.match(menuItem(openMenu(card), 'Open in Google Maps').getAttribute('href'), /google\.com\/maps/); // the menu opens Google Maps
     assert.equal(card.querySelector('.cmain'), null); // and isn't repeated in the body
     const strip = card.querySelector('.stay-strip');
     assert.ok(strip.textContent.includes('3 nights') && strip.textContent.includes('Mon, Jan 2 · 15:00') && strip.textContent.includes('Thu, Jan 5 · 12:00')); // both times on the check-in tile
@@ -747,7 +748,9 @@ test('a booked train, ferry or bus has a mode and state header, the operator as 
     assert.ok([...box.querySelectorAll('.seg-chip')].some((c) => c.textContent === 'Coach 5 · 12A'));
     const items = openMenu(box);
     assert.equal(menuItem(items, 'Ticket').getAttribute('href'), 'https://example.com/ticket');
-    assert.ok(!items.some((i) => /book/i.test(i.textContent))); // booked: nothing to book
+    assert.ok(menuItem(items, 'Mark as not booked')); // booked: the menu can only un-book it
+    assert.equal(menuItem(items, 'Search this route'), undefined);
+    assert.equal(box.querySelector('button.status'), null); // the check is a state, not a button
   } finally { view.close(); }
   // Only an https ticket link is ever rendered.
   const bad = resolveDays({ days: [{ ...day, flights: [{ ...row, ticketUrl: 'javascript:alert(1)' }], hotels: [] }] });
@@ -755,7 +758,7 @@ test('a booked train, ferry or bus has a mode and state header, the operator as 
   try { assert.equal(menuItem(openMenu(view2.container.querySelector('.tl-entry')), 'Ticket'), undefined); } finally { view2.close(); }
 });
 
-test('an unbooked train shows its route as the title, a route search; the check mark books it; the flight tile is unchanged', async () => {
+test('an unbooked train shows its route as the title, a route search; its menu books it; the flight tile is unchanged', async () => {
   const { resolveDays, flightId } = await import('../../lib/tripLogic.ts');
   const open = { who: 'all', route: 'Synthetic City → Synthetic Town', mode: 'train', status: 'needed', detail: 'Synthetic train note' };
   const flight = { who: 'all', route: 'Synthetic F → Synthetic G', status: 'booked', title: 'Synthetic flight title' };
@@ -772,10 +775,10 @@ test('an unbooked train shows its route as the title, a route search; the check 
     assert.ok(note.parentElement.lastElementChild === note);
     const items = openMenu(train);
     const search = menuItem(items, 'Search this route');
-    assert.ok(!items.some((i) => /book/i.test(i.textContent))); // no Mark as booked: the check mark does it
     assert.equal(search.textContent, 'Search this route');
     assert.equal(new URL(search.href).searchParams.get('travelmode'), 'transit');
-    act(() => train.querySelector('.status').click());
+    const book = menuItem(items, 'Mark as booked');
+    await act(async () => book.click());
     assert.deepEqual(calls[0], [[flightId(day.date, open)], 'needed']); // the toggle reports the current state; the page flips it
     // A flight keeps its own title; booked, its header has just the check, and it has no booking links.
     assert.equal(plane.querySelector('.ctype'), null);
@@ -979,7 +982,7 @@ test('Only gaps: booked tiles start closed and actionable ones open, whatever th
 // ---- to-dos and considerations on the timeline ----
 const consider = (id, extra = {}) => ({ key: `item:${id}`, kind: 'consider', scope: { kind: 'day', date: day.date }, title: `Synthetic ${id}`, refs: [`item:${id}`], refsDone: [false], done: false, dueDate: null, dueDateIsDefault: true, editable: true, votes: { yes: [], no: [], mine: null }, ...extra });
 
-test('dated to-dos and considerations are tiles on the day: a timed one among the activities, an untimed one after them', () => {
+test('dated to-dos and considerations are tiles on the day: a timed one among the activities, an untimed one after them', async () => {
   const votes = [];
   const ticks = [];
   const synthetic = { ...day, acts: [{ time: '09:00', text: 'Synthetic morning' }, { time: '15:00', text: 'Synthetic afternoon' }] };
@@ -993,13 +996,15 @@ test('dated to-dos and considerations are tiles on the day: a timed one among th
     const lunch = view.container.querySelector('.tl-consider');
     assert.equal(lunch.closest('.tl-entry').querySelector('.tl-time').textContent, '12:00');
     assert.match(lunch.querySelector('.tl-meta').textContent, /Considering/);
-    // Voting and ticking happen in the header, so they work while the tile is closed, and never toggle it.
+    // Voting and ticking are in the card's menu, so they work while the card is closed, and never toggle it.
     const before = lunch.querySelector('.tl-toggle').getAttribute('aria-expanded');
-    act(() => lunch.querySelector('.tl-end .vote-btn[data-vote="yes"]').click());
+    const yes = menuItem(openMenu(lunch), 'Vote yes');
+    await act(async () => yes.click());
     assert.deepEqual(votes, [['lunch', 'yes']]);
     assert.equal(lunch.querySelector('.tl-toggle').getAttribute('aria-expanded'), before);
-    assert.equal(lunch.querySelector('.vote-btn[data-vote="yes"] b').textContent, '1');
-    act(() => view.container.querySelector('.tl-item:not(.tl-consider) .tl-check').click());
+    assert.equal(lunch.querySelector('.vote-tally b').textContent, '1'); // the tally stays in the header
+    const tick = menuItem(openMenu(view.container.querySelector('.tl-item:not(.tl-consider)')), 'Mark as done');
+    await act(async () => tick.click());
     assert.deepEqual(ticks, ['todo1']);
   } finally { view.close(); }
 });
@@ -1017,8 +1022,10 @@ test('a consideration proposing a hotel shows it as a Proposed tile, and Add to 
     const proposal = tile.querySelector('.tl-proposal');
     assert.ok(proposal.textContent.includes('Proposed') && proposal.textContent.includes('Synthetic Proposed Hotel'));
     assert.equal(proposal.querySelector('.tl-actions'), null); // the draft has no actions of its own
-    await act(async () => { tile.querySelector('.tl-approve').click(); });
+    const add = menuItem(openMenu(tile), 'Add to itinerary');
+    await act(async () => { add.click(); });
     assert.deepEqual(promoted, [['stay', day.date]]);
+    assert.equal(tile.querySelector('.share-status').textContent, 'Added to the itinerary');
   } finally { view.close(); }
 });
 
@@ -1034,33 +1041,33 @@ test('an entry approved from an item shows its History (wording and votes), and 
     assert.match(hist.textContent, /👍 2 \(Ann, Ben\) · 👎 1 \(Cy\) · Chosen/);
     const item = view.container.querySelector('.tl-consider');
     assert.ok(item.textContent.includes('In the itinerary.'));
-    assert.equal(item.querySelector('.tl-approve'), null); // already added
+    assert.equal(menuItem(openMenu(item), 'Add to itinerary'), undefined); // already added
     assert.equal(item.querySelector('.tl-toggle').getAttribute('aria-expanded'), 'false'); // settled: closed
   } finally { view.close(); }
 });
 
-test('an activity is one row: time, icon and title, the Maps pin, and its actions in the "⋯" menu; nothing to open', () => {
+test('an activity is one static card: time, icon and title, and all its actions in the "⋯" menu; nothing to open', () => {
   const synthetic = { ...day, country: 'TH', acts: [{ tag: 'Food', time: '12:00', text: 'Synthetic Cafe', places: [{ name: 'Synthetic Cafe', address: 'Synthetic street' }] }] };
   const edits = [];
   const view = mount(React.createElement(DayCard, { ...props, day: synthetic, days: [synthetic], expanded: true, onEditActivity: async (...a) => { edits.push(a); } }));
   try {
     const tile = view.container.querySelector('.tl-tile');
     assert.ok(tile.classList.contains('tl-flat'));
-    assert.equal(tile.querySelector('.tl-toggle, .tl-chev, .tl-body'), null); // no chevron, no body
+    assert.equal(tile.querySelector('.tl-toggle, .tl-notch, .tl-body'), null); // no chevron, no body
     assert.equal(tile.querySelector('.tl-meta'), null); // no "Food" line: the icon says it
     assert.equal(tile.querySelector('.tl-time').textContent, '12:00');
     assert.equal(tile.querySelector('.tl-title').textContent, 'Synthetic Cafe');
-    const pin = tile.querySelector('.tl-pin-btn');
-    assert.match(pin.getAttribute('href'), /google\.com\/maps/);
-    assert.equal(pin.getAttribute('aria-label'), 'Open Synthetic Cafe in Google Maps');
+    assert.equal(tile.querySelectorAll('button, a').length, 1); // the "⋯" button is the card's only control
     const items = openMenu(tile);
-    assert.deepEqual(items.map((i) => i.textContent), ['Edit', 'Copy link', 'Add to Google Calendar', 'Show on the trip map']);
+    assert.deepEqual(items.map((i) => i.textContent), ['Edit', 'Open in Google Maps', 'Copy link', 'Add to Google Calendar', 'Show on the trip map']);
+    assert.match(menuItem(items, 'Open in Google Maps').getAttribute('href'), /google\.com\/maps/);
+    assert.ok(items.every((i) => i.querySelector('.tl-menu-icon svg'))); // every action has its icon
     act(() => menuItem(items, 'Edit').click()); // editing opens it, with the editor
     assert.ok(view.container.querySelector('.tl-tile .tl-body .ai-editor'));
   } finally { view.close(); }
 });
 
-test('an activity approved from a suggestion opens to its History; a hotel opens from anywhere on its row but the Maps pin', () => {
+test('an activity approved from a suggestion opens to its History; a card opens from anywhere on it but its menu', () => {
   const synthetic = { ...day, acts: [{ text: 'Synthetic dinner', fromItem: 'x' }], hotels: [{ who: 'all', name: 'Synthetic Hotel', status: 'booked' }] };
   const task = consider('x', { title: 'Synthetic idea', done: true, outcome: 'chosen' });
   const view = mount(React.createElement(Stateful, { ...props, day: { ...synthetic, _d: day._d, hotels: [{ ...synthetic.hotels[0], src: `${day.date}|h|Synthetic Hotel|all`, checkIn: true, checkOut: true }] }, days: [synthetic], expanded: true, itemTasks: { x: task } }));
@@ -1069,12 +1076,17 @@ test('an activity approved from a suggestion opens to its History; a hotel opens
     assert.ok(!dinner.classList.contains('tl-flat') && dinner.querySelector('.tl-body details.tl-history'));
     const hotel = view.container.querySelector('.tl-hotel');
     const toggle = hotel.querySelector('.tl-toggle');
-    act(() => hotel.querySelector('.tl-pin-btn').dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true })));
-    assert.equal(toggle.getAttribute('aria-expanded'), 'false'); // the pin only opens Maps
     act(() => hotel.querySelector('.tl-menu-btn').click());
-    assert.equal(toggle.getAttribute('aria-expanded'), 'false'); // nor does the menu
+    assert.equal(toggle.getAttribute('aria-expanded'), 'false'); // opening the menu doesn't toggle the card
+    // A tap outside closes the menu; the click it makes doesn't toggle the card either.
+    act(() => { hotel.querySelector('.tl-time').dispatchEvent(new window.Event('pointerdown', { bubbles: true })); hotel.querySelector('.tl-time').dispatchEvent(new window.MouseEvent('click', { bubbles: true })); });
+    assert.equal(hotel.querySelector('[role=menu]'), null);
+    assert.equal(toggle.getAttribute('aria-expanded'), 'false');
     act(() => hotel.querySelector('.tl-time').dispatchEvent(new window.MouseEvent('click', { bubbles: true })));
-    assert.equal(toggle.getAttribute('aria-expanded'), 'true'); // anywhere else on the row opens the tile
+    assert.equal(toggle.getAttribute('aria-expanded'), 'true'); // anywhere else on the card opens it
+    assert.equal(hotel.querySelector('.tl-notch').getAttribute('aria-hidden'), 'true'); // the chevron is decoration
+    act(() => hotel.querySelector('.tl-body').dispatchEvent(new window.MouseEvent('click', { bubbles: true })));
+    assert.equal(toggle.getAttribute('aria-expanded'), 'false'); // and from its body it closes
   } finally { view.close(); }
 });
 
@@ -1155,3 +1167,28 @@ test('Nothing planned yet is one line: no hint under the title', () => {
     assert.equal(tile.querySelector('.tx-state').textContent, 'Not planned');
   } finally { view.close(); }
 });
+
+test('the "⋯" menu: arrow keys move through it, Escape closes it back to its button, and a settled vote is shown but unavailable', async () => {
+  const votes = [];
+  const task = consider('settled', { done: true, outcome: 'chosen', votes: { yes: ['Ann'], no: [], mine: null } });
+  const view = mount(React.createElement(DayCard, { ...props, day, expanded: true, dayConsiderations: [task], onVote: (...a) => votes.push(a), onPromote: async () => {} }));
+  try {
+    const tile = view.container.querySelector('.tl-consider');
+    const items = openMenu(tile);
+    const yes = menuItem(items, 'Vote yes');
+    assert.equal(yes.getAttribute('aria-disabled'), 'true');
+    await act(async () => yes.click());
+    assert.deepEqual(votes, []); // voting is over
+    const enabled = items.filter((i) => i.getAttribute('aria-disabled') !== 'true');
+    assert.equal(document.activeElement, enabled[0]); // opening focuses the first available action
+    const list = tile.querySelector('[role=menu]');
+    act(() => list.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })));
+    assert.equal(document.activeElement, enabled[1]);
+    act(() => list.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true })));
+    assert.equal(document.activeElement, enabled[0]);
+    act(() => document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+    assert.equal(tile.querySelector('[role=menu]'), null);
+    assert.equal(document.activeElement, tile.querySelector('.tl-menu-btn'));
+  } finally { view.close(); }
+});
+

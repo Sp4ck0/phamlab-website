@@ -7,7 +7,7 @@ import type { StayInfo } from "./stay";
 import type { FlightGroup, HotelGroup } from "./tripLogic";
 
 // A placeholder name ("TBD — Oslo hotel", or none) is not a place: show it as "Hotel to be decided" (the stored name is untouched).
-export const isPlaceholderHotel = (g: HotelGroup) => !g.name || /^TBD\b/i.test(g.name);
+export const isPlaceholderHotel = (g: Pick<HotelGroup, "name">) => !g.name || /^TBD\b/i.test(g.name);
 
 // What a hotel's timeline header says while the tile is closed: the name, and which
 // part of the stay this day is (with the time when it is known).

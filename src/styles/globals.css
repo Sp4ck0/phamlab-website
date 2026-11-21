@@ -403,112 +403,111 @@ h1{font-size:30px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
    but must take no space: iOS Safari otherwise keeps its full height as a blank gap. */
 .day-card > div[hidden],.tl-body[hidden]{height:0;overflow:hidden;padding:0;margin:0;border:0}
 
-/* ── day agenda (TimelineTile): one row per item, each an accordion ──
-   time pill | icon | title and meta | extras | control | Maps pin | ⋯ menu | chevron. The last
-   four slots are on every row, filled or not, so the controls line up down the day. A closed
-   row is its header alone; opening one only pushes what is below it down. */
+/* ── day agenda (TimelineTile): one card per item ──
+   The time is a pill set into the card's top border; the "⋯" menu (all of the card's actions)
+   sits at the top right; an expandable card has a chevron in a notch in its bottom border (down
+   closed, up open) and opens or closes from a tap anywhere on it. A static card has neither. */
 .tl{list-style:none;margin:0;padding:0}
 .tl-heading-row{display:flex;align-items:center;gap:8px;margin:4px 0 8px}
 .tl-heading-row h3{margin:0;font-size:15px;font-weight:700;color:var(--text-primary)}
 .tl-count{font-size:12px;font-weight:600;color:var(--text-secondary);border:1px solid var(--border);border-radius:999px;padding:1px 8px}
 .tl-entry,.tl-now{position:relative;scroll-margin-top:66px}
-.tl-tile{min-width:0;margin-bottom:6px;background:var(--card);border:1px solid var(--border);border-radius:12px;transition:border-color .15s}
+.tl-tile{position:relative;min-width:0;margin-bottom:8px;background:var(--card);border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:border-color .2s,background-color .2s}
+.tl-tile.tl-flat{cursor:default}
+/* Room for the time pill above the border and the chevron notch below it. */
+.tl-entry--timed .tl-tile{margin-top:14px}
+.tl-tile:not(.tl-flat){margin-bottom:20px}
+@media (hover:hover){.tl-tile:not(.tl-flat):hover{background:color-mix(in srgb,var(--accent-1) 4%,var(--card))}}
 .tl-tile.is-open{border-color:color-mix(in srgb,var(--accent-1) 40%,var(--border))}
 .tl-tile.miss{border-style:dashed;border-color:var(--warn);background:var(--accent-transit-tint)}
 .day-card.gaps-only .tl-tile.miss{border-width:2px}
 .tl-tile.maybe{opacity:.88}
-.tl-entry.next-up{box-shadow:none}
 .tl-entry.next-up .tl-tile{box-shadow:0 0 0 2px var(--accent-1)}
-.tl-head{position:relative;display:grid;grid-template-columns:62px 28px minmax(0,1fr) auto 28px 32px 32px 28px;align-items:center;column-gap:8px;min-height:50px;padding:0 6px 0 10px;border-radius:11px;cursor:pointer}
-@media (hover:hover){.tl-head:hover{background:color-mix(in srgb,var(--accent-1) 5%,transparent)}}
-/* The time as a pill; "All day" in small caps; no time keeps the space so titles line up. */
-.tl-time{grid-column:1;justify-self:start;box-sizing:border-box;min-width:58px;text-align:center;padding:4px 8px;border-radius:999px;background:var(--accent-1-tint);color:var(--accent-1);font-size:13px;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap}
-.tl-time:empty{visibility:hidden}
-.tl-time[data-all-day]{font-size:10px;letter-spacing:.04em;text-transform:uppercase;padding:5px 6px}
-.tl-entry--now .tl-time{background:var(--now);color:#fff}
-.tl-dot{grid-column:2;position:relative;display:grid;place-items:center;width:28px;height:28px;font-size:20px;line-height:1}
-.tl-toggle{grid-column:3;display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0;padding:8px 0;border:0;background:transparent;font:inherit;color:inherit;text-align:left;cursor:pointer;border-radius:9px}
-.tl-toggle:focus-visible{outline:2px solid var(--accent-1);outline-offset:2px}
-.tl-heading{grid-column:3;display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0;padding:8px 0}
-.tl-flat .tl-head{cursor:default}
-@media (hover:hover){.tl-flat .tl-head:hover{background:transparent}}
-.tl-title{max-width:100%;font-size:14.5px;font-weight:600;line-height:1.35;color:var(--text-primary);overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+/* The time, set into the top border like a legend: its own fill hides the line behind it. */
+.tl-time{position:absolute;z-index:1;top:0;left:12px;transform:translateY(-50%);padding:2px 10px;border:1px solid color-mix(in srgb,var(--accent-1) 45%,var(--border));border-radius:999px;background:linear-gradient(var(--accent-1-tint),var(--accent-1-tint)),var(--card);color:var(--accent-1);font-size:12.5px;font-weight:700;line-height:1.3;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tl-time[data-all-day]{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase}
+.tl-entry--now .tl-time{background:var(--now);border-color:var(--now);color:#fff}
+.tl-head{position:relative;display:grid;grid-template-columns:28px minmax(0,1fr) auto 44px;align-items:center;column-gap:10px;min-height:56px;padding:6px 0 6px 12px;border-radius:11px}
+.tl-entry--timed .tl-head{padding-top:12px}
+.tl-tile:not(.tl-flat) .tl-head{padding-bottom:12px}
+.tl-dot{grid-column:1;position:relative;display:grid;place-items:center;width:28px;height:28px;font-size:20px;line-height:1}
+.tl-toggle,.tl-heading{grid-column:2;display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;padding:4px 0}
+.tl-toggle{border:0;background:transparent;font:inherit;color:inherit;text-align:left;cursor:pointer;border-radius:8px}
+.tl-toggle:focus-visible{outline:2px solid var(--accent-1);outline-offset:3px}
+.tl-title{max-width:100%;font-size:15px;font-weight:650;line-height:1.35;color:var(--text-primary);overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 .tl-tile.is-open .tl-title{display:block;-webkit-line-clamp:unset}
-.tl-meta{font-size:12.5px;line-height:1.35;color:var(--text-secondary);overflow-wrap:anywhere}
+.tl-meta{font-size:13px;line-height:1.35;color:var(--text-secondary);overflow-wrap:anywhere}
 .tl-meta .next-up-line{display:block;margin:0}
-.tl-end{grid-column:4;display:inline-flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:6px 8px}
-.tl-end .now-pill{margin-right:0}
+.tl-end{grid-column:3;display:inline-flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:6px 8px}
 .tl-end:empty{display:none}
-.tl-plan .tl-end{grid-column:4 / -1}
-.tl-control{grid-column:5;display:grid;place-items:center}
-.tl-control .status{position:relative;top:auto;right:auto}
-.tl-pin{grid-column:6;display:grid;place-items:center}
-.tl-more{grid-column:7;display:grid;place-items:center}
-.tl-chev,.tl-chev-slot{grid-column:8;justify-self:center}
-.tl-chev{color:var(--text-muted);transition:transform .16s}
-.tl-tile.is-open .tl-chev{transform:rotate(180deg)}
-.tl-pin-btn,.tl-menu-btn{width:32px;height:32px;color:var(--text-secondary)}
-.tl-pin-btn svg.maps-pin{width:18px;height:18px;margin:0}
-/* Unresolved and closed: a small badge on the row's icon, so it never moves the header. */
+.tl-end .now-pill{margin-right:0}
+.tl-end .status{position:relative;top:auto;right:auto;cursor:default}
+.vote-tally{display:inline-flex;gap:10px;font-size:13px;color:var(--text-secondary);white-space:nowrap}
+.vote-tally [data-mine]{color:var(--accent-1)}
+.tl-more{grid-column:4;grid-row:1;align-self:start;display:grid;place-items:center;margin-top:-4px}
+.tl-menu-btn{width:44px;height:44px;color:var(--text-secondary)}
+/* Unresolved and closed: a small badge on the card's icon, so it never moves the header. */
 .tl-warn{position:absolute;z-index:2;top:-1px;right:-3px;width:9px;height:9px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 2px var(--card)}
 .tl-head .now-progress{border-radius:0 0 11px 11px}
-/* The "⋯" menu. */
+/* The chevron in a notch in the bottom border: decorative, the whole card is the control. */
+.tl-notch{position:absolute;z-index:1;left:50%;bottom:0;transform:translate(-50%,50%);display:grid;place-items:center;width:38px;height:20px;border:1px solid var(--border);border-radius:999px;background:var(--card);color:var(--text-muted);pointer-events:none}
+.tl-tile.is-open .tl-notch{border-color:color-mix(in srgb,var(--accent-1) 40%,var(--border));color:var(--accent-1)}
+.tl-tile.miss .tl-notch{border-color:var(--warn)}
+.tl-chev{transition:transform .22s ease}
+.tl-tile.is-open .tl-chev{transform:rotate(180deg)}
+/* The "⋯" menu: an icon before every action. */
 .tl-menu{position:relative;display:inline-flex}
-.tl-menu-list{position:absolute;right:0;top:calc(100% + 4px);z-index:30;display:flex;flex-direction:column;min-width:210px;padding:4px;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.28)}
-.tl-menu-list>*{display:block;text-align:left;font:inherit;font-size:13.5px;font-weight:500;color:var(--text-primary);background:transparent;border:0;border-radius:6px;padding:8px 10px;text-decoration:none;cursor:pointer;white-space:nowrap}
+.tl-menu-list{position:absolute;right:0;top:calc(100% + 2px);z-index:30;display:flex;flex-direction:column;min-width:230px;padding:4px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.28);cursor:default}
+.tl-menu-list>*{display:flex;align-items:center;gap:10px;text-align:left;font:inherit;font-size:13.5px;font-weight:500;color:var(--text-primary);background:transparent;border:0;border-radius:8px;padding:9px 10px;text-decoration:none;cursor:pointer;white-space:nowrap}
 .tl-menu-list>*:hover,.tl-menu-list>*:focus-visible{background:var(--chip-bg);outline:none}
-/* Body: the tile's own content, then (for a suggestion) its main action. */
-.tl-body:not([hidden]){padding:10px 12px 12px;border-top:1px solid var(--gridline)}
+.tl-menu-list>*:focus-visible{box-shadow:inset 0 0 0 2px var(--accent-1)}
+.tl-menu-list>[aria-disabled="true"]{opacity:.45;cursor:default}
+.tl-menu-list>[aria-disabled="true"]:hover{background:transparent}
+.tl-menu-icon{display:inline-grid;place-items:center;flex:none;width:18px;height:18px;color:var(--text-secondary)}
+.tl-menu-icon svg{width:16px;height:16px}
+/* Body: the card's own content, revealed with a short fade. */
+.tl-body:not([hidden]){padding:10px 12px 18px;border-top:1px solid var(--gridline);animation:tl-reveal .22s ease-out}
+@keyframes tl-reveal{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 .tl-actions{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;margin-top:10px;padding-top:8px;border-top:1px solid var(--gridline)}
 .tl-actions:first-child{margin-top:0;padding-top:0;border-top:0}
 .tl-link{color:var(--accent-1);text-decoration:none;font-size:13px;font-weight:600}
 .tl-link:hover{text-decoration:underline}
 .tl-body>.activity-text{display:block;font-size:14.5px;line-height:1.5}
 .transport-top{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;margin-bottom:4px}
-/* Things that are not rows: the tour box; "now" is a red line across the agenda. */
-.tl-entry--plain .tl-plain{margin-bottom:6px}
+/* Things that are not cards: the tour box; "now" is a red line across the agenda. */
+.tl-entry--plain .tl-plain{margin-bottom:8px}
 .tl-entry--plain .tl-plain details.tour-box{margin-top:0}
-.tl-now{margin:2px 0 8px}
+.tl-now{margin:2px 0 10px}
 .tl-now-label{display:block;border-top:2px solid var(--now);padding-top:4px;font-size:12px;font-weight:700;color:var(--now);font-variant-numeric:tabular-nums}
 .tl-tile.tl-item{border-style:dashed}
 .tl-tile.tl-item.is-done{opacity:.7}
 .tl-tile.tl-item.is-done:not(.tl-consider) .tl-title{text-decoration:line-through;text-decoration-color:var(--text-muted)}
-.tl-check{width:18px;height:18px;margin:0;accent-color:var(--good);cursor:pointer}
-.tl-end .vote-bar{display:inline-flex;gap:4px}
-.tl-end .vote-btn{min-height:28px}
-/* A proposed hotel, transport or activity: drawn like the real tile, inside a labelled box. */
+/* A proposed hotel, transport or activity: drawn like the real card, inside a labelled box. */
 .tl-proposal{position:relative;margin-top:8px;padding:14px 12px 10px;border:1px dashed var(--accent-1);border-radius:8px;background:color-mix(in srgb,var(--accent-1) 4%,transparent)}
 .tl-proposal-label{position:absolute;top:-9px;left:10px;padding:0 6px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-1);background:var(--card)}
 .tl-linked{color:var(--good)}
-.tl-approve{font:inherit;font-size:13px;font-weight:700;color:#fff;background:var(--good);border:0;border-radius:8px;padding:6px 12px;cursor:pointer}
-.tl-approve:disabled{opacity:.6;cursor:default}
 .tl-link-btn{border:0;background:transparent;padding:0;cursor:pointer;font-family:inherit}
-/* An entry approved from an item: what was weighed, folded away at the end of the tile. */
+/* An entry approved from an item: what was weighed, folded away at the end of the card. */
 .tl-history{margin-top:10px;border-top:1px solid var(--gridline);padding-top:6px}
 .tl-history summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--text-secondary)}
 .tl-history-body{display:grid;gap:4px;margin-top:6px}
 /* Day header: open or close every tile of the day. */
 /* An icon like the day's share button beside it; "Expand all" / "Collapse all" is its tooltip and label. */
 .day-tiles-btn{flex:none}
-@media(prefers-reduced-motion:reduce){.tl-chev,.tl-tile{transition:none}}
+@media(prefers-reduced-motion:reduce){.tl-chev,.tl-tile{transition:none}.tl-body:not([hidden]){animation:none}}
 @media(max-width:640px){
-  /* Phones: the same row as on desktop, tighter: time pill, icon, title, then the controls.
-     Pills and votes drop under the title. */
-  .tl-head{grid-template-columns:48px 20px minmax(0,1fr) 24px 28px 28px 16px;column-gap:5px;padding:0 4px 0 8px;min-height:46px}
-  .tl-time{min-width:48px;padding:3px 4px;font-size:12px}
-  .tl-time[data-all-day]{font-size:8.5px;padding:4px 2px;letter-spacing:.02em}
-  .tl-dot{width:20px;height:20px;font-size:16px}
-  .tl-title{font-size:14px}
-  .tl-control{grid-column:4;grid-row:1}
-  .tl-pin{grid-column:5;grid-row:1}
-  .tl-more{grid-column:6;grid-row:1}
-  .tl-chev,.tl-chev-slot{grid-column:7;grid-row:1}
-  .tl-pin-btn,.tl-menu-btn{width:28px;height:28px}
-  .tl-end{grid-column:3 / -1;grid-row:2;justify-content:flex-start;padding:0 0 8px}
-  .tl-plan .tl-end{grid-column:4 / -1;grid-row:1;justify-content:flex-end;padding:0}
-  .tl-body:not([hidden]){padding:10px}
-  .tl-approve,.tl-end .vote-btn{min-height:44px}
-  .tl-check{width:24px;height:24px}
+  /* Phones: the same card, tighter; pills and the tally drop under the title. */
+  .tl-head{grid-template-columns:22px minmax(0,1fr) auto 44px;column-gap:8px;min-height:50px;padding:4px 0 4px 10px}
+  .tl-entry--timed .tl-head{padding-top:11px}
+  .tl-tile:not(.tl-flat) .tl-head{padding-bottom:11px}
+  .tl-dot{width:22px;height:22px;font-size:17px}
+  .tl-title{font-size:14.5px}
+  .tl-time{left:10px}
+  .tl-more{grid-column:4;grid-row:1 / span 2}
+  .tl-end{grid-column:2 / 4;grid-row:2;justify-content:flex-start;padding:2px 0 2px}
+  /* A lone booked check is small enough to stay beside the title. */
+  .tl-end:has(> .status:only-child){grid-column:3;grid-row:1;padding:0}
+  .tl-body:not([hidden]){padding:10px 10px 18px}
   .tl-menu-list>*{padding:12px}
 }
 .itinerary-status{font-size:13px;color:var(--text-secondary)}

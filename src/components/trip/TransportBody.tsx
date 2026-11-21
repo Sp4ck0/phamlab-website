@@ -68,7 +68,7 @@ export function TransportBody({ group, groups, day, dayNumber = 0, actions = tru
         return (
           <div key={i}>
             {wait !== null && <div className="fl-layover">{fmtDuration(wait)} layover · {seg.from}</div>}
-            <SegmentRow seg={seg} mode={group.mode} day={day} dayNumber={dayNumber} first={i === 0} last={i === segments.length - 1} />
+            <SegmentRow seg={seg} mode={group.mode} day={day} dayNumber={dayNumber} first={i === 0} last={i === segments.length - 1} calendar={actions} />
           </div>
         );
       })}
@@ -81,7 +81,7 @@ export function TransportBody({ group, groups, day, dayNumber = 0, actions = tru
             </div>
             <div className="fl-time">
               {leg.time}
-              {day && <AddToCalendar url={legUrl(leg, i, legs.length, group.mode, day, dayNumber, group.detail)} />}
+              {actions && day && <AddToCalendar url={legUrl(leg, i, legs.length, group.mode, day, dayNumber, group.detail)} />}
             </div>
             {leg.meta && <div className="fl-meta">{leg.meta}</div>}
           </div>
