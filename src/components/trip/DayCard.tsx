@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useLayoutEffect, useState } from "react";
 import type { Act, ActionItem, Group, LegColor, Place, ResolvedDay, Status, Task, Vote } from "../../lib/types";
 import { diffLines, type Change } from "../../lib/changeDiff";
 import { MAPS_PIN_ICON, focusOnMap, googleMapsUrl, placeKey } from "../../lib/mapPoints";
@@ -149,20 +149,14 @@ export function DayCard({
       </span>
     </li>
   );
-  // The city's photo, asked for once the day's header scrolls into view (each city once per page).
-  const headRef = useRef<HTMLHeadingElement>(null);
+  // The city's photo, asked for as the page loads so it is already there when the day scrolls
+  // into view (each city once per page).
   const [photo, setPhoto] = useState<CityPhoto | null>(null);
   useEffect(() => {
-    const el = headRef.current;
-    if (!el || !cityPhoto || typeof IntersectionObserver === "undefined") return;
+    if (!cityPhoto) return;
     let live = true;
-    const seen = new IntersectionObserver((hits) => {
-      if (!hits.some((h) => h.isIntersecting)) return;
-      seen.disconnect();
-      void cityPhoto(d.city, d.country).then((p) => live && setPhoto(p));
-    }, { rootMargin: "300px 0px" });
-    seen.observe(el);
-    return () => { live = false; seen.disconnect(); };
+    void cityPhoto(d.city, d.country).then((p) => live && setPhoto(p));
+    return () => { live = false; };
   }, [cityPhoto, d.city, d.country]);
   // A collapsed panel is hidden="until-found": still in the page, so Ctrl+F finds its text,
   // and a match opens the day.
@@ -577,7 +571,7 @@ export function DayCard({
       id={rowId}
       style={{ ["--leg-color" as string]: legColor.color, ["--leg-tint" as string]: legColor.tint }}
     >
-      <h2 className="day-heading" ref={headRef}>
+      <h2 className="day-heading">
       {/* The city's photo, fading into the card; the leg's colour until it loads (or when there is none). */}
       <span className={`day-photo${photo ? " has-photo" : ""}`} style={photo ? { backgroundImage: `url("${photo.url.replace(/"/g, "%22")}")` } : undefined} />
       <button id={`${rowId}-trigger`} type="button" className="day-head day-head-btn" aria-expanded={expanded} aria-controls={`${rowId}-panel`} onClick={onExpandedChange}>
