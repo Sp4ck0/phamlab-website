@@ -811,8 +811,10 @@ details.tour-box[open] summary::after{content:"Hide"}
 .roster{margin-bottom:22px}
 .roster summary{cursor:pointer;font-size:14px;font-weight:600;color:var(--text-secondary);width:max-content}
 .roster[open] summary{margin-bottom:10px}
-.roster .roster-list{margin-bottom:0}
-.roster-span{font-weight:500;font-size:12px;color:var(--text-muted)}
+.roster .roster-list{margin-bottom:0;gap:6px 18px}
+.roster-rows{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;align-items:baseline}
+.roster-row{display:contents}
+.roster-span{font-weight:500;font-size:12px;color:var(--text-muted);white-space:nowrap}
 .roster-list{display:flex;flex-wrap:wrap;gap:10px 22px;margin-bottom:22px}
 .roster-person{display:inline-flex;align-items:center;gap:7px;font-size:14px;font-weight:600;color:var(--text-primary)}
 .roster-person .dot{width:8px;height:8px;border-radius:50%;flex:none}

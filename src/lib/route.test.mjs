@@ -54,7 +54,7 @@ test('without dates or groups it is just the labels (print view)', () => {
   assert.ok(stops.every((s) => s.who.length === 0));
 });
 
-test('travelers sort by join date, then leave date, then name', () => {
+test('whole-trip travelers first, then by join date, leave date and name', () => {
   const people = [g('late', '2030-01-05'), g('zed'), g('mid', '2030-01-02', '2030-01-04'), g('early', undefined, '2030-01-03'), g('amy')];
-  assert.equal(names(people.sort(byStay)), 'early,amy,zed,mid,late');
+  assert.equal(names(people.sort(byStay)), 'amy,zed,early,mid,late');
 });
