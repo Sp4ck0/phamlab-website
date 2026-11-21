@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Act, ActionItem, Group, LegColor, Place, ResolvedDay, Status, Task, Vote } from "../../lib/types";
 import { diffLines, type Change } from "../../lib/changeDiff";
 import { MAPS_PIN_ICON, focusOnMap, googleMapsUrl, placeKey } from "../../lib/mapPoints";
@@ -200,6 +200,18 @@ export function DayCard({
   // A collapsed panel is hidden="until-found": still in the page, so Ctrl+F finds its text,
   // and a match opens the day.
   const panelRef = useUntilFound(expanded, onExpandedChange);
+  // Safari skips laying out a closed day's contents, and when the day opens it keeps the closed
+  // tiles inside at their full height (a blank gap under each) until something touches them.
+  // Re-applying their closed state as the day opens makes it measure them again.
+  useLayoutEffect(() => {
+    if (!expanded) return;
+    panelRef.current?.querySelectorAll<HTMLElement>(".tl-body[hidden]").forEach((body) => {
+      const value = body.getAttribute("hidden") ?? "until-found";
+      body.removeAttribute("hidden");
+      void body.offsetHeight;
+      body.setAttribute("hidden", value);
+    });
+  }, [expanded, panelRef]);
   // The body stays mounted while collapsed; don't reopen it mid-edit.
   useEffect(() => {
     if (!expanded) setEditingAct(null);
@@ -374,7 +386,6 @@ export function DayCard({
         key: entry.key, ghost: false, defaultOpen: false,
         tile: {
           icon: "🗓️", title: "Nothing planned yet", expandable: false, warn: true, className: "tl-gap tl-plan miss",
-          meta: "Add activities to this day, or dismiss it in Action Items.",
           headerEnd: <TileStatePill state="needed" label="Not planned" />,
           children: null,
         },
