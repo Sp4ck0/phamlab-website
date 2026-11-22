@@ -78,8 +78,8 @@ function TripPageEntry() {
   const [seen, setSeen] = useState<Partial<Record<TripTab, true>>>({ agenda: true });
   useEffect(() => { if (!seen[tab]) setSeen((s) => ({ ...s, [tab]: true })); }, [tab, seen]);
   // Desktop has room for everything on one page: no tabs, the map above the day picker, the floating note.
-  // The tabs are for phones.
-  const desktop = useMediaQuery("(min-width: 641px)");
+  // The tabs are for phones and tablets: up to the width where the site menu turns into a side bar (globals.css 780px).
+  const desktop = useMediaQuery("(min-width: 781px)");
   const desktopRef = useRef(desktop);
   desktopRef.current = desktop;
   // Desktop can pin the map above the date strip; it then follows the day and tile being looked at.
