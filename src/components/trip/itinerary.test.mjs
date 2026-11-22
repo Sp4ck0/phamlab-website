@@ -1360,3 +1360,91 @@ test('editing an activity: its time is in the editor; "No time" clears it, a tex
     assert.ok(saved[5] === undefined); // unchanged: the activity keeps its place
   } finally { view.close(); }
 });
+
+// ---- date strip: today lined up with yesterday first, the day being looked at filled ----
+test('the day being looked at is the last day whose card has reached the line under the strip', async () => {
+  const { dayAtLine } = await import('../../lib/dayInView.ts');
+  const cards = [{ id: 'a', top: -900 }, { id: 'b', top: 40 }, { id: 'c', top: 500 }];
+  assert.equal(dayAtLine(cards, 100), 'b');
+  assert.equal(dayAtLine(cards, 30), 'a');
+  assert.equal(dayAtLine(cards, 600), 'c');
+  assert.equal(dayAtLine([{ id: 'a', top: 300 }], 100), undefined); // page above the first day
+  assert.equal(dayAtLine([], 100), undefined);
+});
+
+// A strip 300px wide with 100px chips, laid out by hand (jsdom has no layout).
+function stubStripLayout() {
+  const original = window.HTMLElement.prototype.getBoundingClientRect;
+  window.HTMLElement.prototype.getBoundingClientRect = function () {
+    if (this.matches('nav.daynav')) return { left: 0, right: 300, top: 0, bottom: 50 };
+    if (this.dataset.row) {
+      const i = [...this.parentElement.querySelectorAll('[data-row]')].indexOf(this);
+      const left = i * 100 - this.parentElement.scrollLeft;
+      return { left, right: left + 100, top: 0, bottom: 50 };
+    }
+    return original.call(this);
+  };
+  return () => { window.HTMLElement.prototype.getBoundingClientRect = original; };
+}
+
+test('date strip: opens on today with yesterday first, outlines today, fills the day being looked at and keeps it in sight', async () => {
+  const { DayNav } = await import('./DayNav.tsx');
+  const rows = ['a', 'b', 'c', 'd', 'e', 'f'].map((id, i) => ({ id, day: { ...day, date: `2040-01-0${i + 1}`, _d: new Date(2040, 0, i + 1) } }));
+  const restore = stubStripLayout();
+  const view = mount(React.createElement(DayNav, { rows, todayId: 'c', onJump() {} }));
+  try {
+    const strip = view.container.querySelector('nav.daynav');
+    assert.equal(strip.scrollLeft, 100); // b (yesterday) is the first chip in sight, then c (today)
+    const chip = (id) => strip.querySelector(`[data-row="${id}"]`);
+    assert.ok(chip('c').classList.contains('daynav-today') && !chip('c').classList.contains('daynav-current'));
+    assert.equal(chip('c').querySelector('.dn-dow').textContent, 'Today');
+    assert.equal(chip('c').getAttribute('aria-current'), 'date');
+    // Scrolled to a day off the right end: it comes into sight, the day before it first.
+    act(() => view.root.render(React.createElement(DayNav, { rows, todayId: 'c', currentId: 'f', onJump() {} })));
+    assert.ok(chip('f').classList.contains('daynav-current'));
+    assert.equal(chip('f').getAttribute('aria-current'), 'location');
+    assert.equal(strip.scrollLeft, 400);
+    // Already in sight: the strip stays put.
+    act(() => view.root.render(React.createElement(DayNav, { rows, todayId: 'c', currentId: 'e', onJump() {} })));
+    assert.equal(strip.scrollLeft, 400);
+    assert.ok(!chip('f').classList.contains('daynav-current') && chip('e').classList.contains('daynav-current'));
+  } finally { view.close(); }
+  // On a trip's first day there is no yesterday: today is first.
+  const first = mount(React.createElement(DayNav, { rows, todayId: 'a', onJump() {} }));
+  try { assert.equal(first.container.querySelector('nav.daynav').scrollLeft, 0); } finally { first.close(); restore(); }
+});
+
+test('date strip follows the page: a clicked day stays filled until the reader scrolls, then the day under the strip is', async () => {
+  const { DetailedView } = await import('./DetailedView.tsx');
+  window.HTMLElement.prototype.scrollIntoView = function () {};
+  const tops = [50, 400]; // card tops; the strip's bottom is at 60, so the line is at 92
+  const original = window.HTMLElement.prototype.getBoundingClientRect;
+  window.HTMLElement.prototype.getBoundingClientRect = function () {
+    if (this.classList.contains('daynav-shell')) return { left: 0, right: 300, top: 0, bottom: 60 };
+    const i = [...document.querySelectorAll('section.day-card')].indexOf(this);
+    if (i >= 0) return { left: 0, right: 300, top: tops[i], bottom: tops[i] + 300 };
+    return original.call(this);
+  };
+  globalThis.requestAnimationFrame = (cb) => { cb(); return 0; }; // runs at once, so no frame is left pending
+  globalThis.cancelAnimationFrame = () => {};
+  const days = [day, { ...day, date: '2040-01-03', _d: new Date(2040, 0, 3) }];
+  const view = mount(React.createElement(DetailedView, { days, legColors: [props.legColor, props.legColor], weather: {}, groups: [], ticks: {}, onlyGaps: false, onOnlyGapsChange() {}, filterRef: { current: null }, onToggle() {}, actionItems: [], considerations: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} }));
+  try {
+    const chips = () => [...view.container.querySelectorAll('nav.daynav button')];
+    const filled = () => chips().map(b => b.classList.contains('daynav-current'));
+    assert.deepEqual(filled(), [true, false]); // the first day's card is under the strip
+    act(() => chips()[1].click());
+    assert.deepEqual(filled(), [false, true]); // the clicked day, even though its card can't reach the strip
+    act(() => { window.dispatchEvent(new window.Event('scroll')); });
+    assert.deepEqual(filled(), [false, true]); // the jump's own scrolling doesn't undo it
+    act(() => { window.dispatchEvent(new window.Event('wheel')); });
+    assert.deepEqual(filled(), [true, false]); // the reader scrolled: back to the day under the strip
+    tops.splice(0, 2, -400, 80);
+    act(() => { window.dispatchEvent(new window.Event('scroll')); });
+    assert.deepEqual(filled(), [false, true]);
+  } finally {
+    view.close();
+    window.HTMLElement.prototype.getBoundingClientRect = original;
+    delete globalThis.requestAnimationFrame; delete globalThis.cancelAnimationFrame;
+  }
+});
