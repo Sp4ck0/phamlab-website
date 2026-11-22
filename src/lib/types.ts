@@ -217,6 +217,9 @@ export interface MapPointData extends Place {
   id: string;
   category: MapCategory;
   note?: string;
+  // The itinerary days (ISO dates) this place belongs to, so a pinned map can show one day.
+  // None: not tied to a day (a curated point of interest).
+  dates?: string[];
   // A pin for a consideration (not part of the plan): open, or chosen.
   candidate?: "open" | "chosen";
 }

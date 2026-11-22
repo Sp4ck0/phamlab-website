@@ -71,6 +71,18 @@ export function focusOnMap(place: Place) {
   if (key) focusOnMapKey(key);
 }
 
+// While the map is pinned (desktop), it follows the reader. The itinerary says which day is being
+// looked at (MAP_DAY_EVENT, a date) and which tile is under the pointer (MAP_GLANCE_EVENT, a place
+// key). Unlike MAP_FOCUS_EVENT neither scrolls the page or opens a popup; an unpinned map ignores both.
+export const MAP_DAY_EVENT = "trip-map:day";
+export function focusMapDay(date: string | undefined) {
+  window.dispatchEvent(new CustomEvent<string | undefined>(MAP_DAY_EVENT, { detail: date }));
+}
+export const MAP_GLANCE_EVENT = "trip-map:glance";
+export function glanceOnMap(key: string) {
+  window.dispatchEvent(new CustomEvent<string>(MAP_GLANCE_EVENT, { detail: key }));
+}
+
 // Crosshair icon for the show-on-map button (also used inside inlinePlaces' HTML).
 // Show on the trip map (in the page): a folded map with a pin.
 export const MAP_FOCUS_ICON =
@@ -139,9 +151,17 @@ export function derivePoints(days: ResolvedDay[], mapPoints: Trip["mapPoints"]):
   const byKey = new Map<string, MapPointData>();
   const citiesWithPoint = new Set<string>();
 
-  const add = (point: MapPointData, city?: string) => {
+  // A day's place also marks that day on a pin already there (a hotel over several nights).
+  const onDay = (point: MapPointData, date: string) => {
+    if (!point.dates) point.dates = [date];
+    else if (!point.dates.includes(date)) point.dates.push(date);
+  };
+  const add = (point: MapPointData, city?: string, date?: string) => {
     const key = placeKey(point);
-    if (!key || byKey.has(key)) return false;
+    const existing = key ? byKey.get(key) : undefined;
+    if (existing && date) onDay(existing, date);
+    if (!key || existing) return false;
+    if (date) onDay(point, date);
     byKey.set(key, point);
     points.push(point);
     if (city) citiesWithPoint.add(city);
@@ -150,7 +170,7 @@ export function derivePoints(days: ResolvedDay[], mapPoints: Trip["mapPoints"]):
 
   days.forEach((d) => {
     d.hotels.forEach((h) => {
-      add({ id: `hotel-${h.src}`, name: h.name || "Hotel", address: h.address, placeId: h.placeId, category: "hotel" }, d.city);
+      add({ id: `hotel-${h.src}`, name: h.name || "Hotel", address: h.address, placeId: h.placeId, category: "hotel" }, d.city, d.date);
     });
   });
 
@@ -164,7 +184,7 @@ export function derivePoints(days: ResolvedDay[], mapPoints: Trip["mapPoints"]):
       const line = text ? `${text} · ${when}` : when;
       (act.places ?? []).forEach((place, j) => {
         const category = (act.tag && ACT_CATEGORY[act.tag]) || "event";
-        if (add({ ...place, id: `act-${d.date}-${i}-${j}`, category, note: line }, d.city)) return;
+        if (add({ ...place, id: `act-${d.date}-${i}-${j}`, category, note: line }, d.city, d.date)) return;
         const existing = byKey.get(placeKey(place) ?? "");
         if (existing) existing.note = existing.note ? `${existing.note}; ${line}` : line;
       });
@@ -182,7 +202,8 @@ export function derivePoints(days: ResolvedDay[], mapPoints: Trip["mapPoints"]):
     ].forEach(({ city, country }) => {
       if (!city || seenCities.has(city) || citiesWithPoint.has(city)) return;
       seenCities.add(city);
-      points.push({ id: `city-${city}`, name: city, address: `${city}, ${country}`, category: "city" });
+      const dates = days.filter((o) => o.city === city || o.to === city).map((o) => o.date);
+      points.push({ id: `city-${city}`, name: city, address: `${city}, ${country}`, category: "city", dates });
     });
   });
 
