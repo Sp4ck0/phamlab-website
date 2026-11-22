@@ -261,7 +261,8 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
       const strip = document.querySelector(".daynav-shell");
       if (!strip) return;
       // A little below the strip: a jump leaves the day's header just under it.
-      const line = strip.getBoundingClientRect().bottom + 32;
+      // (On a phone the strip may have scrolled far off the top with the tabs: count it as at the top.)
+      const line = Math.max(0, strip.getBoundingClientRect().bottom) + 32;
       const cards = state.rows.flatMap(r => {
         const el = document.getElementById(r.id);
         return el ? [{ id: r.id, top: el.getBoundingClientRect().top }] : [];
