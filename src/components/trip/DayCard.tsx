@@ -489,11 +489,11 @@ export function DayCard({
     const editing = !gone && editingAct === ai && !!onEditActivity;
     const live = nowBits(entry.key);
     // The sentence is the row's title; its places open from the menu.
-    // There is nothing more to open, so the row has no chevron: it opens only for the editor, or
-    // for the History of an approved suggestion.
+    // With nothing more to open, the row has no chevron: it opens only for the editor, the
+    // description, or the History of an approved suggestion.
     const hist = history(typeof a === "string" ? undefined : a.fromItem);
     const title = plain(text);
-    // The description is the line under the title, in the card's smaller secondary type (its meta line).
+    // The description is not on the card: it is what the card opens to, above any History.
     const sub = description ? plain(description) : "";
     const named = (places ?? []).filter((p) => p.name);
     return {
@@ -505,9 +505,8 @@ export function DayCard({
         // The tag (Food, Sightsee…) is the icon; its name is the icon's tooltip, not a second line.
         icon: (tag && TAG_EMOJI[tag]) || "📍", iconLabel: tag, change: state, now: !!live,
         label: title,
-        expandable: editing || !!hist,
+        expandable: editing || !!hist || !!sub,
         title: prev ? <InlineDiff prev={sanitizeHtml(actParts(prev).text)} next={sanitizeHtml(text)} paused={changePaused} ms={changeMs}>{title}</InlineDiff> : title,
-        meta: sub || undefined,
         menu: [
           ...(onEditActivity ? [{ label: "Edit", icon: "edit" as const, onSelect: () => setEditingAct(ai) }] : []),
           ...mapsItem(named[0], named.length > 1 ? `Open ${named[0]?.name} in Google Maps` : undefined),
@@ -534,6 +533,11 @@ export function DayCard({
               setEditingAct(null);
             }}
           />
+        ) : sub ? (
+          <>
+            <p className="activity-desc">{sub}</p>
+            {hist}
+          </>
         ) : hist,
       },
     };

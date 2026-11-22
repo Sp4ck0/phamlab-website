@@ -1722,19 +1722,27 @@ test('a static card whose title is cut off gets the chevron and opens to show th
   }
 });
 
-test('an activity with a description shows it under the title; one without adds no empty line', () => {
+test('an activity with a description opens to show it; the card itself shows only the title, and one without stays a static card', () => {
   const synthetic = { ...day, country: 'TH', acts: [
     { time: '09:00', text: 'Synthetic palace', description: 'Synthetic rooms and exhibits' },
     { time: '12:00', text: 'Synthetic lunch' },
     'Synthetic legacy string',
   ] };
-  const view = mount(React.createElement(DayCard, { ...props, day: synthetic, days: [synthetic], expanded: true }));
+  try { localStorage.clear(); } catch { /* earlier tests may have saved open cards under this key */ }
+  const view = mount(React.createElement(Stateful, { ...props, day: synthetic, days: [synthetic], expanded: true }));
   try {
     const [withDesc, plainAct, legacy] = view.container.querySelectorAll('.tl-tile');
     assert.equal(withDesc.querySelector('.tl-title').textContent, 'Synthetic palace');
-    assert.equal(withDesc.querySelector('.tl-meta').textContent, 'Synthetic rooms and exhibits');
-    assert.equal(plainAct.querySelector('.tl-meta'), null);
-    assert.equal(legacy.querySelector('.tl-meta'), null);
+    assert.equal(withDesc.querySelector('.tl-meta'), null); // not on the card face
+    assert.equal(withDesc.querySelector('.tl-toggle').getAttribute('aria-expanded'), 'false');
+    assert.equal(withDesc.querySelector('.tl-body > .activity-desc').textContent, 'Synthetic rooms and exhibits'); // what it opens to
+    act(() => withDesc.querySelector('.tl-toggle').click());
+    assert.equal(withDesc.querySelector('.tl-toggle').getAttribute('aria-expanded'), 'true');
+    assert.equal(withDesc.querySelector('.tl-title').textContent, 'Synthetic palace'); // the title stays the heading
+    for (const flat of [plainAct, legacy]) {
+      assert.ok(flat.classList.contains('tl-flat')); // nothing to open: no chevron, no body
+      assert.equal(flat.querySelector('.tl-toggle, .tl-body'), null);
+    }
     assert.equal(legacy.querySelector('.tl-title').textContent, 'Synthetic legacy string');
   } finally { view.close(); }
 });
