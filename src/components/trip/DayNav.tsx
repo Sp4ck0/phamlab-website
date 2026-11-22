@@ -63,6 +63,22 @@ export function DayNav({ rows, todayId, currentId, onJump }: { rows: ItineraryRo
     s.addEventListener("wheel", onWheel, { passive: false });
     return () => s.removeEventListener("wheel", onWheel);
   }, []);
+  // Where the pinned strip ends on screen (--daynav-bottom), for a phone's day header to pin under it.
+  useEffect(() => {
+    const s = shell.current;
+    if (!s || typeof window.getComputedStyle !== "function") return;
+    const root = document.documentElement;
+    const set = () => root.style.setProperty("--daynav-bottom", `${(parseFloat(window.getComputedStyle(s).top) || 0) + s.offsetHeight}px`);
+    set();
+    const ro = typeof ResizeObserver === "function" ? new ResizeObserver(set) : undefined;
+    ro?.observe(s);
+    window.addEventListener("resize", set);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener("resize", set);
+      root.style.removeProperty("--daynav-bottom");
+    };
+  }, []);
   return (
     <div className="daynav-shell" ref={shell}>
       <nav className="daynav" aria-label="Jump to itinerary day" ref={nav}>

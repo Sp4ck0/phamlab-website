@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, type MouseEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Act, ActionItem, Group, LegColor, Place, ResolvedDay, Status, Task, Vote } from "../../lib/types";
 import { diffLines, type Change } from "../../lib/changeDiff";
 import { MAPS_PIN_ICON, focusOnMap, glanceOnMap, googleMapsUrl, placeKey } from "../../lib/mapPoints";
@@ -601,6 +601,17 @@ export function DayCard({
   const anyClosed = liveTiles.some((x) => !isOpenTile(x));
   // What the day's schedule holds: every row but removed ghosts and the "nothing planned" placeholder.
   const scheduleCount = described.filter((x) => !!x && !x.ghost && x.key !== "plan").length + (entries.some((e) => e.kind === "tour") ? 1 : 0);
+  // The day's summary line: inside the header on desktop, under it on a phone (CSS shows one).
+  const summary = (where: string, onClick?: (e: MouseEvent) => void) => {
+    const text = d.highlight || d.note;
+    if (!text) return null;
+    const prev = summaryChanged && old ? old.highlight || old.note : undefined;
+    return (
+      <span className={`day-summary ${where}${summaryChanged && !prev ? " chg-new" : ""}`} onClick={onClick}>
+        {prev ? <InlineDiff prev={prev} next={text}>{text}</InlineDiff> : text}
+      </span>
+    );
+  };
 
   return (
     <section
@@ -639,15 +650,7 @@ export function DayCard({
           {isToday && <span className="today-badge">Today{clock ? ` · ${clock}` : ""}</span>}
           <WeatherBlock weather={weather} />
         </span>
-        {(d.highlight || d.note) && (
-          summaryChanged && old && (old.highlight || old.note) ? (
-            <span className="day-summary">
-              <InlineDiff prev={old.highlight || old.note || ""} next={d.highlight || d.note || ""}>{d.highlight || d.note}</InlineDiff>
-            </span>
-          ) : (
-            <span className={`day-summary${summaryChanged ? " chg-new" : ""}`}>{d.highlight || d.note}</span>
-          )
-        )}
+        {summary("day-summary--in-head")}
       </button>
       <span className="day-tools">
       {/* The day's one ⋯ menu: open or close all its cards, its link, and the photographer's credit (Google asks for it). */}
@@ -667,6 +670,13 @@ export function DayCard({
       />
       </span>
       </h2>
+      {/* Phones: the summary sits under the header rather than in it, so it scrolls away while the
+          header stays pinned under the date strip. A tap on it opens or closes the day, as before. */}
+      {summary("day-summary--below", (e) => {
+        if (window.getSelection?.()?.toString()) return;
+        e.stopPropagation();
+        onExpandedChange();
+      })}
 
       <div ref={panelRef} id={`${rowId}-panel`} aria-labelledby={`${rowId}-trigger`}>
         <>
