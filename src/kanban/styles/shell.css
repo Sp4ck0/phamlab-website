@@ -62,6 +62,10 @@
   background: var(--accent-1-tint);
   border-color: var(--accent-1);
 }
+.nudge--quiet {
+  background: transparent;
+  border-color: var(--rule);
+}
 /* A failed edit that has no form of its own to show the reason in. */
 .board__error {
   margin: 0;

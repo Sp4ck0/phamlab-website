@@ -59,6 +59,7 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined, { allDo
   const addReplyMut = useMutation(api.kanban.addReply);
   const removeReplyMut = useMutation(api.kanban.removeReply);
   const markReadMut = useMutation(api.kanban.markCardRead);
+  const markAllReadMut = useMutation(api.kanban.markBoardRead);
   const uploadUrlMut = useMutation(api.kanban.generateImageUploadUrl);
   const addNoteImagesMut = useMutation(api.kanban.addNoteImages);
   const removeNoteImageMut = useMutation(api.kanban.removeNoteImage);
@@ -165,6 +166,12 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined, { allDo
     void markReadMut({ code, boardId, cardId: id as Id<"kanban_cards"> });
   }
 
+  // Clears every unread/new badge on the board, for this viewer only.
+  function markAllRead() {
+    if (!code || !boardId) return;
+    report(markAllReadMut({ code, boardId }));
+  }
+
   return {
     board,
     isLoading,
@@ -178,6 +185,7 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined, { allDo
     addNoteImages,
     removeNoteImage,
     markRead,
+    markAllRead,
     actionError,
     clearActionError: () => setActionError(""),
   };
