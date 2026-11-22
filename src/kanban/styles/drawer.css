@@ -20,6 +20,7 @@
   box-shadow: -20px 0 50px var(--shadow);
   z-index: 50;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .drawer::before {
   content: '';
@@ -120,13 +121,23 @@
 }
 
 .drawer__inner {
-  padding: 22px 26px 40px;
+  --drawer-pad-x: 26px;
+  padding: 0 var(--drawer-pad-x) 40px;
   display: flex;
   flex-direction: column;
   gap: 22px;
 }
 
+/* Pinned to the top of the scrolling pane so the close button is always in
+   reach; the negative margin lets its background span the full width. */
 .drawer__head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0 calc(var(--drawer-pad-x) * -1);
+  padding: 22px var(--drawer-pad-x) 12px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
   display: flex;
   align-items: center;
   justify-content: space-between;
