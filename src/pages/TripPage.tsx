@@ -30,7 +30,7 @@ import { useAccessCode } from "../hooks/useAccessCode";
 import { batchedPhotos } from "../lib/cityPhoto";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 
-// Where "Show on the trip map" scrolls to on desktop, where the map sits below the agenda.
+// Where "Show on the trip map" scrolls to on desktop, where the map sits above the day picker.
 const TRIP_MAP_ID = "trip-map";
 
 export function TripPage() {
@@ -75,7 +75,7 @@ function TripPageEntry() {
   // (The note stays unmounted when hidden: the floating note is shown then, and two editors of one note would diverge.)
   const [seen, setSeen] = useState<Partial<Record<TripTab, true>>>({ agenda: true });
   useEffect(() => { if (!seen[tab]) setSeen((s) => ({ ...s, [tab]: true })); }, [tab, seen]);
-  // Desktop has room for everything on one page: no tabs, the map below the agenda, the floating note.
+  // Desktop has room for everything on one page: no tabs, the map above the day picker, the floating note.
   // The tabs are for phones.
   const desktop = useMediaQuery("(min-width: 641px)");
   const desktopRef = useRef(desktop);
@@ -210,6 +210,13 @@ function TripPageEntry() {
             onRemoveItem={removeItem}
           />
 
+          {/* Desktop: the map between the trip summary and the day picker (TripMap has its own heading). */}
+          {desktop && (
+            <section className="trip-map-section" id={TRIP_MAP_ID}>
+              {map}
+            </section>
+          )}
+
           <Fragment key={trip._id}>
             <DetailedView
               days={resolvedDays}
@@ -254,13 +261,6 @@ function TripPageEntry() {
             onVote={vote}
             onSetOutcome={setOutcome}
           />
-
-          {desktop && (
-            <section className="trip-map-section" id={TRIP_MAP_ID}>
-              <h2 className="section-title">Map</h2>
-              {map}
-            </section>
-          )}
 
           <footer>
             Trip content is stored in Convex — ask to have a change made rather than editing code. Check-offs are saved
