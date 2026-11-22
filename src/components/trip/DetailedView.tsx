@@ -174,6 +174,9 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   const { focus: dayFocus, consume } = useAiFocus("day");
   const { focus: tileFocus } = useAiFocus("tile");
   const focus = dayFocus ?? tileFocus;
+  // The AI pointing at a task or to-do: the list or its tile scrolls there, so today mustn't.
+  const { focus: taskFocus } = useAiFocus("task");
+  const { focus: itemFocus } = useAiFocus("actionItem");
   const [diff, setDiff] = useState<{ date: string; prev: ResolvedDay } | null>(null);
   const [ghost, setGhost] = useState<ResolvedDay | null>(null);
   useEffect(() => {
@@ -223,7 +226,8 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   const autoDone = useRef(false);
   const jumpRef = useRef(jump);
   jumpRef.current = jump;
-  const hasPointer = params.has("day") || params.has("tile") || !!focus;
+  // A link to a task (?task=, as a notification sends) is a pointer too.
+  const hasPointer = params.has("day") || params.has("tile") || params.has("task") || !!focus || !!taskFocus || !!itemFocus;
   useEffect(() => {
     if (autoDone.current || !todayRow || hasPointer) return;
     const id = todayRow.id;

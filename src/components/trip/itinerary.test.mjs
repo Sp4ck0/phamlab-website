@@ -1535,3 +1535,26 @@ test('a phone day header is marked stuck only while pinned under the date strip,
     document.documentElement.style.removeProperty('--daynav-bottom');
   }
 });
+
+test('opening a trip under way lands on today, unless a link points at a task (?task=, as a notification sends)', async () => {
+  const { DetailedView } = await import('./DetailedView.tsx');
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const { Routes, Route } = await import('react-router-dom');
+  window.matchMedia = () => ({ matches: true, addEventListener() {}, removeEventListener() {} });
+  window.HTMLElement.prototype.scrollIntoView = () => {};
+  // Today where the trip is (Bangkok), and the days around it.
+  const local = (offset) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(Date.now() + offset * 864e5));
+  const days = resolveDays({ days: [-1, 0, 1].map((o) => ({ ...day, date: local(o), city: 'Bangkok', country: 'TH', hotels: [], flights: [], acts: [] })) });
+  const open = async (url) => {
+    const shared = { days, legColors: days.map(() => props.legColor), weather: {}, groups: [], ticks: {}, onlyGaps: false, onOnlyGapsChange() {}, filterRef: { current: null }, onToggle() {}, actionItems: [], considerations: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} };
+    const view = mount(React.createElement(DefaultRouter, { initialEntries: [url] },
+      React.createElement(Routes, null, React.createElement(Route, { path: '/trip/:slug', element: React.createElement(DetailedView, shared) }))));
+    await act(async () => { await new Promise((r) => setTimeout(r, 400)); }); // past the settle delay
+    const todayOpen = view.container.querySelectorAll('.day-head-btn')[1].getAttribute('aria-expanded') === 'true';
+    view.close();
+    return todayOpen;
+  };
+  assert.ok(await open('/trip/synthetic')); // plain: today opens
+  assert.ok(!(await open('/trip/synthetic?task=item%3Asynthetic'))); // a task link wins: today stays put
+});
+
