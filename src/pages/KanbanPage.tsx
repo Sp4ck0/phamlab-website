@@ -67,6 +67,7 @@ export function KanbanPage() {
     addNoteImages,
     removeNoteImage,
     markRead,
+    markAllRead,
     actionError,
     clearActionError,
   } = useKanbanBoard(boardId as Id<"kanban_boards"> | undefined, { allDone });
@@ -306,6 +307,11 @@ export function KanbanPage() {
                 {due.length > 0 && (
                   <button className="nudge" onClick={() => setOpenId(due[0].id)} title="Oldest one first">
                     {due.length} to check back on
+                  </button>
+                )}
+                {(unread.length > 0 || board.fresh.length > 0) && (
+                  <button className="nudge nudge--quiet" onClick={markAllRead}>
+                    Mark all as read
                   </button>
                 )}
               </div>
