@@ -190,7 +190,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   const { focus: taskFocus } = useAiFocus("task");
   const { focus: itemFocus } = useAiFocus("actionItem");
   // versions[k]: the day after its first k changes (lib/changeSteps.ts).
-  const [diff, setDiff] = useState<{ date: string; versions: ResolvedDay[]; nonce: string } | null>(null);
+  const [diff, setDiff] = useState<{ date: string; versions: ResolvedDay[]; nonce: string; json: string } | null>(null);
   const [ghost, setGhost] = useState<ResolvedDay | null>(null);
   useEffect(() => {
     if (!ghost) return;
@@ -214,6 +214,13 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   }, [diff]);
   // Any newer AI pointer (a tile, another day, a to-do) ends the playback: what
   // was left of it shows as it ends up, and the new pointer takes the page.
+  // So does any other change to the day being played (the reader's own edit, a
+  // later AI edit): the page then shows the day as it really is.
+  useEffect(() => {
+    if (!diff) return;
+    const live = days.find(x => x.date === diff.date);
+    if (!live || JSON.stringify(live) !== diff.json) setDiff(null);
+  }, [days, diff]);
   const newest = (focus ?? taskFocus ?? itemFocus)?.nonce;
   useEffect(() => {
     if (newest) setDiff(current => (current && current.nonce !== newest ? null : current));
@@ -263,7 +270,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
       const next = days.find(x => x.date === date);
       if (!tile && change?.prev && !change.gone && next) {
         recent.release(date);
-        setDiff({ date, versions: changeVersions(change.prev, next), nonce: focus.nonce });
+        setDiff({ date, versions: changeVersions(change.prev, next), nonce: focus.nonce, json: JSON.stringify(next) });
         jump(row.id, false, false);
         return;
       }
