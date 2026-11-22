@@ -1214,22 +1214,27 @@ test('a place offers Uber or Grab to it only where that app runs; Grab only on a
   try {
     // US: Uber. With the place's coordinates already known on this device it is a plain link.
     const us = menuOf('US');
-    assert.deepEqual(labels(us), ['Uber to Synthetic Cafe']);
-    const uber = new URL(menuItem(us, 'Uber to Synthetic Cafe').getAttribute('href'));
+    assert.deepEqual(labels(us), ['Uber to location']);
+    const uber = new URL(menuItem(us, 'Uber to location').getAttribute('href'));
     assert.equal(uber.origin + uber.pathname, 'https://m.uber.com/ul/');
     assert.equal(uber.searchParams.get('dropoff[latitude]'), '1.5');
-    assert.equal(menuItem(us, 'Uber to Synthetic Cafe').getAttribute('target'), '_blank');
+    assert.equal(menuItem(us, 'Uber to location').getAttribute('target'), '_blank');
     // Thailand on a computer: Uber isn't there and Grab has no website, so neither is offered.
     assert.deepEqual(labels(menuOf('TH')), []);
     // Thailand on a phone: Grab, opened in the same tab.
     globalThis.matchMedia = () => ({ matches: true });
     const th = menuOf('TH');
-    assert.deepEqual(labels(th), ['Grab to Synthetic Cafe']);
-    assert.match(menuItem(th, 'Grab to Synthetic Cafe').getAttribute('href'), /^grab:\/\/open\?screenType=BOOKING&dropOffLatitude=1\.5&/);
-    assert.equal(menuItem(th, 'Grab to Synthetic Cafe').getAttribute('target'), null);
+    assert.deepEqual(labels(th), ['Grab to location']);
+    assert.match(menuItem(th, 'Grab to location').getAttribute('href'), /^grab:\/\/open\?screenType=BOOKING&dropOffLatitude=1\.5&/);
+    assert.equal(menuItem(th, 'Grab to location').getAttribute('target'), null);
+    assert.match(menuItem(th, 'Grab to location').querySelector('.tl-menu-icon svg rect').getAttribute('style'), /#00b14f/); // Grab's own mark
+    // A card with several places names each one, cut short, so the items can be told apart.
+    const two = { ...withCountry('TH'), acts: [{ text: 'Synthetic walk', places: [place, { name: 'Synthetic Museum With A Very Long Name', address: 'Other street' }] }] };
+    const multi = mount(React.createElement(DayCard, { ...props, day: two, days: [two], expanded: true }));
+    try { assert.deepEqual(labels(openMenu(multi.container.querySelector('.tl-tile'))), ['Grab to Synthetic Cafe', 'Grab to Synthetic Museum With…']); } finally { multi.close(); }
     // A place the map hasn't looked up yet is a button that finds it on tap, not a link.
     localStorage.removeItem('phamlab.geocode.v1');
-    const cold = menuItem(menuOf('US'), 'Uber to Synthetic Cafe');
+    const cold = menuItem(menuOf('US'), 'Uber to location');
     assert.equal(cold.tagName, 'BUTTON');
     // A day in a country with neither app gets none.
     assert.deepEqual(labels(menuOf('ZZ')), []);
