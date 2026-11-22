@@ -270,6 +270,18 @@ export interface MapMark extends MapPointData {
 }
 export const MARK_PULSE_MS = 60_000;
 
+// How long a mark has left to pulse at `now` (0 once it's done): a minute from when it was
+// marked, so a later call's marks don't restart an earlier call's.
+export const markPulseLeft = (mark: MapMark | undefined, now: number) => Math.max(0, (mark?.at ?? 0) + MARK_PULSE_MS - now);
+
+// The drawn marks the map fits into view: only those of the call just made (`batch`), not the
+// marks already on the map; none once that call has been fitted (`batch` null).
+export function marksToFit<P extends { id: string }>(points: P[], marks: MapMark[], batch: string | null | undefined): P[] {
+  if (!batch) return [];
+  const ids = new Set(marks.filter((m) => m.batch === batch).map((m) => m.id));
+  return points.filter((p) => ids.has(p.id));
+}
+
 // Adds one call's places to the page's marks. A place marked again moves to the new call (and
 // pulses again, with the new call's icon and color); a place with no Place ID or address can't be
 // put on the map. A color that isn't "#rrggbb" is left out (red).

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useShowAiFocus } from "../../hooks/useAiFocus";
 import type { MapPointData, ResolvedDay, Task } from "../../lib/types";
-import { CATEGORY_COLORS, CATEGORY_EMOJI, CATEGORY_LABELS, MAP_DAY_EVENT, deriveDayRoutes, MAP_FOCUS_EVENT, MAP_GLANCE_EVENT, MARK_PULSE_MS, deriveJumpTargets, googleMapsUrl, jumpTargetFor, placeKey } from "../../lib/mapPoints";
+import { CATEGORY_COLORS, CATEGORY_EMOJI, CATEGORY_LABELS, MAP_DAY_EVENT, deriveDayRoutes, MAP_FOCUS_EVENT, MAP_GLANCE_EVENT, deriveJumpTargets, markPulseLeft, marksToFit, googleMapsUrl, jumpTargetFor, placeKey } from "../../lib/mapPoints";
 import type { JumpTarget, MapMark, WeatherStop } from "../../lib/mapPoints";
 import { assignLegColors, fmtShort } from "../../lib/tripLogic";
 import { summarizeStay, temp, weatherIcon, weatherText } from "../../lib/weather";
@@ -736,7 +736,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
         look.classList.add("has-emoji");
         look.textContent = icon;
       }
-      const left = (byId.get(p.id)?.at ?? 0) + MARK_PULSE_MS - Date.now();
+      const left = markPulseLeft(byId.get(p.id), Date.now());
       if (left > 0) {
         look.classList.add("is-pulsing");
         timers.push(window.setTimeout(() => look.classList.remove("is-pulsing"), left));
@@ -746,7 +746,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
       }, 3);
       return marker;
     });
-    const batch = fitMarks ? geocodedMarks.filter((p) => byId.get(p.id)?.batch === fitMarks) : [];
+    const batch = marksToFit(geocodedMarks, marks, fitMarks);
     if (batch.length > 0) {
       const { center, zoom } = viewFor(map, batch.map((p) => ({ lat: p.lat, lng: p.lng })));
       moveTo(map, center, zoom);
