@@ -29,6 +29,7 @@ import { api } from "@convex/api";
 import { useAccessCode } from "../hooks/useAccessCode";
 import { batchedPhotos } from "../lib/cityPhoto";
 import { useMediaQuery } from "../hooks/useMediaQuery";
+import { usePinMap } from "../lib/pinMap";
 
 // Where "Show on the trip map" scrolls to on desktop, where the map sits above the day picker.
 const TRIP_MAP_ID = "trip-map";
@@ -80,13 +81,34 @@ function TripPageEntry() {
   const desktop = useMediaQuery("(min-width: 641px)");
   const desktopRef = useRef(desktop);
   desktopRef.current = desktop;
+  // Desktop can pin the map above the date strip; it then follows the day and tile being looked at.
+  const [pinMap, setPinMap] = usePinMap();
+  const pinned = desktop && pinMap;
+  const pinnedRef = useRef(pinned);
+  pinnedRef.current = pinned;
+  // The pinned map's height, for the date strip to sit under it and for jumps to land below both.
+  const pageRef = useRef<HTMLDivElement>(null);
+  const hasTrip = !!trip;
+  useEffect(() => {
+    const page = pageRef.current, section = document.getElementById(TRIP_MAP_ID);
+    if (!pinned || !page || !section) return;
+    const set = () => page.style.setProperty("--pinned-map-h", `${section.offsetHeight}px`);
+    set();
+    const ro = new ResizeObserver(set);
+    ro.observe(section);
+    return () => {
+      ro.disconnect();
+      page.style.removeProperty("--pinned-map-h");
+    };
+  }, [pinned, hasTrip]);
   // "Show on the trip map" from the agenda: on a phone open the Map tab, then hand it the place once it
   // is there; on desktop the map is already on the page (it shows the place itself), so scroll down to it.
   const pendingMapKey = useRef<string | null>(null);
   useEffect(() => {
     const onFocus = (e: Event) => {
       if (desktopRef.current) {
-        document.getElementById(TRIP_MAP_ID)?.scrollIntoView({ behavior: "smooth", block: "start" });
+        // A pinned map is already in view.
+        if (!pinnedRef.current) document.getElementById(TRIP_MAP_ID)?.scrollIntoView({ behavior: "smooth", block: "start" });
         return;
       }
       if (tabRef.current === "map") return;
@@ -164,6 +186,7 @@ function TripPageEntry() {
       weatherStops={weatherStops}
       candidates={deriveTaskPoints(tasks, mapPlanPoints)}
       considerations={tasks.filter((t) => !!t.places?.length)}
+      pin={desktop ? { on: pinMap, set: setPinMap } : undefined}
     />
   );
   // On a phone, the agenda is a tab panel; on desktop it is just the page.
@@ -173,7 +196,7 @@ function TripPageEntry() {
 
   return (
     <PageShell>
-      <div className="trip-page" data-tab={desktop ? "agenda" : tab}>
+      <div ref={pageRef} className={`trip-page${pinned ? " map-pinned" : ""}`} data-tab={desktop ? "agenda" : tab}>
         {/* Phones show the trip summary on the Agenda tab only (CSS): the map and the note start under the tabs. */}
         <div className="trip-summary">
         <TripHeader
