@@ -260,21 +260,25 @@ export function deriveTaskPoints(tasks: Task[], existing: MapPointData[]): MapPo
 // A place the AI marked on the map for a while (mark_on_map): not part of the trip, kept only
 // while the page stays open. `at` is when it was marked (it pulses for MARK_PULSE_MS after),
 // `batch` the call it came in, so the map can fit a new call's places. `icon` is drawn inside
-// the dot: a lib/markIcons.ts name or one emoji, the place's own or else the call's.
+// the dot: a lib/markIcons.ts name or one emoji, the place's own or else the call's. `color`
+// ("#rrggbb") colors the dot; none is the default red.
 export interface MapMark extends MapPointData {
   at: number;
   batch: string;
   icon?: string;
+  color?: string;
 }
 export const MARK_PULSE_MS = 60_000;
 
 // Adds one call's places to the page's marks. A place marked again moves to the new call (and
-// pulses again, with the new call's icon); a place with no Place ID or address can't be put on the map.
-export function addMarks(marks: MapMark[], places: (Place & { icon?: string })[], batch: string, at: number, icon?: string): MapMark[] {
+// pulses again, with the new call's icon and color); a place with no Place ID or address can't be
+// put on the map. A color that isn't "#rrggbb" is left out (red).
+export function addMarks(marks: MapMark[], places: (Place & { icon?: string; color?: string })[], batch: string, at: number, icon?: string): MapMark[] {
   const fresh: MapMark[] = places.flatMap((p) => {
     const key = placeKey(p);
     const own = p.icon ?? icon;
-    return key ? [{ name: p.name, address: p.address, placeId: p.placeId, id: `mark|${key}`, category: "other" as const, at, batch, ...(own ? { icon: own } : {}) }] : [];
+    const color = p.color && /^#[0-9a-f]{6}$/i.test(p.color) ? p.color : undefined;
+    return key ? [{ name: p.name, address: p.address, placeId: p.placeId, id: `mark|${key}`, category: "other" as const, at, batch, ...(own ? { icon: own } : {}), ...(color ? { color } : {}) }] : [];
   });
   const ids = new Set(fresh.map((m) => m.id));
   return [...marks.filter((m) => !ids.has(m.id)), ...fresh];
