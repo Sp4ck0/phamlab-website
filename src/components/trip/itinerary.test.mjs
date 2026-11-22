@@ -923,8 +923,11 @@ const timelineView = async (days, extra = {}) => {
   const out = { show: null };
   function Pointer() { out.show = useShowAiFocus(); return null; }
   const shared = { days, legColors: days.map(() => props.legColor), weather: {}, groups: [], ticks: {}, onlyGaps: false, onOnlyGapsChange() {}, filterRef: { current: null }, onToggle() {}, actionItems: [], considerations: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {}, ...extra };
-  out.view = mount(React.createElement(DefaultRouter, { initialEntries: ['/trip/synthetic'] },
-    React.createElement(Routes, null, React.createElement(Route, { path: '/trip/:slug', element: React.createElement(React.Fragment, null, React.createElement(DetailedView, shared), React.createElement(Pointer)) }))));
+  const tree = (list) => React.createElement(DefaultRouter, { initialEntries: ['/trip/synthetic'] },
+    React.createElement(Routes, null, React.createElement(Route, { path: '/trip/:slug', element: React.createElement(React.Fragment, null, React.createElement(DetailedView, { ...shared, days: list }), React.createElement(Pointer)) })));
+  out.view = mount(tree(days));
+  // The trip data changing under the page, as an edit elsewhere would.
+  out.setDays = (list) => act(() => out.view.root.render(tree(list)));
   return out;
 };
 const dayCards = (c) => [...c.querySelectorAll('section.day-card')];
@@ -982,6 +985,31 @@ test('a tile the AI or a shared link points at opens, scrolls and blinks; tiles 
     assert.equal(toggle('Synthetic two').getAttribute('aria-expanded'), 'true'); // untouched
     assert.equal(toggle('Synthetic Hotel').getAttribute('aria-expanded'), 'false'); // untouched
     assert.equal(localStorage.getItem('tiles:synthetic'), JSON.stringify({ [`${day.date}#${flightId(day.date, two)}`]: true })); // the reveal is not saved
+  } finally { view.close(); localStorage.clear(); }
+});
+
+test('an AI edit to one item on a day scrolls to that item and blinks it, not the day\'s top', async () => {
+  localStorage.clear();
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const acts = ['Synthetic first', 'Synthetic second', 'Synthetic third'];
+  const before = resolveDays({ days: [{ ...day, acts }] });
+  const after = resolveDays({ days: [{ ...day, acts: [acts[0], 'Synthetic second, rescheduled', acts[2]] }] });
+  const scrolled = [];
+  const out = await timelineView(before);
+  window.HTMLElement.prototype.scrollIntoView = function () { scrolled.push(this); };
+  const { view } = out;
+  try {
+    const [section] = dayCards(view.container);
+    act(() => section.querySelector('.day-head-btn').click());
+    out.setDays(after);
+    act(() => out.show({ slug: 'synthetic', target: { kind: 'day', date: day.date }, nonce: 'n1' }));
+    await act(async () => { await new Promise((r) => setTimeout(r, 900)); }); // settle, then the scroll fallback
+    const entry = (text) => [...section.querySelectorAll('li.tl-entry')].find((li) => li.textContent.includes(text));
+    const changed = entry('rescheduled');
+    assert.ok(changed.querySelector('.chg-inline')); // the diff is drawn on the item
+    assert.ok(changed.classList.contains('ai-focus-flash'));
+    assert.equal(scrolled.at(-1), changed); // the last scroll lands on the item
+    assert.ok(!entry('Synthetic first').classList.contains('ai-focus-flash'));
   } finally { view.close(); localStorage.clear(); }
 });
 
