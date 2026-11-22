@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useShowAiFocus } from "../../hooks/useAiFocus";
 import type { MapPointData, ResolvedDay, Task } from "../../lib/types";
-import { CATEGORY_COLORS, CATEGORY_EMOJI, CATEGORY_LABELS, MAP_DAY_EVENT, deriveDayRoutes, MAP_FOCUS_EVENT, MAP_GLANCE_EVENT, deriveJumpTargets, googleMapsUrl, jumpTargetFor, placeKey } from "../../lib/mapPoints";
-import type { JumpTarget, WeatherStop } from "../../lib/mapPoints";
+import { CATEGORY_COLORS, CATEGORY_EMOJI, CATEGORY_LABELS, MAP_DAY_EVENT, deriveDayRoutes, MAP_FOCUS_EVENT, MAP_GLANCE_EVENT, MARK_PULSE_MS, deriveJumpTargets, googleMapsUrl, jumpTargetFor, placeKey } from "../../lib/mapPoints";
+import type { JumpTarget, MapMark, WeatherStop } from "../../lib/mapPoints";
 import { assignLegColors, fmtShort } from "../../lib/tripLogic";
 import { summarizeStay, temp, weatherIcon, weatherText } from "../../lib/weather";
 import { useGeocodedPoints } from "../../hooks/useGeocodedPoints";
@@ -41,6 +41,11 @@ interface Props {
   considerations: Task[];
   // Desktop: the "Pin map" toggle. Pinned, the map follows the day and tile being looked at.
   pin?: { on: boolean; set: (on: boolean) => void };
+  // Places the AI marked for a while (not in the trip), and the call whose places to fit into
+  // view once they are drawn (then onMarksFitted).
+  marks?: MapMark[];
+  fitMarks?: string | null;
+  onMarksFitted?: () => void;
 }
 
 // A category's pin: its emoji on a white-rimmed disc in the category color.
@@ -274,8 +279,9 @@ function viewFor(map: google.maps.Map, points: google.maps.LatLngLiteral[], pad 
   return { center: fromWorld((x0 + x1) / 2, (y0 + y1) / 2), zoom: Math.max(2, Math.min(maxZoom, Math.floor(zoom))) };
 }
 
-export function TripMap({ points, days, route, weatherStops, candidates, considerations, pin }: Props) {
+export function TripMap({ points, days, route, weatherStops, candidates, considerations, pin, marks = [], fitMarks, onMarksFitted }: Props) {
   const { points: geocoded, status, error } = useGeocodedPoints(points);
+  const { points: geocodedMarks } = useGeocodedPoints(marks);
   const { points: geocodedRoute } = useGeocodedPoints(route);
   const { points: geocodedWeather } = useGeocodedPoints(weatherStops);
   const { points: geocodedCandidates } = useGeocodedPoints(candidates);
@@ -697,6 +703,39 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady, geocodedCandidates, showCandidates]);
 
+  // The AI's marks: a dot above every other pin that pulses for its first minute (MARK_PULSE_MS);
+  // a new call's marks are fitted into view once drawn.
+  useEffect(() => {
+    const map = mapInstance.current;
+    if (!mapReady || !map) return;
+    const byId = new Map(marks.map((m) => [m.id, m]));
+    const timers: number[] = [];
+    const made = geocodedMarks.map((p) => {
+      const look = document.createElement("div");
+      look.className = "map-mark";
+      const left = (byId.get(p.id)?.at ?? 0) + MARK_PULSE_MS - Date.now();
+      if (left > 0) {
+        look.classList.add("is-pulsing");
+        timers.push(window.setTimeout(() => look.classList.remove("is-pulsing"), left));
+      }
+      const marker: Pin = makePin(map, { lat: p.lat, lng: p.lng }, `${p.name} (marked, not in the trip)`, look, () => {
+        openInfo(map, infoHtml(p.name, `Marked by the AI · not in the trip${p.address ? ` · ${p.address}` : ""}`, tempUnitRef.current, undefined, googleMapsUrl(p)), marker);
+      }, 3);
+      return marker;
+    });
+    const batch = fitMarks ? geocodedMarks.filter((p) => byId.get(p.id)?.batch === fitMarks) : [];
+    if (batch.length > 0) {
+      const { center, zoom } = viewFor(map, batch.map((p) => ({ lat: p.lat, lng: p.lng })));
+      moveTo(map, center, zoom);
+      onMarksFitted?.();
+    }
+    return () => {
+      timers.forEach((t) => window.clearTimeout(t));
+      made.forEach((m) => (m.map = null));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- marks only add `at`/`batch` to geocodedMarks; redraw when those land
+  }, [mapReady, geocodedMarks, fitMarks]);
+
   // Scroll to the map, zoom in on the pin and open its popup, as if it had been tapped.
   focusHandler.current = (key) => {
     const wrap = wrapRef.current;
@@ -896,6 +935,12 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
                 </span>
               );
             })}
+            {geocodedMarks.length > 0 && (
+              <span className="map-legend-item">
+                <span className="map-mark-swatch" />
+                Marked by the AI
+              </span>
+            )}
             {geocodedCandidates.length > 0 && (
               <button
                 type="button"

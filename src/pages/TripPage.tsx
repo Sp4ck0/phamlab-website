@@ -19,7 +19,7 @@ import { useTripWeather } from "../hooks/useTripWeather";
 import { todayISO } from "../lib/dueDates";
 import { assignLegColors } from "../lib/tripLogic";
 import { dayGaps, gapDates } from "../lib/tasks";
-import { MAP_FOCUS_EVENT, deriveTaskPoints, derivePoints, deriveRouteAddresses, deriveWeatherStops, focusOnMapKey } from "../lib/mapPoints";
+import { MAP_FOCUS_EVENT, addMarks, deriveTaskPoints, derivePoints, deriveRouteAddresses, deriveWeatherStops, focusOnMapKey, type MapMark } from "../lib/mapPoints";
 import { TripTabs } from "../components/trip/TripTabs";
 import { tabFromHash, tripPanelId, tripTabId, withTab, type TripTab } from "../lib/tripTabs";
 import { useAiFocus } from "../hooks/useAiFocus";
@@ -133,6 +133,25 @@ function TripPageEntry() {
   useEffect(() => {
     if (pointed && tabRef.current !== "agenda") setTab("agenda");
   }, [pointed, setTab]);
+  // Places the AI marked (mark_on_map), kept only while this page is open: gone on reload or
+  // when the tab closes, and not carried to another trip. Each call adds its places, opens the
+  // map (the Map tab on a phone; on desktop, scrolls to it unless pinned) and has it fit them.
+  const [marks, setMarks] = useState<MapMark[]>([]);
+  const [fitMarks, setFitMarks] = useState<string | null>(null);
+  useEffect(() => {
+    setMarks([]);
+    setFitMarks(null);
+  }, [slug]);
+  const { focus: markFocus, consume: consumeMark } = useAiFocus("mark");
+  useEffect(() => {
+    if (!markFocus) return;
+    consumeMark(markFocus.nonce);
+    setMarks((m) => addMarks(m, markFocus.target.places, markFocus.nonce, Date.now()));
+    setFitMarks(markFocus.nonce);
+    if (desktopRef.current) {
+      if (!pinnedRef.current) document.getElementById(TRIP_MAP_ID)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else if (tabRef.current !== "map") setTab("map");
+  }, [markFocus, consumeMark, setTab]);
   const filterRef = useRef<HTMLButtonElement>(null);
 
   const resolvedDays = useResolvedDays(trip);
@@ -190,6 +209,9 @@ function TripPageEntry() {
       candidates={deriveTaskPoints(tasks, mapPlanPoints)}
       considerations={tasks.filter((t) => !!t.places?.length)}
       pin={desktop ? { on: pinMap, set: setPinMap } : undefined}
+      marks={marks}
+      fitMarks={fitMarks}
+      onMarksFitted={() => setFitMarks(null)}
     />
   );
   // On a phone, the agenda is a tab panel; on desktop it is just the page.

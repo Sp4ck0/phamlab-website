@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
+import type { Place } from "../lib/types";
 
 export type FocusTarget =
   | { kind: "trip" }
@@ -10,7 +11,9 @@ export type FocusTarget =
   // Any task by its key (item:…, booking:…, plan:…); what a shared link points at.
   | { kind: "task"; key: string }
   | { kind: "board" }
-  | { kind: "card"; id: string };
+  | { kind: "card"; id: string }
+  // Places the AI marked on the trip's map for a while (mark_on_map); see TripPage.
+  | { kind: "mark"; places: Place[] };
 
 // Mirrors the backend's mcp_focus row (mcpFocus.ts getFocus). For the board
 // and card targets, `slug` is the board's id.
