@@ -185,6 +185,20 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
     const t = setTimeout(() => { setDiff(null); setGhost(null); }, 4200);
     return () => clearTimeout(t);
   }, [diff, ghost]);
+  // Once the day's change is drawn, go to the first item that changed (not the
+  // day's top) and blink it. A change to the summary line alone stays at the top.
+  useEffect(() => {
+    if (!diff) return;
+    const row = state.rows.find(r => r.day.date === diff.date);
+    const marks = row ? document.getElementById(row.id)?.querySelectorAll<HTMLElement>(".chg-new, .chg-gone, .chg-inline") : undefined;
+    const mark = [...(marks ?? [])].find(m => !m.closest(".day-summary"));
+    if (!mark) return;
+    const item = mark.closest<HTMLElement>("li.tl-entry, .note") ?? mark;
+    item.scrollIntoView({ block: "center", behavior: scrollBehavior() });
+    flash(item);
+    // Only when a new diff is drawn; the rows it reads are this render's.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [diff]);
   useEffect(() => {
     if (!focus) return;
     const date = focus.target.date;
