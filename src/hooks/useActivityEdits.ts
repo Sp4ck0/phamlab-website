@@ -20,6 +20,7 @@ export function useActivityEdits(slug: string) {
         ...(timing.time !== undefined ? { time: timing.time } : {}),
         ...(timing.endTime !== undefined ? { endTime: timing.endTime } : {}),
         ...(timing.allDay !== undefined ? { allDay: timing.allDay } : {}),
+        ...(timing.description !== undefined ? { description: timing.description } : {}),
       }),
   };
 }
