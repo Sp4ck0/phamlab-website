@@ -918,6 +918,7 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
 .map-legend-toggle:focus-visible{outline:2px solid var(--accent-1);outline-offset:3px;border-radius:4px}
 /* "Pin map" (desktop): the map's heading row carries the toggle. */
 .map-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.map-head-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
 .map-pin-toggle{flex:none;display:inline-flex;align-items:center;gap:6px;margin-bottom:6px;padding:5px 12px;font:inherit;font-size:13px;font-weight:600;color:var(--text-secondary);background:var(--card);border:1px solid var(--border);border-radius:999px;cursor:pointer}
 .map-pin-toggle:hover{color:var(--text-primary)}
 .map-pin-toggle[aria-pressed="true"]{color:var(--accent-1);border-color:var(--accent-1);background:var(--accent-1-tint)}
