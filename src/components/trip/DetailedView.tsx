@@ -200,7 +200,9 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   }, [ghost]);
   // The change on screen (`step`) waits at its first frame until the page has
   // scrolled to it (`playing` names the step that has started). A reader who
-  // scrolls or taps meanwhile keeps the page: the rest play where they are.
+  // scrolls meanwhile keeps the page: the rest play where they are. A tap, click
+  // or key ends the playback, so whatever the reader then opens (an editor, a
+  // menu) acts on the day as it really is, not on a step of the playback.
   const [playing, setPlaying] = useState<string | null>(null);
   const [fast, setFast] = useState(false);
   const readerMoved = useRef(false);
@@ -208,9 +210,14 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
     if (!diff) return;
     readerMoved.current = false;
     const moved = () => { readerMoved.current = true; };
-    const events = ["pointerdown", "wheel", "touchstart", "keydown"] as const;
-    events.forEach(event => window.addEventListener(event, moved, { passive: true }));
-    return () => events.forEach(event => window.removeEventListener(event, moved));
+    const took = () => setDiff(null);
+    const acts = ["pointerdown", "touchstart", "keydown"] as const;
+    window.addEventListener("wheel", moved, { passive: true });
+    acts.forEach(event => window.addEventListener(event, took, { passive: true, capture: true }));
+    return () => {
+      window.removeEventListener("wheel", moved);
+      acts.forEach(event => window.removeEventListener(event, took, { capture: true }));
+    };
   }, [diff]);
   // Any newer AI pointer (a tile, another day, a to-do) ends the playback: what
   // was left of it shows as it ends up, and the new pointer takes the page.
