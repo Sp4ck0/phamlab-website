@@ -32,7 +32,6 @@ import { useShowAiFocus } from "../../hooks/useAiFocus";
 import { useUntilFound } from "../../hooks/useUntilFound";
 import { ActivityEditor } from "./ActivityEditor";
 import { tileDomId } from "../../lib/tileId";
-import { BARS_EVENT } from "../../lib/hideBars";
 import { InlineDiff } from "./InlineDiff";
 
 // What a line is, for telling an edited line from an untouched one (not its
@@ -193,34 +192,35 @@ export function DayCard({
   }, [cityPhoto, d.city, d.country]);
   // On a phone the header pins under the date strip while its day scrolls by. It is marked
   // (data-stuck) while pinned, so the tiles fade as they slide under it instead of being cut off
-  // at its edge (CSS). Pinned means its top has reached the line it pins at (--pinned-top: the
-  // strip's bottom, or the top of the screen while the bars are hidden): the observer's top edge
-  // sits 1px below that line, so a pinned header is never wholly inside. It moves with the bars.
+  // at its edge (CSS). It pins somewhere between the strip's bottom (--daynav-bottom, the bars shown)
+  // and the site's top bar (the bars slid away), moving with the scroll in between. One observer per
+  // end, each with its top edge 1px below that line: a header cut off at either is pinned.
   useEffect(() => {
     const el = headRef.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
-    let io: IntersectionObserver | undefined;
+    let observers: IntersectionObserver[] = [];
     const watch = () => {
-      io?.disconnect();
-      const style = window.getComputedStyle(document.documentElement);
-      const at = (name: string) => parseFloat(style.getPropertyValue(name));
-      const line = [at("--pinned-top"), at("--daynav-bottom")].find((v) => !Number.isNaN(v)) ?? 0;
-      io = new IntersectionObserver((hits) => {
-        const hit = hits[hits.length - 1];
-        // Cut off at the top, not at the bottom of the screen.
-        const stuck = !!hit && hit.isIntersecting && hit.intersectionRatio < 1 && hit.boundingClientRect.top < (hit.rootBounds?.top ?? line + 1);
-        if (stuck) el.dataset.stuck = "";
-        else delete el.dataset.stuck;
-      }, { rootMargin: `${-(line + 1)}px 0px 0px 0px`, threshold: [0, 1] });
-      io.observe(el);
+      observers.forEach((o) => o.disconnect());
+      const shown = parseFloat(window.getComputedStyle(document.documentElement).getPropertyValue("--daynav-bottom")) || 0;
+      const bar = Math.max(0, document.querySelector(".mobile-topbar")?.getBoundingClientRect().bottom ?? 0);
+      const cut = new Map<number, boolean>();
+      observers = [...new Set([shown, bar])].map((line) => {
+        const io = new IntersectionObserver((hits) => {
+          const hit = hits[hits.length - 1];
+          // Cut off at the top, not at the bottom of the screen.
+          cut.set(line, !!hit && hit.isIntersecting && hit.intersectionRatio < 1 && hit.boundingClientRect.top < (hit.rootBounds?.top ?? line + 1));
+          if ([...cut.values()].some(Boolean)) el.dataset.stuck = "";
+          else delete el.dataset.stuck;
+        }, { rootMargin: `${-(line + 1)}px 0px 0px 0px`, threshold: [0, 1] });
+        io.observe(el);
+        return io;
+      });
     };
     watch();
     window.addEventListener("resize", watch);
-    window.addEventListener(BARS_EVENT, watch);
     return () => {
-      io?.disconnect();
+      observers.forEach((o) => o.disconnect());
       window.removeEventListener("resize", watch);
-      window.removeEventListener(BARS_EVENT, watch);
     };
   }, []);
   // A collapsed panel is hidden="until-found": still in the page, so Ctrl+F finds its text,

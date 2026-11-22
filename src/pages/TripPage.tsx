@@ -30,7 +30,7 @@ import { useAccessCode } from "../hooks/useAccessCode";
 import { batchedPhotos } from "../lib/cityPhoto";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { usePinMap } from "../lib/pinMap";
-import { useHideBarsOnScroll } from "../lib/hideBars";
+import { useScrollLinkedBars } from "../lib/hideBars";
 
 // Where "Show on the trip map" scrolls to on desktop, where the map sits above the day picker.
 const TRIP_MAP_ID = "trip-map";
@@ -90,8 +90,8 @@ function TripPageEntry() {
   // The pinned map's height, for the date strip to sit under it and for jumps to land below both.
   const pageRef = useRef<HTMLDivElement>(null);
   const hasTrip = !!trip;
-  // Phones: the top bar, tabs and date strip slide away on scroll down and come back on scroll up.
-  useHideBarsOnScroll(!desktop && hasTrip);
+  // Phones: the tabs and date strip slide up and back with the reader's scrolling.
+  useScrollLinkedBars(pageRef, !desktop && hasTrip);
   useEffect(() => {
     const page = pageRef.current, section = document.getElementById(TRIP_MAP_ID);
     if (!pinned || !page || !section) return;
