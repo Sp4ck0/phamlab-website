@@ -5,7 +5,7 @@ import { DOW, MON } from "../../lib/tripLogic";
 export function DayNav({ rows, todayId, onJump }: { rows: ItineraryRow[]; todayId?: string; onJump: (rowId: string) => void }) {
   const nav = useRef<HTMLElement>(null);
   const todayBtn = useRef<HTMLButtonElement>(null);
-  // Chips snap to whole buttons after a swipe; on phones they line up just right of the sticky
+  // Chips snap to whole buttons after a swipe; they line up just right of the sticky
   // Today button, so none sits half under it.
   const jumpBtn = useRef<HTMLButtonElement>(null);
   useLayoutEffect(() => {
@@ -41,7 +41,7 @@ export function DayNav({ rows, todayId, onJump }: { rows: ItineraryRow[]; todayI
   return (
     <div className="daynav-shell" ref={shell}>
       <nav className="daynav" aria-label="Jump to itinerary day" ref={nav}>
-        {/* Phones: stays at the strip's left edge so today is one tap away from any day. */}
+        {/* Stays at the strip's left edge so today is one tap away from any day. */}
         {todayId && (
           <button type="button" className="daynav-jump" ref={jumpBtn} onClick={() => onJump(todayId)}>
             ↩ Today
