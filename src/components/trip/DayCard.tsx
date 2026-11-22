@@ -537,6 +537,9 @@ export function DayCard({
     <section
       className={`day-card${gapsOnly ? " gaps-only" : ""}${isToday ? " day-card--today" : ""}${old && changePaused ? " chg-paused" : ""}`}
       id={rowId}
+      // While an AI edit plays (DetailedView), the day shows steps of the edit, not the day as stored:
+      // nothing in it can be focused or pressed until the playback ends (the reader's first tap or key ends it).
+      inert={!!old}
       style={{ ["--leg-color" as string]: legColor.color, ["--leg-tint" as string]: legColor.tint, ...(old && changeMs ? { ["--chg-ms" as string]: `${changeMs}ms` } : {}) }}
     >
       {/* Like a tile, a tap anywhere on the header (the photo, the space under the ⋯) opens or closes
