@@ -941,6 +941,19 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
 .map-pinned .day-card,.map-pinned .tl-entry,.map-pinned .tl-now{scroll-margin-top:calc(var(--pinned-map-h,0px) + var(--pin-top) + 66px)}
 .map-pinned .day-head-btn{scroll-margin-top:calc(var(--pinned-map-h,0px) + var(--pin-top) + 76px)}
 @media(max-width:780px){.map-pinned{--pin-top:56px}}
+/* Pinned at the side (wide windows, TripPage's .map-side): the page's column keeps its width on the
+   left and the map fills the window's height on the right. TripMap sets --side-map-w from the divider
+   down the map's left edge; it stays a narrow column at least and leaves 800px for the side menu and
+   itinerary (pinMap.ts clampMapWidth). The date strip and jumps no longer clear a map above them. */
+.wrap:has(> .map-side){--side-w:clamp(320px,var(--side-map-w,40vw),calc(100vw - 800px));max-width:none;padding-right:calc(var(--side-w) + 20px)}
+.wrap > .map-side{max-width:840px;margin:0 auto}
+.map-side .trip-map-section{position:fixed;top:0;right:0;bottom:0;width:var(--side-w);display:flex;flex-direction:column;padding:0 16px 16px 0;box-sizing:border-box}
+.map-side .trip-map-wrap{flex:1;min-height:0;display:flex}
+.map-side .trip-map{flex:1;min-width:0;height:auto}
+.map-side .map-divider{order:-1;width:14px;height:auto;cursor:col-resize;border-top:0;border-right:1px solid var(--gridline)}
+.map-side .map-divider::before{width:4px;height:44px}
+/* The floating note sits at the itinerary's corner, off the map. */
+.map-side .trip-note-fab,.map-side .trip-note:not(.trip-note--inline){right:calc(var(--side-w) + 36px)}
 /* Pinned and following a day: the other days' pins step back; a tile under the pointer pulses its pin. */
 .map-pin{transition:opacity .25s}
 .map-pin.is-dimmed{opacity:.3}
