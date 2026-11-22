@@ -1031,7 +1031,7 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
   /* Moved down under the tabs and date strip while they scroll away (hideBars.ts): the space above it,
      up to the site bar, is filled with the page's colour, behind the bars, so if they move off faster
      than it follows, no tiles show through for that frame. */
-  .day-heading::before{content:"";position:absolute;left:-16px;right:-16px;bottom:100%;height:var(--under-bars,0px);background:var(--page);pointer-events:none}
+  .day-heading::before{content:"";position:absolute;left:-10px;right:-10px;bottom:100%;height:var(--under-bars,0px);background:var(--page);pointer-events:none}
   /* The pinned tab bar and date strip reach into the page's side margins, so a card scrolling
      under them (today's ring sits just outside its edges) can't show at the sides. */
   .trip-tabs-bar,.daynav-shell{margin-inline:-10px;padding-inline:10px}
