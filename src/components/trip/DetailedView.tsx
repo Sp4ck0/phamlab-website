@@ -42,7 +42,7 @@ interface Props {
   onVote: (itemId: string, vote: Vote | null) => void;
   actionItemsDone: Record<string, boolean>;
   onToggleActionItem: (id: string) => void;
-  onEditActivity?: (date: string, index: number, expected: string, text: string, places: Place[]) => Promise<unknown>;
+  onEditActivity?: (date: string, index: number, expected: string, text: string, places: Place[], time?: string | null) => Promise<unknown>;
   // Every stored item by id, for the History of an entry approved from one.
   itemTasks?: Record<string, Task>;
   // "Add to itinerary" on an item tile.

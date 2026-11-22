@@ -6,14 +6,18 @@ import { PlacesEditor, cleanPlaces } from "./PlacesEditor";
 interface Props {
   initial: string;
   initialPlaces?: Place[];
-  onSave: (text: string, places: Place[]) => Promise<unknown>;
+  /** The activity's time ("HH:MM"), or none. */
+  initialTime?: string;
+  /** `time` is undefined when it wasn't changed, null when it was cleared. */
+  onSave: (text: string, places: Place[], time?: string | null) => Promise<unknown>;
   onCancel: () => void;
 }
 
-// Inline editor for one activity's text and places. Opens with the cursor at
-// the end so appending a note ("— Dec 5 sold out") is just type and save.
-export function ActivityEditor({ initial, initialPlaces, onSave, onCancel }: Props) {
+// Inline editor for one activity's time, text and places. Opens with the cursor at
+// the end of the text so appending a note ("— Dec 5 sold out") is just type and save.
+export function ActivityEditor({ initial, initialPlaces, initialTime, onSave, onCancel }: Props) {
   const [text, setText] = useState(initial);
+  const [time, setTime] = useState(initialTime ?? "");
   const [places, setPlaces] = useState<Place[]>(initialPlaces ?? []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -39,7 +43,9 @@ export function ActivityEditor({ initial, initialPlaces, onSave, onCancel }: Pro
     setSaving(true);
     setError("");
     try {
-      await onSave(text, cleanPlaces(places));
+      // Only a changed time is sent: a text-only edit never moves the activity.
+      const nextTime = time === (initialTime ?? "") ? undefined : time || null;
+      await onSave(text, cleanPlaces(places), nextTime);
     } catch (e) {
       // A ConvexError carries what the backend meant to say; otherwise Convex
       // wraps server errors and the useful part is the last line.
@@ -64,6 +70,15 @@ export function ActivityEditor({ initial, initialPlaces, onSave, onCancel }: Pro
         }
       }}
     >
+      <label className="ai-time">
+        <span>Time</span>
+        <input type="time" className="ai-input" value={time} onChange={(e) => setTime(e.target.value)} />
+        {time && (
+          <button type="button" className="ai-btn ai-time-clear" onClick={() => setTime("")} aria-label="Clear the time">
+            No time
+          </button>
+        )}
+      </label>
       <textarea
         ref={ref}
         className="ai-input"

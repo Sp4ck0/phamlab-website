@@ -1330,3 +1330,33 @@ test('a static card whose title is cut off gets the chevron and opens to show th
   }
 });
 
+test('editing an activity: its time is in the editor; "No time" clears it, a text-only edit leaves it alone', async () => {
+  // (Typing a new time is checked in a real browser: react-dom loads here before jsdom's document,
+  // so it doesn't see input events and a typed change never reaches onChange.)
+  const synthetic = { ...day, country: 'TH', acts: [{ tag: 'Food', time: '12:00', text: 'Synthetic lunch' }] };
+  const edits = [];
+  const open = () => {
+    const view = mount(React.createElement(Stateful, { ...props, day: synthetic, days: [synthetic], expanded: true, onEditActivity: async (...a) => { edits.push(a); } }));
+    const edit = menuItem(openMenu(view.container.querySelector('.tl-tile')), 'Edit');
+    act(() => edit.click());
+    return view;
+  };
+  const save = (view) => act(async () => { view.container.querySelector('.ai-editor button[type=submit]').click(); });
+
+  let view = open();
+  try {
+    assert.equal(view.container.querySelector('.ai-editor input[type=time]').value, '12:00'); // opens with the activity's time
+    act(() => view.container.querySelector('.ai-time-clear').click());
+    assert.equal(view.container.querySelector('.ai-editor input[type=time]').value, '');
+    await save(view);
+    assert.ok(edits.pop()[5] === null); // cleared
+  } finally { view.close(); }
+
+  view = open();
+  try {
+    await save(view);
+    const saved = edits.pop();
+    assert.equal(saved[3], 'Synthetic lunch');
+    assert.ok(saved[5] === undefined); // unchanged: the activity keeps its place
+  } finally { view.close(); }
+});
