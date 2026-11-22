@@ -930,6 +930,12 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
 .map-pinned .map-head .section-title{margin-top:8px}
 .map-pinned .trip-map-section .section-sub,.map-pinned .map-legend{display:none}
 .map-pinned .trip-map{height:clamp(240px,35vh,360px)}
+.trip-map.is-sized{min-height:160px;max-height:calc(100vh - 260px)}
+/* The divider under the pinned map: drag it up or down to share the screen between map and itinerary. */
+.map-divider{display:grid;place-items:center;height:14px;cursor:row-resize;touch-action:none;user-select:none;background:var(--card);border-top:1px solid var(--gridline)}
+.map-divider::before{content:"";width:44px;height:4px;border-radius:2px;background:var(--border);transition:background .15s}
+.map-divider:hover::before,.map-divider.is-dragging::before{background:var(--accent-1)}
+.map-divider:focus-visible{outline:2px solid var(--accent-1);outline-offset:-2px}
 .map-pinned .daynav-shell{top:calc(var(--pin-top) + var(--pinned-map-h,0px));margin-top:0}
 .map-pinned .day-card,.map-pinned .tl-entry,.map-pinned .tl-now{scroll-margin-top:calc(var(--pinned-map-h,0px) + var(--pin-top) + 66px)}
 .map-pinned .day-head-btn{scroll-margin-top:calc(var(--pinned-map-h,0px) + var(--pin-top) + 76px)}

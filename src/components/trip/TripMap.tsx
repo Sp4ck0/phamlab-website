@@ -10,6 +10,7 @@ import { markIconSvg } from "../../lib/markIcons";
 import { useGeocodedPoints } from "../../hooks/useGeocodedPoints";
 import { useSettings, type TempUnit } from "../../hooks/useSettings";
 import { MAP_ID, loadGoogleMaps } from "../../lib/googleMaps";
+import { MAP_MIN_H, clampMapHeight, loadPinMapHeight, maxMapHeight, savePinMapHeight } from "../../lib/pinMap";
 
 const ARROW_SPACING_PX = 28;
 // From this zoom in (about one city on screen) each day's own route shows and the city-to-city line fades.
@@ -293,6 +294,8 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
   considerationById.current = new Map(considerations.map((t) => [t.key.slice("item:".length), t]));
   const mapRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  // Pinned: the height dragged to with the divider under the map (null: the stylesheet's).
+  const [mapHeight, setMapHeight] = useState(loadPinMapHeight);
   // Pins by place key, so a "show on map" button elsewhere on the page can find its pin.
   const planPins = useRef(new Map<string, Pin>());
   const candidatePins = useRef(new Map<string, Pin>());
@@ -905,6 +908,45 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
     infoWindow.current?.show(header, body);
   }
 
+  // The divider under the pinned map: drag it, or use the arrow keys, to make the map taller or
+  // shorter; double-click goes back to the default. While dragging, only the map's own style changes.
+  function sizeMap(h: number | null) {
+    setMapHeight(h);
+    savePinMapHeight(h);
+  }
+  function startResize(e: React.PointerEvent<HTMLDivElement>) {
+    const el = mapRef.current;
+    if (!el || e.button !== 0) return;
+    e.preventDefault();
+    const handle = e.currentTarget;
+    const startY = e.clientY;
+    const startH = el.offsetHeight;
+    let h = startH;
+    const move = (ev: PointerEvent) => {
+      h = clampMapHeight(startH + ev.clientY - startY, window.innerHeight);
+      el.style.height = `${h}px`;
+    };
+    const end = () => {
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", end);
+      handle.removeEventListener("pointercancel", end);
+      handle.classList.remove("is-dragging");
+      if (h !== startH) sizeMap(h);
+    };
+    handle.setPointerCapture(e.pointerId);
+    handle.classList.add("is-dragging");
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", end);
+    handle.addEventListener("pointercancel", end);
+  }
+  function resizeByKey(e: React.KeyboardEvent<HTMLDivElement>) {
+    const step = e.key === "ArrowUp" ? -24 : e.key === "ArrowDown" ? 24 : 0;
+    const el = mapRef.current;
+    if (!step || !el) return;
+    e.preventDefault();
+    sizeMap(clampMapHeight(el.offsetHeight + step, window.innerHeight));
+  }
+
   if (points.length === 0) return null;
 
   return (
@@ -939,7 +981,27 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
 
       {status === "ready" && geocoded.length > 0 && (
         <div ref={wrapRef} className={`trip-map-wrap${flash ? " is-focused" : ""}`}>
-          <div ref={mapRef} className="trip-map" />
+          <div
+            ref={mapRef}
+            className={`trip-map${pinned && mapHeight ? " is-sized" : ""}`}
+            style={pinned && mapHeight ? { height: mapHeight } : undefined}
+          />
+          {pinned && (
+            <div
+              className="map-divider"
+              role="separator"
+              aria-orientation="horizontal"
+              aria-label="Map size"
+              aria-valuemin={MAP_MIN_H}
+              aria-valuemax={maxMapHeight(window.innerHeight)}
+              aria-valuenow={mapHeight ?? undefined}
+              tabIndex={0}
+              title="Drag to make the map bigger or smaller; double-click to reset"
+              onPointerDown={startResize}
+              onKeyDown={resizeByKey}
+              onDoubleClick={() => sizeMap(null)}
+            />
+          )}
           <div className="map-legend">
             {Object.entries(CATEGORY_LABELS).map(([cat, label]) => {
               const inUse = geocoded.some((p) => p.category === cat);
