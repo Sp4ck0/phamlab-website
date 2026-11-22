@@ -227,7 +227,11 @@
   }
 
   .drawer__inner {
-    padding: 20px 18px 36px;
+    --drawer-pad-x: 18px;
+    padding-bottom: 36px;
+  }
+  .drawer__head {
+    padding-top: 12px;
   }
   .drawer__title {
     font-size: 23px;
