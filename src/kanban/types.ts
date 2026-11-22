@@ -156,7 +156,7 @@ export const BOARD_COPY: Record<
   features: {
     lanes: [
       { id: 'raised', name: 'New', blurb: 'Just posted. Not picked up yet.' },
-      { id: 'talking', name: 'Planned', blurb: 'Agreed on. Waiting its turn.' },
+      { id: 'talking', name: 'Planning', blurb: 'Picked up. Working out the plan.' },
       { id: 'doing', name: 'Building', blurb: 'Being worked on now.' },
       { id: 'followup', name: 'Try it out', blurb: 'Live — tell us if it works.' },
       { id: 'settled', name: 'Done', blurb: 'Shipped and working. Kudos live here too.' },
