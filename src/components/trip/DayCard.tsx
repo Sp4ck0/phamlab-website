@@ -10,7 +10,7 @@ import { hotelHeader, isPlaceholderHotel, segmentsOf, transportHeader } from "..
 import { copyShareLink } from "../../lib/shareLink";
 import { TileMenu, type TileMenuItem } from "./TileMenu";
 import { routeSearchUrl } from "../../lib/segments";
-import { ALL_DAY, TileStatePill, TimelineTile, type TimelineTileProps, type TileState } from "./TimelineTile";
+import { ALL_DAY, OWN_CLICK, TileStatePill, TimelineTile, type TimelineTileProps, type TileState } from "./TimelineTile";
 import { buildTimeline, timelineSpans, type ActRow, type DayItem, type TimelineEntry } from "../../lib/timeline";
 import { serverMessage } from "../../lib/serverError";
 import type { TileOpen } from "../../hooks/useTileOpen";
@@ -590,7 +590,17 @@ export function DayCard({
       id={rowId}
       style={{ ["--leg-color" as string]: legColor.color, ["--leg-tint" as string]: legColor.tint }}
     >
-      <h2 className="day-heading" ref={headRef}>
+      {/* Like a tile, a tap anywhere on the header (the photo, the space under the ⋯) opens or closes
+          the day, except on a control of its own; the button inside stays the keyboard toggle. */}
+      <h2
+        className="day-heading"
+        ref={headRef}
+        onClick={(e) => {
+          if ((e.target as HTMLElement).closest(OWN_CLICK)) return;
+          if (window.getSelection?.()?.toString()) return;
+          onExpandedChange();
+        }}
+      >
       {/* The city's photo, fading into the card; the leg's colour until it loads (or when there is none). */}
       <span className={`day-photo${photo ? " has-photo" : ""}`} style={photo ? { backgroundImage: `url("${photo.url.replace(/"/g, "%22")}")` } : undefined} />
       <button id={`${rowId}-trigger`} type="button" className="day-head day-head-btn" aria-expanded={expanded} aria-controls={`${rowId}-panel`} onClick={onExpandedChange}>
