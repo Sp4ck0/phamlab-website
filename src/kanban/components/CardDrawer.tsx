@@ -171,36 +171,36 @@ export function CardDrawer({
           >
             <div className="drawer__inner">
               <header className="drawer__head">
-                <div className="seg" role="group" aria-label="Kind of feedback">
-                  {copy.kinds.map((k) => (
-                    <button
-                      key={k.id}
-                      title={k.hint}
-                      data-on={card.kind === k.id || undefined}
-                      onClick={() => onChange(card.id, { kind: k.id as Kind })}
-                    >
-                      {k.label}
-                    </button>
-                  ))}
-                </div>
+                <textarea
+                  className="drawer__title"
+                  rows={1}
+                  value={title}
+                  placeholder="Say it plainly"
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const id = card.id;
+                    setTitle(value);
+                    saveSoon('title', () => onChange(id, { title: value }));
+                  }}
+                  onBlur={flush}
+                />
                 <button className="drawer__close" onClick={onClose} aria-label="Close">
                   ✕
                 </button>
               </header>
 
-              <textarea
-                className="drawer__title"
-                rows={2}
-                value={title}
-                placeholder="Say it plainly"
-                onChange={(e) => {
-                  const value = e.target.value;
-                  const id = card.id;
-                  setTitle(value);
-                  saveSoon('title', () => onChange(id, { title: value }));
-                }}
-                onBlur={flush}
-              />
+              <div className="seg" role="group" aria-label="Kind of feedback">
+                {copy.kinds.map((k) => (
+                  <button
+                    key={k.id}
+                    title={k.hint}
+                    data-on={card.kind === k.id || undefined}
+                    onClick={() => onChange(card.id, { kind: k.id as Kind })}
+                  >
+                    {k.label}
+                  </button>
+                ))}
+              </div>
 
               <div className="who__block">
                 <span className="label">{copy.weightLabel(raisedBy)}</span>
