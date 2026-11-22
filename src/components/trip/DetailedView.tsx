@@ -323,14 +323,16 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   // (any input before the timer fires cancels it).
   const [params] = useSearchParams();
   const todayRow = state.rows.find(r => isDestToday(r.day, nowMs));
+  // The effect below keys on the id: the row itself is a new object every render.
+  const todayId = todayRow?.id;
   const autoDone = useRef(false);
   const jumpRef = useRef(jump);
   jumpRef.current = jump;
   // A link to a task (?task=, as a notification sends) is a pointer too.
   const hasPointer = params.has("day") || params.has("tile") || params.has("task") || !!focus || !!taskFocus || !!itemFocus;
   useEffect(() => {
-    if (autoDone.current || !todayRow || hasPointer) return;
-    const id = todayRow.id;
+    if (autoDone.current || !todayId || hasPointer) return;
+    const id = todayId;
     let cancelNow = () => {};
     const t = setTimeout(() => {
       autoDone.current = true;
@@ -348,7 +350,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
       cancelNow();
       events.forEach(event => window.removeEventListener(event, cancel));
     };
-  }, [todayRow?.id, hasPointer]);
+  }, [todayId, hasPointer]);
 
   // The day the reader is looking at, marked on the date strip: the day they last jumped to, until
   // they scroll by hand (a day near the page's end can't reach the strip); else the day under the strip.
