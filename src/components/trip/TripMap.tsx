@@ -6,6 +6,7 @@ import { CATEGORY_COLORS, CATEGORY_EMOJI, CATEGORY_LABELS, MAP_DAY_EVENT, derive
 import type { JumpTarget, MapMark, WeatherStop } from "../../lib/mapPoints";
 import { assignLegColors, fmtShort } from "../../lib/tripLogic";
 import { summarizeStay, temp, weatherIcon, weatherText } from "../../lib/weather";
+import { markIconSvg } from "../../lib/markIcons";
 import { useGeocodedPoints } from "../../hooks/useGeocodedPoints";
 import { useSettings, type TempUnit } from "../../hooks/useSettings";
 import { MAP_ID, loadGoogleMaps } from "../../lib/googleMaps";
@@ -717,6 +718,11 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
     const made = geocodedMarks.map((p) => {
       const look = document.createElement("div");
       look.className = "map-mark";
+      const icon = markIconSvg(byId.get(p.id)?.icon);
+      if (icon) {
+        look.classList.add("has-icon");
+        look.innerHTML = icon;
+      }
       const left = (byId.get(p.id)?.at ?? 0) + MARK_PULSE_MS - Date.now();
       if (left > 0) {
         look.classList.add("is-pulsing");

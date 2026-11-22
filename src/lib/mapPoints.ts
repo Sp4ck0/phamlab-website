@@ -259,19 +259,21 @@ export function deriveTaskPoints(tasks: Task[], existing: MapPointData[]): MapPo
 
 // A place the AI marked on the map for a while (mark_on_map): not part of the trip, kept only
 // while the page stays open. `at` is when it was marked (it pulses for MARK_PULSE_MS after),
-// `batch` the call it came in, so the map can fit a new call's places.
+// `batch` the call it came in, so the map can fit a new call's places. `icon` is the call's
+// named icon (lib/markIcons.ts), if any.
 export interface MapMark extends MapPointData {
   at: number;
   batch: string;
+  icon?: string;
 }
 export const MARK_PULSE_MS = 60_000;
 
 // Adds one call's places to the page's marks. A place marked again moves to the new call (and
-// pulses again); a place with no Place ID or address can't be put on the map.
-export function addMarks(marks: MapMark[], places: Place[], batch: string, at: number): MapMark[] {
+// pulses again, with the new call's icon); a place with no Place ID or address can't be put on the map.
+export function addMarks(marks: MapMark[], places: Place[], batch: string, at: number, icon?: string): MapMark[] {
   const fresh: MapMark[] = places.flatMap((p) => {
     const key = placeKey(p);
-    return key ? [{ name: p.name, address: p.address, placeId: p.placeId, id: `mark|${key}`, category: "other" as const, at, batch }] : [];
+    return key ? [{ name: p.name, address: p.address, placeId: p.placeId, id: `mark|${key}`, category: "other" as const, at, batch, ...(icon ? { icon } : {}) }] : [];
   });
   const ids = new Set(fresh.map((m) => m.id));
   return [...marks.filter((m) => !ids.has(m.id)), ...fresh];
