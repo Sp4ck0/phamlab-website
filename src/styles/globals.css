@@ -410,6 +410,13 @@ button.route-chip[aria-expanded=true]{box-shadow:inset 0 0 0 1.5px var(--text-mu
   .day-heading:hover{background:var(--page)}
   .day-heading:hover .day-photo::after{background:linear-gradient(90deg,transparent 40%,var(--page))}
 }
+/* Desktop: the day's text runs the full width, under the ⋯ (on top in the corner, only as tall as its
+   button); just the top row (today, the weather) keeps clear of it. */
+@media (min-width:641px){
+  .day-heading .day-head-btn{grid-column:2 / 4}
+  .day-tools{position:relative;z-index:1;justify-self:end;align-self:start}
+  .day-head-right{padding-right:40px}
+}
 .daynav button:focus-visible{outline:3px solid var(--accent-1);outline-offset:2px}
 /* Inside the card's edge, with rounded corners, so the ring never cuts across the card's own border. */
 .day-head-btn:focus-visible{outline:3px solid var(--accent-1);outline-offset:-3px;border-radius:10px}
