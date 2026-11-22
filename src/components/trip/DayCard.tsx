@@ -250,13 +250,16 @@ export function DayCard({
   // Under Only gaps, a to-do or consideration that is done or settled is not a gap.
   const shownConsiderations = gapsOnly ? dayConsiderations.filter((t) => !t.done) : dayConsiderations;
   const shownActionItems = gapsOnly ? dayActionItems.filter((item) => !actionItemsDone[item.id]) : dayActionItems;
+  // Items already written into the itinerary (an entry links back to them), with the first day each is on.
+  const linkedOn = linkedItems(days ?? [d]);
   // To-dos and considerations that cover this day are tiles too; a time only counts on the item's own first day.
+  // Once an entry has been written from an item, the entry is the tile (its votes are the History
+  // folded into it), so the item doesn't show a second time; it stays in the Under consideration
+  // list, where it can be taken back out of the itinerary.
   const dayItems: DayItem[] = [
     ...shownConsiderations.map((t) => ({ id: t.key.slice("item:".length), task: t, time: (t.scope.kind === "day" ? t.scope.date : t.scope.kind === "range" ? t.scope.start : undefined) === d.date ? t.time : undefined })),
     ...shownActionItems.map((i) => ({ id: i.id, todo: i, time: i.date === d.date ? i.time : undefined })),
-  ];
-  // Items already written into the itinerary (an entry links back to them), with the first day each is on.
-  const linkedOn = linkedItems(days ?? [d]);
+  ].filter((x) => !linkedOn.has(x.id));
   // An entry approved from an item: what was weighed and how the votes went, folded away at the end of the tile.
   const history = (fromItem?: string) => {
     const t = fromItem ? itemTasks?.[fromItem] : undefined;
