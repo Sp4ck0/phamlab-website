@@ -708,8 +708,8 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady, geocodedCandidates, showCandidates]);
 
-  // The AI's marks: a dot above every other pin that pulses for its first minute (MARK_PULSE_MS);
-  // a new call's marks are fitted into view once drawn.
+  // The AI's marks: a dot above every other pin that pulses for its first minute (MARK_PULSE_MS),
+  // or a round pin with the emoji the AI gave it; a new call's marks are fitted into view once drawn.
   useEffect(() => {
     const map = mapInstance.current;
     if (!mapReady || !map) return;
@@ -718,10 +718,16 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
     const made = geocodedMarks.map((p) => {
       const look = document.createElement("div");
       look.className = "map-mark";
-      const icon = markIconSvg(byId.get(p.id)?.icon);
-      if (icon) {
+      // A named icon is drawn white in the dot; any other icon is an emoji (the backend sends
+      // nothing else), shown on a white disc.
+      const icon = byId.get(p.id)?.icon;
+      const svg = markIconSvg(icon);
+      if (svg) {
         look.classList.add("has-icon");
-        look.innerHTML = icon;
+        look.innerHTML = svg;
+      } else if (icon) {
+        look.classList.add("has-emoji");
+        look.textContent = icon;
       }
       const left = (byId.get(p.id)?.at ?? 0) + MARK_PULSE_MS - Date.now();
       if (left > 0) {
