@@ -146,7 +146,7 @@ function TripPageEntry() {
   useEffect(() => {
     if (!markFocus) return;
     consumeMark(markFocus.nonce);
-    setMarks((m) => addMarks(m, markFocus.target.places, markFocus.nonce, Date.now()));
+    setMarks((m) => addMarks(m, markFocus.target.places, markFocus.nonce, Date.now(), markFocus.target.icon));
     setFitMarks(markFocus.nonce);
     if (desktopRef.current) {
       if (!pinnedRef.current) document.getElementById(TRIP_MAP_ID)?.scrollIntoView({ behavior: "smooth", block: "start" });

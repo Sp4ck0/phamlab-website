@@ -6,6 +6,7 @@ import { CATEGORY_COLORS, CATEGORY_EMOJI, CATEGORY_LABELS, MAP_DAY_EVENT, derive
 import type { JumpTarget, MapMark, WeatherStop } from "../../lib/mapPoints";
 import { assignLegColors, fmtShort } from "../../lib/tripLogic";
 import { summarizeStay, temp, weatherIcon, weatherText } from "../../lib/weather";
+import { markIconSvg } from "../../lib/markIcons";
 import { useGeocodedPoints } from "../../hooks/useGeocodedPoints";
 import { useSettings, type TempUnit } from "../../hooks/useSettings";
 import { MAP_ID, loadGoogleMaps } from "../../lib/googleMaps";
@@ -717,9 +718,15 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
     const made = geocodedMarks.map((p) => {
       const look = document.createElement("div");
       look.className = "map-mark";
+      // A named icon is drawn white in the dot; any other icon is an emoji (the backend sends
+      // nothing else), shown on a white disc.
       const icon = byId.get(p.id)?.icon;
-      if (icon) {
+      const svg = markIconSvg(icon);
+      if (svg) {
         look.classList.add("has-icon");
+        look.innerHTML = svg;
+      } else if (icon) {
+        look.classList.add("has-emoji");
         look.textContent = icon;
       }
       const left = (byId.get(p.id)?.at ?? 0) + MARK_PULSE_MS - Date.now();

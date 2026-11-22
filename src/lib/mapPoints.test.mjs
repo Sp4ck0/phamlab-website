@@ -74,13 +74,32 @@ test("the AI's marks add up; marking a place again moves it to the new call; a p
   assert.deepEqual(marks.map((m) => [m.name, m.batch, m.at]), [['Museum', 'n2', 2000], ['Tower', 'n2', 2000]]);
 });
 
-test("a mark keeps the emoji the AI gave it; marking the place again takes the new call's icon", async () => {
+test("a place's own icon (an emoji) wins over the call's; marking it again takes the new call's icon", async () => {
   const { addMarks } = await import('./mapPoints.ts');
   const tower = { name: 'Tower', placeId: 'P-tower' };
-  let marks = addMarks([], [{ ...tower, icon: '🗼' }], 'n1', 1000);
-  assert.deepEqual(marks.map((m) => [m.name, m.icon]), [['Tower', '🗼']]);
+  const museum = { name: 'Museum', placeId: 'P-museum' };
+  let marks = addMarks([], [{ ...tower, icon: '🗼' }, museum], 'n1', 1000, 'camera');
+  assert.deepEqual(marks.map((m) => [m.name, m.icon]), [['Tower', '🗼'], ['Museum', 'camera']]);
   marks = addMarks(marks, [tower], 'n2', 2000);
-  assert.deepEqual(marks.map((m) => [m.name, m.icon]), [['Tower', undefined]]);
+  assert.deepEqual(marks.map((m) => [m.name, m.icon]), [['Museum', 'camera'], ['Tower', undefined]]);
+});
+
+test("a call's icon goes on each of its marks; marking a place again takes the new call's icon", async () => {
+  const { addMarks } = await import('./mapPoints.ts');
+  const tower = { name: 'Tower', placeId: 'P-tower' };
+  let marks = addMarks([], [tower], 'n1', 1000, 'camera');
+  assert.equal(marks[0].icon, 'camera');
+  marks = addMarks(marks, [tower], 'n2', 2000);
+  assert.equal(marks[0].icon, undefined);
+});
+
+test('the site draws every icon the backend offers, and nothing else', async () => {
+  const { MARK_ICON_NAMES, markIconSvg } = await import('./markIcons.ts');
+  // The backend's MARK_ICONS (phamlab convex/mcpTools.ts).
+  const backend = ['landmark', 'utensils', 'coffee', 'bar', 'shopping-bag', 'camera', 'museum', 'park', 'beach', 'hotel', 'train', 'plane', 'star', 'pin'];
+  assert.deepEqual([...MARK_ICON_NAMES].sort(), [...backend].sort());
+  for (const name of backend) assert.match(markIconSvg(name), /^<svg /);
+  for (const name of [undefined, '', 'dragon', 'constructor', 'toString']) assert.equal(markIconSvg(name), undefined);
 });
 
 test('a derived task (not a stored item) has no ghost pin', () => {
