@@ -326,14 +326,32 @@ export function DayCard({
   const rideApps = rideAppsFor([d.country, d.toCountry]);
   const touch = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
   // The label says "to location"; a card with several places names each one (cut short) instead.
+  // In China, where DiDi has no link that takes a destination, the item copies the name and opens DiDi.
   const rideItems = (p: Place | undefined, several = false): TileMenuItem[] => {
-    if (!p?.name || !placeKey(p)) return [];
-    return rideApps.filter((app) => app === "uber" || touch).map((app): TileMenuItem => {
-      const label = `${RIDE_APPS[app].label} to ${several ? (p.name.length > 22 ? `${p.name.slice(0, 21).trimEnd()}…` : p.name) : "location"}`;
+    if (!p?.name) return [];
+    const short = several ? (p.name.length > 22 ? `${p.name.slice(0, 21).trimEnd()}…` : p.name) : "";
+    return rideApps.filter((app) => app === "uber" || touch).flatMap((app): TileMenuItem[] => {
+      // DiDi takes no destination in a link, so the name goes on the clipboard to paste into its destination box.
+      if (app === "didi") {
+        return [{
+          label: `Copy ${short || "name"} & open DiDi`,
+          icon: "didi",
+          onSelect: async () => {
+            try {
+              await navigator.clipboard.writeText(p.name);
+            } catch {
+              return "Couldn't copy the name";
+            }
+            window.location.href = "diditaxi://";
+          },
+        }];
+      }
+      if (!placeKey(p)) return [];
+      const label = `${RIDE_APPS[app].label} to ${short || "location"}`;
       const target = (at: { lat: number; lng: number }) => ({ ...at, name: p.name, address: p.address });
       const known = cachedLatLng(p);
-      if (known) return { label, icon: app, href: rideUrl(app, target(known)), sameTab: app === "grab" };
-      return {
+      if (known) return [{ label, icon: app, href: rideUrl(app, target(known)), sameTab: app === "grab" }];
+      return [{
         label,
         icon: app,
         onSelect: async () => {
@@ -343,7 +361,7 @@ export function DayCard({
           if (app === "grab") window.location.href = url;
           else if (!window.open(url, "_blank", "noopener")) return "Tap again to open Uber";
         },
-      };
+      }];
     });
   };
   // The booked toggle (the check that used to sit on the row).

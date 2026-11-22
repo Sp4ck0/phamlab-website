@@ -1,12 +1,14 @@
-// Grab and Uber links for a place, and which of them exist where the traveller is.
+// Grab and Uber links for a place (and DiDi, which has none), and which of them exist where the traveller is.
 
-export type RideApp = "grab" | "uber";
+export type RideApp = "grab" | "uber" | "didi";
 
 // Where each app takes bookings, as ISO country codes. Add a code here when the app launches
 // somewhere; leave a country out when unsure, since a button for an app that isn't there is worse
 // than no button. This is the only place the countries are listed.
 export const RIDE_APPS: Record<RideApp, { label: string; countries: ReadonlySet<string> }> = {
   grab: { label: "Grab", countries: new Set(["SG", "MY", "TH", "VN", "ID", "PH", "KH", "MM"]) },
+  // DiDi has no public link that takes a destination, so it is a copy-the-name-and-open item (see DayCard).
+  didi: { label: "DiDi", countries: new Set(["CN"]) },
   uber: {
     label: "Uber",
     countries: new Set([
@@ -53,4 +55,4 @@ export function uberUrl({ lat, lng, name, address }: RideTarget): string {
   return `https://m.uber.com/ul/?${q.toString().replace(/\+/g, "%20")}`;
 }
 
-export const rideUrl = (app: RideApp, t: RideTarget): string => (app === "grab" ? grabUrl(t) : uberUrl(t));
+export const rideUrl = (app: Exclude<RideApp, "didi">, t: RideTarget): string => (app === "grab" ? grabUrl(t) : uberUrl(t));
