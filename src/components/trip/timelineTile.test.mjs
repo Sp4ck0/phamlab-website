@@ -108,3 +108,36 @@ test('the next-up line stays in the header while the tile is closed', () => {
   assert.ok(view.container.querySelector('li.next-up'));
   view.close();
 });
+
+test('every ⋯ menu has the same order, whatever order the card lists its actions in, with a line between groups', async () => {
+  const { TileMenu } = await import('./TileMenu.tsx');
+  const items = [
+    { label: 'Copy link', icon: 'link', onSelect() {} },
+    { label: 'See photo credit', icon: 'photo', href: 'https://example.com/p' },
+    { label: 'Add to Google Calendar', icon: 'calendar', href: 'https://example.com/cal' },
+    { label: 'Open in Google Maps', icon: 'pin', href: 'https://example.com/maps' },
+    { label: 'Call', icon: 'phone', href: 'tel:0' },
+    { label: 'Show on the trip map', icon: 'map', onSelect() {} },
+    { label: 'Open in list', icon: 'list', onSelect() {} },
+    { label: 'Mark as booked', icon: 'check', onSelect() {} },
+    { label: 'Ticket', icon: 'ticket', href: 'https://example.com/t' },
+  ];
+  const view = mount(h(TileMenu, { label: 'Synthetic', items }));
+  try {
+    act(() => view.container.querySelector('.tl-menu-btn').click());
+    const list = view.container.querySelector('[role=menu]');
+    const rows = [...list.children].map((el) => (el.getAttribute('role') === 'separator' ? '—' : el.textContent));
+    assert.deepEqual(rows, [
+      'Mark as booked', '—',
+      'Call', 'Ticket', '—', // the card's own order kept within a group
+      'Show on the trip map', 'Open in Google Maps', '—',
+      'Add to Google Calendar', '—',
+      'Open in list', 'Copy link', '—',
+      'See photo credit',
+    ]);
+    // The first action has focus, and the arrow keys skip the lines.
+    assert.equal(document.activeElement.textContent, 'Mark as booked');
+    act(() => list.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })));
+    assert.equal(document.activeElement.textContent, 'Call');
+  } finally { view.close(); }
+});

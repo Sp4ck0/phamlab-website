@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { Fragment, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { MENU_ICONS, type MenuIcon } from "../../lib/menuIcons";
 
 // One action in a card's "⋯" menu: a link (opens in a new tab) or something to do. An action
@@ -14,6 +14,27 @@ export type TileMenuItem = {
 };
 
 const INTERACTIVE = "button, a, input, label, select, textarea, summary";
+
+// The order every menu follows, whatever order its card lists its actions in (each action's icon
+// says what kind it is): what you do to the card itself first, then its own shortcuts, then where
+// it is (on the trip map before Google Maps), then the calendar, then finding and sharing it, and
+// the photo credit last. A thin line separates the groups; within one, the card's order is kept.
+const RANK: Record<MenuIcon, number> = {
+  check: 0, uncheck: 0, yes: 0, no: 0, add: 0, edit: 0, expand: 0, collapse: 0,
+  phone: 10, ticket: 10, search: 10,
+  map: 20, pin: 21,
+  calendar: 30,
+  list: 40, link: 41,
+  photo: 50,
+};
+const rankOf = (it: TileMenuItem) => (it.icon ? RANK[it.icon] : 40);
+const groupOf = (it: TileMenuItem) => Math.floor(rankOf(it) / 10);
+
+/** The items in menu order (stable within a rank), each marking whether a new group starts with it. */
+function orderMenu(items: TileMenuItem[]): { item: TileMenuItem; newGroup: boolean }[] {
+  const sorted = items.map((item, i) => ({ item, i })).sort((a, b) => rankOf(a.item) - rankOf(b.item) || a.i - b.i);
+  return sorted.map(({ item }, k) => ({ item, newGroup: k > 0 && groupOf(item) !== groupOf(sorted[k - 1].item) }));
+}
 
 // A card's actions behind one "⋯" button: every action the card has, each with its icon.
 // Arrow keys move between items; Escape, a click outside or an action closes it. A tap that
@@ -95,26 +116,28 @@ export function TileMenu({ label, items }: { label: string; items: TileMenuItem[
       </button>
       {open && (
         <span className="tl-menu-list" role="menu" id={listId} aria-label={label} onKeyDown={onListKey}>
-          {items.map((it) =>
-            it.href && !it.disabled ? (
-              <a key={it.label} role="menuitem" tabIndex={-1} href={it.href} {...(it.sameTab ? {} : { target: "_blank", rel: "noopener noreferrer" })} onClick={() => done()}>
-                {icon(it)}
-                {it.label}
-              </a>
-            ) : (
-              <button
-                key={it.label}
-                role="menuitem"
-                type="button"
-                tabIndex={-1}
-                aria-disabled={it.disabled || undefined}
-                onClick={async () => { if (!it.disabled) done(await it.onSelect?.()); }}
-              >
-                {icon(it)}
-                {it.label}
-              </button>
-            )
-          )}
+          {orderMenu(items).map(({ item: it, newGroup }) => (
+            <Fragment key={it.label}>
+              {newGroup && <span role="separator" className="tl-menu-sep" />}
+              {it.href && !it.disabled ? (
+                <a role="menuitem" tabIndex={-1} href={it.href} {...(it.sameTab ? {} : { target: "_blank", rel: "noopener noreferrer" })} onClick={() => done()}>
+                  {icon(it)}
+                  {it.label}
+                </a>
+              ) : (
+                <button
+                  role="menuitem"
+                  type="button"
+                  tabIndex={-1}
+                  aria-disabled={it.disabled || undefined}
+                  onClick={async () => { if (!it.disabled) done(await it.onSelect?.()); }}
+                >
+                  {icon(it)}
+                  {it.label}
+                </button>
+              )}
+            </Fragment>
+          ))}
         </span>
       )}
       <span role="status" className="share-status">{note}</span>
