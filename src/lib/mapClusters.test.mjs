@@ -33,6 +33,14 @@ test('pins either side of the date line are close, not a world apart', () => {
   assert.deepEqual(clusterPoints([{ lat: 0, lng: 179.99 }, { lat: 0, lng: -179.99 }], 8), [[0, 1]]);
 });
 
+test('pins side by side stay apart; only pins that cover each other share a bubble', () => {
+  // At zoom 10 one degree of longitude is about 728px on the equator.
+  const px = 360 / (256 * 2 ** 10);
+  const a = { lat: 0, lng: 100 };
+  assert.deepEqual(clusterPoints([a, { lat: 0, lng: 100 + 30 * px }], 10), [[0], [1]]);
+  assert.deepEqual(clusterPoints([a, { lat: 0, lng: 100 + 15 * px }], 10), [[0, 1]]);
+});
+
 test('no pins, no groups', () => {
   assert.deepEqual(clusterPoints([], 5), []);
 });

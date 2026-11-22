@@ -1,10 +1,11 @@
 // Trip map clustering: zoomed out, pins that would sit on top of each other merge into one bubble
 // with their count; zooming in splits a bubble into smaller ones and then into the pins themselves.
 
-// Pins closer than this on screen (pins are 30px across) share a bubble.
-export const CLUSTER_RADIUS_PX = 40;
-// From this zoom in (a few streets on screen) every pin shows on its own.
-export const CLUSTER_MAX_ZOOM = 15;
+// Pins closer than this on screen share a bubble: pins are 30px across, so only ones that really
+// cover each other; pins side by side still show.
+export const CLUSTER_RADIUS_PX = 24;
+// From this zoom in (about one city on screen) every pin shows on its own.
+export const CLUSTER_MAX_ZOOM = 13;
 
 interface LatLng {
   lat: number;
