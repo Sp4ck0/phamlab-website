@@ -22,7 +22,7 @@ const INTERACTIVE = "button, a, input, label, select, textarea, summary";
 const RANK: Record<MenuIcon, number> = {
   check: 0, uncheck: 0, yes: 0, no: 0, add: 0, edit: 0, expand: 0, collapse: 0,
   phone: 10, ticket: 10, search: 10,
-  map: 20, pin: 21, grab: 22, uber: 22,
+  map: 20, pin: 21, grab: 22, uber: 22, didi: 22,
   calendar: 30,
   list: 40, link: 41,
   photo: 50,

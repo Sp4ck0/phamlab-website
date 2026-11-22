@@ -16,6 +16,11 @@ test('Uber is offered where it runs and not elsewhere', () => {
   assert.ok(!rideAppsFor(['VN']).includes('uber'));
 });
 
+test('China offers DiDi, which has no link of its own', () => {
+  assert.deepEqual(rideAppsFor(['CN']), ['didi']);
+  assert.deepEqual(rideAppsFor(['US', 'CN']), ['didi', 'uber']);
+});
+
 test('a travel day offers the apps of both its countries, and codes are case-insensitive', () => {
   assert.deepEqual(rideAppsFor(['us', 'TH']), ['grab', 'uber']);
   assert.deepEqual(rideAppsFor([undefined, 'sg']), ['grab']);

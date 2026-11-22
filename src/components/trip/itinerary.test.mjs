@@ -1243,6 +1243,15 @@ test('a place offers Uber or Grab to it only where that app runs; Grab only on a
     assert.match(menuItem(th, 'Grab to location').getAttribute('href'), /^grab:\/\/open\?screenType=BOOKING&dropOffLatitude=1\.5&/);
     assert.equal(menuItem(th, 'Grab to location').getAttribute('target'), null);
     assert.match(menuItem(th, 'Grab to location').querySelector('.tl-menu-icon svg rect').getAttribute('style'), /#00b14f/); // Grab's own mark
+    // China: DiDi has no link that takes a destination, so on a phone the item copies the name and opens DiDi
+    // (even for a place with only a name); on a computer there is nothing to open.
+    const bare = { ...withCountry('CN'), acts: [{ text: 'Synthetic noodles', places: [{ name: 'Synthetic Noodle Shop' }] }] };
+    const cn = mount(React.createElement(DayCard, { ...props, day: bare, days: [bare], expanded: true }));
+    try {
+      const items = openMenu(cn.container.querySelector('.tl-tile'));
+      assert.deepEqual(items.map((i) => i.textContent).filter((t) => /DiDi/.test(t)), ['Copy name & open DiDi']);
+      assert.equal(menuItem(items, 'Copy name & open DiDi').tagName, 'BUTTON');
+    } finally { cn.close(); }
     // A card with several places names each one, cut short, so the items can be told apart.
     const two = { ...withCountry('TH'), acts: [{ text: 'Synthetic walk', places: [place, { name: 'Synthetic Museum With A Very Long Name', address: 'Other street' }] }] };
     const multi = mount(React.createElement(DayCard, { ...props, day: two, days: [two], expanded: true }));
