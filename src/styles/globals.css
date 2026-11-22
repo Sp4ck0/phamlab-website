@@ -508,7 +508,10 @@ button.route-chip[aria-expanded=true]{box-shadow:inset 0 0 0 1.5px var(--text-mu
    pinned at z-index 6 on a phone; inside it, the day's own menu sits above its open/close chevron (2). */
 .day-card:has(.tl-menu-list){z-index:7}
 .day-card:has(> .day-heading .tl-menu-list) .day-tools{z-index:3}
-.tl-menu-list{position:absolute;right:0;top:calc(100% + 2px);z-index:30;display:flex;flex-direction:column;min-width:230px;padding:4px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.28);cursor:default}
+/* A header with a place photo is isolated (its own layer), which would trap its open menu under the
+   chevron notch (1) and the open body below it; raised while the menu is open, it sits above both. */
+.tl-head:has(.tl-menu-list){z-index:3}
+.tl-menu-list{position:absolute;right:0;top:calc(100% + 2px);z-index:30;display:flex;flex-direction:column;min-width:230px;max-width:min(340px,calc(100vw - 32px));padding:4px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.28);cursor:default}
 .tl-menu-list>*{display:flex;align-items:center;gap:10px;text-align:left;font:inherit;font-size:13.5px;font-weight:500;color:var(--text-primary);background:transparent;border:0;border-radius:8px;padding:9px 10px;text-decoration:none;cursor:pointer;white-space:nowrap}
 .tl-menu-list>*:hover,.tl-menu-list>*:focus-visible{background:var(--chip-bg);outline:none}
 .tl-menu-list>*:focus-visible{box-shadow:inset 0 0 0 2px var(--accent-1)}
@@ -517,6 +520,8 @@ button.route-chip[aria-expanded=true]{box-shadow:inset 0 0 0 1.5px var(--text-mu
 /* Between groups of actions (see TileMenu's order). */
 .tl-menu-list>.tl-menu-sep{height:1px;padding:0;margin:4px 8px;background:var(--border);border-radius:0;cursor:default}
 .tl-menu-list>.tl-menu-sep:hover{background:var(--border)}
+/* A long label (a place's full name) is cut with an ellipsis; the full text is the item's tooltip. */
+.tl-menu-label{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .tl-menu-icon{display:inline-grid;place-items:center;flex:none;width:18px;height:18px;color:var(--text-secondary)}
 .tl-menu-icon svg{width:16px;height:16px}
 /* Body: the card's own content, revealed with a short fade. */

@@ -322,16 +322,17 @@ export function DayCard({
   // tap looks them up, and a second tap opens it if the browser blocked the new tab.
   const rideApps = rideAppsFor([d.country, d.toCountry]);
   const touch = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
-  const rideItems = (p: Place | undefined): TileMenuItem[] => {
+  // The label says "to location"; a card with several places names each one (cut short) instead.
+  const rideItems = (p: Place | undefined, several = false): TileMenuItem[] => {
     if (!p?.name || !placeKey(p)) return [];
     return rideApps.filter((app) => app === "uber" || touch).map((app): TileMenuItem => {
-      const label = `${RIDE_APPS[app].label} to ${p.name}`;
+      const label = `${RIDE_APPS[app].label} to ${several ? (p.name.length > 22 ? `${p.name.slice(0, 21).trimEnd()}…` : p.name) : "location"}`;
       const target = (at: { lat: number; lng: number }) => ({ ...at, name: p.name, address: p.address });
       const known = cachedLatLng(p);
-      if (known) return { label, icon: "car", href: rideUrl(app, target(known)), sameTab: app === "grab" };
+      if (known) return { label, icon: app, href: rideUrl(app, target(known)), sameTab: app === "grab" };
       return {
         label,
-        icon: "car",
+        icon: app,
         onSelect: async () => {
           const at = await geocodePlace(p);
           if (!at) return "Couldn't find this place on the map";
@@ -486,10 +487,10 @@ export function DayCard({
         menu: [
           ...(onEditActivity ? [{ label: "Edit", icon: "edit" as const, onSelect: () => setEditingAct(ai) }] : []),
           ...mapsItem(named[0], named.length > 1 ? `Open ${named[0]?.name} in Google Maps` : undefined),
-          ...rideItems(named[0]),
+          ...rideItems(named[0], named.length > 1),
           copyItem({ day: d.date, tile: `act:${ai}` }),
           ...calendarItem(actUrl(a, d, dayNumber, ai)),
-          ...named.slice(1).flatMap((p) => [...mapsItem(p, `Open ${p.name} in Google Maps`), ...rideItems(p)]),
+          ...named.slice(1).flatMap((p) => [...mapsItem(p, `Open ${p.name} in Google Maps`), ...rideItems(p, true)]),
           ...onMapItems(named),
         ],
         headerEnd: live?.pill,

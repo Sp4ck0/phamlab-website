@@ -1107,12 +1107,6 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
           )}
         </div>
       </div>
-      <p className="section-sub">
-        Where you're staying, planned stops that have an address, and each city on the route, joined in travel order
-        with the weather for each stay. Tap a pin or weather label for details.
-        {geocodedCandidates.length > 0 && " Dashed rings are places for ideas and to-dos that aren't settled yet."}
-      </p>
-
       {status === "error" && (
         <div className="note">
           Couldn't load the map{error ? `: ${error}` : ""}. Make sure{" "}
