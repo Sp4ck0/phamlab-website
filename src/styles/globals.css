@@ -981,13 +981,10 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
      right and today's badge top left, then the summary. Expand-all and share sit on the banner's top right. */
   /* The header (photo, day, date, place, weather) pins under the date strip while its day scrolls by,
      so a long day never loses its date; the summary below it scrolls away. DayNav sets --daynav-bottom.
-     The tabs and the date strip move with the reader's scrolling (hideBars.ts writes --bars-shift on the
-     trip page, 0 = shown): they slide up under the site's top bar as far as the reader scrolls down and
-     come back as far as they scroll up, and the header pins that much higher (--pinned-top). Sticky
-     `top`, not a transform, so a strip not pinned yet stays where it is in the page. */
-  .trip-page{--pinned-top:calc(var(--daynav-bottom,176px) - var(--bars-shift,0px))}
-  .trip-tabs-bar{top:calc(56px - var(--bars-shift,0px))}
-  .daynav-shell{top:calc(112px - var(--bars-shift,0px))}
+     The tabs and the date strip scroll away with the page and come back with it (hideBars.ts). While
+     they are away the header pins at the site bar instead (--pinned-top, set on the trip page) and is
+     moved down under whatever is left of them. */
+  .trip-page{--pinned-top:var(--daynav-bottom,176px)}
   .day-heading{display:block;position:sticky;top:var(--pinned-top);z-index:6;background:var(--card);border-radius:11px 11px 0 0}
   /* While it is pinned (DayCard sets data-stuck), the tiles fade out as they slide under it and back in
      as they come out, instead of being cut off at its edge. */

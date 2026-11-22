@@ -1,35 +1,30 @@
-// The phone bars follow the reader's scrolling: the shift is how far they have slid up under the site bar.
+// The phone bars ride the page's own scrolling; these are the placements done at the hand-overs.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { nextShift, settleTarget } from './hideBars.ts';
+import { headerOffset, releaseOffset, settleShown, stackOffsets } from './hideBars.ts';
 
-const H = 120; // tabs + date strip
-
-test('they move 1:1 with the scroll, both ways, and a partial scroll leaves them partly shown', () => {
-  let s = nextShift(0, 30, 530, H); // down 30
-  assert.equal(s, 30);
-  s = nextShift(s, 45, 575, H); // down 45 more
-  assert.equal(s, 75);
-  s = nextShift(s, -20, 555, H); // up 20: 20px of them comes back
-  assert.equal(s, 55);
+test('released, a bar keeps exactly where it is on screen, and is never pulled above its place in the page', () => {
+  assert.equal(releaseOffset(56, -200), 256); // pinned under the site bar, its place long scrolled by
+  assert.equal(releaseOffset(56, 56), 0); // at the top of the page: already in its place
+  assert.equal(releaseOffset(300, 340), 0); // still further down the page than the pin line
 });
 
-test('they stop at fully shown and fully hidden', () => {
-  assert.equal(nextShift(100, 80, 900, H), H);
-  assert.equal(nextShift(10, -80, 800, H), 0);
-});
-
-test('never hidden further than the page has been scrolled, so at the top they are all there', () => {
-  assert.equal(nextShift(0, 40, 40, H), 40);
-  assert.equal(nextShift(90, -60, 30, H), 30);
-  assert.equal(nextShift(50, -70, 0, H), 0);
-  assert.equal(nextShift(50, -90, -30, H), 0); // iOS bounces past the top
+test('stacked just hidden behind the site bar, or fully shown under it', () => {
+  const bars = [{ natural: -900, height: 56 }, { natural: -844, height: 67 }];
+  assert.deepEqual(stackOffsets(bars, 56, 'bottom'), [56 - 123 + 900, 56 - 67 + 844]); // bottom at 56
+  assert.deepEqual(stackOffsets(bars, 56, 'top'), [956, 956]); // tabs at 56, strip right under them
+  // Near the top of the page the date strip is still in its place, lower down: it stays there.
+  assert.deepEqual(stackOffsets([{ natural: 20, height: 56 }, { natural: 400, height: 67 }], 56, 'bottom'), [0, 0]);
 });
 
 test('when scrolling stops halfway they settle to the nearer end', () => {
-  assert.equal(settleTarget(40, H), 0);
-  assert.equal(settleTarget(70, H), H);
-  assert.equal(settleTarget(0, H), 0);
-  assert.equal(settleTarget(H, H), H);
-  assert.equal(settleTarget(90, 50), 50); // near the top, fully hidden is only as far as scrolled
+  assert.equal(settleShown(40, 123), true);
+  assert.equal(settleShown(80, 123), false);
+});
+
+test('a pinned day header sits under what is left of the bars, but never leaves its day or moves up', () => {
+  assert.equal(headerOffset(56, 139, 900), 83); // bars partly shown: under the strip's bottom
+  assert.equal(headerOffset(56, 56, 900), 0); // bars gone: at the site bar
+  assert.equal(headerOffset(300, 139, 900), 0); // not pinned yet: left where it is
+  assert.equal(headerOffset(40, 139, 100), 60); // its day is ending: pushed up with it
 });
