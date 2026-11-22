@@ -1,4 +1,4 @@
-import type { Act, MapCategory, MapPointData, Place, ResolvedDay, Task, Trip } from "./types";
+import type { Act, MapCategory, MapPointData, Place, ResolvedDay, Task, TaskScope } from "./types";
 import { actParts, fmtShort } from "./tripLogic";
 import { isPlaceholderHotel } from "./tileHeaders";
 import type { DayWeather } from "./weather";
@@ -139,15 +139,15 @@ export function inlinePlaces(text: string, places: Place[] = []): { html: string
   return { html, rest };
 }
 
-// Hotels, activity places and the trip's curated POIs all share the Place
-// shape, so they dedupe on the same key; a second thing at an existing place
+// Every pin comes from the itinerary, so it comes and goes with its entry. Hotels and
+// activity places share the Place shape, so they dedupe on the same key; a second thing at an existing place
 // (an event at the hotel you're staying in) adds a line to that pin's note
 // instead of vanishing. Places with neither a Place ID nor an address can't
 // be pinned. Every day also carries a city/country regardless of whether any
 // place is filled in yet, so fall back to a city-level pin for any city that
 // isn't otherwise represented — this is what gives a trip like Thailand (no
 // precise hotel addresses yet) a usable map at all.
-export function derivePoints(days: ResolvedDay[], mapPoints: Trip["mapPoints"]): MapPointData[] {
+export function derivePoints(days: ResolvedDay[]): MapPointData[] {
   const points: MapPointData[] = [];
   const byKey = new Map<string, MapPointData>();
   const citiesWithPoint = new Set<string>();
@@ -174,8 +174,6 @@ export function derivePoints(days: ResolvedDay[], mapPoints: Trip["mapPoints"]):
       add({ id: `hotel-${h.src}`, name: h.name || "Hotel", address: h.address, placeId: h.placeId, category: "hotel" }, d.city, d.date);
     });
   });
-
-  (mapPoints || []).forEach((p) => add(p));
 
   days.forEach((d) => {
     d.acts.forEach((a, i) => {
@@ -211,25 +209,49 @@ export function derivePoints(days: ResolvedDay[], mapPoints: Trip["mapPoints"]):
   return points;
 }
 
-// Pins for the places on action items that aren't part of the plan itself:
-// considerations and to-dos. Open ones are dashed rings; a chosen
-// consideration or a finished to-do is a solid ring; a dropped
-// consideration is gone. A place already pinned for real (`existing`, from
-// derivePoints) or by an earlier item is skipped, so a ring never sits on top of
-// the plan. The id carries the item id (`task|<itemId>|<n>`) so the map can look
-// up the live vote tally at click time instead of rebuilding its pins.
+// The days a task covers, for a pinned map following one day; none for the whole trip.
+function scopeDates(scope: TaskScope): string[] | undefined {
+  if (scope.kind === "day") return [scope.date];
+  if (scope.kind !== "range") return undefined;
+  const out: string[] = [];
+  for (const d = new Date(`${scope.start}T00:00:00Z`); out.length < 366; d.setUTCDate(d.getUTCDate() + 1)) {
+    const iso = d.toISOString().slice(0, 10);
+    if (iso > scope.end) break;
+    out.push(iso);
+  }
+  return out;
+}
+
+// Pins for what isn't in the plan yet: the places on considerations and to-dos, and the
+// hotel or activity an item proposes. The map draws them as ghost pins (open, or chosen /
+// done until the item is added to the itinerary); a dropped consideration has none. Each
+// takes its category from the draft (a hotel, or the activity's tag), else "other", and its
+// item's days. A place already pinned for real (`existing`, from derivePoints) or by an
+// earlier item is skipped, so a ghost never sits on top of the plan; once the item is added,
+// its place is a real pin and the ghost goes. The id carries the item id
+// (`task|<itemId>|<n>`) so the map can look up the live vote tally at click time instead of
+// rebuilding its pins.
 export function deriveTaskPoints(tasks: Task[], existing: MapPointData[]): MapPointData[] {
   const seen = new Set(existing.map(placeKey).filter((k): k is string => !!k));
   const out: MapPointData[] = [];
   for (const t of tasks) {
-    if (!t.places?.length || t.outcome === "dropped") continue;
+    if (!t.key.startsWith("item:") || t.outcome === "dropped") continue;
     const itemId = t.key.slice("item:".length);
     const settled = t.kind === "consider" ? t.outcome === "chosen" : t.done;
-    t.places.forEach((place, j) => {
+    const draft = t.proposes;
+    const draftCategory: MapCategory =
+      draft?.type === "hotel" ? "hotel" : draft?.type === "activity" ? (draft.entry.tag && ACT_CATEGORY[draft.entry.tag]) || "event" : "other";
+    const places: { place: Place; category: MapCategory }[] = [
+      ...(t.places ?? []).map((place) => ({ place, category: draftCategory })),
+      ...(draft?.type === "hotel" ? [{ place: { name: draft.entry.name, address: draft.entry.address, placeId: draft.entry.placeId }, category: "hotel" as const }] : []),
+      ...(draft?.type === "activity" ? (draft.entry.places ?? []).map((place) => ({ place, category: draftCategory })) : []),
+    ];
+    const dates = scopeDates(t.scope);
+    places.forEach(({ place, category }, j) => {
       const key = placeKey(place);
       if (!key || seen.has(key)) return;
       seen.add(key);
-      out.push({ ...place, id: `task|${itemId}|${j}`, category: "other", note: t.title, candidate: settled ? "chosen" : "open" });
+      out.push({ ...place, id: `task|${itemId}|${j}`, category, note: t.title, ...(dates ? { dates } : {}), candidate: settled ? "chosen" : "open" });
     });
   }
   return out;
@@ -242,13 +264,13 @@ export interface JumpTarget {
 
 // Where a pin's popup can send you, by place key. Looked up by place rather than
 // read off the pin's id, because derivePoints keeps one pin per place: an activity at
-// your hotel or a curated point is that pin, whose id says nothing about the day.
+// your hotel is that hotel's pin, whose id says nothing about the activity's day.
 const nameKey = (name: string) => `name:${name.trim().toLowerCase()}`;
 
 export function deriveJumpTargets(days: ResolvedDay[], tasks: Task[]): Map<string, JumpTarget> {
   const out = new Map<string, JumpTarget>();
-  // Filed under the place key and under its name: a pin from a curated point can carry a
-  // different Place ID or address than the day's own entry for the same hotel or venue.
+  // Filed under the place key and under its name: two entries for the same hotel or venue
+  // can carry a different Place ID or address.
   const note = (p: Place, field: keyof JumpTarget, value: string) => {
     const keys = [placeKey(p), p.name?.trim() ? nameKey(p.name) : undefined];
     for (const k of keys) {
@@ -264,7 +286,11 @@ export function deriveJumpTargets(days: ResolvedDay[], tasks: Task[]): Map<strin
   });
   tasks.forEach((task) => {
     if (!task.key.startsWith("item:")) return;
-    (task.places ?? []).forEach((place) => note(place, "item", task.key.slice("item:".length)));
+    const item = task.key.slice("item:".length);
+    (task.places ?? []).forEach((place) => note(place, "item", item));
+    const draft = task.proposes;
+    if (draft?.type === "hotel") note(draft.entry, "item", item);
+    if (draft?.type === "activity") (draft.entry.places ?? []).forEach((place) => note(place, "item", item));
   });
   return out;
 }

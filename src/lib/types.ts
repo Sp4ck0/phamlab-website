@@ -200,7 +200,7 @@ export interface Task {
   editable: boolean;
   // Stored items only.
   priority?: Priority;
-  // Consider only: where it is, how it was settled, and who voted which way.
+  // Stored items: where it is. Consider only: how it was settled, and who voted which way.
   places?: Place[];
   outcome?: Outcome;
   votes?: { yes: string[]; no: string[]; mine: Vote | null };
@@ -221,9 +221,10 @@ export interface MapPointData extends Place {
   category: MapCategory;
   note?: string;
   // The itinerary days (ISO dates) this place belongs to, so a pinned map can show one day.
-  // None: not tied to a day (a curated point of interest).
+  // None: not tied to a day (an action item for the whole trip).
   dates?: string[];
-  // A pin for a consideration (not part of the plan): open, or chosen.
+  // A place not in the plan yet (an action item's place or draft), drawn as a ghost pin:
+  // open, or chosen (a picked consideration or a done to-do).
   candidate?: "open" | "chosen";
 }
 
@@ -241,7 +242,6 @@ export interface Trip {
   days: Day[];
   actionItems?: ActionItem[];
   highlightStat?: HighlightStat;
-  mapPoints?: MapPointData[];
 }
 
 export interface TripSummary {
