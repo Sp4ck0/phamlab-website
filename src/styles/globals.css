@@ -339,6 +339,8 @@ button.route-chip[aria-expanded=true]{box-shadow:inset 0 0 0 1.5px var(--text-mu
 
 /* ── Agenda / Map / Notes tabs ───────────────────────────── */
 .trip-tabs{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;margin:16px 0 4px;padding:4px;background:var(--card);border:1px solid var(--border);border-radius:14px}
+/* Desktop: the map below the agenda; "Show on the trip map" scrolls here, clear of the site menu. */
+.trip-map-section{scroll-margin-top:72px}
 .trip-tab{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:6px 10px;font:inherit;font-size:14px;font-weight:600;color:var(--text-secondary);background:transparent;border:0;border-radius:10px;cursor:pointer}
 .trip-tab:hover{color:var(--text-primary);background:var(--chip-bg)}
 .trip-tab[aria-selected="true"]{color:#fff;background:var(--accent-1);box-shadow:0 2px 10px color-mix(in srgb,var(--accent-1) 35%,transparent)}
