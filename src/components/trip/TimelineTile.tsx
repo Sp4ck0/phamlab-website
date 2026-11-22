@@ -62,7 +62,7 @@ export interface TimelineTileProps {
 }
 
 // Controls inside a card that keep their own click: tapping them never toggles the card.
-const OWN_CLICK = "button, a, input, label, select, textarea, summary, [role=menu]";
+export const OWN_CLICK = "button, a, input, label, select, textarea, summary, [role=menu]";
 
 // One card of a day's agenda. Its icon and time sit in pills set into the top border, the "⋯" menu
 // (every action the card has) at the top right, and an expandable card has a chevron in a notch

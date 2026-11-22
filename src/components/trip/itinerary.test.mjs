@@ -78,6 +78,20 @@ test('controlled closed day keeps its panel findable (until-found) and opens its
     assert.deepEqual(calls, ['toggle']);
   } finally { view.close(); }
 });
+test('a tap anywhere on the day header (the photo, the space under the ⋯) opens or closes the day, once; its own controls keep their click', () => {
+  const calls = [];
+  const view = mount(React.createElement(DayCard, { ...props, onExpandedChange: () => calls.push('toggle') }));
+  try {
+    const heading = view.container.querySelector('.day-heading');
+    act(() => heading.querySelector('.day-photo').click());
+    act(() => heading.querySelector('.day-tools').click()); // the empty space around the ⋯
+    assert.deepEqual(calls, ['toggle', 'toggle']);
+    act(() => heading.querySelector('.day-head-btn .day-date').click()); // the button toggles itself: not twice
+    assert.deepEqual(calls, ['toggle', 'toggle', 'toggle']);
+    act(() => heading.querySelector('.tl-menu-btn').click()); // opening the ⋯ menu doesn't toggle the day
+    assert.deepEqual(calls, ['toggle', 'toggle', 'toggle']);
+  } finally { view.close(); }
+});
 test('full-array occurrence reconciliation retains only unambiguous choices without dropping duplicates', async () => {
   const module = await import('../../lib/itineraryState.ts').catch(() => ({}));
   assert.equal(typeof module.reconcileRows, 'function', 'occurrence reconciliation must be implemented');
