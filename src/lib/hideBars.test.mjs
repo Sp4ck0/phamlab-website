@@ -1,32 +1,35 @@
-// The phone bars' scroll rule: hide after a deliberate scroll down, show after any small scroll up.
+// The phone bars follow the reader's scrolling: the shift is how far they have slid up under the site bar.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { nextBars, HIDE_AFTER, SHOW_AFTER, TOP_ZONE } from './hideBars.ts';
+import { nextShift, settleTarget } from './hideBars.ts';
 
-const run = (ys, start = { hidden: false, lastY: ys[0], anchorY: ys[0] }) =>
-  ys.slice(1).reduce((s, y) => nextBars(s, y), start);
+const H = 120; // tabs + date strip
 
-test('a scroll down of HIDE_AFTER hides them; a shorter nudge does not', () => {
-  assert.equal(run([200, 200 + HIDE_AFTER - 1]).hidden, false);
-  assert.equal(run([200, 210, 200 + HIDE_AFTER]).hidden, true);
+test('they move 1:1 with the scroll, both ways, and a partial scroll leaves them partly shown', () => {
+  let s = nextShift(0, 30, 530, H); // down 30
+  assert.equal(s, 30);
+  s = nextShift(s, 45, 575, H); // down 45 more
+  assert.equal(s, 75);
+  s = nextShift(s, -20, 555, H); // up 20: 20px of them comes back
+  assert.equal(s, 55);
 });
 
-test('any scroll up of SHOW_AFTER brings them back, counted from where it turned', () => {
-  const hidden = run([200, 400]);
-  assert.equal(hidden.hidden, true);
-  assert.equal(nextBars(hidden, 400 - SHOW_AFTER + 1).hidden, true); // a twitch
-  assert.equal(run([400, 395, 400 - SHOW_AFTER], hidden).hidden, false);
+test('they stop at fully shown and fully hidden', () => {
+  assert.equal(nextShift(100, 80, 900, H), H);
+  assert.equal(nextShift(10, -80, 800, H), 0);
 });
 
-test('after coming back, they hide again only after another full scroll down', () => {
-  const shown = run([200, 400, 380]);
-  assert.equal(shown.hidden, false);
-  assert.equal(run([380, 380 + HIDE_AFTER - 1], shown).hidden, false);
-  assert.equal(run([380, 380 + HIDE_AFTER], shown).hidden, true);
+test('never hidden further than the page has been scrolled, so at the top they are all there', () => {
+  assert.equal(nextShift(0, 40, 40, H), 40);
+  assert.equal(nextShift(90, -60, 30, H), 30);
+  assert.equal(nextShift(50, -70, 0, H), 0);
+  assert.equal(nextShift(50, -90, -30, H), 0); // iOS bounces past the top
 });
 
-test('near the top of the page they always show', () => {
-  const hidden = run([200, 400]);
-  assert.equal(nextBars(hidden, TOP_ZONE).hidden, false);
-  assert.equal(nextBars(hidden, -30).hidden, false); // iOS bounces past the top
+test('when scrolling stops halfway they settle to the nearer end', () => {
+  assert.equal(settleTarget(40, H), 0);
+  assert.equal(settleTarget(70, H), H);
+  assert.equal(settleTarget(0, H), 0);
+  assert.equal(settleTarget(H, H), H);
+  assert.equal(settleTarget(90, 50), 50); // near the top, fully hidden is only as far as scrolled
 });

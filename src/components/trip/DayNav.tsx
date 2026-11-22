@@ -64,11 +64,16 @@ export function DayNav({ rows, todayId, currentId, onJump }: { rows: ItineraryRo
     return () => s.removeEventListener("wheel", onWheel);
   }, []);
   // Where the pinned strip ends on screen (--daynav-bottom), for a phone's day header to pin under it.
+  // Always where it ends while shown: its `top` has the bars' current scroll shift taken off (CSS).
   useEffect(() => {
     const s = shell.current;
     if (!s || typeof window.getComputedStyle !== "function") return;
     const root = document.documentElement;
-    const set = () => root.style.setProperty("--daynav-bottom", `${(parseFloat(window.getComputedStyle(s).top) || 0) + s.offsetHeight}px`);
+    const set = () => {
+      const style = window.getComputedStyle(s);
+      const top = (parseFloat(style.top) || 0) + (parseFloat(style.getPropertyValue("--bars-shift")) || 0);
+      root.style.setProperty("--daynav-bottom", `${top + s.offsetHeight}px`);
+    };
     set();
     const ro = typeof ResizeObserver === "function" ? new ResizeObserver(set) : undefined;
     ro?.observe(s);
