@@ -504,7 +504,11 @@ button.route-chip[aria-expanded=true]{box-shadow:inset 0 0 0 1.5px var(--text-mu
 .tl-tile.is-open .tl-chev{transform:rotate(180deg)}
 /* The "⋯" menu: an icon before every action. */
 .tl-menu{position:relative;display:inline-flex}
-.tl-entry:has(.tl-menu-list),.day-card:has(> .day-heading .tl-menu-list){z-index:5}
+.tl-entry:has(.tl-menu-list){z-index:5}
+/* A day with a menu open (its own or a tile's) sits above the days around it, whose headers are
+   pinned at z-index 6 on a phone; inside it, the day's own menu sits above its open/close chevron (2). */
+.day-card:has(.tl-menu-list){z-index:7}
+.day-card:has(> .day-heading .tl-menu-list) .day-tools{z-index:3}
 .tl-menu-list{position:absolute;right:0;top:calc(100% + 2px);z-index:30;display:flex;flex-direction:column;min-width:230px;padding:4px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.28);cursor:default}
 .tl-menu-list>*{display:flex;align-items:center;gap:10px;text-align:left;font:inherit;font-size:13.5px;font-weight:500;color:var(--text-primary);background:transparent;border:0;border-radius:8px;padding:9px 10px;text-decoration:none;cursor:pointer;white-space:nowrap}
 .tl-menu-list>*:hover,.tl-menu-list>*:focus-visible{background:var(--chip-bg);outline:none}
