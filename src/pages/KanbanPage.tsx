@@ -81,6 +81,16 @@ export function KanbanPage() {
   // Which way the last lane change went, for the slide-in; and where a touch began, for swiping.
   const [slide, setSlide] = useState<"next" | "prev" | null>(null);
   const touchStart = useRef<{ x: number; y: number; t: number } | null>(null);
+  // When the current finger went down, and when anything on the page last scrolled: a touch
+  // that has started scrolling a column must not also pick up a card (the browser won't let
+  // go of a scroll once it has begun, so both would happen at once).
+  const touchDownAt = useRef<number | null>(null);
+  const scrolledAt = useRef(0);
+  useEffect(() => {
+    const onScroll = () => (scrolledAt.current = performance.now());
+    document.addEventListener("scroll", onScroll, { capture: true, passive: true });
+    return () => document.removeEventListener("scroll", onScroll, { capture: true });
+  }, []);
 
   const [openId, setOpenId] = useState<string | null>(null);
   // The board only holds tile summaries; the open card is loaded whole.
@@ -224,18 +234,32 @@ export function KanbanPage() {
 
   return (
     <PageShell fullWidth>
-      <div className="kanban-app" ref={fitToViewport}>
+      <div
+        className="kanban-app"
+        ref={fitToViewport}
+        onPointerDownCapture={(e) => {
+          touchDownAt.current = e.pointerType === "touch" ? performance.now() : null;
+        }}
+      >
         <DragDropProvider
           sensors={[
             PointerSensor.configure({
               activationConstraints(event) {
+                // On a phone, picking up is a press-and-hold with the finger nearly still;
+                // more movement than that is a scroll.
                 return event.pointerType === "touch"
-                  ? [new PointerActivationConstraints.Delay({ value: 200, tolerance: { x: 10, y: 10 } })]
+                  ? [new PointerActivationConstraints.Delay({ value: 200, tolerance: 5 })]
                   : [new PointerActivationConstraints.Distance({ value: 4 })];
               },
             }),
             KeyboardSensor,
           ]}
+          onBeforeDragStart={(event) => {
+            // This touch is already scrolling a column: let it scroll, don't also drag.
+            if (touchDownAt.current !== null && scrolledAt.current >= touchDownAt.current) {
+              event.preventDefault();
+            }
+          }}
           onDragStart={() => {
             // A drag is not a swipe, however fast the finger moves.
             touchStart.current = null;
