@@ -1082,6 +1082,10 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
 
   /* Tap targets and inputs */
   .vote-btn,.ai-btn,.add-btn,.ai-chip,.undo-bar button,.export-menu-list button{min-height:44px}
+  /* The 👍 / 👎 on a tile look as small as the state chip beside them, but keep a 44px tap area (a transparent
+     extension of the button, as wide as the gap between the two so they never overlap). */
+  .tl-votes .vote-btn{position:relative;min-height:0;padding:0 9px;font-size:12px;line-height:16px}
+  .tl-votes .vote-btn::after{content:"";position:absolute;inset:-13px -3px}
   .day-link{padding:10px 0}
   .navtoggle{width:44px;height:44px}
   .trip-note-close{min-width:44px;min-height:44px}

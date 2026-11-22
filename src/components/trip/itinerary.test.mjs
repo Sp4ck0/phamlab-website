@@ -1094,22 +1094,37 @@ test('a consideration proposing a hotel shows it as a Proposed tile, and Add to 
   } finally { view.close(); }
 });
 
-test('an entry approved from an item shows its History (wording and votes), and the item says where it is and can go back', async () => {
+test('an entry approved from an item shows its History (wording and votes), and the item is not drawn a second time on the day', () => {
   const synthetic = { ...day, acts: [{ text: 'Synthetic chosen dinner', time: '19:00', fromItem: 'dinner' }] };
   const task = consider('dinner', { title: 'Synthetic dinner idea', detail: 'Synthetic reason', done: true, outcome: 'chosen', votes: { yes: ['Ann', 'Ben'], no: ['Cy'], mine: null } });
-  const back = [];
-  const view = mount(React.createElement(DayCard, { ...props, day: synthetic, days: [synthetic], expanded: true, dayConsiderations: [task], itemTasks: { dinner: task }, onPromote: async () => {}, onUnpromote: async (id) => { back.push(id); } }));
+  const view = mount(React.createElement(DayCard, { ...props, day: synthetic, days: [synthetic], expanded: true, dayConsiderations: [task], itemTasks: { dinner: task }, onPromote: async () => {}, onUnpromote: async () => {} }));
   try {
     const entry = [...view.container.querySelectorAll('.tl-tile')].find((t) => t.querySelector('.tl-title').textContent === 'Synthetic chosen dinner');
     const hist = entry.querySelector('details.tl-history');
     assert.ok(hist && !hist.open); // folded away
     assert.ok(hist.textContent.includes('Synthetic dinner idea') && hist.textContent.includes('Synthetic reason'));
     assert.match(hist.textContent, /👍 2 \(Ann, Ben\) · 👎 1 \(Cy\) · Chosen/);
+    assert.equal(view.container.querySelector('.tl-consider'), null); // the entry is the tile; no "Proposed" twin beside it
+    assert.equal(view.container.querySelectorAll('.tl-tile').length, 1);
+  } finally { view.close(); }
+});
+
+test('in the Under consideration list, an item already in the itinerary says where it is and can go back', async () => {
+  const { Considerations } = await import('./Considerations.tsx');
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const days = resolveDays({ days: [{ ...day, date: '2040-01-02', acts: [{ text: 'Synthetic chosen dinner', time: '19:00', fromItem: 'dinner' }] }] });
+  const task = consider('dinner', { title: 'Synthetic dinner idea', detail: 'Synthetic reason', done: true, outcome: 'chosen', votes: { yes: ['Ann', 'Ben'], no: ['Cy'], mine: null } });
+  const back = [];
+  const view = mount(React.createElement(Considerations, {
+    tasks: [task], items: [{ id: 'dinner', title: task.title, detail: '', kind: 'consider', date: day.date }], groups: [], days, tripStart: '2040-01-02', tripEnd: '2040-01-02', editing: null, setEditing() {},
+    pendingVotes: {}, onVote() {}, onSetOutcome() {}, onAddItem: async () => {}, onUpdateItem: async () => {}, onRemove() {}, onPromote: async () => {},
+    onUnpromote: async (id) => { back.push(id); }, settledOpen: true, onSettledOpenChange() {},
+  }));
+  try {
     const item = view.container.querySelector('.tl-consider');
     assert.ok(item.textContent.includes('In the itinerary on Jan 2.'));
     const buttons = [...item.querySelectorAll('.consider-actions button')].map((b) => b.textContent);
     assert.deepEqual(buttons, ['Back to considering']); // already added: no Add, no Drop
-    assert.equal(item.querySelector('.tl-toggle').getAttribute('aria-expanded'), 'false'); // settled: closed
     assert.ok([...item.querySelectorAll('.vote-btn')].every((b) => b.disabled)); // voting is over
     await act(async () => item.querySelector('.consider-actions button').click());
     assert.deepEqual(back, ['dinner']);
