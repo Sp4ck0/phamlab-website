@@ -479,8 +479,6 @@ button.route-chip[aria-expanded=true]{box-shadow:inset 0 0 0 1.5px var(--text-mu
 .tl-end{grid-column:2;display:inline-flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:6px 8px}
 .tl-end:empty{display:none}
 .tl-end .now-pill{margin-right:0}
-.vote-tally{display:inline-flex;gap:10px;font-size:13px;color:var(--text-secondary);white-space:nowrap}
-.vote-tally [data-mine]{color:var(--accent-1)}
 .tl-more{grid-column:3;grid-row:1;align-self:start;display:grid;place-items:center;margin-top:-4px}
 /* A tile's place photo, behind its header and fading into the card (a mask, so it blends into any
    tile background): an edge on the right, the same whether the tile is open or closed. Static: wider
@@ -803,22 +801,18 @@ details.tour-box[open] summary::after{content:"Hide"}
 .action-item.done .at,.action-item.done .ad{text-decoration:line-through;text-decoration-color:var(--text-muted);color:var(--text-muted)}
 
 /* ── considerations: candidates the group is weighing (dashed + tinted = "not decided") ── */
-.considerations{display:grid;gap:10px}
+.considerations{display:grid;gap:14px;padding-top:8px}
 .consider{background:var(--accent-1-tint);border:1.5px dashed var(--accent-1);border-radius:14px;padding:14px 18px;scroll-margin-top:96px;margin-bottom:10px}
-.considerations .consider{margin-bottom:0}
-.consider[data-outcome="chosen"]{border-style:solid;background:var(--card);border-color:var(--good)}
-.consider[data-outcome="dropped"]{background:var(--card);border-color:var(--gridline);opacity:.7}
-.consider[data-outcome="dropped"] .consider-title{text-decoration:line-through;text-decoration-color:var(--text-muted)}
-.consider-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
-.consider-pill{display:inline-block;padding:3px 8px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent-1);border:1px dashed var(--accent-1)}
-.consider[data-outcome="chosen"] .consider-pill{color:var(--good);border:1px solid var(--good)}
-.consider[data-outcome="dropped"] .consider-pill{color:var(--text-muted);border:1px solid var(--gridline)}
-.consider-title{font-weight:700;color:var(--text-primary);overflow-wrap:anywhere}
-.consider-detail{margin:6px 0 0;font-size:13.5px;color:var(--text-secondary);overflow-wrap:anywhere}
-.consider-meta{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:12.5px;color:var(--text-secondary)}
-.consider-place{color:var(--accent-1);text-decoration:underline}
+.consider-pill{display:inline-block;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent-1);border:1px dashed var(--accent-1);white-space:nowrap}
+.consider-pill[data-outcome="chosen"]{color:var(--good);border:1px solid var(--good)}
+.consider-pill[data-outcome="dropped"]{color:var(--text-muted);border:1px solid var(--gridline)}
 .consider-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
-.consider-actions .row-actions{margin-left:auto}
+.consider-status:empty{display:none}
+/* A consideration's header: its state, then 👍 / 👎 to vote right on the tile. */
+.tl-consider-head{display:inline-flex;align-items:center;gap:8px}
+.tl-votes .vote-btn{padding:2px 9px;font-size:12.5px}
+.vote-btn:disabled{cursor:default;opacity:.6}
+.tl-consider.tl-tile:has(.consider-pill[data-outcome="dropped"]) .tl-title{text-decoration:line-through;text-decoration-color:var(--text-muted)}
 .vote-bar{display:flex;gap:6px}
 .vote-btn{font:inherit;font-size:13px;display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--text-primary);cursor:pointer}
 .vote-btn:hover{border-color:var(--text-secondary)}
@@ -826,22 +820,12 @@ details.tour-box[open] summary::after{content:"Hide"}
 .vote-btn[aria-pressed="true"][data-vote="no"]{background:var(--danger);border-color:var(--danger);color:#fff}
 .vote-names{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:8px;font-size:12px;color:var(--text-secondary)}
 .ai-places{display:grid;gap:8px;width:100%}
+.ai-act-text{flex-basis:100%}
 .ai-place{display:flex;flex-wrap:wrap;align-items:flex-end;gap:6px}
 .ai-place .ai-field{flex:1 1 180px}
 .ai-placeid{flex-basis:100%;font-size:12px;color:var(--text-secondary)}
 .ai-placeid summary{cursor:pointer;width:fit-content}
 .ai-placeid .ai-input{display:block;width:100%;margin-top:6px}
-/* The same candidates on the day they cover. */
-.day-considering{margin-top:14px;padding:10px 14px;border:1.5px dashed var(--accent-1);border-radius:12px;background:var(--accent-1-tint);font-size:13.5px}
-.day-considering ul{margin:8px 0 0;padding-left:18px}
-.day-considering ul{list-style:none;padding-left:0}
-.day-considering li{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:4px 0}
-.day-considering-title{font:inherit;font-weight:600;color:var(--text-primary);background:none;border:0;padding:0;cursor:pointer;text-align:left;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
-.day-considering-title:hover{color:var(--accent-1)}
-.day-considering .vote-btn{padding:2px 9px;font-size:12.5px}
-.day-considering .vote-btn:disabled{cursor:default;opacity:.7}
-.day-considering .day-chosen{color:var(--good);border:1px solid var(--good)}
-
 /* ── alerts (high priority / not booked yet) ───────────────────────────── */
 .alerts{display:grid;gap:14px;margin:22px 0 8px}
 .alert{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--danger);border-radius:16px;padding:18px 22px}
@@ -1088,7 +1072,7 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
   a.gcal-btn,.conf-chip{min-height:36px}
 
   /* Tap targets and inputs */
-  .vote-btn,.day-considering .vote-btn,.ai-btn,.add-btn,.ai-chip,.undo-bar button,.export-menu-list button{min-height:44px}
+  .vote-btn,.ai-btn,.add-btn,.ai-chip,.undo-bar button,.export-menu-list button{min-height:44px}
   .day-link{padding:10px 0}
   .navtoggle{width:44px;height:44px}
   .trip-note-close{min-width:44px;min-height:44px}
@@ -1179,7 +1163,7 @@ textarea.ai-input{display:block;width:100%;resize:none;overflow:hidden;line-heig
 .ai-btn-primary{background:var(--good);color:#fff}
 .ai-btn:disabled{opacity:.5;cursor:default}
 .row-actions{flex:none;display:flex;gap:2px;opacity:0;transition:opacity .12s}
-.action-item:hover .row-actions,.action-item:focus-within .row-actions,.consider:hover .row-actions,.consider:focus-within .row-actions{opacity:1}
+.action-item:hover .row-actions,.action-item:focus-within .row-actions{opacity:1}
 .icon-btn{display:flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;color:var(--text-muted);background:transparent;border:none;border-radius:6px;cursor:pointer}
 @media (hover:hover){.icon-btn:hover{color:var(--text-primary);background:var(--chip-bg)}}
 .act-edit{flex:none;align-self:flex-start;opacity:0;transition:opacity .12s}

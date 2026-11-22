@@ -1049,14 +1049,15 @@ test('dated to-dos and considerations are tiles on the day: a timed one among th
     assert.deepEqual(titles, ['Synthetic morning', 'Synthetic lunch', 'Synthetic afternoon', 'Synthetic to-do']);
     const lunch = view.container.querySelector('.tl-consider');
     assert.equal(lunch.closest('.tl-entry').querySelector('.tl-time').textContent, '12:00');
-    assert.match(lunch.querySelector('.tl-meta').textContent, /Considering/);
-    // Voting and ticking are in the card's menu, so they work while the card is closed, and never toggle it.
+    assert.equal(lunch.querySelector('.consider-pill').textContent, 'Idea');
+    // Voting is the 👍 / 👎 in the card's header, so it works while the card is closed, and never toggles it.
     const before = lunch.querySelector('.tl-toggle').getAttribute('aria-expanded');
-    const yes = menuItem(openMenu(lunch), 'Vote yes');
+    const yes = lunch.querySelector('.tl-head .vote-btn[data-vote=yes]');
+    assert.equal(yes.querySelector('b').textContent, '1'); // the count is on the button
     await act(async () => yes.click());
     assert.deepEqual(votes, [['lunch', 'yes']]);
     assert.equal(lunch.querySelector('.tl-toggle').getAttribute('aria-expanded'), before);
-    assert.equal(lunch.querySelector('.vote-tally b').textContent, '1'); // the tally stays in the header
+    assert.equal(menuItem(openMenu(lunch), 'Vote yes'), undefined); // not in the menu any more
     const tick = menuItem(openMenu(view.container.querySelector('.tl-item:not(.tl-consider)')), 'Mark as done');
     await act(async () => tick.click());
     assert.deepEqual(ticks, ['todo1']);
@@ -1076,28 +1077,97 @@ test('a consideration proposing a hotel shows it as a Proposed tile, and Add to 
     const proposal = tile.querySelector('.tl-proposal');
     assert.ok(proposal.textContent.includes('Proposed') && proposal.textContent.includes('Synthetic Proposed Hotel'));
     assert.equal(proposal.querySelector('.tl-actions'), null); // the draft has no actions of its own
-    const add = menuItem(openMenu(tile), 'Add to itinerary');
+    const add = [...tile.querySelectorAll('.consider-actions button')].find((b) => b.textContent === 'Add stay to itinerary');
     await act(async () => { add.click(); });
     assert.deepEqual(promoted, [['stay', day.date]]);
-    assert.equal(tile.querySelector('.share-status').textContent, 'Added to the itinerary');
+    assert.equal(tile.querySelector('.consider-status').textContent, 'Added to the itinerary');
   } finally { view.close(); }
 });
 
-test('an entry approved from an item shows its History (wording and votes), and the item says it is in the itinerary', () => {
+test('an entry approved from an item shows its History (wording and votes), and the item says where it is and can go back', async () => {
   const synthetic = { ...day, acts: [{ text: 'Synthetic chosen dinner', time: '19:00', fromItem: 'dinner' }] };
   const task = consider('dinner', { title: 'Synthetic dinner idea', detail: 'Synthetic reason', done: true, outcome: 'chosen', votes: { yes: ['Ann', 'Ben'], no: ['Cy'], mine: null } });
-  const view = mount(React.createElement(DayCard, { ...props, day: synthetic, days: [synthetic], expanded: true, dayConsiderations: [task], itemTasks: { dinner: task }, onPromote: async () => {} }));
+  const back = [];
+  const view = mount(React.createElement(DayCard, { ...props, day: synthetic, days: [synthetic], expanded: true, dayConsiderations: [task], itemTasks: { dinner: task }, onPromote: async () => {}, onUnpromote: async (id) => { back.push(id); } }));
   try {
-    const act = [...view.container.querySelectorAll('.tl-tile')].find((t) => t.querySelector('.tl-title').textContent === 'Synthetic chosen dinner');
-    const hist = act.querySelector('details.tl-history');
+    const entry = [...view.container.querySelectorAll('.tl-tile')].find((t) => t.querySelector('.tl-title').textContent === 'Synthetic chosen dinner');
+    const hist = entry.querySelector('details.tl-history');
     assert.ok(hist && !hist.open); // folded away
     assert.ok(hist.textContent.includes('Synthetic dinner idea') && hist.textContent.includes('Synthetic reason'));
     assert.match(hist.textContent, /👍 2 \(Ann, Ben\) · 👎 1 \(Cy\) · Chosen/);
     const item = view.container.querySelector('.tl-consider');
-    assert.ok(item.textContent.includes('In the itinerary.'));
-    assert.equal(menuItem(openMenu(item), 'Add to itinerary'), undefined); // already added
+    assert.ok(item.textContent.includes('In the itinerary on Jan 2.'));
+    const buttons = [...item.querySelectorAll('.consider-actions button')].map((b) => b.textContent);
+    assert.deepEqual(buttons, ['Back to considering']); // already added: no Add, no Drop
     assert.equal(item.querySelector('.tl-toggle').getAttribute('aria-expanded'), 'false'); // settled: closed
+    assert.ok([...item.querySelectorAll('.vote-btn')].every((b) => b.disabled)); // voting is over
+    await act(async () => item.querySelector('.consider-actions button').click());
+    assert.deepEqual(back, ['dinner']);
   } finally { view.close(); }
+});
+
+test('the Under consideration list draws each idea as a tile: vote in its header, pick a day and add it, or drop it', async () => {
+  const { Considerations } = await import('./Considerations.tsx');
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const days = resolveDays({ days: [{ ...day, date: '2040-01-02' }, { ...day, date: '2040-01-03', _d: new Date(2040, 0, 3) }] });
+  const idea = consider('anywhere', { scope: { kind: 'trip' }, title: 'Synthetic anywhere idea', votes: { yes: [], no: ['Ann'], mine: null } });
+  const dated = consider('dated', { title: 'Synthetic dated idea', proposes: { type: 'activity', entry: { text: 'Synthetic proposed walk', tag: 'Trek' } } });
+  const items = [{ id: 'anywhere', title: idea.title, detail: '', kind: 'consider' }, { id: 'dated', title: dated.title, detail: '', kind: 'consider', date: day.date }];
+  const calls = [];
+  const view = mount(React.createElement(Considerations, {
+    tasks: [idea, dated], items, groups: [], days, tripStart: '2040-01-02', tripEnd: '2040-01-03', editing: null, setEditing() {},
+    pendingVotes: {}, onVote: (...a) => calls.push(['vote', ...a]), onSetOutcome: (...a) => calls.push(['outcome', ...a]),
+    onAddItem: async () => {}, onUpdateItem: async () => {}, onRemove() {}, onPromote: async (...a) => { calls.push(['promote', ...a]); },
+    onUnpromote: async () => {}, settledOpen: false, onSettledOpenChange() {},
+  }));
+  try {
+    assert.equal(view.container.querySelector('.consider'), null); // no separate card design
+    const tiles = [...view.container.querySelectorAll('.tl-consider')];
+    assert.deepEqual(tiles.map((t) => t.querySelector('.tl-title').textContent), ['Synthetic dated idea', 'Synthetic anywhere idea']);
+    assert.equal(tiles[0].closest('li').id, 'ai-row-dated'); // ?task= links and the alerts still land on it
+    assert.equal(tiles[0].closest('.tl-entry').querySelector('.tl-dot').textContent, '🥾'); // drawn as the activity it proposes
+    assert.match(tiles[0].querySelector('.tl-meta').textContent, /Jan 2/);
+    // A single-day idea adds to its day; a whole-trip one asks which.
+    assert.equal(tiles[0].querySelector('select'), null);
+    assert.ok([...tiles[0].querySelectorAll('button')].some((b) => b.textContent === 'Add to itinerary · Jan 2'));
+    const anywhere = tiles[1];
+    assert.equal(anywhere.querySelector('.vote-btn[data-vote=no] b').textContent, '1');
+    assert.match(anywhere.querySelector('.vote-names').textContent, /Ann/);
+    const select = anywhere.querySelector('select');
+    assert.deepEqual([...select.options].map((o) => o.textContent), ['Jan 2', 'Jan 3']);
+    const setValue = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value').set;
+    act(() => { setValue.call(select, '2040-01-03'); select.dispatchEvent(new window.Event('change', { bubbles: true })); });
+    const button = (tile, text) => [...tile.querySelectorAll('.consider-actions button')].find((b) => b.textContent === text);
+    await act(async () => button(anywhere, 'Add to itinerary').click());
+    await act(async () => button(anywhere, 'Drop').click());
+    await act(async () => anywhere.querySelector('.vote-btn[data-vote=yes]').click());
+    assert.deepEqual(calls, [['promote', 'anywhere', '2040-01-03'], ['outcome', 'item:anywhere', 'dropped'], ['vote', 'anywhere', 'yes']]);
+  } finally { view.close(); }
+});
+
+test('the editor can draft the activity a consideration would add, and keeps an AI-drafted stay as it is', async () => {
+  const { ActionItemEditor } = await import('./ActionItemEditor.tsx');
+  const saved = [];
+  const initial = { id: 'x', title: 'Synthetic market', detail: '', kind: 'consider', date: day.date, time: '18:00' };
+  const view = mount(React.createElement(ActionItemEditor, { groups: [], minDate: day.date, maxDate: day.date, initial, onSave: async (f) => { saved.push(f); }, onCancel() {} }));
+  try {
+    const button = (text) => [...view.container.querySelectorAll('button')].find((b) => b.textContent === text);
+    act(() => view.container.querySelector('.ai-options').click());
+    act(() => button('An activity').click());
+    const select = view.container.querySelector('select');
+    const setValue = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value').set;
+    act(() => { setValue.call(select, 'Food'); select.dispatchEvent(new window.Event('change', { bubbles: true })); });
+    await act(async () => button('Save').click());
+    assert.deepEqual(saved[0].proposes, { type: 'activity', entry: { text: 'Synthetic market', tag: 'Food', time: '18:00' } });
+  } finally { view.close(); }
+  const stay = { type: 'hotel', entry: { who: 'all', name: 'Synthetic Stay', status: 'needed' } };
+  const again = mount(React.createElement(ActionItemEditor, { groups: [], minDate: day.date, maxDate: day.date, initial: { ...initial, proposes: stay }, onSave: async (f) => { saved.push(f); }, onCancel() {} }));
+  try {
+    act(() => again.container.querySelector('.ai-options').click());
+    assert.match(again.container.textContent, /A stay at Synthetic Stay \(drafted by the AI\)/);
+    await act(async () => [...again.container.querySelectorAll('button')].find((b) => b.textContent === 'Save').click());
+    assert.deepEqual(saved[1].proposes, stay);
+  } finally { again.close(); }
 });
 
 test('an activity is one static card: time, icon and title, and all its actions in the "⋯" menu; nothing to open', () => {
@@ -1285,11 +1355,11 @@ test('the "⋯" menu: arrow keys move through it, Escape closes it back to its b
   const view = mount(React.createElement(DayCard, { ...props, day, expanded: true, dayConsiderations: [task], onVote: (...a) => votes.push(a), onPromote: async () => {} }));
   try {
     const tile = view.container.querySelector('.tl-consider');
-    const items = openMenu(tile);
-    const yes = menuItem(items, 'Vote yes');
-    assert.equal(yes.getAttribute('aria-disabled'), 'true');
+    const yes = tile.querySelector('.vote-btn[data-vote=yes]');
+    assert.ok(yes.disabled);
     await act(async () => yes.click());
     assert.deepEqual(votes, []); // voting is over
+    const items = openMenu(tile);
     const enabled = items.filter((i) => i.getAttribute('aria-disabled') !== 'true');
     assert.equal(document.activeElement, enabled[0]); // opening focuses the first available action
     const list = tile.querySelector('[role=menu]');

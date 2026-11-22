@@ -3,6 +3,7 @@ import type { ActionItem, Group, Place, Priority } from "../../lib/types";
 import type { ActionItemFields } from "../../hooks/useActionItemEdits";
 import { fmtShort } from "../../lib/tripLogic";
 import { PRIORITY_LABELS } from "../../lib/tasks";
+import { TAG_EMOJI } from "../../lib/calendar";
 import { serverMessage } from "../../lib/serverError";
 import { AutoTextarea } from "./AutoTextarea";
 import { PlacesEditor, cleanPlaces } from "./PlacesEditor";
@@ -58,6 +59,15 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
   // A time of day places a dated item on its day's timeline.
   const [time, setTime] = useState(initial?.time ?? "");
   const [whoIds, setWhoIds] = useState<string[]>(() => toIds(initial?.who));
+  // What a consideration would add once chosen: nothing in particular (an activity from its title), or an
+  // activity drafted here. A hotel or transport draft comes from the AI and is kept as it is.
+  const draft = initial?.proposes;
+  const aiDraft = draft && draft.type !== "activity" ? draft : undefined;
+  const actDraft = draft?.type === "activity" ? draft.entry : undefined;
+  const [adds, setAdds] = useState<"idea" | "activity">(actDraft ? "activity" : "idea");
+  const [actText, setActText] = useState(actDraft?.text ?? "");
+  const [tag, setTag] = useState(actDraft?.tag ?? "");
+  const [endTime, setEndTime] = useState(actDraft?.endTime ?? "");
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -81,6 +91,8 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
 
   async function submit() {
     if (!title.trim() || !scopeOk || saving) return;
+    if (kind === "consider" && adds === "activity" && endTime && !(time && scope !== "trip")) return setError("Set a day and start time before an end time.");
+    if (kind === "consider" && adds === "activity" && endTime && endTime <= time) return setError("End time must be after the start time.");
     setSaving(true);
     setError("");
     try {
@@ -94,9 +106,22 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
         places: cleanPlaces(places),
         who: whoIds.length === 0 ? undefined : whoIds.length === 1 ? whoIds[0] : whoIds,
         time: scope === "trip" ? undefined : time || undefined,
-        // The editor can't change a proposed entry (the AI writes those), but saving keeps it:
-        // the save replaces the whole item.
-        proposes: initial?.proposes,
+        // A drafted activity takes the item's time; a hotel or transport draft (the AI's) is kept,
+        // since the save replaces the whole item.
+        proposes:
+          kind === "consider" && !aiDraft
+            ? adds === "activity"
+              ? {
+                  type: "activity",
+                  entry: {
+                    text: actText.trim() || title.trim(),
+                    ...(tag ? { tag } : {}),
+                    ...(time && scope !== "trip" ? { time } : {}),
+                    ...(endTime && time && scope !== "trip" ? { endTime } : {}),
+                  },
+                }
+              : undefined
+            : initial?.proposes,
       });
     } catch (e) {
       setError(errorText(e));
@@ -125,6 +150,7 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
   const summary = [
     whoIds.length === 0 ? "Everyone" : whoIds.map((id) => groups.find((g) => g.id === id)?.name ?? id).join(", "),
     KIND_LABELS[kind],
+    ...(kind === "consider" && !aiDraft && adds === "activity" ? ["Adds an activity"] : []),
     ...(priority ? [`${PRIORITY_LABELS[priority]} priority`] : []),
     time && scope !== "trip" ? `${when} · ${time}` : when,
     ...(placeNames.length === 0 ? [] : [placeNames.length === 1 ? placeNames[0] : `${placeNames.length} places`]),
@@ -213,6 +239,48 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
               ))}
             </div>
           </div>
+          {kind === "consider" && (
+            <div className="ai-row">
+              <span className="ai-label">Adds</span>
+              {aiDraft ? (
+                <span className="cmeta">
+                  {aiDraft.type === "hotel" ? `A stay at ${aiDraft.entry.name}` : `A ${aiDraft.entry.mode || "flight"} · ${aiDraft.entry.route}`} (drafted by the AI)
+                </span>
+              ) : (
+                <>
+                  <div className="ai-who" role="group" aria-label="What it adds">
+                    <button type="button" className="ai-chip" aria-pressed={adds === "idea"} onClick={() => setAdds("idea")}>
+                      Just an idea
+                    </button>
+                    <button type="button" className="ai-chip" aria-pressed={adds === "activity"} onClick={() => setAdds("activity")}>
+                      An activity
+                    </button>
+                  </div>
+                  {adds === "activity" && (
+                    <>
+                      <label className="ai-day">
+                        Type
+                        <select className="due-input" value={tag} onChange={(e) => setTag(e.target.value)}>
+                          <option value="">None</option>
+                          {Object.entries(TAG_EMOJI).map(([t, emoji]) => (
+                            <option key={t} value={t}>{`${emoji} ${t}`}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="ai-day">
+                        Ends
+                        <input type="time" className="due-input" value={endTime} onChange={(e) => setEndTime(e.target.value)} aria-label="End time (optional)" />
+                      </label>
+                      <label className="ai-field ai-act-text">
+                        <span className="ai-label">As it reads on the day</span>
+                        <input className="ai-input" value={actText} placeholder={title.trim() || "The title"} onChange={(e) => setActText(e.target.value)} />
+                      </label>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          )}
           <div className="ai-row">
             <span className="ai-label">Priority</span>
             <div className="ai-who" role="group" aria-label="Priority">
