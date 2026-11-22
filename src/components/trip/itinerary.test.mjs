@@ -1511,3 +1511,27 @@ test('a pinned map follows the pointer: resting on a tile with a place names its
     view.close();
   }
 });
+
+test('a phone day header is marked stuck only while pinned under the date strip, so tiles fade under it', () => {
+  const observers = [];
+  globalThis.IntersectionObserver = class { constructor(cb, opts) { this.cb = cb; this.opts = opts; observers.push(this); } observe() {} disconnect() {} };
+  document.documentElement.style.setProperty('--daynav-bottom', '176px');
+  const view = mount(React.createElement(DayCard, { ...props, expanded: true }));
+  try {
+    const head = view.container.querySelector('.day-heading');
+    const pin = observers.find((o) => o.opts?.rootMargin === '-177px 0px 0px 0px');
+    assert.ok(pin, 'watches 1px below the strip');
+    const report = (top) => pin.cb([{ isIntersecting: true, intersectionRatio: 0.9, boundingClientRect: { top }, rootBounds: { top: 177 } }]);
+    report(176); // pinned: its top is on the strip's bottom, above the observer's edge
+    assert.equal(head.hasAttribute('data-stuck'), true);
+    report(700); // cut off at the bottom of the screen instead
+    assert.equal(head.hasAttribute('data-stuck'), false);
+    report(176);
+    pin.cb([{ isIntersecting: false, intersectionRatio: 0, boundingClientRect: { top: -200 }, rootBounds: { top: 177 } }]); // its day has scrolled away
+    assert.equal(head.hasAttribute('data-stuck'), false);
+  } finally {
+    view.close();
+    delete globalThis.IntersectionObserver;
+    document.documentElement.style.removeProperty('--daynav-bottom');
+  }
+});
