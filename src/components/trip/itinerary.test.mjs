@@ -1071,7 +1071,7 @@ test('an activity is one static card: time, icon and title, and all its actions 
     assert.equal(tile.querySelector('.tl-title').textContent, 'Synthetic Cafe');
     assert.equal(tile.querySelectorAll('button, a').length, 1); // the "⋯" button is the card's only control
     const items = openMenu(tile);
-    assert.deepEqual(items.map((i) => i.textContent), ['Edit', 'Open in Google Maps', 'Copy link', 'Add to Google Calendar', 'Show on the trip map']);
+    assert.deepEqual(items.map((i) => i.textContent), ['Edit', 'Show on the trip map', 'Open in Google Maps', 'Add to Google Calendar', 'Copy link']);
     assert.match(menuItem(items, 'Open in Google Maps').getAttribute('href'), /google\.com\/maps/);
     assert.ok(items.every((i) => i.querySelector('.tl-menu-icon svg'))); // every action has its icon
     act(() => menuItem(items, 'Edit').click()); // editing opens it, with the editor
