@@ -191,7 +191,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   const { focus: taskFocus } = useAiFocus("task");
   const { focus: itemFocus } = useAiFocus("actionItem");
   // versions[k]: the day after its first k changes (lib/changeSteps.ts).
-  const [diff, setDiff] = useState<{ date: string; versions: ResolvedDay[]; nonce: string; json: string } | null>(null);
+  const [diff, setDiff] = useState<{ date: string; tile: string | null; versions: ResolvedDay[]; nonce: string; json: string } | null>(null);
   const [ghost, setGhost] = useState<ResolvedDay | null>(null);
   useEffect(() => {
     if (!ghost) return;
@@ -207,6 +207,16 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   const [playing, setPlaying] = useState<string | null>(null);
   const [fast, setFast] = useState(false);
   const readerMoved = useRef(false);
+  // Did any step of the playback have a change on screen? If none did (only a status, or a field
+  // the day doesn't show, changed), the page blinks what the AI pointed at instead, as for a plain pointer.
+  const drewChange = useRef(false);
+  // Blink a day, or one of its tiles (a tile that is gone, the booking changed, falls back to the day).
+  function blink(rowId: string, tile: string | null, scroll: boolean) {
+    const el = document.getElementById(tile ? tileDomId(rowId, tile) : rowId) ?? document.getElementById(rowId);
+    if (!el) return;
+    if (scroll) el.scrollIntoView({ block: "center", behavior: scrollBehavior() });
+    flash(el);
+  }
   useEffect(() => {
     if (!diff) return;
     readerMoved.current = false;
@@ -248,6 +258,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
       const el = row && [...(document.getElementById(row.id)?.querySelectorAll<HTMLElement>(".chg-new, .chg-gone, .chg-inline") ?? [])]
         .find(e => e.getClientRects().length > 0);
       if (!el) { done(); return; } // nothing on screen changed (a status, a field the day doesn't show)
+      drewChange.current = true;
       const start = () => {
         setPlaying(`${diff!.nonce}:${i}`);
         timer = setTimeout(done, quick ? FAST_MS : STEP_MS);
@@ -258,7 +269,11 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
       cancelScroll = afterScroll(start, quick ? 300 : 1000);
     }, 0);
     return () => { clearTimeout(frame); cancelScroll(); clearTimeout(timer); };
-  }, () => setDiff(null));
+  }, () => {
+    const row = diff && !drewChange.current && state.rows.find(r => r.day.date === diff.date);
+    if (row) blink(row.id, diff.tile, true);
+    setDiff(null);
+  });
   const stepView = (date: string) =>
     diff?.date === date && step >= 0 && step < diff.versions.length - 1
       ? { day: diff.versions[step + 1], from: diff.versions[step], paused: playing !== `${diff.nonce}:${step}`, ms: fast ? FAST_MS : undefined }
@@ -286,18 +301,15 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
       const next = days.find(x => x.date === date);
       if (change?.prev && !change.gone && next) {
         recent.release(date);
-        setDiff({ date, versions: changeVersions(change.prev, next), nonce: focus.nonce, json: withoutPlaceIds(next) });
+        drewChange.current = false;
+        setDiff({ date, tile, versions: changeVersions(change.prev, next), nonce: focus.nonce, json: withoutPlaceIds(next) });
         jump(row.id, false, false);
         return;
       }
       // Once the page has stopped scrolling, show the new content and blink it.
       afterScroll(() => {
         recent.release(date);
-        // A tile that is gone (the booking changed) falls back to the day.
-        const el = document.getElementById(tile ? tileDomId(row.id, tile) : row.id) ?? document.getElementById(row.id);
-        if (!el) return;
-        if (tile && el.id !== row.id) el.scrollIntoView({ block: "center", behavior: scrollBehavior() });
-        flash(el);
+        blink(row.id, tile, !!tile && !!document.getElementById(tileDomId(row.id, tile)));
       });
       jump(row.id, false); // the flash shows where; no focus ring on top of it
     }, SETTLE_MS);

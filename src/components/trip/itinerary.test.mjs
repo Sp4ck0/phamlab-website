@@ -1156,6 +1156,52 @@ test('a pointer at another day still ends an AI edit\'s playback', async () => {
   } finally { restore(); out.view.close(); localStorage.clear(); }
 });
 
+test('an AI edit nothing on screen shows (a booking\'s status), with a pointer at its tile: the tile still scrolls into view and blinks', async () => {
+  localStorage.clear();
+  const { resolveDays, flightId } = await import('../../lib/tripLogic.ts');
+  const flight = { who: 'all', route: 'Synthetic route', status: 'needed' };
+  const before = resolveDays({ days: [{ ...day, flights: [flight] }] });
+  const after = resolveDays({ days: [{ ...day, flights: [{ ...flight, status: 'booked' }] }] });
+  const scrolled = [];
+  const out = await timelineView(before);
+  window.HTMLElement.prototype.scrollIntoView = function () { scrolled.push(this); };
+  const restore = fakeLayout();
+  try {
+    const [section] = dayCards(out.view.container);
+    act(() => section.querySelector('.day-head-btn').click());
+    out.setDays(after);
+    act(() => out.show({ slug: 'synthetic', target: { kind: 'tile', date: day.date, tile: flightId(day.date, flight) }, nonce: 'n1' }));
+    await wait(1500);
+    const tile = tileToggle(section, (t) => t.textContent.includes('Synthetic route')).closest('li.tl-entry');
+    assert.ok(tile.classList.contains('ai-focus-flash'));
+    assert.ok(scrolled.includes(tile));
+  } finally { restore(); out.view.close(); localStorage.clear(); }
+});
+
+test('a pointer at a to-do, or the reader\'s own edit to the day, still ends an AI edit\'s playback', async () => {
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const before = resolveDays({ days: [{ ...day, acts: ['Synthetic one oldword', 'Synthetic two oldtwo'] }] });
+  const after = resolveDays({ days: [{ ...day, acts: ['Synthetic one newword', 'Synthetic two newtwo'] }] });
+  const mine = resolveDays({ days: [{ ...day, acts: ['Synthetic one newword', 'Synthetic two mine'] }] });
+  for (const interrupt of ['todo', 'own edit']) {
+    localStorage.clear();
+    const out = await timelineView(before);
+    const restore = fakeLayout();
+    try {
+      const [section] = dayCards(out.view.container);
+      act(() => section.querySelector('.day-head-btn').click());
+      out.setDays(after);
+      act(() => out.show({ slug: 'synthetic', target: { kind: 'day', date: day.date }, nonce: 'n1' }));
+      await wait(600);
+      assert.ok(section.querySelector('.chg-inline'), interrupt); // playing
+      if (interrupt === 'todo') act(() => out.show({ slug: 'synthetic', target: { kind: 'actionItem', id: 'synthetic-item' }, nonce: 'n2' }));
+      else out.setDays(mine);
+      await wait(50);
+      assert.equal(section.querySelector('.chg-inline, .chg-new, .chg-gone'), null, interrupt); // ended: the day as it really is
+    } finally { restore(); out.view.close(); localStorage.clear(); }
+  }
+});
+
 test('InlineDiff: paused holds the old words; then old (red) → new (green) → plain; new texts start over; a short ms still shows both', async () => {
   const { InlineDiff } = await import('./InlineDiff.tsx');
   const on = (c) => c.querySelector('.chg-layer[data-on=true]');
