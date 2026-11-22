@@ -67,6 +67,12 @@ export function FollowAiEdits() {
 
     const tripPath = `/trip/${focus.slug}`;
     const onTrip = pathRef.current === tripPath;
+    // Clearing marks only concerns a map already open on that trip; a newly opened one has none.
+    // Elsewhere it does nothing, so clear_map_markers hears that no map answered.
+    if (focus.target.kind === "clearMarks") {
+      if (onTrip) show(focus);
+      return;
+    }
     if (!onTrip) navigate(tripPath);
     if (focus.target.kind === "trip") {
       // A fresh trip page already starts at its top; on the page, go back up.

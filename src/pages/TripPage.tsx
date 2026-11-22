@@ -24,7 +24,7 @@ import { TripTabs } from "../components/trip/TripTabs";
 import { tabFromHash, tripPanelId, tripTabId, withTab, type TripTab } from "../lib/tripTabs";
 import { useAiFocus } from "../hooks/useAiFocus";
 import { NotFoundOrDenied } from "./NotFoundOrDenied";
-import { useAction } from "convex/react";
+import { useAction, useMutation } from "convex/react";
 import { api } from "@convex/api";
 import { useAccessCode } from "../hooks/useAccessCode";
 import { batchedPhotos } from "../lib/cityPhoto";
@@ -152,6 +152,17 @@ function TripPageEntry() {
       if (!pinnedRef.current) document.getElementById(TRIP_MAP_ID)?.scrollIntoView({ behavior: "smooth", block: "start" });
     } else if (tabRef.current !== "map") setTab("map");
   }, [markFocus, consumeMark, setTab]);
+  // clear_map_markers: drop every mark (itinerary pins aren't marks) and tell the AI how many went.
+  const { code } = useAccessCode();
+  const reportCleared = useMutation(api.mcpFocus.reportCleared);
+  const { focus: clearFocus, consume: consumeClear } = useAiFocus("clearMarks");
+  useEffect(() => {
+    if (!clearFocus) return;
+    consumeClear(clearFocus.nonce);
+    setMarks([]);
+    setFitMarks(null);
+    void reportCleared({ ...(code ? { code } : {}), nonce: clearFocus.nonce, count: marks.length });
+  }, [clearFocus, consumeClear, reportCleared, code, marks.length]);
   const filterRef = useRef<HTMLButtonElement>(null);
 
   const resolvedDays = useResolvedDays(trip);
@@ -172,7 +183,6 @@ function TripPageEntry() {
   // in one call for whatever scrolled into view together.
   const getCityPhotos = useAction(api.cityPhotos.getCityPhotos);
   const getPlacePhotos = useAction(api.cityPhotos.getPlacePhotos);
-  const { code } = useAccessCode();
   const cityPhoto = useMemo(() => {
     const one = batchedPhotos((c: { city: string; country: string }) => `${c.city}|${c.country}`, (cities) => getCityPhotos({ slug: slug || "", code, cities }));
     return (city: string, country: string) => one({ city, country });
