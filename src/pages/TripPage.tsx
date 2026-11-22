@@ -28,6 +28,10 @@ import { useAction } from "convex/react";
 import { api } from "@convex/api";
 import { useAccessCode } from "../hooks/useAccessCode";
 import { batchedPhotos } from "../lib/cityPhoto";
+import { useMediaQuery } from "../hooks/useMediaQuery";
+
+// Where "Show on the trip map" scrolls to on desktop, where the map sits below the agenda.
+const TRIP_MAP_ID = "trip-map";
 
 export function TripPage() {
   return <TripEntryBoundary><TripPageEntry /></TripEntryBoundary>;
@@ -71,10 +75,20 @@ function TripPageEntry() {
   // (The note stays unmounted when hidden: the floating note is shown then, and two editors of one note would diverge.)
   const [seen, setSeen] = useState<Partial<Record<TripTab, true>>>({ agenda: true });
   useEffect(() => { if (!seen[tab]) setSeen((s) => ({ ...s, [tab]: true })); }, [tab, seen]);
-  // "Show on the trip map" from the agenda: open the Map tab, then hand it the place once it is there.
+  // Desktop has room for everything on one page: no tabs, the map below the agenda, the floating note.
+  // The tabs are for phones.
+  const desktop = useMediaQuery("(min-width: 641px)");
+  const desktopRef = useRef(desktop);
+  desktopRef.current = desktop;
+  // "Show on the trip map" from the agenda: on a phone open the Map tab, then hand it the place once it
+  // is there; on desktop the map is already on the page (it shows the place itself), so scroll down to it.
   const pendingMapKey = useRef<string | null>(null);
   useEffect(() => {
     const onFocus = (e: Event) => {
+      if (desktopRef.current) {
+        document.getElementById(TRIP_MAP_ID)?.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
       if (tabRef.current === "map") return;
       pendingMapKey.current = (e as CustomEvent<string>).detail;
       setTab("map");
@@ -142,10 +156,24 @@ function TripPageEntry() {
   }
 
   const mapPlanPoints = derivePoints(resolvedDays, trip.mapPoints);
+  const map = (
+    <TripMap
+      points={mapPlanPoints}
+      days={resolvedDays}
+      route={deriveRouteAddresses(resolvedDays)}
+      weatherStops={weatherStops}
+      candidates={deriveTaskPoints(tasks, mapPlanPoints)}
+      considerations={tasks.filter((t) => !!t.places?.length)}
+    />
+  );
+  // On a phone, the agenda is a tab panel; on desktop it is just the page.
+  const agendaPanel = desktop
+    ? {}
+    : { role: "tabpanel", id: tripPanelId("agenda"), "aria-labelledby": tripTabId("agenda"), hidden: tab !== "agenda" };
 
   return (
     <PageShell>
-      <div className="trip-page" data-tab={tab}>
+      <div className="trip-page" data-tab={desktop ? "agenda" : tab}>
         {/* Phones show the trip summary on the Agenda tab only (CSS): the map and the note start under the tabs. */}
         <div className="trip-summary">
         <TripHeader
@@ -161,12 +189,14 @@ function TripPageEntry() {
         />
         </div>
 
-        {/* Phones: moved to the top of the page and pinned under the site menu (CSS). */}
-        <div className="trip-tabs-bar" ref={tabsRef}>
-          <TripTabs tab={tab} onChange={setTab} />
-        </div>
+        {/* Phones only: moved to the top of the page and pinned under the site menu (CSS). */}
+        {!desktop && (
+          <div className="trip-tabs-bar" ref={tabsRef}>
+            <TripTabs tab={tab} onChange={setTab} />
+          </div>
+        )}
 
-        <div role="tabpanel" id={tripPanelId("agenda")} aria-labelledby={tripTabId("agenda")} hidden={tab !== "agenda"}>
+        <div {...agendaPanel}>
           <AlertsPanel
             tasks={tasks}
             items={trip.actionItems || []}
@@ -225,30 +255,30 @@ function TripPageEntry() {
             onSetOutcome={setOutcome}
           />
 
+          {desktop && (
+            <section className="trip-map-section" id={TRIP_MAP_ID}>
+              <h2 className="section-title">Map</h2>
+              {map}
+            </section>
+          )}
+
           <footer>
             Trip content is stored in Convex — ask to have a change made rather than editing code. Check-offs are saved
             for everyone with access to this trip.
           </footer>
         </div>
-        {(seen.map || tab === "map") && (
+        {!desktop && (seen.map || tab === "map") && (
           <div role="tabpanel" id={tripPanelId("map")} aria-labelledby={tripTabId("map")} hidden={tab !== "map"}>
-            <TripMap
-              points={mapPlanPoints}
-              days={resolvedDays}
-              route={deriveRouteAddresses(resolvedDays)}
-              weatherStops={weatherStops}
-              candidates={deriveTaskPoints(tasks, mapPlanPoints)}
-              considerations={tasks.filter((t) => !!t.places?.length)}
-            />
+            {map}
           </div>
         )}
-        {tab === "notes" && (
+        {!desktop && tab === "notes" && (
           <div role="tabpanel" id={tripPanelId("notes")} aria-labelledby={tripTabId("notes")}>
             <TripNote slug={slug || ""} inline />
           </div>
         )}
 
-        {tab !== "notes" && <TripNote slug={slug || ""} />}
+        {(desktop || tab !== "notes") && <TripNote slug={slug || ""} />}
       </div>
     </PageShell>
   );
