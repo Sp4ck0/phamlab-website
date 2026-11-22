@@ -1,23 +1,30 @@
 import { useEffect, useRef, useState } from "react";
-import type { Place } from "../../lib/types";
+import type { ActTiming, Place } from "../../lib/types";
 import { serverMessage } from "../../lib/serverError";
 import { PlacesEditor, cleanPlaces } from "./PlacesEditor";
 
 interface Props {
   initial: string;
   initialPlaces?: Place[];
-  /** The activity's time ("HH:MM"), or none. */
+  /** The activity's time and end time ("HH:MM"), or none. */
   initialTime?: string;
-  /** `time` is undefined when it wasn't changed, null when it was cleared. */
-  onSave: (text: string, places: Place[], time?: string | null) => Promise<unknown>;
+  initialEndTime?: string;
+  /** It takes the whole day, like a hotel. */
+  initialAllDay?: boolean;
+  /** `timing` holds only what changed (null = a time cleared). */
+  onSave: (text: string, places: Place[], timing: ActTiming) => Promise<unknown>;
   onCancel: () => void;
 }
 
-// Inline editor for one activity's time, text and places. Opens with the cursor at
-// the end of the text so appending a note ("— Dec 5 sold out") is just type and save.
-export function ActivityEditor({ initial, initialPlaces, initialTime, onSave, onCancel }: Props) {
+// Inline editor for one activity's timing (all day, or a time and an end time), text and
+// places. Opens with the cursor at the end of the text so appending a note ("— Dec 5 sold
+// out") is just type and save. The end time isn't shown on the card; it sets when the
+// Add to Google Calendar event ends.
+export function ActivityEditor({ initial, initialPlaces, initialTime, initialEndTime, initialAllDay = false, onSave, onCancel }: Props) {
   const [text, setText] = useState(initial);
+  const [allDay, setAllDay] = useState(initialAllDay);
   const [time, setTime] = useState(initialTime ?? "");
+  const [endTime, setEndTime] = useState(initialEndTime ?? "");
   const [places, setPlaces] = useState<Place[]>(initialPlaces ?? []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -40,12 +47,20 @@ export function ActivityEditor({ initial, initialPlaces, initialTime, onSave, on
 
   async function submit() {
     if (saving || !text.trim()) return;
+    // The same checks the server makes, said before a round trip.
+    if (!allDay && endTime && !time) return setError("Set a start time before an end time.");
+    if (!allDay && endTime && time && endTime <= time) return setError("End time must be after the start time.");
     setSaving(true);
     setError("");
     try {
-      // Only a changed time is sent: a text-only edit never moves the activity.
-      const nextTime = time === (initialTime ?? "") ? undefined : time || null;
-      await onSave(text, cleanPlaces(places), nextTime);
+      // Only what changed is sent: a text-only edit never moves the activity.
+      const timing: ActTiming = {};
+      if (allDay !== initialAllDay) timing.allDay = allDay;
+      if (!allDay) {
+        if (time !== (initialTime ?? "")) timing.time = time || null;
+        if (endTime !== (initialEndTime ?? "")) timing.endTime = endTime || null;
+      }
+      await onSave(text, cleanPlaces(places), timing);
     } catch (e) {
       // A ConvexError carries what the backend meant to say; otherwise Convex
       // wraps server errors and the useful part is the last line.
@@ -70,15 +85,29 @@ export function ActivityEditor({ initial, initialPlaces, initialTime, onSave, on
         }
       }}
     >
-      <label className="ai-time">
-        <span>Time</span>
-        <input type="time" className="ai-input" value={time} onChange={(e) => setTime(e.target.value)} />
-        {time && (
-          <button type="button" className="ai-btn ai-time-clear" onClick={() => setTime("")} aria-label="Clear the time">
-            No time
-          </button>
+      <div className="ai-time">
+        <label className="ai-allday">
+          <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
+          All day
+        </label>
+        {!allDay && (
+          <>
+            <label>
+              <span>Start</span>
+              <input type="time" className="ai-input" aria-label="Start time" value={time} onChange={(e) => setTime(e.target.value)} />
+            </label>
+            <label>
+              <span>End</span>
+              <input type="time" className="ai-input" aria-label="End time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+            </label>
+            {(time || endTime) && (
+              <button type="button" className="ai-btn ai-time-clear" onClick={() => { setTime(""); setEndTime(""); }} aria-label="Clear the times">
+                No time
+              </button>
+            )}
+          </>
         )}
-      </label>
+      </div>
       <textarea
         ref={ref}
         className="ai-input"

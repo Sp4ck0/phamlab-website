@@ -163,7 +163,7 @@ export function buildItinerary(data: TripExport, rangeArg?: Partial<DateRange> |
     if (stay.length) rows.push({ label: "Stay", items: stay });
 
     if (d.acts.length) {
-      rows.push({ label: "Plan", items: d.acts.map((a) => ({ main: a.text, time: a.time, tag: a.tag })) });
+      rows.push({ label: "Plan", items: d.acts.map((a) => ({ main: a.text, time: a.allDay ? "All day" : a.time, tag: a.tag })) });
     }
     if (d.tourDetails?.summary) {
       rows.push({ label: "Tour", items: [{ main: d.tourDetails.summary, sub: d.tourDetails.body }] });

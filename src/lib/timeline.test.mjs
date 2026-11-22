@@ -125,3 +125,10 @@ test('a day with nothing planned gets a placeholder where the activities would b
   const out = build({ hotels: [hotel('Stay')], flights: [flight('F1')], items: [{ id: 'later' }], plan: true, tour: true });
   assert.deepEqual(keys(out), [`${DATE}|h|Stay|a`, `${DATE}|f|F1|a`, 'plan', 'item:later', 'tour']);
 });
+
+test('all-day activities come right after the hotels, before untimed transport, in data order', () => {
+  const stay = hotel('Stay A');
+  const out = build({ hotels: [stay], flights: [flight('F1')], acts: acts({ time: '09:00', text: 'a' }, { allDay: true, text: 'whole' }, 'untimed', { allDay: true, text: 'fest' }) });
+  assert.deepEqual(keys(out), [stay.item.srcs[0], 'act:1', 'act:3', `${DATE}|f|F1|a`, 'act:0', 'act:2']);
+});
+

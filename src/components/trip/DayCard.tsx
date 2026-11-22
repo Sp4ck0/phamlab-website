@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { Act, ActionItem, Group, LegColor, Place, ResolvedDay, Status, Task, Vote } from "../../lib/types";
+import type { Act, ActionItem, Group, LegColor, Place, ResolvedDay, Status, Task, Vote, ActTiming } from "../../lib/types";
 import { diffLines, type Change } from "../../lib/changeDiff";
 import { MAPS_PIN_ICON, focusOnMap, googleMapsUrl, placeKey } from "../../lib/mapPoints";
 import { COUNTRY, DOW, MON, actParts, fmtShort, gapLabel, mergeFlightsByRoute, mergeHotelsByName } from "../../lib/tripLogic";
@@ -96,7 +96,7 @@ interface Props {
   onToggleActionItem: (id: string) => void;
   // Saves new text and places for the activity at `index`; `expected` is the text it had
   // when the editor opened. The pencil only shows when this is passed.
-  onEditActivity?: (date: string, index: number, expected: string, text: string, places: Place[], time?: string | null) => Promise<unknown>;
+  onEditActivity?: (date: string, index: number, expected: string, text: string, places: Place[], timing?: ActTiming) => Promise<unknown>;
   // Every stored item by id (its wording, votes and outcome), for the History of an entry approved from one.
   itemTasks?: Record<string, Task>;
   // "Add to itinerary": approves an item into the days (convex actionItems.promoteActionItem).
@@ -412,7 +412,8 @@ export function DayCard({
     return {
       key: entry.key, ghost: gone, defaultOpen: false, forceOpen: editing,
       tile: {
-        domId: entry.domKey && tileDomId(rowId, entry.domKey), time: entry.time,
+        // An all-day activity reads All day, like a hotel.
+        domId: entry.domKey && tileDomId(rowId, entry.domKey), time: typeof a !== "string" && a.allDay ? ALL_DAY : entry.time,
         // The tag (Food, Sightsee…) is the icon; its name is the icon's tooltip, not a second line.
         icon: (tag && TAG_EMOJI[tag]) || "📍", iconLabel: tag, change: state, now: !!live,
         label: title,
@@ -434,9 +435,11 @@ export function DayCard({
             initial={text}
             initialPlaces={places}
             initialTime={typeof a === "string" ? undefined : a.time}
+            initialEndTime={typeof a === "string" ? undefined : a.endTime}
+            initialAllDay={typeof a !== "string" && !!a.allDay}
             onCancel={() => setEditingAct(null)}
-            onSave={async (next, nextPlaces, nextTime) => {
-              await onEditActivity(d.date, ai, text, next, nextPlaces, nextTime);
+            onSave={async (next, nextPlaces, timing) => {
+              await onEditActivity(d.date, ai, text, next, nextPlaces, timing);
               setEditingAct(null);
             }}
           />

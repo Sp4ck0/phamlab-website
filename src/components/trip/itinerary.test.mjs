@@ -1345,11 +1345,11 @@ test('editing an activity: its time is in the editor; "No time" clears it, a tex
 
   let view = open();
   try {
-    assert.equal(view.container.querySelector('.ai-editor input[type=time]').value, '12:00'); // opens with the activity's time
+    assert.equal(view.container.querySelector('.ai-editor input[aria-label="Start time"]').value, '12:00'); // opens with the activity's time
     act(() => view.container.querySelector('.ai-time-clear').click());
-    assert.equal(view.container.querySelector('.ai-editor input[type=time]').value, '');
+    assert.equal(view.container.querySelector('.ai-editor input[aria-label="Start time"]').value, '');
     await save(view);
-    assert.ok(edits.pop()[5] === null); // cleared
+    assert.ok(edits.pop()[5].time === null); // cleared
   } finally { view.close(); }
 
   view = open();
@@ -1357,6 +1357,33 @@ test('editing an activity: its time is in the editor; "No time" clears it, a tex
     await save(view);
     const saved = edits.pop();
     assert.equal(saved[3], 'Synthetic lunch');
-    assert.ok(saved[5] === undefined); // unchanged: the activity keeps its place
+    assert.equal(JSON.stringify(saved[5]), '{}'); // nothing about its timing changed: it keeps its place
   } finally { view.close(); }
+
+  // All day: the times go, and only that is sent.
+  view = open();
+  try {
+    act(() => view.container.querySelector('.ai-allday input').click());
+    assert.ok(!view.container.querySelector('.ai-editor input[type=time]')); // no start or end while all day
+    await save(view);
+    assert.equal(JSON.stringify(edits.pop()[5]), '{"allDay":true}');
+  } finally { view.close(); }
+});
+
+test('an all-day activity sits at the top with the hotels, reads All day, and its calendar link is an all-day event', async () => {
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const { actUrl } = await import('../../lib/calendar.ts');
+  const synthetic = { ...day, country: 'TH', hotels: [{ who: 'all', name: 'Synthetic Hotel', status: 'booked' }],
+    acts: [{ tag: 'Food', time: '08:00', text: 'Synthetic breakfast' }, { tag: 'Event', allDay: true, text: 'Synthetic festival' }] };
+  const days = resolveDays({ days: [synthetic] });
+  const view = mount(React.createElement(Stateful, { ...props, day: days[0], days, expanded: true }));
+  try {
+    const titles = [...view.container.querySelectorAll('.tl-entry .tl-title')].map((t) => t.textContent);
+    assert.deepEqual(titles, ['Synthetic Hotel', 'Synthetic festival', 'Synthetic breakfast']);
+    const fest = [...view.container.querySelectorAll('.tl-tile')].find((t) => t.textContent.includes('Synthetic festival'));
+    assert.equal(fest.querySelector('.tl-time').textContent, 'All day');
+    assert.equal(fest.querySelector('.tl-time').dataset.allDay, 'true');
+  } finally { view.close(); }
+  const url = new URL(actUrl(synthetic.acts[1], days[0], 3, 1));
+  assert.equal(url.searchParams.get('dates'), '20400102/20400103'); // all day: date-only, ending the next day
 });

@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import type { ActionItem, Group, LegColor, Place, ResolvedDay, Status, Task, Vote } from "../../lib/types";
+import type { ActionItem, Group, LegColor, Place, ResolvedDay, Status, Task, Vote, ActTiming } from "../../lib/types";
 import { coversDay } from "../../lib/tasks";
 import type { DayGaps } from "../../lib/tasks";
 import { useAiFocus } from "../../hooks/useAiFocus";
@@ -42,7 +42,7 @@ interface Props {
   onVote: (itemId: string, vote: Vote | null) => void;
   actionItemsDone: Record<string, boolean>;
   onToggleActionItem: (id: string) => void;
-  onEditActivity?: (date: string, index: number, expected: string, text: string, places: Place[], time?: string | null) => Promise<unknown>;
+  onEditActivity?: (date: string, index: number, expected: string, text: string, places: Place[], timing?: ActTiming) => Promise<unknown>;
   // Every stored item by id, for the History of an entry approved from one.
   itemTasks?: Record<string, Task>;
   // "Add to itinerary" on an item tile.
