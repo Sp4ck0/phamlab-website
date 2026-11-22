@@ -4,6 +4,7 @@ import type { Board, NewCardDraft } from '../types';
 import { BOARD_COPY } from '../types';
 import { boardLanes, pastedImages } from '../lib';
 import { ImagePicker } from './ImagePicker';
+import { NoteBox } from './NoteBox';
 
 const MAX_IMAGES = 8;
 
@@ -104,8 +105,7 @@ export function NewCardPane({ board, draft, open, onChange, onMinimize, onExpand
 
                 <label className="field">
                   <span className="label">The longer version</span>
-                  <textarea
-                    rows={5}
+                  <NoteBox
                     value={draft.note}
                     placeholder="Say more, if you want to (optional)"
                     onChange={(e) => onChange({ note: e.target.value })}

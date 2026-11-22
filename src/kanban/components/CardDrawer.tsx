@@ -6,6 +6,7 @@ import { boardLanes, pastedImages, uid } from '../lib';
 import { serverMessage } from '../../lib/serverError';
 import { ImageGallery } from './ImageGallery';
 import { ImagePicker } from './ImagePicker';
+import { NoteBox } from './NoteBox';
 import { Thread } from './Thread';
 
 interface Props {
@@ -274,8 +275,7 @@ export function CardDrawer({
 
               <label className="field">
                 <span className="label">The longer version</span>
-                <textarea
-                  rows={4}
+                <NoteBox
                   value={note}
                   placeholder={copy.notePlaceholder}
                   onChange={(e) => {
