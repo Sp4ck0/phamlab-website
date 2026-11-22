@@ -400,7 +400,15 @@ button.route-chip[aria-expanded=true]{box-shadow:inset 0 0 0 1.5px var(--text-mu
   width:100%;background:none;border:0;padding:12px 14px;font:inherit;color:inherit;
   text-align:left;cursor:pointer;scroll-margin-top:76px;border-radius:0;
 }
-.day-head-btn:hover{background:var(--page)}
+/* The whole header opens and closes the day (DayCard), so hovering anywhere on it highlights all of it,
+   the photo's fade included; its corners follow the card's (square at the bottom while the day is open).
+   Mouse and desktop only: on a phone the header is a photo banner, and a tap would leave it highlighted. */
+@media (hover:hover) and (min-width:641px){
+  .day-heading{border-radius:11px 15px 15px 11px;transition:background-color .15s}
+  .day-heading:has(.day-head-btn[aria-expanded="true"]){border-bottom-left-radius:0;border-bottom-right-radius:0}
+  .day-heading:hover{background:var(--page)}
+  .day-heading:hover .day-photo::after{background:linear-gradient(90deg,transparent 40%,var(--page))}
+}
 .daynav button:focus-visible{outline:3px solid var(--accent-1);outline-offset:2px}
 /* Inside the card's edge, with rounded corners, so the ring never cuts across the card's own border. */
 .day-head-btn:focus-visible{outline:3px solid var(--accent-1);outline-offset:-3px;border-radius:10px}
@@ -938,7 +946,6 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
   .day-photo::after{background:linear-gradient(180deg,rgba(0,0,0,.05) 20%,rgba(0,0,0,.62))}
   /* width:100%: a button sizes to its content, so a short summary would pull the weather and chevron left. */
   .day-heading .day-head-btn{position:relative;z-index:1;padding:0;width:100%;border-radius:11px 11px 0 0}
-  .day-head-btn:hover{background:transparent}
   .day-head{grid-template-columns:minmax(0,1fr) auto;grid-template-rows:1fr auto auto auto;gap:0}
   .day-title-group{grid-column:1;grid-row:1 / 4;min-height:92px;justify-content:flex-end;gap:0;padding:8px 12px 7px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7)}
   .day-num{font-size:11.5px;color:rgba(255,255,255,.9)}
