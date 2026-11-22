@@ -208,10 +208,16 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
     if (!diff) return;
     readerMoved.current = false;
     const moved = () => { readerMoved.current = true; };
-    const events = ["wheel", "touchstart", "keydown"] as const;
+    const events = ["pointerdown", "wheel", "touchstart", "keydown"] as const;
     events.forEach(event => window.addEventListener(event, moved, { passive: true }));
     return () => events.forEach(event => window.removeEventListener(event, moved));
   }, [diff]);
+  // Any newer AI pointer (a tile, another day, a to-do) ends the playback: what
+  // was left of it shows as it ends up, and the new pointer takes the page.
+  const newest = (focus ?? taskFocus ?? itemFocus)?.nonce;
+  useEffect(() => {
+    if (newest) setDiff(current => (current && current.nonce !== newest ? null : current));
+  }, [newest]);
   const step = useChangeQueue(diff?.nonce ?? null, diff ? diff.versions.length - 1 : 0, (i, quick, done) => {
     setFast(quick);
     let cancelScroll = () => {};

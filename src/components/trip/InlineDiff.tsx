@@ -19,12 +19,18 @@ export function InlineDiff({ prev, next, children, paused = false, ms = NEW_MS }
     return [diffRuns(a, b, "old"), diffRuns(a, b, "new")];
   }, [prev, next]);
   const [phase, setPhase] = useState<"old" | "new" | "done">("old");
+  // Another change to the same line starts over from its old text.
+  const [shown, setShown] = useState({ prev, next });
+  if (shown.prev !== prev || shown.next !== next) {
+    setShown({ prev, next });
+    setPhase("old");
+  }
   useEffect(() => {
     if (paused) return;
     const a = setTimeout(() => setPhase("new"), (OLD_MS * ms) / NEW_MS);
     const b = setTimeout(() => setPhase("done"), ms);
     return () => { clearTimeout(a); clearTimeout(b); };
-  }, [paused, ms]);
+  }, [paused, ms, shown]);
   if (phase === "done") return <>{children}</>;
   return (
     <span className="chg-inline">
