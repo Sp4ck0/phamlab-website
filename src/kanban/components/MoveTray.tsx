@@ -23,11 +23,55 @@ function Target({ lane, name }: { lane: LaneId; name: string }) {
   );
 }
 
+/** The band above the tray where a held finger scrolls the lane down (px), and the speed range (px per frame). */
+const SCROLL_BAND = 140;
+const SCROLL_MIN = 1;
+const SCROLL_MAX = 16;
+/** How long the finger must stay in the band to reach full speed (ms), so it starts slow. */
+const SCROLL_RAMP_MS = 1400;
+
+/**
+ * While a card is held, dnd-kit only scrolls toward an edge the finger is near, and the tray
+ * covers the bottom edge, so dragging down never scrolled. Scroll the lane down while the
+ * finger sits just above the tray, slow at first and faster the longer it stays.
+ */
+function useScrollDownWhileDragging(active: boolean) {
+  useEffect(() => {
+    if (!active) return;
+    let y: number | null = null;
+    let enteredAt: number | null = null;
+    let frame = 0;
+    const onMove = (e: PointerEvent) => {
+      y = e.clientY;
+    };
+    const tick = (now: number) => {
+      const trayTop = document.querySelector('.movetray')?.getBoundingClientRect().top;
+      const inBand = y !== null && trayTop !== undefined && y < trayTop && y > trayTop - SCROLL_BAND;
+      if (inBand) {
+        enteredAt ??= now;
+        const t = Math.min(1, (now - enteredAt) / SCROLL_RAMP_MS);
+        // The lane's card list is what scrolls on a phone, not the page.
+        document.querySelector('.lane__body')?.scrollBy(0, SCROLL_MIN + (SCROLL_MAX - SCROLL_MIN) * t * t);
+      } else {
+        enteredAt = null;
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    window.addEventListener('pointermove', onMove, { capture: true, passive: true });
+    frame = requestAnimationFrame(tick);
+    return () => {
+      window.removeEventListener('pointermove', onMove, { capture: true });
+      cancelAnimationFrame(frame);
+    };
+  }, [active]);
+}
+
 /** Phone layout: while a card is being dragged, big drop targets (one per other lane) rise from the bottom. */
 export function MoveTray({ board, onOverChange }: { board: Board; onOverChange: (over: boolean) => void }) {
   const { source, target } = useDragOperation();
   // Tell the page when the finger is on a target, so it can shrink the dragged tile then.
   const over = !!source && String(target?.id ?? '').startsWith(MOVE_PREFIX);
+  useScrollDownWhileDragging(!!source);
   useEffect(() => {
     onOverChange(over);
   }, [over, onOverChange]);
