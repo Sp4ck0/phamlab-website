@@ -390,7 +390,8 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   );
   return (
     <>
-      <DayNav rows={state.rows} todayId={todayRow?.id} currentId={currentId} onJump={jump} />
+      {/* Picking a day ends an AI edit's playback, so it can't scroll the page back. */}
+      <DayNav rows={state.rows} todayId={todayRow?.id} currentId={currentId} onJump={id => { setDiff(null); jump(id); }} />
       <p role="status" className="itinerary-status">{message}</p>
       {days.length === 0 ? <p>No itinerary days yet.</p> : !visible.some(Boolean) ? (
         <div className="itinerary-empty"><p>No days match Only gaps.</p><button type="button" className="btn" onClick={() => onOnlyGapsChange(false)}>Show all days</button></div>
