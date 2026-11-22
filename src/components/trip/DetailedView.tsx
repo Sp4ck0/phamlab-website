@@ -236,10 +236,11 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
     setFast(quick);
     let cancelScroll = () => {};
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const frame = requestAnimationFrame(() => {
+    // After this render is on the page (the step's change is drawn).
+    const frame = setTimeout(() => {
       const row = state.rows.find(r => r.day.date === diff!.date);
       // The first change the day shows (a hidden copy, like the summary's other layout, doesn't count).
-      const el = row && [...document.querySelectorAll<HTMLElement>(`#${CSS.escape(row.id)} :is(.chg-new, .chg-gone, .chg-inline)`)]
+      const el = row && [...(document.getElementById(row.id)?.querySelectorAll<HTMLElement>(".chg-new, .chg-gone, .chg-inline") ?? [])]
         .find(e => e.getClientRects().length > 0);
       if (!el) { done(); return; } // nothing on screen changed (a status, a field the day doesn't show)
       const start = () => {
@@ -250,8 +251,8 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
       if (readerMoved.current || (box.top >= 0 && box.bottom <= window.innerHeight)) { start(); return; }
       el.scrollIntoView({ block: "center", behavior: quick ? "instant" : scrollBehavior() });
       cancelScroll = afterScroll(start, quick ? 300 : 1000);
-    });
-    return () => { cancelAnimationFrame(frame); cancelScroll(); clearTimeout(timer); };
+    }, 0);
+    return () => { clearTimeout(frame); cancelScroll(); clearTimeout(timer); };
   }, () => setDiff(null));
   const stepView = (date: string) =>
     diff?.date === date && step >= 0 && step < diff.versions.length - 1

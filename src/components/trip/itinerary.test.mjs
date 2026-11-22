@@ -988,7 +988,7 @@ test('a tile the AI or a shared link points at opens, scrolls and blinks; tiles 
   } finally { view.close(); localStorage.clear(); }
 });
 
-test('an AI edit to one item on a day scrolls to that item and blinks it, not the day\'s top', async () => {
+test('an AI edit to one item on a day scrolls straight to that item and plays its change, not the day\'s top', async () => {
   localStorage.clear();
   const { resolveDays } = await import('../../lib/tripLogic.ts');
   const acts = ['Synthetic first', 'Synthetic second', 'Synthetic third'];
@@ -997,20 +997,30 @@ test('an AI edit to one item on a day scrolls to that item and blinks it, not th
   const scrolled = [];
   const out = await timelineView(before);
   window.HTMLElement.prototype.scrollIntoView = function () { scrolled.push(this); };
+  // jsdom has no layout: every element is drawn, below the fold, so the page has to scroll to it.
+  const rects = window.Element.prototype.getClientRects;
+  const box = window.Element.prototype.getBoundingClientRect;
+  window.Element.prototype.getClientRects = function () { return [{}]; };
+  window.Element.prototype.getBoundingClientRect = function () { return { top: 2000, bottom: 2100, left: 0, right: 100, width: 100, height: 100 }; };
   const { view } = out;
   try {
     const [section] = dayCards(view.container);
     act(() => section.querySelector('.day-head-btn').click());
     out.setDays(after);
     act(() => out.show({ slug: 'synthetic', target: { kind: 'day', date: day.date }, nonce: 'n1' }));
-    await act(async () => { await new Promise((r) => setTimeout(r, 900)); }); // settle, then the scroll fallback
+    await act(async () => { await new Promise((r) => setTimeout(r, 300)); }); // the pointer settles and the playback starts
+    await act(async () => { await new Promise((r) => setTimeout(r, 300)); }); // its first step goes to the change
     const entry = (text) => [...section.querySelectorAll('li.tl-entry')].find((li) => li.textContent.includes(text));
     const changed = entry('rescheduled');
-    assert.ok(changed.querySelector('.chg-inline')); // the diff is drawn on the item
-    assert.ok(changed.classList.contains('ai-focus-flash'));
-    assert.equal(scrolled.at(-1), changed); // the last scroll lands on the item
-    assert.ok(!entry('Synthetic first').classList.contains('ai-focus-flash'));
-  } finally { view.close(); localStorage.clear(); }
+    assert.ok(changed.querySelector('.chg-inline')); // the change plays on the item
+    assert.ok(changed.contains(scrolled.at(-1))); // the page went to the item
+    assert.ok(!scrolled.some((el) => el.id?.endsWith('-trigger'))); // not to the day's top
+    assert.ok(!entry('Synthetic first').querySelector('.chg-inline, .chg-new'));
+  } finally {
+    window.Element.prototype.getClientRects = rects;
+    window.Element.prototype.getBoundingClientRect = box;
+    view.close(); localStorage.clear();
+  }
 });
 
 test('Only gaps: booked tiles start closed and actionable ones open, whatever the reader saved; every element id is unique', async () => {
