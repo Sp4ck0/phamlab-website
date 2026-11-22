@@ -1,6 +1,6 @@
 import { Fragment, type MouseEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Act, ActionItem, Group, LegColor, Outcome, Place, ResolvedDay, Status, Task, Vote, ActTiming } from "../../lib/types";
-import { diffLines, type Change } from "../../lib/changeDiff";
+import { diffLines, pairRewrites, type Change } from "../../lib/changeDiff";
 import { MAPS_PIN_ICON, focusOnMap, glanceOnMap, googleMapsUrl, placeKey } from "../../lib/mapPoints";
 import { COUNTRY, DOW, MON, actParts, mergeFlightsByRoute, mergeHotelsByName } from "../../lib/tripLogic";
 import type { FlightGroup, HotelGroup } from "../../lib/tripLogic";
@@ -46,29 +46,13 @@ const photoPlacesOf = (places: Place[] | undefined): TilePlace[] => {
   return (places ?? []).flatMap((p) => (p.placeId && !seen.has(p.placeId) && seen.add(p.placeId) ? [{ name: p.name, placeId: p.placeId }] : []));
 };
 
-// An edited line comes out of diffLines as old rows ("gone") then new rows. Pair
-// them in order so the new row can show the old wording's words in place
-// (InlineDiff) instead of a separate struck-through ghost above it.
-function pairRewrites<T>(changes: Change<T>[]): (Change<T> & { prev?: T })[] {
-  const out: (Change<T> & { prev?: T })[] = [];
-  for (let i = 0; i < changes.length; ) {
-    if (changes[i].state !== "gone") { out.push(changes[i++]); continue; }
-    let g = i;
-    while (g < changes.length && changes[g].state === "gone") g++;
-    let n = g;
-    while (n < changes.length && changes[n].state === "new") n++;
-    const k = Math.min(g - i, n - g);
-    out.push(...changes.slice(i, g - k));
-    for (let j = 0; j < n - g; j++) out.push(j < k ? { ...changes[g + j], prev: changes[g - k + j].item } : changes[g + j]);
-    i = n;
-  }
-  return out;
-}
-
 interface Props {
   day: ResolvedDay;
   // How this day looked before an AI edit, to show what changed (see useRecentChanges).
   changedFrom?: ResolvedDay;
+  // While the page scrolls to the change, it waits (paused); a long queue plays it in changeMs.
+  changePaused?: boolean;
+  changeMs?: number;
   // Whole resolved trip, to find a hotel's check-out date for its calendar link.
   days?: ResolvedDay[];
   dayNumber: number;
@@ -114,6 +98,8 @@ interface Props {
 export function DayCard({
   day: d,
   changedFrom: old,
+  changePaused = false,
+  changeMs,
   days,
   dayNumber,
   legColor,
@@ -468,7 +454,7 @@ export function DayCard({
         icon: (tag && TAG_EMOJI[tag]) || "📍", iconLabel: tag, change: state, now: !!live,
         label: title,
         expandable: editing || !!hist,
-        title: prev ? <InlineDiff prev={sanitizeHtml(actParts(prev).text)} next={sanitizeHtml(text)}>{title}</InlineDiff> : title,
+        title: prev ? <InlineDiff prev={sanitizeHtml(actParts(prev).text)} next={sanitizeHtml(text)} paused={changePaused} ms={changeMs}>{title}</InlineDiff> : title,
         menu: [
           ...(onEditActivity ? [{ label: "Edit", icon: "edit" as const, onSelect: () => setEditingAct(ai) }] : []),
           ...mapsItem(named[0], named.length > 1 ? `Open ${named[0]?.name} in Google Maps` : undefined),
@@ -542,16 +528,19 @@ export function DayCard({
     const prev = summaryChanged && old ? old.highlight || old.note : undefined;
     return (
       <span className={`day-summary ${where}${summaryChanged && !prev ? " chg-new" : ""}`} onClick={onClick}>
-        {prev ? <InlineDiff prev={prev} next={text}>{text}</InlineDiff> : text}
+        {prev ? <InlineDiff prev={prev} next={text} paused={changePaused} ms={changeMs}>{text}</InlineDiff> : text}
       </span>
     );
   };
 
   return (
     <section
-      className={`day-card${gapsOnly ? " gaps-only" : ""}${isToday ? " day-card--today" : ""}`}
+      className={`day-card${gapsOnly ? " gaps-only" : ""}${isToday ? " day-card--today" : ""}${old && changePaused ? " chg-paused" : ""}`}
       id={rowId}
-      style={{ ["--leg-color" as string]: legColor.color, ["--leg-tint" as string]: legColor.tint }}
+      // While an AI edit plays (DetailedView), the day shows steps of the edit, not the day as stored:
+      // nothing in it can be focused or pressed until the playback ends (the reader's first tap or key ends it).
+      inert={!!old}
+      style={{ ["--leg-color" as string]: legColor.color, ["--leg-tint" as string]: legColor.tint, ...(old && changeMs ? { ["--chg-ms" as string]: `${changeMs}ms` } : {}) }}
     >
       {/* Like a tile, a tap anywhere on the header (the photo, the space under the ⋯) opens or closes
           the day, except on a control of its own; the button inside stays the keyboard toggle. */}
@@ -653,7 +642,7 @@ export function DayCard({
           {!gapsOnly && d.callout && (
             <div className={`note${old && !old.callout && old.callout !== d.callout ? " chg-new" : ""}`}>
               {old?.callout && old.callout !== d.callout ? (
-                <InlineDiff prev={sanitizeHtml(old.callout)} next={sanitizeHtml(d.callout)}>
+                <InlineDiff prev={sanitizeHtml(old.callout)} next={sanitizeHtml(d.callout)} paused={changePaused} ms={changeMs}>
                   <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(d.callout) }} />
                 </InlineDiff>
               ) : (

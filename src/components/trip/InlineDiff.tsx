@@ -7,21 +7,30 @@ import { diffRuns, plainText, type Run } from "../../lib/wordDiff";
 // Mounting starts it; the parent unmounts it when the change is over. Both texts
 // share one grid cell (the unseen one hidden, not removed), so the space is the
 // larger of the two for the whole animation and nothing around it moves.
+// `paused` holds it on the old text (the page is still scrolling to it); `ms`
+// plays the whole change in that time instead (a long queue catching up).
 const OLD_MS = 1100;
 const NEW_MS = 2800;
 
-export function InlineDiff({ prev, next, children }: { prev: string; next: string; children: ReactNode }) {
+export function InlineDiff({ prev, next, children, paused = false, ms = NEW_MS }: { prev: string; next: string; children: ReactNode; paused?: boolean; ms?: number }) {
   const [before, after] = useMemo(() => {
     const a = plainText(prev);
     const b = plainText(next);
     return [diffRuns(a, b, "old"), diffRuns(a, b, "new")];
   }, [prev, next]);
   const [phase, setPhase] = useState<"old" | "new" | "done">("old");
+  // Another change to the same line starts over from its old text.
+  const [shown, setShown] = useState({ prev, next });
+  if (shown.prev !== prev || shown.next !== next) {
+    setShown({ prev, next });
+    setPhase("old");
+  }
   useEffect(() => {
-    const a = setTimeout(() => setPhase("new"), OLD_MS);
-    const b = setTimeout(() => setPhase("done"), NEW_MS);
+    if (paused) return;
+    const a = setTimeout(() => setPhase("new"), (OLD_MS * ms) / NEW_MS);
+    const b = setTimeout(() => setPhase("done"), ms);
     return () => { clearTimeout(a); clearTimeout(b); };
-  }, []);
+  }, [paused, ms, shown]);
   if (phase === "done") return <>{children}</>;
   return (
     <span className="chg-inline">
