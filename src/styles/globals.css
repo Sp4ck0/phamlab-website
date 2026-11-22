@@ -363,9 +363,11 @@ button.route-chip[aria-expanded=true]{box-shadow:inset 0 0 0 1.5px var(--text-mu
   font-family:inherit;cursor:pointer;min-height:44px;
 }
 .daynav button .dn-dow{font-size:12.5px;font-weight:600;color:var(--text-secondary)}
-.daynav button.daynav-today{font-weight:700}
-.daynav button.daynav-today .dn-dow{color:inherit;opacity:.9}
-.daynav button.daynav-today{background:var(--accent-1);border-color:var(--accent-1);color:#fff}
+/* Today: outlined, its weekday reads "Today". The day being looked at: filled (wins when it is today). */
+.daynav button.daynav-today{border-color:var(--accent-1);box-shadow:inset 0 0 0 1px var(--accent-1)}
+.daynav button.daynav-today .dn-dow{color:var(--accent-1);font-weight:700}
+.daynav button.daynav-current{background:var(--accent-1);border-color:var(--accent-1);color:#fff;font-weight:700}
+.daynav button.daynav-current .dn-dow{color:inherit;opacity:.9}
 /* Today, pinned at the left edge of the scrolling strip (shown only while a trip is under way). */
 .daynav button.daynav-jump{align-items:center;position:sticky;left:0;z-index:1;background:var(--accent-1-tint);border-color:var(--accent-1);color:var(--accent-1)}
 .today-badge{

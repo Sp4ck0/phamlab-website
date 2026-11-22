@@ -13,6 +13,7 @@ import { afterScroll, flash, scrollBehavior, SETTLE_MS } from "../../lib/flash";
 import { tileDomId } from "../../lib/tileId";
 import { reconcileRows } from "../../lib/itineraryState";
 import { DayNav } from "./DayNav";
+import { dayAtLine } from "../../lib/dayInView";
 import { DayCard } from "./DayCard";
 import type { DayWeather } from "../../lib/weather";
 import type { CityPhotoFetcher, PlacePhotoFetcher } from "../../lib/cityPhoto";
@@ -159,6 +160,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
     setState(current => ({ ...current, expanded: new Set([...current.expanded, id]) }));
     setGapsCollapsed(current => { const next = new Set(current); next.delete(id); return next; });
     setPending({ id, focus }); // A new intent also makes repeat jumps work.
+    setJumpedTo(id);
   }
 
   // The AI or a shared link pointed at a day, or at one tile on it: open and
@@ -243,6 +245,39 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
     };
   }, [todayRow?.id, hasPointer]);
 
+  // The day the reader is looking at, marked on the date strip: the day they last jumped to, until
+  // they scroll by hand (a day near the page's end can't reach the strip); else the day under the strip.
+  const [jumpedTo, setJumpedTo] = useState<string>();
+  const [scrolledTo, setScrolledTo] = useState<string>();
+  useEffect(() => {
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
+      const strip = document.querySelector(".daynav-shell");
+      if (!strip) return;
+      // A little below the strip: a jump leaves the day's header just under it.
+      const line = strip.getBoundingClientRect().bottom + 32;
+      const cards = state.rows.flatMap(r => {
+        const el = document.getElementById(r.id);
+        return el ? [{ id: r.id, top: el.getBoundingClientRect().top }] : [];
+      });
+      setScrolledTo(dayAtLine(cards, line));
+    };
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(measure); };
+    const byHand = () => setJumpedTo(undefined);
+    const handEvents = ["wheel", "touchmove", "keydown"] as const;
+    measure();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    handEvents.forEach(event => window.addEventListener(event, byHand, { passive: true }));
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      handEvents.forEach(event => window.removeEventListener(event, byHand));
+    };
+  }, [state.rows]);
+
   // The removed day, where it sat among the rest.
   // The reader's own edit shows at once; only the AI's is held for its focus signal.
   const editActivity: typeof onEditActivity = onEditActivity && ((date, ...rest) => {
@@ -265,7 +300,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   );
   return (
     <>
-      <DayNav rows={state.rows} todayId={todayRow?.id} onJump={jump} />
+      <DayNav rows={state.rows} todayId={todayRow?.id} currentId={jumpedTo ?? scrolledTo} onJump={jump} />
       <p role="status" className="itinerary-status">{message}</p>
       {days.length === 0 ? <p>No itinerary days yet.</p> : !visible.some(Boolean) ? (
         <div className="itinerary-empty"><p>No days match Only gaps.</p><button type="button" className="btn" onClick={() => onOnlyGapsChange(false)}>Show all days</button></div>
