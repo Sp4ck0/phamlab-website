@@ -205,6 +205,12 @@
   outline: none;
   border-color: var(--ink);
 }
+/* "The longer version": starts about 8 lines tall, grows with the note
+   (NoteBox), and scrolls inside past two thirds of the screen. */
+.field textarea.note-box {
+  min-height: calc(8 * 1.5em + 20px);
+  max-height: 66vh;
+}
 
 .row {
   display: flex;
