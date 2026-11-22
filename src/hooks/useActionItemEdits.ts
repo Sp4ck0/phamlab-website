@@ -14,6 +14,7 @@ export function useActionItemEdits(slug: string) {
   const updateMut = useMutation(api.actionItems.updateActionItem);
   const removeMut = useMutation(api.actionItems.removeActionItem);
   const promoteMut = useMutation(api.actionItems.promoteActionItem);
+  const unpromoteMut = useMutation(api.actionItems.unpromoteActionItem);
 
   return {
     // Pass `id` only to restore a deleted item under its original id.
@@ -22,5 +23,7 @@ export function useActionItemEdits(slug: string) {
     removeItem: (id: string) => removeMut({ slug, code, id }),
     // "Add to itinerary": writes what the item proposes (or an activity from its title) into the days.
     promoteItem: (id: string, date: string) => promoteMut({ slug, code, id, date }),
+    // "Back to considering": takes what was approved from the item back out and reopens it.
+    unpromoteItem: (id: string) => unpromoteMut({ slug, code, id }),
   };
 }

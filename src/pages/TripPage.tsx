@@ -181,7 +181,7 @@ function TripPageEntry() {
     return (day: { date: string }) => dates.has(day.date);
   }, [loaded, tasks]);
   const gapsByDate = useMemo(() => dayGaps(tasks), [tasks]);
-  const { addItem, updateItem, removeItem, promoteItem } = useActionItemEdits(slug || "");
+  const { addItem, updateItem, removeItem, promoteItem, unpromoteItem } = useActionItemEdits(slug || "");
   // Every stored item by id: an itinerary entry approved from one shows its wording and votes as History.
   // Day headers' city photos and tiles' place photos: each asked for once while the page is open,
   // in one call for whatever scrolled into view together.
@@ -307,6 +307,8 @@ function TripPageEntry() {
               onEditActivity={updateActivity}
               itemTasks={itemTasks}
               onPromote={promoteItem}
+              onUnpromote={unpromoteItem}
+              onSetOutcome={setOutcome}
               cityPhoto={cityPhoto}
               placePhoto={placePhoto}
             />
@@ -328,6 +330,9 @@ function TripPageEntry() {
             pendingVotes={pendingVotes}
             onVote={vote}
             onSetOutcome={setOutcome}
+            days={resolvedDays}
+            onPromote={promoteItem}
+            onUnpromote={unpromoteItem}
           />
 
           <footer>

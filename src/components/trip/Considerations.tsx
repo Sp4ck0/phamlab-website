@@ -1,19 +1,21 @@
-import type { ReactNode } from "react";
-import type { ActionItem, Group, Outcome, Task, Vote } from "../../lib/types";
-import { gapLabel } from "../../lib/tripLogic";
-import { PRIORITY_LABELS, priorityRank, scopeStart, voteTally } from "../../lib/tasks";
+import { useState } from "react";
+import { useParams } from "react-router-dom";
+import type { ActionItem, Group, Outcome, ResolvedDay, Task, Vote } from "../../lib/types";
+import { priorityRank, scopeStart } from "../../lib/tasks";
 import { googleMapsUrl } from "../../lib/mapPoints";
+import { copyShareLink } from "../../lib/shareLink";
 import type { ActionItemFields } from "../../hooks/useActionItemEdits";
-import { sanitizeHtml } from "../../lib/sanitizeHtml";
 import { ActionItemEditor } from "./ActionItemEditor";
-import { MapsPin, PencilIcon, ScopeLinks, ShowOnMap, TrashIcon } from "./taskParts";
-import { ShareLinkButton } from "./ShareLinkButton";
+import { TimelineTile } from "./TimelineTile";
+import { describeItemTile, linkedItems } from "./itemTile";
 
 interface Props {
   // Only the consider tasks.
   tasks: Task[];
   items: ActionItem[];
   groups: Group[];
+  // The trip's days: the days an idea can be added to, and where an added one is.
+  days: ResolvedDay[];
   tripStart: string;
   tripEnd: string;
   // "new-consider" = the composer is open; an id = that item is being edited.
@@ -25,6 +27,8 @@ interface Props {
   onAddItem: (fields: ActionItemFields) => Promise<unknown>;
   onUpdateItem: (id: string, fields: ActionItemFields) => Promise<unknown>;
   onRemove: (task: Task, item: ActionItem) => void;
+  onPromote?: (id: string, date: string) => Promise<unknown>;
+  onUnpromote?: (id: string) => Promise<unknown>;
   settledOpen: boolean;
   onSettledOpenChange: (open: boolean) => void;
 }
@@ -43,22 +47,21 @@ function byDate(a: Task, b: Task) {
   return a.title.localeCompare(b.title);
 }
 
-const badgeStyle = (color: string | null) => ({
-  display: "inline-block",
-  padding: "3px 7px",
-  borderRadius: 6,
-  fontSize: 10,
-  fontWeight: 700,
-  ...(color ? { background: `${color}1a`, color } : { background: "var(--chip-bg)", color: "var(--text-secondary)" }),
-});
+// The days an idea can be added to: its own day or range, or any day for a whole-trip idea.
+function promoteDays(task: Task, days: ResolvedDay[]) {
+  const s = task.scope;
+  return days
+    .map((d) => d.date)
+    .filter((date) => (s.kind === "trip" ? true : s.kind === "day" ? date === s.date : date >= s.start && date <= s.end));
+}
 
-// Things the group is still weighing, shown apart from the plan so they can't be
-// mistaken for it: dashed, tinted, no checkbox. Each can be voted yes / no by
-// anyone with access, then marked Chosen or Dropped.
+// Ideas the group is still weighing, each drawn as the tile it would become on its day (itemTile.tsx):
+// dashed, voted on in its header, added to the itinerary or dropped from its body. Settled ones fold away.
 export function Considerations({
   tasks,
   items,
   groups,
+  days,
   tripStart,
   tripEnd,
   editing,
@@ -69,18 +72,46 @@ export function Considerations({
   onAddItem,
   onUpdateItem,
   onRemove,
+  onPromote,
+  onUnpromote,
   settledOpen,
   onSettledOpenChange,
 }: Props) {
+  const { slug } = useParams<{ slug: string }>();
+  const [opened, setOpened] = useState<Record<string, boolean>>({});
   const editorProps = { groups, minDate: tripStart, maxDate: tripEnd, onCancel: () => setEditing(null) };
+  const linkedOn = linkedItems(days);
 
-  const card = (task: Task): ReactNode => {
+  const tile = (task: Task) => {
     const id = itemId(task);
     const item = items.find((i) => i.id === id);
     if (!item) return null;
-    if (editing === id) {
-      return (
-        <div className="consider" key={task.key}>
+    const start = scopeStart(task.scope);
+    const at = Math.max(0, start ? days.findIndex((d) => d.date === start) : 0);
+    const place = task.places?.[0];
+    const x = describeItemTile({
+      item: { id, task },
+      domId: `ai-row-${id}`,
+      time: task.time,
+      day: days[at] ? { day: days[at], dayNumber: at } : undefined,
+      groups,
+      pendingVotes,
+      onVote,
+      done: !!task.done,
+      linkedOn: linkedOn.get(id),
+      promoteDays: promoteDays(task, days),
+      onPromote,
+      onUnpromote,
+      onSetOutcome,
+      showDay: true,
+      menu: [
+        { label: "Edit", icon: "edit", onSelect: () => setEditing(id) },
+        ...(place?.name ? [{ label: "Open in Google Maps", icon: "pin" as const, href: googleMapsUrl(place) }] : []),
+        { label: "Copy link", icon: "link", onSelect: () => copyShareLink(slug, { task: task.key }) },
+        { label: "Delete", onSelect: () => onRemove(task, item) },
+      ],
+      editor:
+        editing === id ? (
           <ActionItemEditor
             {...editorProps}
             initial={item}
@@ -89,73 +120,17 @@ export function Considerations({
               setEditing(null);
             }}
           />
-        </div>
-      );
-    }
-    const badge = task.who !== undefined ? gapLabel(task.who, groups, scopeStart(task.scope) ?? "") : null;
-    const { mine, yes, no, votes } = voteTally(task, pendingVotes[id]);
-    const settled = task.outcome;
-    const pick = (v: Vote) => onVote(id, mine === v ? null : v);
+        ) : undefined,
+    });
+    const open = !!x.forceOpen || (opened[id] ?? x.defaultOpen);
     return (
-      <div className="consider" data-outcome={settled} key={task.key} id={`ai-row-${id}`}>
-        <div className="consider-head">
-          <span className="consider-pill">{settled === "chosen" ? "Chosen" : settled === "dropped" ? "Dropped" : "Considering"}</span>
-          {task.priority && <span style={badgeStyle(null)}>{PRIORITY_LABELS[task.priority]}</span>}
-          {badge && <span style={badgeStyle(badge.color)}>{badge.label}</span>}
-          <span className="consider-title" dangerouslySetInnerHTML={{ __html: sanitizeHtml(task.title) }} />
-        </div>
-        {task.detail && <p className="consider-detail" dangerouslySetInnerHTML={{ __html: sanitizeHtml(task.detail) }} />}
-        <div className="consider-meta">
-          <span>{<ScopeLinks scope={task.scope} />}</span>
-          {task.places?.map((p, i) => (
-            <span key={i}>
-              <a href={googleMapsUrl(p)} target="_blank" rel="noopener noreferrer" className="consider-place">
-                <MapsPin />{p.name}
-              </a>
-              <ShowOnMap place={p} />
-            </span>
-          ))}
-        </div>
-        <div className="consider-actions">
-          <div className="vote-bar" role="group" aria-label={`Vote on ${task.title}`}>
-            <button type="button" className="vote-btn" data-vote="yes" aria-pressed={mine === "yes"} onClick={() => pick("yes")}>
-              👍 <b>{yes}</b>
-            </button>
-            <button type="button" className="vote-btn" data-vote="no" aria-pressed={mine === "no"} onClick={() => pick("no")}>
-              👎 <b>{no}</b>
-            </button>
-          </div>
-          {settled ? (
-            <button type="button" className="ai-btn" onClick={() => onSetOutcome(task.key, null)}>
-              Reopen
-            </button>
-          ) : (
-            <>
-              <button type="button" className="ai-btn" onClick={() => onSetOutcome(task.key, "chosen")}>
-                Choose
-              </button>
-              <button type="button" className="ai-btn" onClick={() => onSetOutcome(task.key, "dropped")}>
-                Drop
-              </button>
-            </>
-          )}
-          <span className="row-actions">
-            <ShareLinkButton param={{ task: task.key }} label={`Share link to ${task.title}`} />
-            <button type="button" className="icon-btn" aria-label={`Edit ${task.title}`} onClick={() => setEditing(id)}>
-              <PencilIcon />
-            </button>
-            <button type="button" className="icon-btn" aria-label={`Delete ${task.title}`} onClick={() => onRemove(task, item)}>
-              <TrashIcon />
-            </button>
-          </span>
-        </div>
-        {(votes.yes.length > 0 || votes.no.length > 0) && (
-          <div className="vote-names">
-            {votes.yes.length > 0 && <span>👍 {votes.yes.join(", ")}</span>}
-            {votes.no.length > 0 && <span>👎 {votes.no.join(", ")}</span>}
-          </div>
-        )}
-      </div>
+      <TimelineTile
+        key={task.key}
+        {...x.tile}
+        open={open}
+        onToggle={() => setOpened((o) => ({ ...o, [id]: !open }))}
+        onReveal={() => setOpened((o) => ({ ...o, [id]: true }))}
+      />
     );
   };
 
@@ -174,8 +149,7 @@ export function Considerations({
         </div>
       </div>
       <p className="section-sub">
-        Ideas the group is still weighing — not part of the plan yet. Vote 👍 or 👎, then choose or drop each one.
-        Each person gets one vote.
+        Possible additions to the itinerary. Vote 👍 or 👎 (one vote each), then add the winner to the itinerary or drop it.
       </p>
       {editing === "new-consider" && (
         <div className="consider">
@@ -190,14 +164,14 @@ export function Considerations({
         </div>
       )}
       {open.length > 0 ? (
-        <div className="considerations">{open.map(card)}</div>
+        <ol className="tl considerations">{open.map(tile)}</ol>
       ) : (
         editing !== "new-consider" && <div className="action-items action-items-empty">Nothing under consideration.</div>
       )}
       {settled.length > 0 && (
         <details className="action-completed" open={settledOpen} onToggle={(e) => onSettledOpenChange(e.currentTarget.open)}>
           <summary>Settled ({settled.length})</summary>
-          <div className="considerations">{settled.map(card)}</div>
+          <ol className="tl considerations">{settled.map(tile)}</ol>
         </details>
       )}
     </>

@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState, type ReactNode } from "react";
-import type { ActionItem, Group, Outcome, Priority, Task, Vote } from "../../lib/types";
+import type { ActionItem, Group, Outcome, Priority, ResolvedDay, Task, Vote } from "../../lib/types";
 import { gapLabel } from "../../lib/tripLogic";
 import { dueLabel, dueState } from "../../lib/dueDates";
 import { kindLabel, PRIORITY_LABELS, priorityRank, scopeStart } from "../../lib/tasks";
@@ -39,6 +39,10 @@ interface Props {
   pendingVotes: Record<string, Vote | null>;
   onVote: (itemId: string, vote: Vote | null) => void;
   onSetOutcome: (key: string, outcome: Outcome | null) => void;
+  // The trip's days, and adding an idea to them / taking it back out (Considerations.tsx).
+  days: ResolvedDay[];
+  onPromote?: (id: string, date: string) => Promise<unknown>;
+  onUnpromote?: (id: string) => Promise<unknown>;
 }
 
 interface Row {
@@ -82,6 +86,9 @@ export function ActionItems({
   pendingVotes,
   onVote,
   onSetOutcome,
+  days,
+  onPromote,
+  onUnpromote,
 }: Props) {
   // "new" = the composer is open; "new-consider" = the considerations composer;
   // an id = that item's row is being edited.
@@ -341,6 +348,9 @@ export function ActionItems({
         pendingVotes={pendingVotes}
         onVote={onVote}
         onSetOutcome={onSetOutcome}
+        days={days}
+        onPromote={onPromote}
+        onUnpromote={onUnpromote}
         onAddItem={onAddItem}
         onUpdateItem={updateItem}
         onRemove={remove}

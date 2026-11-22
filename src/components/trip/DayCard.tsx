@@ -1,8 +1,8 @@
 import { Fragment, type MouseEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { Act, ActionItem, Group, LegColor, Place, ResolvedDay, Status, Task, Vote, ActTiming } from "../../lib/types";
+import type { Act, ActionItem, Group, LegColor, Outcome, Place, ResolvedDay, Status, Task, Vote, ActTiming } from "../../lib/types";
 import { diffLines, type Change } from "../../lib/changeDiff";
 import { MAPS_PIN_ICON, focusOnMap, glanceOnMap, googleMapsUrl, placeKey } from "../../lib/mapPoints";
-import { COUNTRY, DOW, MON, actParts, fmtShort, gapLabel, mergeFlightsByRoute, mergeHotelsByName } from "../../lib/tripLogic";
+import { COUNTRY, DOW, MON, actParts, mergeFlightsByRoute, mergeHotelsByName } from "../../lib/tripLogic";
 import type { FlightGroup, HotelGroup } from "../../lib/tripLogic";
 import { TransportBody } from "./TransportBody";
 import { HotelBody } from "./HotelCard";
@@ -12,7 +12,6 @@ import { TileMenu, type TileMenuItem } from "./TileMenu";
 import { routeSearchUrl } from "../../lib/segments";
 import { ALL_DAY, OWN_CLICK, TileStatePill, TimelineTile, type TimelineTileProps, type TileState } from "./TimelineTile";
 import { buildTimeline, timelineSpans, type ActRow, type DayItem, type TimelineEntry } from "../../lib/timeline";
-import { serverMessage } from "../../lib/serverError";
 import type { TileOpen } from "../../hooks/useTileOpen";
 import { countdownText, nextUp } from "../../lib/nextUp";
 import { useNow } from "../../lib/useNow";
@@ -21,18 +20,19 @@ import { TourBox } from "./TourBox";
 import { WeatherBlock } from "./WeatherBadge";
 import type { CityPhoto, CityPhotoFetcher, PlacePhotoFetcher } from "../../lib/cityPhoto";
 import type { TilePlace } from "../../hooks/usePlacePhotos";
-import { MODE_EMOJI, TAG_EMOJI, actUrl, hotelUrl, legUrl, plain, segmentUrl, zoneNow } from "../../lib/calendar";
+import { TAG_EMOJI, actUrl, hotelUrl, legUrl, plain, segmentUrl, zoneNow } from "../../lib/calendar";
 import { NOW_EMOJI, dayZone, nowPosition, untilText, viewerHint, type NowPosition } from "../../lib/nowMarker";
 import { sanitizeHtml } from "../../lib/sanitizeHtml";
 import type { DayWeather } from "../../lib/weather";
 import { useParams } from "react-router-dom";
-import { PRIORITY_LABELS, voteTally } from "../../lib/tasks";
+import { voteTally } from "../../lib/tasks";
 import type { DayGaps } from "../../lib/tasks";
 import { useShowAiFocus } from "../../hooks/useAiFocus";
 import { useUntilFound } from "../../hooks/useUntilFound";
 import { ActivityEditor } from "./ActivityEditor";
 import { tileDomId } from "../../lib/tileId";
 import { InlineDiff } from "./InlineDiff";
+import { describeItemTile, linkedItems } from "./itemTile";
 
 // What a line is, for telling an edited line from an untouched one (not its
 // ids or ticks, which change without the content changing).
@@ -101,6 +101,10 @@ interface Props {
   itemTasks?: Record<string, Task>;
   // "Add to itinerary": approves an item into the days (convex actionItems.promoteActionItem).
   onPromote?: (id: string, date: string) => Promise<unknown>;
+  // "Back to considering": takes what was approved from an item back out (actionItems.unpromoteActionItem).
+  onUnpromote?: (id: string) => Promise<unknown>;
+  // Drop or reopen a consideration.
+  onSetOutcome?: (key: string, outcome: Outcome | null) => void;
   // A photo of the day's city for its header; without it the header shows the leg's colour.
   cityPhoto?: CityPhotoFetcher;
   // A photo of a place on a tile (a hotel, an activity's or an item's place with a Place ID).
@@ -133,6 +137,8 @@ export function DayCard({
   onEditActivity,
   itemTasks,
   onPromote,
+  onUnpromote,
+  onSetOutcome,
   cityPhoto,
   placePhoto,
 }: Props) {
@@ -261,14 +267,8 @@ export function DayCard({
     ...shownConsiderations.map((t) => ({ id: t.key.slice("item:".length), task: t, time: (t.scope.kind === "day" ? t.scope.date : t.scope.kind === "range" ? t.scope.start : undefined) === d.date ? t.time : undefined })),
     ...shownActionItems.map((i) => ({ id: i.id, todo: i, time: i.date === d.date ? i.time : undefined })),
   ];
-  // Items already written into the itinerary (an entry links back to them).
-  const linkedIds = new Set(
-    (days ?? [d]).flatMap((day) => [
-      ...day.flights.map((f) => f.fromItem),
-      ...day.hotels.map((h) => h.fromItem),
-      ...day.acts.map((a) => (typeof a === "string" ? undefined : a.fromItem)),
-    ]).filter((x): x is string => !!x)
-  );
+  // Items already written into the itinerary (an entry links back to them), with the first day each is on.
+  const linkedOn = linkedItems(days ?? [d]);
   // An entry approved from an item: what was weighed and how the votes went, folded away at the end of the tile.
   const history = (fromItem?: string) => {
     const t = fromItem ? itemTasks?.[fromItem] : undefined;
@@ -497,69 +497,10 @@ export function DayCard({
       },
     };
   };
-  // A to-do or consideration on the timeline. A consideration votes in its header, a to-do
-  // ticks off there. One that proposes a hotel, transport or activity shows that entry as a
-  // "Proposed" card, drawn like the real tile, and "Add to itinerary" writes it into the days.
+  // A to-do or consideration on the timeline (itemTile.tsx, shared with the Under consideration list).
   function describeItem(entry: Extract<TimelineEntry, { kind: "item" }>): Described {
     const { id, task, todo } = entry.item;
-    const consider = !!task;
-    // The header has the title as plain text (it sits in a button); a title with links shows them again in the body.
-    const richTitle = sanitizeHtml(task?.title ?? todo?.title ?? "");
-    const titleHasLinks = /<a\b/i.test(richTitle);
-    const title = plain(richTitle);
-    const detail = task?.detail ?? todo?.detail;
     const proposes = task?.proposes ?? todo?.proposes;
-    const done = consider ? !!task!.done : !!actionItemsDone[id];
-    const linked = linkedIds.has(id);
-    const open = !done && !linked;
-    const start = task ? (task.scope.kind === "day" ? task.scope.date : task.scope.kind === "range" ? task.scope.start : undefined) : todo?.date;
-    const end = task ? (task.scope.kind === "range" ? task.scope.end : start) : todo?.endDate ?? todo?.date;
-    const icon = !proposes ? (consider ? "🗳️" : "☑️")
-      : proposes.type === "hotel" ? "🏨"
-      : proposes.type === "transport" ? MODE_EMOJI[proposes.entry.mode || "flight"]
-      : (proposes.entry.tag && TAG_EMOJI[proposes.entry.tag]) || "📍";
-    const status = consider ? (task!.outcome === "chosen" ? "Chosen" : task!.outcome === "dropped" ? "Dropped" : "Considering") : done ? "Done" : "To-do";
-    const what = !proposes ? undefined
-      : proposes.type === "hotel" ? `Proposed stay · ${proposes.entry.name}`
-      : proposes.type === "transport" ? `Proposed ${proposes.entry.mode || "flight"} · ${proposes.entry.route}`
-      : "Proposed activity";
-    const range = start && end && end !== start ? `${fmtShort(start)} – ${fmtShort(end)}` : undefined;
-    const who = task?.who ?? todo?.who;
-    const priority = task?.priority ?? todo?.priority;
-    // A consideration's header shows the tally; voting is in its menu. A settled item keeps its
-    // tally but voting is over.
-    let headerEnd;
-    const voteItems: TileMenuItem[] = [];
-    if (consider) {
-      const { mine, yes, no } = voteTally(task!, pendingVotes[id]);
-      const pick = (v: Vote) => onVote(id, mine === v ? null : v);
-      headerEnd = (
-        <span className="vote-tally" role="img" aria-label={`${yes} yes, ${no} no${mine ? `, you voted ${mine}` : ""}`}>
-          <span data-mine={mine === "yes" || undefined}>👍 <b>{yes}</b></span>
-          <span data-mine={mine === "no" || undefined}>👎 <b>{no}</b></span>
-        </span>
-      );
-      voteItems.push(
-        { label: mine === "yes" ? "Take back my yes vote" : "Vote yes", icon: "yes", disabled: !!task!.outcome, onSelect: () => pick("yes") },
-        { label: mine === "no" ? "Take back my no vote" : "Vote no", icon: "no", disabled: !!task!.outcome, onSelect: () => pick("no") },
-      );
-    }
-    const doneItem: TileMenuItem[] = consider ? [] : [{ label: done ? "Mark as not done" : "Mark as done", icon: done ? "uncheck" : "check", onSelect: () => onToggleActionItem(id) }];
-    const approveItem: TileMenuItem[] =
-      open && onPromote && (proposes || consider)
-        ? [{
-            label: "Add to itinerary",
-            icon: "add",
-            onSelect: async () => {
-              try {
-                await onPromote(id, d.date);
-                return "Added to the itinerary";
-              } catch (e) {
-                return serverMessage(e, "Couldn't add it — try again.");
-              }
-            },
-          }]
-        : [];
     // A proposed hotel's or transport's own links (its Maps page, each hop's calendar).
     const draftItems: TileMenuItem[] = !proposes
       ? []
@@ -571,63 +512,20 @@ export function DayCard({
         : proposes.type === "transport"
           ? transportCalendarItems({ ...proposes.entry, who: [proposes.entry.who].flat(), ids: [`item:${id}`], statuses: [proposes.entry.status] })
           : [];
-    const draftBody = (() => {
-      if (!proposes) return null;
-      if (proposes.type === "hotel") {
-        const h = proposes.entry;
-        const g = { ...h, who: [h.who].flat(), srcs: [`item:${id}`], statuses: [h.status], carriedAll: false, checkIn: d.date === start, checkOut: d.date === end };
-        return <HotelBody g={g} status={h.status} stay={null} groups={groups} date={d.date} dayNumber={dayNumber} actions={false} showName />;
-      }
-      if (proposes.type === "transport") {
-        const f = proposes.entry;
-        const g = { ...f, who: [f.who].flat(), ids: [`item:${id}`], statuses: [f.status] };
-        return <TransportBody group={g} groups={groups} day={d} dayNumber={dayNumber} actions={false} />;
-      }
-      const a = proposes.entry;
-      return (
-        <div className="activity-text">
-          {a.time && <b>{a.time} </b>}
-          <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(a.text) }} />
-        </div>
-      );
-    })();
-    return {
-      key: entry.key, ghost: false, defaultOpen: open,
-      tile: {
-        domId: tileDomId(rowId, entry.domKey), time: entry.time, icon, title, warn: open,
-        menu: [
-          ...doneItem,
-          ...voteItems,
-          ...approveItem,
-          ...mapsItem((task?.places ?? todo?.places ?? [])[0]),
-          // Jumps to this item in the Action Items or Under consideration list.
-          { label: "Open in list", icon: "list", onSelect: () => { if (slug) showFocus({ slug, target: { kind: "actionItem", id }, nonce: `${Date.now()}` }); } },
-          copyItem({ task: `item:${id}` }),
-          ...draftItems,
-        ],
-        meta: [status, what, range, who ? gapLabel(who, groups, start ?? d.date)?.label : undefined, priority ? `${PRIORITY_LABELS[priority]} priority` : undefined].filter(Boolean).join(" · "),
-        className: `tl-item${consider ? " tl-consider" : ""}${done ? " is-done" : ""}`,
-        headerEnd,
-        photoPlaces: photoPlacesOf(task?.places ?? todo?.places),
-        children: (
-          <>
-            {(titleHasLinks || detail) && (
-              <div className="action-text">
-                {titleHasLinks && <div dangerouslySetInnerHTML={{ __html: richTitle }} />}
-                {detail && <div className="cmeta" dangerouslySetInnerHTML={{ __html: sanitizeHtml(detail) }} />}
-              </div>
-            )}
-            {draftBody && (
-              <div className="tl-proposal">
-                <span className="tl-proposal-label">Proposed</span>
-                {draftBody}
-              </div>
-            )}
-            {linked && <p className="cmeta tl-linked">In the itinerary.</p>}
-          </>
-        ),
-      },
-    };
+    const places = task?.places ?? todo?.places;
+    const x = describeItemTile({
+      item: entry.item, domId: tileDomId(rowId, entry.domKey), time: entry.time, day: { day: d, dayNumber }, onDay: d.date,
+      groups, pendingVotes, onVote, done: !!actionItemsDone[id], linkedOn: linkedOn.get(id), promoteDays: [d.date],
+      onToggleActionItem, onPromote, onUnpromote, onSetOutcome,
+      menu: [
+        ...mapsItem((places ?? [])[0]),
+        // Jumps to this item in the Action Items or Under consideration list (where it is edited).
+        { label: task ? "Edit in list" : "Open in list", icon: task ? "edit" : "list", onSelect: () => { if (slug) showFocus({ slug, target: { kind: "actionItem", id }, nonce: `${Date.now()}` }); } },
+        copyItem({ task: `item:${id}` }),
+        ...draftItems,
+      ],
+    });
+    return { key: entry.key, ghost: false, ...x, tile: { ...x.tile, photoPlaces: photoPlacesOf(places) } };
   }
   const described = entries.map((e) => (e.kind === "tour" ? null : describe(e)));
   // Open state is kept per trip, so an id carries the day's date.
