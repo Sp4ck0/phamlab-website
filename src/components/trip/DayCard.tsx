@@ -32,6 +32,7 @@ import { useShowAiFocus } from "../../hooks/useAiFocus";
 import { useUntilFound } from "../../hooks/useUntilFound";
 import { ActivityEditor } from "./ActivityEditor";
 import { tileDomId } from "../../lib/tileId";
+import { BARS_EVENT } from "../../lib/hideBars";
 import { InlineDiff } from "./InlineDiff";
 
 // What a line is, for telling an edited line from an untouched one (not its
@@ -192,15 +193,18 @@ export function DayCard({
   }, [cityPhoto, d.city, d.country]);
   // On a phone the header pins under the date strip while its day scrolls by. It is marked
   // (data-stuck) while pinned, so the tiles fade as they slide under it instead of being cut off
-  // at its edge (CSS). Pinned means its top has reached the strip's bottom (--daynav-bottom): the
-  // observer's top edge sits 1px below that line, so a pinned header is never wholly inside.
+  // at its edge (CSS). Pinned means its top has reached the line it pins at (--pinned-top: the
+  // strip's bottom, or the top of the screen while the bars are hidden): the observer's top edge
+  // sits 1px below that line, so a pinned header is never wholly inside. It moves with the bars.
   useEffect(() => {
     const el = headRef.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
     let io: IntersectionObserver | undefined;
     const watch = () => {
       io?.disconnect();
-      const line = parseFloat(window.getComputedStyle(document.documentElement).getPropertyValue("--daynav-bottom")) || 0;
+      const style = window.getComputedStyle(document.documentElement);
+      const at = (name: string) => parseFloat(style.getPropertyValue(name));
+      const line = [at("--pinned-top"), at("--daynav-bottom")].find((v) => !Number.isNaN(v)) ?? 0;
       io = new IntersectionObserver((hits) => {
         const hit = hits[hits.length - 1];
         // Cut off at the top, not at the bottom of the screen.
@@ -212,9 +216,11 @@ export function DayCard({
     };
     watch();
     window.addEventListener("resize", watch);
+    window.addEventListener(BARS_EVENT, watch);
     return () => {
       io?.disconnect();
       window.removeEventListener("resize", watch);
+      window.removeEventListener(BARS_EVENT, watch);
     };
   }, []);
   // A collapsed panel is hidden="until-found": still in the page, so Ctrl+F finds its text,
