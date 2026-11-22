@@ -151,10 +151,11 @@ a{color:inherit}
 .follow-ai-btn{font-size:16px;line-height:18px}
 .follow-ai-btn[aria-pressed="false"] .follow-ai-eyes{opacity:.55}
 .follow-ai-btn[aria-pressed="true"]{background:var(--accent-1-tint);border-color:var(--accent-1);color:var(--accent-1)}
-/* The eyes glance left, then right, then pause. */
-.follow-ai-eyes{display:block;animation:ai-glance 4s ease-in-out infinite}
+/* While Follow AI edits is on, the eyes glance left, then right, then pause. Off: still. */
+.follow-ai-eyes{display:block}
+.follow-ai-btn[aria-pressed="true"] .follow-ai-eyes{animation:ai-glance 4s ease-in-out infinite}
 @keyframes ai-glance{0%,15%,85%,100%{transform:translateX(0)}30%,45%{transform:translateX(-2.5px)}60%,75%{transform:translateX(2.5px)}}
-@media(prefers-reduced-motion:reduce){.follow-ai-eyes{animation:none}}
+@media(prefers-reduced-motion:reduce){.follow-ai-btn[aria-pressed="true"] .follow-ai-eyes{animation:none}}
 .follow-ai-btn[data-working="true"]{
   border-color:var(--accent-3);color:var(--accent-3);
   box-shadow:0 0 0 3px color-mix(in srgb,var(--accent-3) 30%,transparent),0 0 12px var(--accent-3);
