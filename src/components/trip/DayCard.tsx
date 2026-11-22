@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Act, ActionItem, Group, LegColor, Place, ResolvedDay, Status, Task, Vote } from "../../lib/types";
 import { diffLines, type Change } from "../../lib/changeDiff";
-import { MAPS_PIN_ICON, focusOnMap, googleMapsUrl, placeKey } from "../../lib/mapPoints";
+import { MAPS_PIN_ICON, focusOnMap, glanceOnMap, googleMapsUrl, placeKey } from "../../lib/mapPoints";
 import { COUNTRY, DOW, MON, actParts, fmtShort, gapLabel, mergeFlightsByRoute, mergeHotelsByName } from "../../lib/tripLogic";
 import type { FlightGroup, HotelGroup } from "../../lib/tripLogic";
 import { TransportBody } from "./TransportBody";
@@ -137,6 +137,22 @@ export function DayCard({
   placePhoto,
 }: Props) {
   const [editingAct, setEditingAct] = useState<number | null>(null);
+  // A pinned trip map flies to the place of the tile under the pointer (or keyboard focus) once it
+  // has stayed there a moment, so sweeping across the list doesn't send the map hopping.
+  const glanceTimer = useRef<number | undefined>(undefined);
+  const glanced = useRef<string | undefined>(undefined);
+  const glanceSoon = (e: { target: EventTarget }) => {
+    const key = (e.target as Element).closest<HTMLElement>("[data-map-key]")?.dataset.mapKey;
+    if (key === glanced.current) return;
+    glanced.current = key;
+    window.clearTimeout(glanceTimer.current);
+    if (key) glanceTimer.current = window.setTimeout(() => glanceOnMap(key), 250);
+  };
+  const stopGlance = () => {
+    window.clearTimeout(glanceTimer.current);
+    glanced.current = undefined;
+  };
+  useEffect(() => () => window.clearTimeout(glanceTimer.current), []);
   const { slug } = useParams<{ slug: string }>();
   const showFocus = useShowAiFocus();
   // While the trip is under way, the next departure or check-in says how long is left.
@@ -312,7 +328,7 @@ export function DayCard({
       return {
         key: entry.key, ghost: state === "gone", defaultOpen: unresolved,
         tile: {
-          domId: entry.domKey && tileDomId(rowId, entry.domKey), time: ALL_DAY, icon: "🏨", meta, change: state, warn: unresolved,
+          domId: entry.domKey && tileDomId(rowId, entry.domKey), mapKey: chosen ? placeKey(place) : undefined, time: ALL_DAY, icon: "🏨", meta, change: state, warn: unresolved,
           title,
           menu: [
             bookedItem(g.srcs, s),
@@ -413,6 +429,7 @@ export function DayCard({
       key: entry.key, ghost: gone, defaultOpen: false, forceOpen: editing,
       tile: {
         domId: entry.domKey && tileDomId(rowId, entry.domKey), time: entry.time,
+        mapKey: named.map(placeKey).find(Boolean),
         // The tag (Food, Sightsee…) is the icon; its name is the icon's tooltip, not a second line.
         icon: (tag && TAG_EMOJI[tag]) || "📍", iconLabel: tag, change: state, now: !!live,
         label: title,
@@ -660,7 +677,7 @@ export function DayCard({
             </div>
           )}
           {(entries.length > 0 || (!gapsOnly && actRows.length === 0 && nowPos?.kind === "untimed")) && (
-            <ol className="tl">
+            <ol className="tl" onMouseOver={glanceSoon} onFocus={glanceSoon} onMouseLeave={stopGlance}>
               {entries.map((e, i) => {
                 if (e.kind === "tour") {
                   return (

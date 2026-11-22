@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useShowAiFocus } from "../../hooks/useAiFocus";
 import type { MapPointData, ResolvedDay, Task } from "../../lib/types";
-import { CATEGORY_COLORS, CATEGORY_EMOJI, CATEGORY_LABELS, MAP_FOCUS_EVENT, deriveJumpTargets, googleMapsUrl, jumpTargetFor, placeKey } from "../../lib/mapPoints";
+import { CATEGORY_COLORS, CATEGORY_EMOJI, CATEGORY_LABELS, MAP_DAY_EVENT, MAP_FOCUS_EVENT, MAP_GLANCE_EVENT, deriveJumpTargets, googleMapsUrl, jumpTargetFor, placeKey } from "../../lib/mapPoints";
 import type { JumpTarget, WeatherStop } from "../../lib/mapPoints";
 import { fmtShort } from "../../lib/tripLogic";
 import { summarizeStay, temp, weatherIcon, weatherText } from "../../lib/weather";
@@ -37,6 +37,8 @@ interface Props {
   candidates: MapPointData[];
   // The considerations behind them, for the vote tally in a pin's popup.
   considerations: Task[];
+  // Desktop: the "Pin map" toggle. Pinned, the map follows the day and tile being looked at.
+  pin?: { on: boolean; set: (on: boolean) => void };
 }
 
 // A dashed hollow ring for an open candidate, a solid one once chosen: the
@@ -202,7 +204,19 @@ function flyTo(
   };
 }
 
-export function TripMap({ points, days, route, weatherStops, candidates, considerations }: Props) {
+// The center and whole zoom that fit `points` in the map with `pad` pixels to spare, no closer than
+// `maxZoom` (one point, or several on one street, would otherwise zoom all the way in).
+function viewFor(map: google.maps.Map, points: google.maps.LatLngLiteral[], pad = 48, maxZoom = 15) {
+  const w = points.map(toWorld);
+  const xs = w.map((p) => p.x), ys = w.map((p) => p.y);
+  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+  const div = map.getDiv();
+  const fit = (room: number, span: number) => (span > 0 ? Math.max(room - 2 * pad, 64) / (span * 256) : Infinity);
+  const zoom = Math.log2(Math.min(fit(div.clientWidth, x1 - x0), fit(div.clientHeight, y1 - y0)));
+  return { center: fromWorld((x0 + x1) / 2, (y0 + y1) / 2), zoom: Math.max(2, Math.min(maxZoom, Math.floor(zoom))) };
+}
+
+export function TripMap({ points, days, route, weatherStops, candidates, considerations, pin }: Props) {
   const { points: geocoded, status, error } = useGeocodedPoints(points);
   const { points: geocodedRoute } = useGeocodedPoints(route);
   const { points: geocodedWeather } = useGeocodedPoints(weatherStops);
@@ -230,6 +244,16 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
   const infoWindow = useRef<InfoCard | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const markers = useRef<Pin[]>([]);
+  // Pinned (desktop): the day being looked at (from the itinerary, kept even while unpinned so
+  // pinning shows it at once), each plan pin's days, and the whole-trip view to go back to.
+  const pinned = !!pin?.on;
+  const pinnedRef = useRef(pinned);
+  pinnedRef.current = pinned;
+  const lookingAt = useRef<string | undefined>(undefined);
+  const pinDates = useRef(new Map<Pin, string[] | undefined>());
+  const tripBounds = useRef<google.maps.LatLngBounds | null>(null);
+  const showDay = useRef<() => void>(() => {});
+  const glance = useRef<(key: string) => void>(() => {});
   const weatherOverlays = useRef<google.maps.OverlayView[]>([]);
   const polyline = useRef<google.maps.Polyline | null>(null);
   const frame = useRef<number | null>(null);
@@ -270,9 +294,18 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
   // "Show on map" buttons anywhere on the page announce a place key; the latest handler answers.
   useEffect(() => {
     const onFocus = (e: Event) => focusHandler.current((e as CustomEvent<string>).detail);
+    const onDay = (e: Event) => {
+      lookingAt.current = (e as CustomEvent<string | undefined>).detail;
+      showDay.current();
+    };
+    const onGlance = (e: Event) => glance.current((e as CustomEvent<string>).detail);
     window.addEventListener(MAP_FOCUS_EVENT, onFocus);
+    window.addEventListener(MAP_DAY_EVENT, onDay);
+    window.addEventListener(MAP_GLANCE_EVENT, onGlance);
     return () => {
       window.removeEventListener(MAP_FOCUS_EVENT, onFocus);
+      window.removeEventListener(MAP_DAY_EVENT, onDay);
+      window.removeEventListener(MAP_GLANCE_EVENT, onGlance);
       window.clearTimeout(flashTimer.current);
       flight.current?.();
     };
@@ -321,6 +354,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
       markers.current.forEach((m) => (m.map = null));
       markers.current = [];
       planPins.current.clear();
+      pinDates.current.clear();
 
       const bounds = new google.maps.LatLngBounds();
       geocoded.forEach((p) => {
@@ -334,6 +368,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
           openInfo(map, infoHtml(p.name, CATEGORY_LABELS[p.category] + (p.note ? " · " + p.note : ""), tempUnitRef.current, stop, link, jumpTargetFor(jumpTargets.current, p)), marker);
         });
         markers.current.push(marker);
+        pinDates.current.set(marker, p.dates);
         const key = placeKey(p);
         if (key) planPins.current.set(key, marker);
         bounds.extend(position);
@@ -388,12 +423,15 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
         path.forEach((pt) => bounds.extend(pt));
       }
 
+      tripBounds.current = bounds;
       if (geocoded.length === 1 && geocodedRoute.length < 2) {
         map.setCenter({ lat: geocoded[0].lat, lng: geocoded[0].lng });
         map.setZoom(14);
       } else {
         map.fitBounds(bounds, 48);
       }
+      // Pinned: back to the day being looked at, now that its pins are drawn.
+      if (pinnedRef.current) showDay.current();
     })();
 
     return () => {
@@ -586,6 +624,62 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
     window.setTimeout(go, reduced ? 0 : 800);
   };
 
+  // Camera moves while pinned: a flight, or a jump with reduced motion. A newer one replaces it.
+  const moveTo = (map: google.maps.Map, center: google.maps.LatLngLiteral, zoom: number) => {
+    flight.current?.();
+    flight.current = null;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      map.moveCamera({ center, zoom });
+      return;
+    }
+    flight.current = flyTo(map, center, zoom, () => (flight.current = null));
+  };
+  const positionOf = (p: Pin) => new google.maps.LatLng(p.position as google.maps.LatLngLiteral).toJSON();
+
+  // Pinned: fit the day being looked at and fade the other days' pins. A day with no pins of its
+  // own leaves the map as it is; points not tied to a day never fade.
+  showDay.current = () => {
+    const map = mapInstance.current;
+    const date = pinnedRef.current ? lookingAt.current : undefined;
+    if (!map || !date || markers.current.length === 0) return;
+    const inDay = markers.current.filter((m) => pinDates.current.get(m)?.includes(date));
+    if (inDay.length === 0) return;
+    markers.current.forEach((m) => {
+      const dates = pinDates.current.get(m);
+      (m.content as HTMLElement | null)?.classList.toggle("is-dimmed", !!dates && !dates.includes(date));
+    });
+    const { center, zoom } = viewFor(map, inDay.map(positionOf));
+    moveTo(map, center, zoom);
+  };
+
+  // Pinned: a tile under the pointer flies the map to its place and makes the pin pulse.
+  glance.current = (key) => {
+    const map = mapInstance.current;
+    const target = planPins.current.get(key) ?? candidatePins.current.get(key);
+    if (!pinnedRef.current || !map || !target?.position) return;
+    moveTo(map, positionOf(target), Math.max(map.getZoom() ?? 0, 15));
+    const look = target.content as HTMLElement | null;
+    if (!look) return;
+    look.classList.add("is-glanced");
+    window.setTimeout(() => look.classList.remove("is-glanced"), 1200);
+  };
+
+  // Pinning shows the day being looked at; unpinning goes back to the whole trip, nothing faded.
+  const wasPinned = useRef(pinned);
+  useEffect(() => {
+    if (wasPinned.current === pinned) return;
+    wasPinned.current = pinned;
+    if (pinned) {
+      showDay.current();
+      return;
+    }
+    const map = mapInstance.current;
+    markers.current.forEach((m) => (m.content as HTMLElement | null)?.classList.remove("is-dimmed"));
+    flight.current?.();
+    flight.current = null;
+    if (map && tripBounds.current && markers.current.length > 1) map.fitBounds(tripBounds.current, 48);
+  }, [pinned]);
+
   // Shared by pins and pills: show this one's card in the map's bottom-left corner.
   function openInfo(
     _map: google.maps.Map,
@@ -600,7 +694,20 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
 
   return (
     <>
-      <h2 className="section-title">Map</h2>
+      <div className="map-head">
+        <h2 className="section-title">Map</h2>
+        {pin && (
+          <button
+            type="button"
+            className="map-pin-toggle"
+            aria-pressed={pin.on}
+            title={pin.on ? "Let the map scroll with the page" : "Keep the map on screen while you scroll; it follows the day you're looking at"}
+            onClick={() => pin.set(!pin.on)}
+          >
+            📌 {pin.on ? "Unpin map" : "Pin map"}
+          </button>
+        )}
+      </div>
       <p className="section-sub">
         Where you're staying, planned stops that have an address, and each city on the route, joined in travel order
         with the weather for each stay. Tap a pin or weather label for details.

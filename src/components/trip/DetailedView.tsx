@@ -14,6 +14,7 @@ import { tileDomId } from "../../lib/tileId";
 import { reconcileRows } from "../../lib/itineraryState";
 import { DayNav } from "./DayNav";
 import { dayAtLine } from "../../lib/dayInView";
+import { focusMapDay } from "../../lib/mapPoints";
 import { DayCard } from "./DayCard";
 import type { DayWeather } from "../../lib/weather";
 import type { CityPhotoFetcher, PlacePhotoFetcher } from "../../lib/cityPhoto";
@@ -278,6 +279,11 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
     };
   }, [state.rows]);
 
+  // The same day is what a pinned trip map shows.
+  const currentId = jumpedTo ?? scrolledTo;
+  const currentDate = state.rows.find(r => r.id === currentId)?.day.date;
+  useEffect(() => { focusMapDay(currentDate); }, [currentDate]);
+
   // The removed day, where it sat among the rest.
   // The reader's own edit shows at once; only the AI's is held for its focus signal.
   const editActivity: typeof onEditActivity = onEditActivity && ((date, ...rest) => {
@@ -300,7 +306,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   );
   return (
     <>
-      <DayNav rows={state.rows} todayId={todayRow?.id} currentId={jumpedTo ?? scrolledTo} onJump={jump} />
+      <DayNav rows={state.rows} todayId={todayRow?.id} currentId={currentId} onJump={jump} />
       <p role="status" className="itinerary-status">{message}</p>
       {days.length === 0 ? <p>No itinerary days yet.</p> : !visible.some(Boolean) ? (
         <div className="itinerary-empty"><p>No days match Only gaps.</p><button type="button" className="btn" onClick={() => onOnlyGapsChange(false)}>Show all days</button></div>

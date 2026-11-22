@@ -897,6 +897,30 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
 .map-legend-toggle{font:inherit;font-size:12.5px;background:none;border:0;padding:0;cursor:pointer}
 .map-legend-toggle[aria-pressed="false"]{opacity:.5;text-decoration:line-through}
 .map-legend-toggle:focus-visible{outline:2px solid var(--accent-1);outline-offset:3px;border-radius:4px}
+/* "Pin map" (desktop): the map's heading row carries the toggle. */
+.map-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.map-pin-toggle{flex:none;display:inline-flex;align-items:center;gap:6px;margin-bottom:6px;padding:5px 12px;font:inherit;font-size:13px;font-weight:600;color:var(--text-secondary);background:var(--card);border:1px solid var(--border);border-radius:999px;cursor:pointer}
+.map-pin-toggle:hover{color:var(--text-primary)}
+.map-pin-toggle[aria-pressed="true"]{color:var(--accent-1);border-color:var(--accent-1);background:var(--accent-1-tint)}
+.map-pin-toggle:focus-visible{outline:2px solid var(--accent-1);outline-offset:2px}
+/* Pinned: the map stays at the top of the screen (under the site menu, where there is one), the date
+   strip under it, and every jump lands below both. TripPage measures the map into --pinned-map-h.
+   The description and legend go, to leave room for the itinerary. */
+.map-pinned{--pin-top:0px}
+.map-pinned .trip-map-section{position:sticky;top:var(--pin-top);z-index:21;background:var(--page);padding-bottom:4px}
+.map-pinned .map-head .section-title{margin-top:8px}
+.map-pinned .trip-map-section .section-sub,.map-pinned .map-legend{display:none}
+.map-pinned .trip-map{height:clamp(240px,35vh,360px)}
+.map-pinned .daynav-shell{top:calc(var(--pin-top) + var(--pinned-map-h,0px));margin-top:0}
+.map-pinned .day-card,.map-pinned .tl-entry,.map-pinned .tl-now{scroll-margin-top:calc(var(--pinned-map-h,0px) + var(--pin-top) + 66px)}
+.map-pinned .day-head-btn{scroll-margin-top:calc(var(--pinned-map-h,0px) + var(--pin-top) + 76px)}
+@media(max-width:780px){.map-pinned{--pin-top:56px}}
+/* Pinned and following a day: the other days' pins step back; a tile under the pointer pulses its pin. */
+.map-pin{transition:opacity .25s}
+.map-pin.is-dimmed{opacity:.3}
+.map-pin.is-glanced{animation:map-pin-glance .6s ease-in-out 2}
+@keyframes map-pin-glance{50%{transform:scale(1.35)}}
+@media(prefers-reduced-motion:reduce){.map-pin{transition:none}.map-pin.is-glanced{animation:none;outline:3px solid var(--accent-1);border-radius:50%}}
 
 @media(max-width:780px){
   body{padding-left:0;padding-top:56px}

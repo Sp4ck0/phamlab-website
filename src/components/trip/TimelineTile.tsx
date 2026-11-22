@@ -18,6 +18,8 @@ export function TileStatePill({ state, label }: { state: TileState; label?: stri
 }
 
 export interface TimelineTileProps {
+  /** The place key of this tile's pin on the trip map, which a pinned map flies to while the pointer is over the tile. */
+  mapKey?: string;
   /** Element id, so a shared link or AI focus can scroll to and flash this tile (a removed ghost has none). */
   domId?: string;
   /** The time, in a pill set into the card's top border: "09:30", ALL_DAY, or nothing when the tile has no time. */
@@ -71,7 +73,7 @@ export const OWN_CLICK = "button, a, input, label, select, textarea, summary, [r
 // The body always stays in the page, so find-in-page reaches a closed card and opens it
 // (hidden="until-found"). A static card whose title is cut off opens too, to show all of it.
 export function TimelineTile({
-  domId, time, icon, iconLabel, title, expandable = true, meta, headerEnd, menu, label, warn, open, onToggle, onReveal,
+  domId, mapKey, time, icon, iconLabel, title, expandable = true, meta, headerEnd, menu, label, warn, open, onToggle, onReveal,
   change = "same", className, nextUpLine, now, progress, photoPlaces, placePhoto, children,
 }: TimelineTileProps) {
   const bodyId = useId();
@@ -126,6 +128,7 @@ export function TimelineTile({
     <li
       className={`tl-entry${now ? " tl-entry--now" : ""}${nextUpLine ? " next-up" : ""}${showWarn ? " tl-entry--warn" : ""}${time || icon ? " tl-entry--pinned" : ""}`}
       id={domId}
+      data-map-key={mapKey}
       {...(gone ? { inert: true, "aria-hidden": true } : {})}
     >
       <div
