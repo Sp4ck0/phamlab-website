@@ -1,6 +1,7 @@
 // A day as one ordered list of tiles: what the timeline renders, top to bottom.
 //
 // The order never depends on a guessed time. Hotels come first ("All day"), then
+// all-day activities, then
 // transport with no usable time, then the activities in their stored order. A
 // transport row with a real departure time on this day is slotted in among the
 // activities that have times; nothing else moves. Only-gaps placeholders and the
@@ -72,6 +73,18 @@ export function buildTimeline({ date, hotels, flights, acts, gaps, tour, items =
     out.push({ kind: "hotel", key, domKey: gone ? undefined : key, change });
   });
 
+  const actEntries = acts.map((row, i): TimelineEntry & { kind: "activity" } => {
+    const gone = row.state === "gone";
+    const key = gone ? `gone:act:${i}` : `act:${row.ai}`;
+    const { time } = actParts(row.item);
+    const clock = parseTime(time);
+    return { kind: "activity", key, domKey: gone ? undefined : key, time: time || undefined, minutes: clock ? clock.h * 60 + clock.m : undefined, row };
+  });
+  // All-day activities take the whole day, like a hotel: right after the hotels, in data order.
+  const wholeDay = (e: TimelineEntry & { kind: "activity" }) => typeof e.row.item !== "string" && !!e.row.item.allDay;
+  out.push(...actEntries.filter(wholeDay));
+  const dayActs = actEntries.filter((e) => !wholeDay(e));
+
   const transport = flights.map((change, i): TimelineEntry & { kind: "transport" } => {
     const gone = change.state === "gone";
     const key = gone ? `gone:transport:${i}` : change.item.ids[0];
@@ -88,21 +101,14 @@ export function buildTimeline({ date, hotels, flights, acts, gaps, tour, items =
   type Timed = (TimelineEntry & { kind: "transport" }) | (TimelineEntry & { kind: "item" });
   const timed: Timed[] = [...transport, ...itemEntries].filter((t) => t.minutes !== undefined).sort((a, b) => a.minutes! - b.minutes!);
 
-  const actEntries = acts.map((row, i): TimelineEntry & { kind: "activity" } => {
-    const gone = row.state === "gone";
-    const key = gone ? `gone:act:${i}` : `act:${row.ai}`;
-    const { time } = actParts(row.item);
-    const clock = parseTime(time);
-    return { kind: "activity", key, domKey: gone ? undefined : key, time: time || undefined, minutes: clock ? clock.h * 60 + clock.m : undefined, row };
-  });
-  const lastTimed = actEntries.reduce((last, e, i) => (e.minutes !== undefined ? i : last), -1);
+  const lastTimed = dayActs.reduce((last, e, i) => (e.minutes !== undefined ? i : last), -1);
 
   // No timed activity to slot between: timed transport closes the transport block (timed items wait for the activities).
   if (lastTimed < 0) {
     out.push(...timed.filter((t) => t.kind === "transport"));
     timed.splice(0, timed.length, ...timed.filter((t) => t.kind === "item"));
   }
-  actEntries.forEach((e, i) => {
+  dayActs.forEach((e, i) => {
     if (e.minutes !== undefined) {
       // Before the first activity that starts later; an equal time sorts after the activity.
       while (timed.length && timed[0].minutes! < e.minutes) out.push(timed.shift()!);

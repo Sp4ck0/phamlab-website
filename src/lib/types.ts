@@ -116,7 +116,10 @@ export type Tag = "" | "move" | "transit" | "event" | undefined;
 // An activity is either a plain string (legacy — no tag/time shown) or a
 // richer object with an optional tag pill and time prefix.
 // `endTime` (local HH:MM) is never displayed; it only sets the calendar link's end.
-export type Act = string | { tag?: string; time?: string; endTime?: string; text: string; places?: Place[]; fromItem?: string };
+// `allDay`: takes the whole day, like a hotel (no times; All day at the top of the day).
+export type Act = string | { tag?: string; time?: string; endTime?: string; allDay?: boolean; text: string; places?: Place[]; fromItem?: string };
+/** A change to an activity's timing from the editor: each field undefined = unchanged, null = cleared. */
+export type ActTiming = { time?: string | null; endTime?: string | null; allDay?: boolean };
 
 export interface TourDetails {
   summary: string;
@@ -284,7 +287,7 @@ export interface TripExportDay {
   highlight?: string;
   flights: TripExportFlight[];
   hotels: "same" | TripExportHotel[];
-  acts: { text: string; time?: string; tag?: string }[];
+  acts: { text: string; time?: string; allDay?: boolean; tag?: string }[];
   tourDetails?: { summary?: string; body?: string };
 }
 export interface TripExport {

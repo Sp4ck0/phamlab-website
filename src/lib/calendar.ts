@@ -187,6 +187,10 @@ export function actWindow(a: Act, day: Pick<ResolvedDay, "acts">, index = -1): {
 export function actUrl(a: Act, day: ResolvedDay, dayNumber: number, index = -1): string | null {
   if (typeof a === "string") return null;
   const text = plain(a.text);
+  if (a.allDay && text) {
+    const emoji = (a.tag && TAG_EMOJI[a.tag]) || "📍";
+    return allDayUrl({ title: `${emoji} ${text}`, startDate: day.date, endDate: day.date, location: where(day), details: detailsFor(dayNumber) });
+  }
   const win = actWindow(a, day, index);
   if (!win || !text) return null;
   const emoji = (a.tag && TAG_EMOJI[a.tag]) || "📍";
