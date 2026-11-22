@@ -38,7 +38,9 @@ export function AiButton() {
       data-working={working ? "true" : undefined}
       onClick={() => saveFollowAi(!on)}
     >
-      AI
+      <span className="follow-ai-eyes" aria-hidden="true">
+        👀
+      </span>
     </button>
   );
 }
