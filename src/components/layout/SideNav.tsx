@@ -65,7 +65,7 @@ export function SideNav() {
   }
 
   const headerButtons = (
-    <>
+    <span className="nav-actions">
       <AiButton />
       <button
         className="btn btn-icon"
@@ -75,7 +75,7 @@ export function SideNav() {
       >
         <ThemeIcon isDark={isDark} />
       </button>
-    </>
+    </span>
   );
 
   return (
