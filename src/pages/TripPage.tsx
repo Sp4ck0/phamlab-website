@@ -222,6 +222,10 @@ function TripPageEntry() {
       marks={marks}
       fitMarks={fitMarks}
       onMarksFitted={() => setFitMarks(null)}
+      onClearMarks={() => {
+        setMarks([]);
+        setFitMarks(null);
+      }}
     />
   );
   // On a phone, the agenda is a tab panel; on desktop it is just the page.

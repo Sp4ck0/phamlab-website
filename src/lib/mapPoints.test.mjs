@@ -93,6 +93,16 @@ test("a call's icon goes on each of its marks; marking a place again takes the n
   assert.equal(marks[0].icon, undefined);
 });
 
+test("a place's color goes on its mark when it is #rrggbb; marking it again takes the new call's", async () => {
+  const { addMarks } = await import('./mapPoints.ts');
+  const tower = { name: 'Tower', placeId: 'P-tower' };
+  const museum = { name: 'Museum', placeId: 'P-museum' };
+  let marks = addMarks([], [{ ...tower, color: '#1e88e5' }, { ...museum, color: 'red;background:url(x)' }], 'n1', 1000);
+  assert.deepEqual(marks.map((m) => [m.name, m.color]), [['Tower', '#1e88e5'], ['Museum', undefined]]);
+  marks = addMarks(marks, [tower], 'n2', 2000);
+  assert.deepEqual(marks.map((m) => [m.name, m.color]), [['Museum', undefined], ['Tower', undefined]]);
+});
+
 test('the site draws every icon the backend offers, and nothing else', async () => {
   const { MARK_ICON_NAMES, markIconSvg } = await import('./markIcons.ts');
   // The backend's MARK_ICONS (phamlab convex/mcpTools.ts).

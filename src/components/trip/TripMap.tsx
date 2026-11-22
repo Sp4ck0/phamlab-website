@@ -48,6 +48,8 @@ interface Props {
   marks?: MapMark[];
   fitMarks?: string | null;
   onMarksFitted?: () => void;
+  // The "Clear marks" button: removes every mark (the trip's own pins stay).
+  onClearMarks?: () => void;
 }
 
 // A category's pin: its emoji on a white-rimmed disc in the category color.
@@ -281,7 +283,7 @@ function viewFor(map: google.maps.Map, points: google.maps.LatLngLiteral[], pad 
   return { center: fromWorld((x0 + x1) / 2, (y0 + y1) / 2), zoom: Math.max(2, Math.min(maxZoom, Math.floor(zoom))) };
 }
 
-export function TripMap({ points, days, route, weatherStops, candidates, considerations, pin, marks = [], fitMarks, onMarksFitted }: Props) {
+export function TripMap({ points, days, route, weatherStops, candidates, considerations, pin, marks = [], fitMarks, onMarksFitted, onClearMarks }: Props) {
   const { points: geocoded, status, error } = useGeocodedPoints(points);
   const { points: geocodedMarks } = useGeocodedPoints(marks);
   const { points: geocodedRoute } = useGeocodedPoints(route);
@@ -724,6 +726,8 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
       // A named icon is drawn white in the dot; any other icon is an emoji (the backend sends
       // nothing else), shown on a white disc.
       const icon = byId.get(p.id)?.icon;
+      const color = byId.get(p.id)?.color;
+      if (color) look.style.setProperty("--mark-color", color);
       const svg = markIconSvg(icon);
       if (svg) {
         look.classList.add("has-icon");
@@ -953,17 +957,29 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
     <>
       <div className="map-head">
         <h2 className="section-title">Map</h2>
-        {pin && (
-          <button
-            type="button"
-            className="map-pin-toggle"
-            aria-pressed={pin.on}
-            title={pin.on ? "Let the map scroll with the page" : "Keep the map on screen while you scroll; it follows the day you're looking at"}
-            onClick={() => pin.set(!pin.on)}
-          >
-            📌 {pin.on ? "Unpin map" : "Pin map"}
-          </button>
-        )}
+        <div className="map-head-actions">
+          {onClearMarks && geocodedMarks.length > 0 && (
+            <button
+              type="button"
+              className="map-pin-toggle"
+              title="Remove the places the AI marked; the trip's own pins stay"
+              onClick={onClearMarks}
+            >
+              ✕ Clear marks ({geocodedMarks.length})
+            </button>
+          )}
+          {pin && (
+            <button
+              type="button"
+              className="map-pin-toggle"
+              aria-pressed={pin.on}
+              title={pin.on ? "Let the map scroll with the page" : "Keep the map on screen while you scroll; it follows the day you're looking at"}
+              onClick={() => pin.set(!pin.on)}
+            >
+              📌 {pin.on ? "Unpin map" : "Pin map"}
+            </button>
+          )}
+        </div>
       </div>
       <p className="section-sub">
         Where you're staying, planned stops that have an address, and each city on the route, joined in travel order
