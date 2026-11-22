@@ -64,6 +64,7 @@ interface Props {
 // FAST_MS while a long queue catches up (useChangeQueue).
 const STEP_MS = 3400;
 const FAST_MS = 200;
+const withoutPlaceIds = (d: ResolvedDay) => JSON.stringify(d, (key, value) => (key === "placeId" ? undefined : value));
 
 // Unified itinerary; name retained to keep the detail renderer's consumer small.
 export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps, isGap, dayGaps, onOnlyGapsChange, filterRef,
@@ -190,7 +191,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   const { focus: taskFocus } = useAiFocus("task");
   const { focus: itemFocus } = useAiFocus("actionItem");
   // versions[k]: the day after its first k changes (lib/changeSteps.ts).
-  const [diff, setDiff] = useState<{ date: string; versions: ResolvedDay[]; nonce: string; json: string } | null>(null);
+  const [diff, setDiff] = useState<{ date: string; tile: string | null; versions: ResolvedDay[]; nonce: string; json: string } | null>(null);
   const [ghost, setGhost] = useState<ResolvedDay | null>(null);
   useEffect(() => {
     if (!ghost) return;
@@ -206,6 +207,16 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   const [playing, setPlaying] = useState<string | null>(null);
   const [fast, setFast] = useState(false);
   const readerMoved = useRef(false);
+  // Did any step of the playback have a change on screen? If none did (only a status, or a field
+  // the day doesn't show, changed), the page blinks what the AI pointed at instead, as for a plain pointer.
+  const drewChange = useRef(false);
+  // Blink a day, or one of its tiles (a tile that is gone, the booking changed, falls back to the day).
+  function blink(rowId: string, tile: string | null, scroll: boolean) {
+    const el = document.getElementById(tile ? tileDomId(rowId, tile) : rowId) ?? document.getElementById(rowId);
+    if (!el) return;
+    if (scroll) el.scrollIntoView({ block: "center", behavior: scrollBehavior() });
+    flash(el);
+  }
   useEffect(() => {
     if (!diff) return;
     readerMoved.current = false;
@@ -219,19 +230,23 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
       acts.forEach(event => window.removeEventListener(event, took, { capture: true }));
     };
   }, [diff]);
-  // Any newer AI pointer (a tile, another day, a to-do) ends the playback: what
-  // was left of it shows as it ends up, and the new pointer takes the page.
-  // So does any other change to the day being played (the reader's own edit, a
-  // later AI edit): the page then shows the day as it really is.
+  // A newer AI pointer elsewhere (another day, a to-do) ends the playback: what
+  // was left of it shows as it ends up, and the new pointer takes the page. One
+  // at the day being played, or an item on it (an AI often points at what it just
+  // edited), lets it play on: the playback already goes to each change.
+  // Any other change to the day being played (the reader's own edit, a later AI
+  // edit) ends it too: the page then shows the day as it really is. The server
+  // filling in places' Google ids just after an AI edit shows nothing, so it doesn't.
   useEffect(() => {
     if (!diff) return;
     const live = days.find(x => x.date === diff.date);
-    if (!live || JSON.stringify(live) !== diff.json) setDiff(null);
+    if (!live || withoutPlaceIds(live) !== diff.json) setDiff(null);
   }, [days, diff]);
   const newest = (focus ?? taskFocus ?? itemFocus)?.nonce;
+  const newestDate = focus?.target.date;
   useEffect(() => {
-    if (newest) setDiff(current => (current && current.nonce !== newest ? null : current));
-  }, [newest]);
+    if (newest) setDiff(current => (current && current.nonce !== newest && current.date !== newestDate ? null : current));
+  }, [newest, newestDate]);
   const step = useChangeQueue(diff?.nonce ?? null, diff ? diff.versions.length - 1 : 0, (i, quick, done) => {
     setFast(quick);
     let cancelScroll = () => {};
@@ -243,6 +258,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
       const el = row && [...(document.getElementById(row.id)?.querySelectorAll<HTMLElement>(".chg-new, .chg-gone, .chg-inline") ?? [])]
         .find(e => e.getClientRects().length > 0);
       if (!el) { done(); return; } // nothing on screen changed (a status, a field the day doesn't show)
+      drewChange.current = true;
       const start = () => {
         setPlaying(`${diff!.nonce}:${i}`);
         timer = setTimeout(done, quick ? FAST_MS : STEP_MS);
@@ -253,7 +269,11 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
       cancelScroll = afterScroll(start, quick ? 300 : 1000);
     }, 0);
     return () => { clearTimeout(frame); cancelScroll(); clearTimeout(timer); };
-  }, () => setDiff(null));
+  }, () => {
+    const row = diff && !drewChange.current && state.rows.find(r => r.day.date === diff.date);
+    if (row) blink(row.id, diff.tile, true);
+    setDiff(null);
+  });
   const stepView = (date: string) =>
     diff?.date === date && step >= 0 && step < diff.versions.length - 1
       ? { day: diff.versions[step + 1], from: diff.versions[step], paused: playing !== `${diff.nonce}:${step}`, ms: fast ? FAST_MS : undefined }
@@ -268,28 +288,28 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
       consume(focus.nonce);
       // The pointed-at tile opens (for this visit only); no other tile is touched.
       if (tile) tiles.reveal(`${date}#${tile}`);
+      // The day's edit is already playing (see above): it shows the change, so no blink over it.
+      if (diff?.date === date) return;
       const change = recent.take(date);
       if (!row) {
         if (change?.prev) setGhost(change.prev);
         return;
       }
       // An edit to the day: open it and play its changes one by one (the queue
-      // scrolls to each). The day was held at its old content until now.
+      // scrolls to each). The day was held at its old content until now. A pointer
+      // at one of its items plays it too (it may have overtaken the edit's own pointer).
       const next = days.find(x => x.date === date);
-      if (!tile && change?.prev && !change.gone && next) {
+      if (change?.prev && !change.gone && next) {
         recent.release(date);
-        setDiff({ date, versions: changeVersions(change.prev, next), nonce: focus.nonce, json: JSON.stringify(next) });
+        drewChange.current = false;
+        setDiff({ date, tile, versions: changeVersions(change.prev, next), nonce: focus.nonce, json: withoutPlaceIds(next) });
         jump(row.id, false, false);
         return;
       }
       // Once the page has stopped scrolling, show the new content and blink it.
       afterScroll(() => {
         recent.release(date);
-        // A tile that is gone (the booking changed) falls back to the day.
-        const el = document.getElementById(tile ? tileDomId(row.id, tile) : row.id) ?? document.getElementById(row.id);
-        if (!el) return;
-        if (tile && el.id !== row.id) el.scrollIntoView({ block: "center", behavior: scrollBehavior() });
-        flash(el);
+        blink(row.id, tile, !!tile && !!document.getElementById(tileDomId(row.id, tile)));
       });
       jump(row.id, false); // the flash shows where; no focus ring on top of it
     }, SETTLE_MS);
@@ -303,14 +323,16 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   // (any input before the timer fires cancels it).
   const [params] = useSearchParams();
   const todayRow = state.rows.find(r => isDestToday(r.day, nowMs));
+  // The effect below keys on the id: the row itself is a new object every render.
+  const todayId = todayRow?.id;
   const autoDone = useRef(false);
   const jumpRef = useRef(jump);
   jumpRef.current = jump;
   // A link to a task (?task=, as a notification sends) is a pointer too.
   const hasPointer = params.has("day") || params.has("tile") || params.has("task") || !!focus || !!taskFocus || !!itemFocus;
   useEffect(() => {
-    if (autoDone.current || !todayRow || hasPointer) return;
-    const id = todayRow.id;
+    if (autoDone.current || !todayId || hasPointer) return;
+    const id = todayId;
     let cancelNow = () => {};
     const t = setTimeout(() => {
       autoDone.current = true;
@@ -328,7 +350,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
       cancelNow();
       events.forEach(event => window.removeEventListener(event, cancel));
     };
-  }, [todayRow?.id, hasPointer]);
+  }, [todayId, hasPointer]);
 
   // The day the reader is looking at, marked on the date strip: the day they last jumped to, until
   // they scroll by hand (a day near the page's end can't reach the strip); else the day under the strip.
