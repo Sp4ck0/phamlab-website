@@ -216,6 +216,8 @@ function TripPageEntry() {
         </div>
 
         {/* Phones only: moved to the top of the page and pinned under the site menu (CSS). */}
+        {/* The spacer before it is where hideBars.ts puts the room that moves it while it scrolls away. */}
+        {!desktop && <div className="trip-bars-spacer" aria-hidden="true" />}
         {!desktop && (
           <div className="trip-tabs-bar" ref={tabsRef}>
             <TripTabs tab={tab} onChange={setTab} />
