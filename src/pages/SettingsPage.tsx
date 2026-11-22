@@ -12,9 +12,16 @@ import { useSettings } from "../hooks/useSettings";
 import { loadFollowAi, saveFollowAi, subscribeFollowAi } from "../lib/followAi";
 import { clearLastTab } from "../lib/lastTab";
 
+const THEMES = [
+  ["light", "Light"],
+  ["dark", "Dark"],
+  ["system", "System"],
+] as const;
+
 export function SettingsPage() {
   const { code, clear } = useAccessCode();
-  const { tempUnit, setTempUnit } = useSettings();
+  const { theme, setTheme, tempUnit, setTempUnit } = useSettings();
+  const themeChoice = theme ?? "system";
   const followAi = useSyncExternalStore(subscribeFollowAi, loadFollowAi);
   const { isAuthenticated } = useConvexAuth();
   const { signOut } = useAuthActions();
@@ -65,6 +72,33 @@ export function SettingsPage() {
           Settings
         </h2>
         <SettingsSection title="Preferences">
+          <div className="setting-row">
+            <div>
+              <div className="setting-label">Theme</div>
+              <div className="sdek">
+                Light, dark, or System to match your device. The sun/moon
+                button in the menu switches it too.
+              </div>
+            </div>
+            <div
+              className="unit-toggle theme-toggle"
+              role="radiogroup"
+              aria-label="Theme"
+              data-pos={THEMES.findIndex(([v]) => v === themeChoice)}
+            >
+              {THEMES.map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={themeChoice === value}
+                  onClick={() => setTheme(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="setting-row">
             <div>
               <div className="setting-label">Temperature</div>
