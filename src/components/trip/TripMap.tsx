@@ -723,6 +723,8 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
       // A named icon is drawn white in the dot; any other icon is an emoji (the backend sends
       // nothing else), shown on a white disc.
       const icon = byId.get(p.id)?.icon;
+      const color = byId.get(p.id)?.color;
+      if (color) look.style.setProperty("--mark-color", color);
       const svg = markIconSvg(icon);
       if (svg) {
         look.classList.add("has-icon");
