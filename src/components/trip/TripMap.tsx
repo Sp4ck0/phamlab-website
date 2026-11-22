@@ -420,6 +420,10 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
         mapInstance.current = new google.maps.Map(mapRef.current, {
           zoom: 13,
           mapId: MAP_ID,
+          // Raster whatever the Map ID says: a vector map needs WebAssembly and data:
+          // fetches that the site's Content Security Policy doesn't allow, and then draws
+          // only the pins on a blank grey map.
+          renderingType: google.maps.RenderingType.RASTER,
         });
         const info = createInfoCard();
         mapInstance.current.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(info.el);
