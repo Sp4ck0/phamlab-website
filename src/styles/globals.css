@@ -195,6 +195,12 @@ a{color:inherit}
 .unit-toggle[aria-checked="true"]::before{transform:translateX(100%)}
 .unit-toggle span{position:relative;text-align:center;transition:color .16s}
 .unit-toggle span[data-on="true"]{color:var(--page)}
+.theme-toggle{grid-template-columns:repeat(3,1fr);width:192px;cursor:default}
+.theme-toggle::before{width:calc((100% - 4px) / 3)}
+.theme-toggle[data-pos="1"]::before{transform:translateX(100%)}
+.theme-toggle[data-pos="2"]::before{transform:translateX(200%)}
+.theme-toggle button{position:relative;height:100%;padding:0;border:0;background:none;font:inherit;color:inherit;cursor:pointer;transition:color .16s}
+.theme-toggle button[aria-checked="true"]{color:var(--page)}
 .vlog-backdrop{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:16px}
 .vlog{width:min(560px,100%);max-height:min(80vh,720px);display:flex;flex-direction:column;background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
 .vlog-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--gridline)}
