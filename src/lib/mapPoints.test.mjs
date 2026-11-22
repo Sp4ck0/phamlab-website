@@ -64,6 +64,16 @@ test('a ghost never sits on a planned pin, a dropped idea has none, and a chosen
   assert.equal(ghosts.Done.candidate, 'chosen');
 });
 
+test("the AI's marks add up; marking a place again moves it to the new call; a place with no key is skipped", async () => {
+  const { addMarks } = await import('./mapPoints.ts');
+  const tower = { name: 'Tower', placeId: 'P-tower' };
+  const museum = { name: 'Museum', address: '1 Synthetic Sq' };
+  let marks = addMarks([], [tower, { name: 'Nowhere' }], 'n1', 1000);
+  assert.deepEqual(marks.map((m) => [m.name, m.id, m.batch, m.at]), [['Tower', 'mark|id:P-tower', 'n1', 1000]]);
+  marks = addMarks(marks, [museum, tower], 'n2', 2000);
+  assert.deepEqual(marks.map((m) => [m.name, m.batch, m.at]), [['Museum', 'n2', 2000], ['Tower', 'n2', 2000]]);
+});
+
 test('a derived task (not a stored item) has no ghost pin', () => {
   assert.deepEqual(deriveTaskPoints([{ ...item('x', { places: [{ name: 'X', placeId: 'P-x' }] }), key: 'booking:x' }], []), []);
 });
