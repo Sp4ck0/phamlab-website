@@ -10,6 +10,7 @@ import { flagEmoji, navCountdown, navMonthLabel } from "../../lib/tripLogic";
 import { useVersionLogUnseen } from "../../hooks/useVersionLog";
 import { VersionLog } from "./VersionLog";
 import { ThemeIcon } from "./ThemeIcon";
+import { AiButton } from "./AiButton";
 
 export function SideNav() {
   const { trips } = useAccessibleTrips();
@@ -63,15 +64,18 @@ export function SideNav() {
     if (dx < -50 && Math.abs(dx) > Math.abs(dy) * 1.5) setIsOpen(false);
   }
 
-  const themeButton = (
-    <button
-      className="btn btn-icon"
-      onClick={toggleTheme}
-      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      title={isDark ? "Light mode" : "Dark mode"}
-    >
-      <ThemeIcon isDark={isDark} />
-    </button>
+  const headerButtons = (
+    <>
+      <AiButton />
+      <button
+        className="btn btn-icon"
+        onClick={toggleTheme}
+        aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+        title={isDark ? "Light mode" : "Dark mode"}
+      >
+        <ThemeIcon isDark={isDark} />
+      </button>
+    </>
   );
 
   return (
@@ -95,7 +99,7 @@ export function SideNav() {
         </button>
         <span className="navmark">🧳</span>
         <span className="navtitle">Pham Lab</span>
-        {themeButton}
+        {headerButtons}
       </div>
       <div
         className="navbackdrop"
@@ -114,7 +118,7 @@ export function SideNav() {
         <div className="navhead">
           <span className="navmark">🧳</span>
           <span className="navtitle">Pham Lab</span>
-          {themeButton}
+          {headerButtons}
         </div>
         {trips && trips.length > 0 && (
           <div className="navgroup">

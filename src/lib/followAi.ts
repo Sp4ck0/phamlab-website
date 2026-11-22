@@ -41,3 +41,23 @@ export function newSignal(seen: string | null | undefined, nonce: string | null)
   if (nonce === null || nonce === seen) return { seen, act: false };
   return { seen: nonce, act: true };
 }
+
+// The header's AI button glows green while an AI connected to this access is calling a tool
+// (mcpFocus.getActivity), and for a moment after: most calls finish too fast to see. Timed by
+// this browser's clock from when a change arrives, so a clock that disagrees with the server's
+// can't hide it. Like newSignal, the first value is only a baseline: a call from before the
+// page loaded doesn't glow. A call that never reports its end stops glowing after a minute.
+export const GLOW_AFTER_MS = 4000;
+export const GLOW_MAX_MS = 60000;
+
+export type AiActivity = { startedAt: number; endedAt: number | null } | null;
+
+export function activityGlow(
+  seen: string | undefined,
+  activity: AiActivity,
+  now: number
+): { seen: string; glowUntil: number | null } {
+  const key = activity ? `${activity.startedAt}:${activity.endedAt}` : "none";
+  if (seen === undefined || key === seen || !activity) return { seen: key, glowUntil: null };
+  return { seen: key, glowUntil: now + (activity.endedAt === null ? GLOW_MAX_MS : GLOW_AFTER_MS) };
+}
