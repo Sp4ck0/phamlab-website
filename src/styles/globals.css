@@ -995,6 +995,8 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
      menu (56px); the date strip pins under it, and jump targets clear both. */
   .trip-page{display:flex;flex-direction:column}
   .trip-page:not([data-tab="agenda"]) > .trip-summary{display:none}
+  /* Sized by hideBars.ts while the tabs and date strip scroll away; in the tabs' place at the top. */
+  .trip-page > .trip-bars-spacer{order:-1}
   .trip-tabs-bar{order:-1;position:sticky;top:56px;z-index:22;background:var(--page);padding:6px 0}
   .trip-tabs{margin:0}
   .trip-tab{min-height:34px;padding:4px 8px}
@@ -1029,8 +1031,6 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
   /* Moved down under the tabs and date strip while they scroll away (hideBars.ts): the space above it,
      up to the site bar, is filled with the page's colour, behind the bars, so if they move off faster
      than it follows, no tiles show through for that frame. */
-  /* Sized by hideBars.ts while the tabs and date strip scroll away; in the tabs' place at the top. */
-  .trip-page > .trip-bars-spacer{order:-1}
   .day-heading::before{content:"";position:absolute;left:-16px;right:-16px;bottom:100%;height:var(--under-bars,0px);background:var(--page);pointer-events:none}
   /* The pinned tab bar and date strip reach into the page's side margins, so a card scrolling
      under them (today's ring sits just outside its edges) can't show at the sides. */
@@ -1199,9 +1199,9 @@ textarea.ai-input{display:block;width:100%;resize:none;overflow:hidden;line-heig
 
 /* Trip notes (TripNote.tsx): floating button that opens a draft-then-save pad */
 .trip-note-fab{position:fixed;right:20px;bottom:20px;z-index:25;width:48px;height:48px;border-radius:50%;border:1px solid var(--border);background:var(--card);box-shadow:0 4px 14px rgba(0,0,0,.18);font-size:20px;cursor:pointer;display:grid;place-items:center}
-/* Phones: the note is only the Notes tab's own pane, never a button and overlay over the page. (After the
+/* Phones and tablets: the note is only the Notes tab's own pane, never a button and overlay over the page. (After the
    button's own rule: a phone rule earlier in the file lost to it, so the button showed and opened nothing.) */
-@media(max-width:640px){.trip-note-fab,.trip-note:not(.trip-note--inline){display:none}}
+@media(max-width:780px){.trip-note-fab,.trip-note:not(.trip-note--inline){display:none}}
 .trip-note-fab:hover{border-color:var(--text-muted)}
 .trip-note-dot{position:absolute;top:4px;right:4px;width:11px;height:11px;border-radius:50%;background:var(--accent-2);border:2px solid var(--card)}
 .trip-note{position:fixed;right:20px;bottom:20px;z-index:25;width:min(380px,calc(100vw - 32px));max-height:calc(100vh - 40px);display:flex;flex-direction:column;gap:8px;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.22)}

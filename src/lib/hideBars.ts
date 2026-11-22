@@ -128,7 +128,10 @@ export function useScrollLinkedBars(page: RefObject<HTMLElement | null>, on: boo
         const box = card.getBoundingClientRect();
         // A closed day is just its header: it never pins (CSS), so there is nothing to move.
         const closed = head.querySelector(".day-head-btn")?.getAttribute("aria-expanded") === "false";
-        if (!released || closed || box.bottom < 0 || box.top > line + 4) {
+        // Only phones pin the header (CSS); a tablet's stays in its card, so it is never moved (and one
+        // moved before the window widened goes back: the timeline's resize runs this again).
+        const pins = getComputedStyle(head).position === "sticky";
+        if (!released || closed || !pins || box.bottom < 0 || box.top > line + 4) {
           if (had) reads.push([head, 0]);
           continue;
         }
