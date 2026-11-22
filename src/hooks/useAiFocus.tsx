@@ -15,7 +15,9 @@ export type FocusTarget =
   // Places the AI marked on the trip's map for a while (mark_on_map); see TripPage.
   // `icon` (a lib/markIcons.ts name or one emoji) goes in each of the call's dots; a place's own
   // `icon` overrides it.
-  | { kind: "mark"; places: (Place & { icon?: string })[]; icon?: string };
+  | { kind: "mark"; places: (Place & { icon?: string })[]; icon?: string }
+  // Remove all of those marks and answer with how many went (clear_map_markers); see TripPage.
+  | { kind: "clearMarks" };
 
 // Mirrors the backend's mcp_focus row (mcpFocus.ts getFocus). For the board
 // and card targets, `slug` is the board's id.
