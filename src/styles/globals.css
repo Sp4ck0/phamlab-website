@@ -980,8 +980,15 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
   /* Day header on a phone: the photo as a short banner with the day bottom left, the weather bottom
      right and today's badge top left, then the summary. Expand-all and share sit on the banner's top right. */
   /* The header (photo, day, date, place, weather) pins under the date strip while its day scrolls by,
-     so a long day never loses its date; the summary below it scrolls away. DayNav sets --daynav-bottom. */
-  .day-heading{display:block;position:sticky;top:var(--daynav-bottom,176px);z-index:6;background:var(--card);border-radius:11px 11px 0 0}
+     so a long day never loses its date; the summary below it scrolls away. DayNav sets --daynav-bottom.
+     Scrolling down hides the top bar, tabs and date strip (hideBars.ts sets data-bars-hidden on <html>):
+     they slide up out of sight and the header pins at the very top instead (--pinned-top). */
+  :root{--pinned-top:var(--daynav-bottom,176px)}
+  :root[data-bars-hidden]{--pinned-top:0px}
+  .mobile-topbar,.trip-tabs-bar,.daynav-shell{transition:transform .22s ease}
+  :root[data-bars-hidden] .mobile-topbar{transform:translateY(-100%)}
+  :root[data-bars-hidden] .trip-tabs-bar,:root[data-bars-hidden] .daynav-shell{transform:translateY(calc(-1 * var(--daynav-bottom,176px)))}
+  .day-heading{display:block;position:sticky;top:var(--pinned-top);z-index:6;background:var(--card);border-radius:11px 11px 0 0;transition:top .22s ease}
   /* While it is pinned (DayCard sets data-stuck), the tiles fade out as they slide under it and back in
      as they come out, instead of being cut off at its edge. */
   .day-heading::after{content:"";position:absolute;left:0;right:0;top:100%;height:24px;background:linear-gradient(var(--card),transparent);pointer-events:none;opacity:0;transition:opacity .2s}
@@ -991,7 +998,9 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
   .trip-tabs-bar,.daynav-shell{margin-inline:-10px;padding-inline:10px}
   .day-summary--in-head{display:none}
   .day-summary--below{display:block;cursor:pointer}
-  .tl-entry,.tl-now{scroll-margin-top:calc(var(--daynav-bottom,176px) + 104px)}
+  .tl-entry,.tl-now{scroll-margin-top:calc(var(--pinned-top) + 104px)}
+  .day-card{scroll-margin-top:calc(var(--pinned-top) + 4px)}
+  .day-head-btn{scroll-margin-top:calc(var(--pinned-top) + 12px)}
   .day-photo{position:absolute;top:0;left:0;right:0;height:92px;min-height:0;border-radius:11px 11px 0 0}
   .day-photo::after{background:linear-gradient(180deg,rgba(0,0,0,.05) 20%,rgba(0,0,0,.62))}
   /* width:100%: a button sizes to its content, so a short summary would pull the weather and chevron left. */
@@ -1042,6 +1051,7 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
 }
 body:has(.print-doc){padding:0}
 @media(prefers-reduced-motion:reduce){.day-chev{transition:none}}
+@media(prefers-reduced-motion:reduce){.mobile-topbar,.trip-tabs-bar,.daynav-shell,.day-heading{transition:none}}
 @media print{
   .sidenav,.status,.navtoggle,.navbackdrop,.navhandle,.mobile-topbar{display:none}
 }
