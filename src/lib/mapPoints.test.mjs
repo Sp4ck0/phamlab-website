@@ -93,6 +93,38 @@ test("a call's icon goes on each of its marks; marking a place again takes the n
   assert.equal(marks[0].icon, undefined);
 });
 
+test("a new call's marks never replace earlier ones: every place from every call stays on the map", async () => {
+  const { addMarks } = await import('./mapPoints.ts');
+  let marks = [];
+  ['A', 'B', 'C'].forEach((n, i) => {
+    marks = addMarks(marks, [{ name: n, placeId: `P-${n}` }, { name: `${n}2`, placeId: `P-${n}2` }], `n${i}`, i * 1000, i ? '🍜' : undefined);
+  });
+  assert.deepEqual(marks.map((m) => m.name), ['A', 'A2', 'B', 'B2', 'C', 'C2']);
+});
+
+test('a mark pulses for a minute from when it was marked; a later call does not restart an earlier one', async () => {
+  const { addMarks, markPulseLeft, MARK_PULSE_MS } = await import('./mapPoints.ts');
+  assert.equal(MARK_PULSE_MS, 60_000);
+  let marks = addMarks([], [{ name: 'Tower', placeId: 'P-tower' }], 'n1', 1000);
+  marks = addMarks(marks, [{ name: 'Museum', placeId: 'P-museum' }], 'n2', 31_000);
+  const [tower, museum] = marks;
+  assert.equal(markPulseLeft(tower, 1000), 60_000);
+  assert.equal(markPulseLeft(tower, 31_000), 30_000);
+  assert.equal(markPulseLeft(museum, 31_000), 60_000);
+  assert.equal(markPulseLeft(tower, 61_000), 0);
+  assert.equal(markPulseLeft(museum, 91_000), 0);
+  assert.equal(markPulseLeft(undefined, Date.now()), 0);
+});
+
+test("the map zooms to the call just made, not to the marks already there, and only once", async () => {
+  const { addMarks, marksToFit } = await import('./mapPoints.ts');
+  let marks = addMarks([], [{ name: 'Tower', placeId: 'P-tower' }], 'n1', 1000);
+  marks = addMarks(marks, [{ name: 'Museum', placeId: 'P-museum' }, { name: 'Park', placeId: 'P-park' }], 'n2', 2000);
+  const drawn = marks.map((m, i) => ({ id: m.id, lat: i, lng: i }));
+  assert.deepEqual(marksToFit(drawn, marks, 'n2').map((p) => p.id), ['mark|id:P-museum', 'mark|id:P-park']);
+  assert.deepEqual(marksToFit(drawn, marks, null), []);
+});
+
 test('the site draws every icon the backend offers, and nothing else', async () => {
   const { MARK_ICON_NAMES, markIconSvg } = await import('./markIcons.ts');
   // The backend's MARK_ICONS (phamlab convex/mcpTools.ts).

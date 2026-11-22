@@ -6,7 +6,7 @@ import { useAccessCode } from "../hooks/useAccessCode";
 import { useShowAiFocus } from "../hooks/useAiFocus";
 import { claimActiveTab, isActiveTab, releaseActiveTab } from "../lib/activeTab";
 import { scrollBehavior } from "../lib/flash";
-import { loadFollowAi, subscribeFollowAi } from "../lib/followAi";
+import { loadFollowAi, newSignal, subscribeFollowAi } from "../lib/followAi";
 
 // When the AI edits a trip or a board through the MCP, the backend records
 // where to look (mcpFocus.ts). If this device opted in (Settings → Follow AI
@@ -48,13 +48,9 @@ export function FollowAiEdits() {
       return;
     }
     if (focus === undefined) return; // still loading
-    const nonce = focus?.nonce ?? null;
-    if (seen.current === undefined) {
-      seen.current = nonce;
-      return;
-    }
-    if (!focus || nonce === seen.current) return;
-    seen.current = nonce;
+    const next = newSignal(seen.current, focus?.nonce ?? null);
+    seen.current = next.seen;
+    if (!next.act || !focus) return;
     if (!isActiveTab()) return;
 
     // A board or card: open the board; the board page opens the card itself.

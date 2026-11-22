@@ -32,3 +32,12 @@ export function subscribeFollowAi(onChange: () => void) {
     window.removeEventListener(EVENT, onChange);
   };
 }
+
+// Whether a signal from the backend is one to act on, and the nonce to remember. `seen` is
+// undefined until the first value arrives, which is only a baseline: a signal left from before
+// a reload (or before turning this on) is never replayed, so the AI's marks don't come back.
+export function newSignal(seen: string | null | undefined, nonce: string | null): { seen: string | null | undefined; act: boolean } {
+  if (seen === undefined) return { seen: nonce, act: false };
+  if (nonce === null || nonce === seen) return { seen, act: false };
+  return { seen: nonce, act: true };
+}
