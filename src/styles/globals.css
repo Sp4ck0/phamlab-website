@@ -148,8 +148,13 @@ a{color:inherit}
    so "Pham Lab" stays on one line in the 250px menu. */
 .nav-actions{display:flex;align-items:center;gap:6px;margin-left:auto}
 .nav-actions .btn-icon{width:32px;height:32px;padding:0;margin-left:0}
-.follow-ai-btn{font-size:11.5px;font-weight:800;letter-spacing:.04em;line-height:18px}
+.follow-ai-btn{font-size:16px;line-height:18px}
+.follow-ai-btn[aria-pressed="false"] .follow-ai-eyes{opacity:.55}
 .follow-ai-btn[aria-pressed="true"]{background:var(--accent-1-tint);border-color:var(--accent-1);color:var(--accent-1)}
+/* The eyes glance left, then right, then pause. */
+.follow-ai-eyes{display:block;animation:ai-glance 4s ease-in-out infinite}
+@keyframes ai-glance{0%,15%,85%,100%{transform:translateX(0)}30%,45%{transform:translateX(-2.5px)}60%,75%{transform:translateX(2.5px)}}
+@media(prefers-reduced-motion:reduce){.follow-ai-eyes{animation:none}}
 .follow-ai-btn[data-working="true"]{
   border-color:var(--accent-3);color:var(--accent-3);
   box-shadow:0 0 0 3px color-mix(in srgb,var(--accent-3) 30%,transparent),0 0 12px var(--accent-3);
