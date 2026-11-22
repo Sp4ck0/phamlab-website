@@ -13,7 +13,7 @@ export type FocusTarget =
   | { kind: "board" }
   | { kind: "card"; id: string }
   // Places the AI marked on the trip's map for a while (mark_on_map); see TripPage.
-  | { kind: "mark"; places: Place[] };
+  | { kind: "mark"; places: Place[]; icon?: string };
 
 // Mirrors the backend's mcp_focus row (mcpFocus.ts getFocus). For the board
 // and card targets, `slug` is the board's id.
