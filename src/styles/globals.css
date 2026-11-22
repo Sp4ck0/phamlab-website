@@ -896,6 +896,11 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
 .map-weather-pill.is-hidden{visibility:hidden;pointer-events:none}
 /* Includes a historical average, not purely a forecast. */
 .map-weather-pill.is-typical{border:1px dashed #898781;color:#52514e;font-style:italic;font-weight:500}
+/* Pins that would overlap when zoomed out: one bubble with their count (lib/mapClusters.ts), sized
+   by --size, with a soft halo so it reads as a group rather than a place. */
+.map-cluster{box-sizing:border-box;width:var(--size,32px);height:var(--size,32px);display:grid;place-items:center;border-radius:50%;background:#2f2e2b;color:#fff;font:700 13px/1 system-ui;border:2px solid #fff;box-shadow:0 0 0 5px rgba(47,46,43,.22),0 1px 4px rgba(0,0,0,.35);cursor:pointer;transition:transform .12s,opacity .2s}
+.map-cluster:hover{transform:scale(1.08)}
+.map-cluster.is-dimmed{opacity:.3}
 .map-legend{display:flex;flex-wrap:wrap;gap:14px;padding:14px 18px;border-top:1px solid var(--gridline)}
 .map-legend-item{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text-secondary)}
 .map-legend-item .dot{width:9px;height:9px;border-radius:50%;flex:none}

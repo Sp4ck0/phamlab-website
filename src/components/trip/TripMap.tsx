@@ -7,6 +7,7 @@ import type { JumpTarget, MapMark, WeatherStop } from "../../lib/mapPoints";
 import { assignLegColors, fmtShort } from "../../lib/tripLogic";
 import { summarizeStay, temp, weatherIcon, weatherText } from "../../lib/weather";
 import { markIconSvg } from "../../lib/markIcons";
+import { CLUSTER_MAX_ZOOM, clusterCenter, clusterPoints } from "../../lib/mapClusters";
 import { useGeocodedPoints } from "../../hooks/useGeocodedPoints";
 import { useSettings, type TempUnit } from "../../hooks/useSettings";
 import { MAP_ID, loadGoogleMaps } from "../../lib/googleMaps";
@@ -333,6 +334,9 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
   const [zoomedIn, setZoomedIn] = useState(false);
   const zoomedInRef = useRef(zoomedIn);
   zoomedInRef.current = zoomedIn;
+  // The whole zoom, which decides which pins share a bubble; and the bubbles drawn for it.
+  const [zoomLevel, setZoomLevel] = useState(0);
+  const clusters = useRef<{ bubble: Pin; members: Pin[] }[]>([]);
   const [pinsDrawn, setPinsDrawn] = useState(0); // bumped once the plan pins exist, which day routes join up
   const dayLines = useRef(new Map<string, google.maps.Polyline>());
   const dayRoutes = useMemo(() => {
@@ -536,7 +540,10 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
   useEffect(() => {
     const map = mapInstance.current;
     if (!mapReady || !map) return;
-    const update = () => setZoomedIn((map.getZoom() ?? 0) >= DAY_ROUTE_ZOOM);
+    const update = () => {
+      setZoomedIn((map.getZoom() ?? 0) >= DAY_ROUTE_ZOOM);
+      setZoomLevel(Math.floor(map.getZoom() ?? 0));
+    };
     update();
     const listener = map.addListener("zoom_changed", update);
     return () => listener.remove();
@@ -713,6 +720,42 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady, geocodedCandidates, showCandidates]);
 
+  // Zoomed out, plan and ghost pins that would overlap hide behind one bubble with their count;
+  // zooming in splits it into smaller bubbles and then the pins (lib/mapClusters.ts). Tapping a
+  // bubble flies in until its pins fit. The AI's marks are never bubbled. After the ghost pins'
+  // effect, so their pins exist; rebuilt only when the whole zoom changes, not every frame.
+  useEffect(() => {
+    const map = mapInstance.current;
+    if (!mapReady || !map) return;
+    const pins = [...markers.current, ...candidateMarkers.current];
+    const groups = clusterPoints(pins.map(positionOf), zoomLevel);
+    const made: { bubble: Pin; members: Pin[] }[] = [];
+    groups.forEach((g) => {
+      const members = g.map((i) => pins[i]);
+      members.forEach((m) => (m.map = members.length === 1 ? map : null));
+      if (members.length === 1) return;
+      const points = members.map(positionOf);
+      const look = document.createElement("div");
+      look.className = "map-cluster";
+      look.textContent = String(members.length);
+      // A bit bigger for more places: 32px for two, about 44px for twenty.
+      look.style.setProperty("--size", `${Math.round(28 + 5 * Math.log2(members.length))}px`);
+      const bubble = makePin(map, clusterCenter(points), `${members.length} places: tap to zoom in`, look, () => {
+        const { center, zoom } = viewFor(map, points, 48, CLUSTER_MAX_ZOOM);
+        moveTo(map, center, Math.max(zoom, zoomLevel + 1));
+      }, 2);
+      made.push({ bubble, members });
+    });
+    clusters.current = made;
+    dimOtherDays.current();
+    return () => {
+      made.forEach((c) => (c.bubble.map = null));
+      clusters.current = [];
+    };
+    // positionOf/moveTo are read fresh; the pins are tracked by pinsDrawn and the ghost pins' inputs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapReady, pinsDrawn, geocodedCandidates, showCandidates, zoomLevel]);
+
   // The AI's marks: a dot above every other pin that pulses for its first minute (MARK_PULSE_MS),
   // or a round pin with the emoji the AI gave it; a new call's marks are fitted into view once drawn.
   useEffect(() => {
@@ -870,6 +913,11 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
     [...markers.current, ...candidateMarkers.current].forEach((m) => {
       const dates = pinDates.current.get(m);
       (m.content as HTMLElement | null)?.classList.toggle("is-dimmed", !!date && !!dates && !dates.includes(date));
+    });
+    // A bubble fades only when every pin in it does.
+    clusters.current.forEach(({ bubble, members }) => {
+      const dimmed = members.every((m) => (m.content as HTMLElement | null)?.classList.contains("is-dimmed"));
+      (bubble.content as HTMLElement | null)?.classList.toggle("is-dimmed", dimmed);
     });
   };
 
