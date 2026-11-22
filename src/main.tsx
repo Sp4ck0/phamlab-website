@@ -7,6 +7,7 @@ import "./styles/globals.css";
 import App from "./App.tsx";
 import { AccessCodeProvider } from "./hooks/useAccessCode";
 import { SettingsProvider } from "./hooks/useSettings";
+import { hashToOpen } from "./lib/openUrl";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
@@ -28,15 +29,12 @@ if ("serviceWorker" in navigator) {
   clearSeen();
   // Tapping a notification while the app is open: the worker (public/sw.js) sends
   // the link. The site routes by "#", so setting the hash goes there in-app (and
-  // useShareLinkFocus scrolls to the day, activity or task). Only our own origin.
+  // useShareLinkFocus scrolls to the day, activity or task); the same link tapped
+  // again still goes there (lib/openUrl.ts). Only our own origin.
   navigator.serviceWorker.addEventListener("message", (e: MessageEvent<{ type?: string; url?: unknown }>) => {
     if (e.data?.type !== "open-url" || typeof e.data.url !== "string") return;
-    try {
-      const target = new URL(e.data.url);
-      if (target.origin === location.origin && target.hash) location.hash = target.hash;
-    } catch {
-      /* not a link we can follow: staying put is fine */
-    }
+    const hash = hashToOpen(e.data.url, location.origin, location.hash);
+    if (hash) location.hash = hash;
   });
 }
 

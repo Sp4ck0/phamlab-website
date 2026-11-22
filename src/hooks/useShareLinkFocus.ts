@@ -14,10 +14,12 @@ export function useShareLinkFocus(slug: string | undefined, ready: boolean) {
   const day = params.get("day");
   const task = params.get("task");
   const tile = params.get("tile");
+  // A notification tapped again adds ?at=<time> (lib/openUrl.ts): a new visit to the same place.
+  const at = params.get("at");
 
   useEffect(() => {
     if (!slug || !ready || (!day && !task)) return;
-    const signature = `${slug}|${day}|${tile}|${task}`;
+    const signature = `${slug}|${day}|${tile}|${task}|${at}`;
     if (handled.current === signature) return;
     handled.current = signature;
     show({
@@ -29,5 +31,5 @@ export function useShareLinkFocus(slug: string | undefined, ready: boolean) {
           : { kind: "day", date: day! },
       nonce: `share-${Date.now()}`,
     });
-  }, [slug, ready, day, tile, task, show]);
+  }, [slug, ready, day, tile, task, at, show]);
 }
