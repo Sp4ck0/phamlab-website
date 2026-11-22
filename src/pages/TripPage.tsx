@@ -29,7 +29,7 @@ import { api } from "@convex/api";
 import { useAccessCode } from "../hooks/useAccessCode";
 import { batchedPhotos } from "../lib/cityPhoto";
 import { useMediaQuery } from "../hooks/useMediaQuery";
-import { usePinMap } from "../lib/pinMap";
+import { usePinMap, usePinMapSide } from "../lib/pinMap";
 import { useScrollLinkedBars } from "../lib/hideBars";
 
 // Where "Show on the trip map" scrolls to on desktop, where the map sits above the day picker.
@@ -87,14 +87,18 @@ function TripPageEntry() {
   const pinned = desktop && pinMap;
   const pinnedRef = useRef(pinned);
   pinnedRef.current = pinned;
-  // The pinned map's height, for the date strip to sit under it and for jumps to land below both.
+  // A wide window can pin it at the side instead: itinerary on the left, map down the right.
+  const wide = useMediaQuery("(min-width: 1180px)");
+  const [pinSide, setPinSide] = usePinMapSide();
+  const side = pinned && wide && pinSide;
+  // The pinned map's height (on top), for the date strip to sit under it and for jumps to land below both.
   const pageRef = useRef<HTMLDivElement>(null);
   const hasTrip = !!trip;
   // Phones: the tabs and date strip slide up and back with the reader's scrolling.
   useScrollLinkedBars(pageRef, !desktop && hasTrip);
   useEffect(() => {
     const page = pageRef.current, section = document.getElementById(TRIP_MAP_ID);
-    if (!pinned || !page || !section) return;
+    if (!pinned || side || !page || !section) return;
     const set = () => page.style.setProperty("--pinned-map-h", `${section.offsetHeight}px`);
     set();
     const ro = new ResizeObserver(set);
@@ -103,7 +107,7 @@ function TripPageEntry() {
       ro.disconnect();
       page.style.removeProperty("--pinned-map-h");
     };
-  }, [pinned, hasTrip]);
+  }, [pinned, side, hasTrip]);
   // "Show on the trip map" from the agenda: on a phone open the Map tab, then hand it the place once it
   // is there; on desktop the map is already on the page (it shows the place itself), so scroll down to it.
   const pendingMapKey = useRef<string | null>(null);
@@ -218,7 +222,7 @@ function TripPageEntry() {
       weatherStops={weatherStops}
       candidates={deriveTaskPoints(tasks, mapPlanPoints)}
       considerations={tasks.filter((t) => !!t.places?.length)}
-      pin={desktop ? { on: pinMap, set: setPinMap } : undefined}
+      pin={desktop ? { on: pinMap, set: setPinMap, side: wide ? { on: pinSide, set: setPinSide } : undefined } : undefined}
       marks={marks}
       fitMarks={fitMarks}
       onMarksFitted={() => setFitMarks(null)}
@@ -235,7 +239,7 @@ function TripPageEntry() {
 
   return (
     <PageShell>
-      <div ref={pageRef} className={`trip-page${pinned ? " map-pinned" : ""}`} data-tab={desktop ? "agenda" : tab}>
+      <div ref={pageRef} className={`trip-page${pinned ? " map-pinned" : ""}${side ? " map-side" : ""}`} data-tab={desktop ? "agenda" : tab}>
         {/* Phones show the trip summary on the Agenda tab only (CSS): the map and the note start under the tabs. */}
         <div className="trip-summary">
         <TripHeader

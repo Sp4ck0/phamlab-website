@@ -10,7 +10,18 @@ import { markIconSvg } from "../../lib/markIcons";
 import { useGeocodedPoints } from "../../hooks/useGeocodedPoints";
 import { useSettings, type TempUnit } from "../../hooks/useSettings";
 import { MAP_ID, loadGoogleMaps } from "../../lib/googleMaps";
-import { MAP_MIN_H, clampMapHeight, loadPinMapHeight, maxMapHeight, savePinMapHeight } from "../../lib/pinMap";
+import {
+  MAP_MIN_H,
+  MAP_MIN_W,
+  clampMapHeight,
+  clampMapWidth,
+  loadPinMapHeight,
+  loadPinMapWidth,
+  maxMapHeight,
+  maxMapWidth,
+  savePinMapHeight,
+  savePinMapWidth,
+} from "../../lib/pinMap";
 
 const ARROW_SPACING_PX = 28;
 // From this zoom in (about one city on screen) each day's own route shows and the city-to-city line fades.
@@ -42,7 +53,8 @@ interface Props {
   // The considerations behind them, for the vote tally in a pin's popup.
   considerations: Task[];
   // Desktop: the "Pin map" toggle. Pinned, the map follows the day and tile being looked at.
-  pin?: { on: boolean; set: (on: boolean) => void };
+  // `side` (wide windows only): pinned at the side, itinerary on the left, instead of on top.
+  pin?: { on: boolean; set: (on: boolean) => void; side?: { on: boolean; set: (side: boolean) => void } };
   // Places the AI marked for a while (not in the trip), and the call whose places to fit into
   // view once they are drawn (then onMarksFitted).
   marks?: MapMark[];
@@ -298,6 +310,8 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
   const wrapRef = useRef<HTMLDivElement>(null);
   // Pinned: the height dragged to with the divider under the map (null: the stylesheet's).
   const [mapHeight, setMapHeight] = useState(loadPinMapHeight);
+  // Pinned at the side: the width dragged to (null: the stylesheet's).
+  const [mapWidth, setMapWidth] = useState(loadPinMapWidth);
   // Pins by place key, so a "show on map" button elsewhere on the page can find its pin.
   const planPins = useRef(new Map<string, Pin>());
   const candidatePins = useRef(new Map<string, Pin>());
@@ -317,6 +331,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
   // Pinned (desktop): the day being looked at (from the itinerary, kept even while unpinned so
   // pinning shows it at once), each plan pin's days, and the whole-trip view to go back to.
   const pinned = !!pin?.on;
+  const side = pinned && !!pin?.side?.on;
   const pinnedRef = useRef(pinned);
   pinnedRef.current = pinned;
   const lookingAt = useRef<string | undefined>(undefined);
@@ -912,15 +927,32 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
     infoWindow.current?.show(header, body);
   }
 
+  // At the side, the width is a variable on the page root, since the page's own column makes room
+  // for it too (.wrap:has(> .map-side)). Unset, the stylesheet's default applies.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (!side || !mapWidth) return;
+    root.style.setProperty("--side-map-w", `${mapWidth}px`);
+    return () => {
+      root.style.removeProperty("--side-map-w");
+    };
+  }, [side, mapWidth]);
+
   // The divider under the pinned map: drag it, or use the arrow keys, to make the map taller or
   // shorter; double-click goes back to the default. While dragging, only the map's own style changes.
+  // At the side, it runs down the map's left edge and sets the width the same way.
   function sizeMap(h: number | null) {
     setMapHeight(h);
     savePinMapHeight(h);
   }
+  function widenMap(w: number | null) {
+    setMapWidth(w);
+    savePinMapWidth(w);
+  }
   function startResize(e: React.PointerEvent<HTMLDivElement>) {
     const el = mapRef.current;
     if (!el || e.button !== 0) return;
+    if (side) return startWiden(e);
     e.preventDefault();
     const handle = e.currentTarget;
     const startY = e.clientY;
@@ -943,7 +975,43 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
     handle.addEventListener("pointerup", end);
     handle.addEventListener("pointercancel", end);
   }
+  // The section is the map's column: dragging left widens it.
+  function startWiden(e: React.PointerEvent<HTMLDivElement>) {
+    const col = e.currentTarget.closest("section");
+    if (!col) return;
+    e.preventDefault();
+    const root = document.documentElement;
+    const handle = e.currentTarget;
+    const startX = e.clientX;
+    const startW = col.offsetWidth;
+    let w = startW;
+    const move = (ev: PointerEvent) => {
+      w = clampMapWidth(startW - (ev.clientX - startX), window.innerWidth);
+      root.style.setProperty("--side-map-w", `${w}px`);
+    };
+    const end = () => {
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", end);
+      handle.removeEventListener("pointercancel", end);
+      handle.classList.remove("is-dragging");
+      if (w !== startW) widenMap(w);
+      else if (!mapWidth) root.style.removeProperty("--side-map-w");
+    };
+    handle.setPointerCapture(e.pointerId);
+    handle.classList.add("is-dragging");
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", end);
+    handle.addEventListener("pointercancel", end);
+  }
   function resizeByKey(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (side) {
+      const step = e.key === "ArrowLeft" ? 24 : e.key === "ArrowRight" ? -24 : 0;
+      const col = e.currentTarget.closest("section");
+      if (!step || !col) return;
+      e.preventDefault();
+      widenMap(clampMapWidth(col.offsetWidth + step, window.innerWidth));
+      return;
+    }
     const step = e.key === "ArrowUp" ? -24 : e.key === "ArrowDown" ? 24 : 0;
     const el = mapRef.current;
     if (!step || !el) return;
@@ -966,6 +1034,16 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
               onClick={onClearMarks}
             >
               ✕ Clear marks ({geocodedMarks.length})
+            </button>
+          )}
+          {pinned && pin?.side && (
+            <button
+              type="button"
+              className="map-pin-toggle"
+              title={side ? "Put the map above the itinerary" : "Put the map beside the itinerary, filling the window's height"}
+              onClick={() => pin.side?.set(!side)}
+            >
+              {side ? "⬒ Map on top" : "◨ Map at the side"}
             </button>
           )}
           {pin && (
@@ -999,23 +1077,23 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
         <div ref={wrapRef} className={`trip-map-wrap${flash ? " is-focused" : ""}`}>
           <div
             ref={mapRef}
-            className={`trip-map${pinned && mapHeight ? " is-sized" : ""}`}
-            style={pinned && mapHeight ? { height: mapHeight } : undefined}
+            className={`trip-map${pinned && !side && mapHeight ? " is-sized" : ""}`}
+            style={pinned && !side && mapHeight ? { height: mapHeight } : undefined}
           />
           {pinned && (
             <div
               className="map-divider"
               role="separator"
-              aria-orientation="horizontal"
+              aria-orientation={side ? "vertical" : "horizontal"}
               aria-label="Map size"
-              aria-valuemin={MAP_MIN_H}
-              aria-valuemax={maxMapHeight(window.innerHeight)}
-              aria-valuenow={mapHeight ?? undefined}
+              aria-valuemin={side ? MAP_MIN_W : MAP_MIN_H}
+              aria-valuemax={side ? maxMapWidth(window.innerWidth) : maxMapHeight(window.innerHeight)}
+              aria-valuenow={(side ? mapWidth : mapHeight) ?? undefined}
               tabIndex={0}
-              title="Drag to make the map bigger or smaller; double-click to reset"
+              title={side ? "Drag to make the map wider or narrower; double-click to reset" : "Drag to make the map bigger or smaller; double-click to reset"}
               onPointerDown={startResize}
               onKeyDown={resizeByKey}
-              onDoubleClick={() => sizeMap(null)}
+              onDoubleClick={() => (side ? widenMap(null) : sizeMap(null))}
             />
           )}
           <div className="map-legend">
