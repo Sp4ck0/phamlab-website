@@ -83,7 +83,10 @@ export function DayNav({ rows, todayId, currentId, onJump }: { rows: ItineraryRo
       root.style.removeProperty("--daynav-bottom");
     };
   }, []);
+  // The spacer before the strip: on a phone, hideBars.ts sizes it to move the strip while it scrolls away.
   return (
+    <>
+    <div className="trip-bars-spacer" aria-hidden="true" />
     <div className="daynav-shell" ref={shell}>
       <nav className="daynav" aria-label="Jump to itinerary day" ref={nav}>
         {/* Stays at the strip's left edge so today is one tap away from any day. */}
@@ -115,5 +118,6 @@ export function DayNav({ rows, todayId, currentId, onJump }: { rows: ItineraryRo
         })}
       </nav>
     </div>
+    </>
   );
 }

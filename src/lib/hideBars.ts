@@ -67,13 +67,53 @@ export function useScrollLinkedBars(page: RefObject<HTMLElement | null>, on: boo
     let idle = 0;
     let tween = 0;
 
-    const setOffset = (b: HTMLElement, offset: number) => {
-      offsets.set(b, offset);
-      b.style.position = "relative";
-      b.style.top = `${offset}px`;
+    // Each bar's pinned line and own margins, read while it is still pinned by CSS.
+    const pinned = new Map<HTMLElement, { line: number; mb: number }>();
+    const capture = (b: HTMLElement) => {
+      if (pinned.has(b)) return;
+      const cs = window.getComputedStyle(b);
+      pinned.set(b, { line: parseFloat(cs.top) || 0, mb: parseFloat(cs.marginBottom) || 0 });
     };
-    // Where each bar would be with no offset (read once the bars are released).
-    const naturals = (list: HTMLElement[]) => list.map((b) => ({ b, natural: b.getBoundingClientRect().top - (offsets.get(b) ?? 0), height: b.offsetHeight }));
+    // A released bar sits `offset` below its place in the page: the empty spacer just before it
+    // (.trip-bars-spacer) grows by that much, and an equal negative bottom margin keeps everything
+    // after it where it was. (Not its own top margin: a sticky box can't be moved into its margins.)
+    // It is sticky with only a bottom limit, set at its pinned line: scrolling up brings it back in
+    // with the content, and the browser itself stops it at that line, on its scrolling thread, not a
+    // frame late from here (which overshot and snapped back). A bar whose place is still lower down
+    // the page gets no limit, or the browser would pull it up.
+    const spacer = (b: HTMLElement) => {
+      const s = b.previousElementSibling;
+      return s instanceof HTMLElement && s.classList.contains("trip-bars-spacer") ? s : null;
+    };
+    const setOffset = (b: HTMLElement, offset: number, natural: number) => {
+      const p = pinned.get(b);
+      const s = spacer(b);
+      if (!p || !s) return;
+      offsets.set(b, offset);
+      s.style.height = `${offset}px`;
+      b.style.position = "sticky";
+      b.style.top = "auto";
+      b.style.marginBottom = `${p.mb - offset}px`;
+      b.style.bottom = natural <= p.line + 0.5 ? `calc(100% - ${p.line + b.offsetHeight}px)` : "";
+    };
+    // Where a bar's place in the page is on screen now (with no offset and no limit).
+    const naturalOf = (b: HTMLElement) => {
+      const p = pinned.get(b);
+      const s = spacer(b);
+      if (s) s.style.height = "";
+      b.style.position = "relative";
+      b.style.top = "0px";
+      b.style.bottom = "";
+      if (p) b.style.marginBottom = `${p.mb}px`;
+      return b.getBoundingClientRect().top;
+    };
+    const naturals = (list: HTMLElement[]) =>
+      list.map((b) => {
+        const offset = offsets.get(b) ?? 0;
+        const natural = naturalOf(b);
+        setOffset(b, offset, natural);
+        return { b, natural, height: b.offsetHeight };
+      });
 
     // Day headers: pinned by CSS at the site bar while the bars are released; each one up there is
     // moved down to sit under whatever is left of the bars.
@@ -99,16 +139,23 @@ export function useScrollLinkedBars(page: RefObject<HTMLElement | null>, on: boo
         if (by) moved.set(head, by);
         else moved.delete(head);
         head.style.transform = by ? `translateY(${by}px)` : "";
+        // The space it was moved down from (up to the site bar), filled with the page's colour: when
+        // the bars scroll away faster than this follows, that shows instead of the tiles behind.
+        if (by) head.style.setProperty("--under-bars", `${by}px`);
+        else head.style.removeProperty("--under-bars");
       }
     };
 
-    // `dy`: the scroll that set this off. The bars move with it too, so the first frame isn't a hitch.
-    const release = (dy: number) => {
+    // Released where they are on screen now. (Not "where they'd be had they moved with the scroll that
+    // set this off": on a phone the page has already drawn that frame without them moving, so they'd
+    // jump twice as far on the next one.)
+    const release = () => {
       const list = bars();
       if (!list.length) return;
+      list.forEach(capture);
       const at = list.map((b) => b.getBoundingClientRect().top);
-      list.forEach((b) => setOffset(b, 0));
-      list.forEach((b, i) => setOffset(b, releaseOffset(at[i] - dy, b.getBoundingClientRect().top)));
+      const naturalTops = list.map(naturalOf);
+      list.forEach((b, i) => setOffset(b, releaseOffset(at[i], naturalTops[i]), naturalTops[i]));
       released = true;
       // The day headers now pin at the site bar (CSS), moved down under the bars by placeHeaders.
       el.style.setProperty("--pinned-top", `${siteBar()}px`);
@@ -116,10 +163,12 @@ export function useScrollLinkedBars(page: RefObject<HTMLElement | null>, on: boo
     };
     const pin = () => {
       for (const b of bars()) {
-        b.style.position = "";
-        b.style.top = "";
+        for (const prop of ["position", "top", "bottom", "marginBottom"] as const) b.style[prop] = "";
+        const s = spacer(b);
+        if (s) s.style.height = "";
       }
       offsets.clear();
+      pinned.clear();
       released = false;
       el.style.removeProperty("--pinned-top");
       placeHeaders();
@@ -127,7 +176,7 @@ export function useScrollLinkedBars(page: RefObject<HTMLElement | null>, on: boo
     // Stack the bars with their bottom at the site bar (just hidden) or their top there (shown).
     const stack = (from: "top" | "bottom") => {
       const list = naturals(bars());
-      stackOffsets(list, siteBar(), from).forEach((offset, i) => setOffset(list[i].b, offset));
+      stackOffsets(list, siteBar(), from).forEach((offset, i) => setOffset(list[i].b, offset, list[i].natural));
     };
     const first = () => bars()[0];
     // How far the bars have gone up behind the site bar: 0 = all shown, up to their height = gone.
@@ -152,7 +201,7 @@ export function useScrollLinkedBars(page: RefObject<HTMLElement | null>, on: boo
         else placeHeaders();
       };
       if (reduced()) {
-        list.forEach(({ b }, i) => setOffset(b, to[i]));
+        list.forEach(({ b, natural }, i) => setOffset(b, to[i], natural));
         done();
         return;
       }
@@ -160,7 +209,7 @@ export function useScrollLinkedBars(page: RefObject<HTMLElement | null>, on: boo
       const step = (now: number) => {
         const t = Math.min(1, (now - start) / SETTLE_MS);
         const k = 1 - (1 - t) ** 3;
-        list.forEach(({ b }, i) => setOffset(b, from[i] + (to[i] - from[i]) * k));
+        list.forEach(({ b, natural }, i) => setOffset(b, from[i] + (to[i] - from[i]) * k, natural));
         placeHeaders();
         if (t < 1) tween = requestAnimationFrame(step);
         else {
@@ -187,7 +236,7 @@ export function useScrollLinkedBars(page: RefObject<HTMLElement | null>, on: boo
       const dy = y - lastY;
       lastY = y;
       if (!released) {
-        if (byHand && dy > 0 && y > 0) release(dy);
+        if (byHand && dy > 0 && y > 0) release();
       } else {
         // Scrolling back up after the bars have gone: put them just above, so they come back in.
         if (byHand && dy < 0 && hiddenBy() >= height() - 0.5) stack("bottom");
