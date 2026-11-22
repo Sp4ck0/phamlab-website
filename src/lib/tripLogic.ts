@@ -4,7 +4,7 @@ import type { Act, Day, Flight, FlightLeg, Group, Hotel, HotelPrice, LegColor, P
 
 // Normalizes a legacy plain-string activity and a rich {tag,time,text}
 // activity to the same shape for rendering.
-export function actParts(a: Act): { tag?: string; time?: string; text: string; places?: Place[] } {
+export function actParts(a: Act): { tag?: string; time?: string; text: string; description?: string; places?: Place[] } {
   return typeof a === "string" ? { text: a } : a;
 }
 

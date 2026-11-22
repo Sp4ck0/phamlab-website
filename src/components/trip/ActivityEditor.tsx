@@ -4,7 +4,10 @@ import { serverMessage } from "../../lib/serverError";
 import { PlacesEditor, cleanPlaces } from "./PlacesEditor";
 
 interface Props {
+  /** The title. */
   initial: string;
+  /** The supporting line under the title, or none. */
+  initialDescription?: string;
   initialPlaces?: Place[];
   /** The activity's time and end time ("HH:MM"), or none. */
   initialTime?: string;
@@ -20,8 +23,9 @@ interface Props {
 // places. Opens with the cursor at the end of the text so appending a note ("— Dec 5 sold
 // out") is just type and save. The end time isn't shown on the card; it sets when the
 // Add to Google Calendar event ends.
-export function ActivityEditor({ initial, initialPlaces, initialTime, initialEndTime, initialAllDay = false, onSave, onCancel }: Props) {
+export function ActivityEditor({ initial, initialDescription, initialPlaces, initialTime, initialEndTime, initialAllDay = false, onSave, onCancel }: Props) {
   const [text, setText] = useState(initial);
+  const [description, setDescription] = useState(initialDescription ?? "");
   const [allDay, setAllDay] = useState(initialAllDay);
   const [time, setTime] = useState(initialTime ?? "");
   const [endTime, setEndTime] = useState(initialEndTime ?? "");
@@ -60,6 +64,8 @@ export function ActivityEditor({ initial, initialPlaces, initialTime, initialEnd
         if (time !== (initialTime ?? "")) timing.time = time || null;
         if (endTime !== (initialEndTime ?? "")) timing.endTime = endTime || null;
       }
+      // Same for the description: only a change is sent, and an emptied box clears it.
+      if (description.trim() !== (initialDescription ?? "").trim()) timing.description = description.trim() || null;
       await onSave(text, cleanPlaces(places), timing);
     } catch (e) {
       // A ConvexError carries what the backend meant to say; otherwise Convex
@@ -112,10 +118,20 @@ export function ActivityEditor({ initial, initialPlaces, initialTime, initialEnd
         ref={ref}
         className="ai-input"
         aria-label="Activity text"
+        placeholder="Title"
         rows={1}
         maxLength={2000}
         value={text}
         onChange={(e) => setText(e.target.value)}
+      />
+      <textarea
+        className="ai-input"
+        aria-label="Activity description"
+        placeholder="Description (optional)"
+        rows={2}
+        maxLength={2000}
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
       />
       <PlacesEditor places={places} setPlaces={setPlaces} />
       <div className="ai-editor-actions">

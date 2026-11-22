@@ -1722,6 +1722,39 @@ test('a static card whose title is cut off gets the chevron and opens to show th
   }
 });
 
+test('an activity with a description shows it under the title; one without adds no empty line', () => {
+  const synthetic = { ...day, country: 'TH', acts: [
+    { time: '09:00', text: 'Synthetic palace', description: 'Synthetic rooms and exhibits' },
+    { time: '12:00', text: 'Synthetic lunch' },
+    'Synthetic legacy string',
+  ] };
+  const view = mount(React.createElement(DayCard, { ...props, day: synthetic, days: [synthetic], expanded: true }));
+  try {
+    const [withDesc, plainAct, legacy] = view.container.querySelectorAll('.tl-tile');
+    assert.equal(withDesc.querySelector('.tl-title').textContent, 'Synthetic palace');
+    assert.equal(withDesc.querySelector('.tl-meta').textContent, 'Synthetic rooms and exhibits');
+    assert.equal(plainAct.querySelector('.tl-meta'), null);
+    assert.equal(legacy.querySelector('.tl-meta'), null);
+    assert.equal(legacy.querySelector('.tl-title').textContent, 'Synthetic legacy string');
+  } finally { view.close(); }
+});
+
+test('editing an activity: the editor opens with the title and description apart; an unchanged description is not sent', async () => {
+  const synthetic = { ...day, country: 'TH', acts: [{ time: '12:00', text: 'Synthetic lunch', description: 'Synthetic noodles' }] };
+  const edits = [];
+  const view = mount(React.createElement(Stateful, { ...props, day: synthetic, days: [synthetic], expanded: true, onEditActivity: async (...a) => { edits.push(a); } }));
+  try {
+    const edit = menuItem(openMenu(view.container.querySelector('.tl-tile')), 'Edit');
+    act(() => edit.click());
+    assert.equal(view.container.querySelector('.ai-editor textarea[aria-label="Activity text"]').value, 'Synthetic lunch');
+    assert.equal(view.container.querySelector('.ai-editor textarea[aria-label="Activity description"]').value, 'Synthetic noodles');
+    await act(async () => { view.container.querySelector('.ai-editor button[type=submit]').click(); });
+    const saved = edits.pop();
+    assert.equal(saved[3], 'Synthetic lunch');
+    assert.equal(JSON.stringify(saved[5]), '{}'); // description untouched: not sent
+  } finally { view.close(); }
+});
+
 test('editing an activity: its time is in the editor; "No time" clears it, a text-only edit leaves it alone', async () => {
   // (Typing a new time is checked in a real browser: react-dom loads here before jsdom's document,
   // so it doesn't see input events and a typed change never reaches onChange.)

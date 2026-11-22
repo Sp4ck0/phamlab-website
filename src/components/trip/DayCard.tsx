@@ -484,7 +484,7 @@ export function DayCard({
       };
     }
     const { item: a, state, ai, prev } = entry.row;
-    const { tag, text, places } = actParts(a);
+    const { tag, text, description, places } = actParts(a);
     const gone = state === "gone";
     const editing = !gone && editingAct === ai && !!onEditActivity;
     const live = nowBits(entry.key);
@@ -493,6 +493,8 @@ export function DayCard({
     // for the History of an approved suggestion.
     const hist = history(typeof a === "string" ? undefined : a.fromItem);
     const title = plain(text);
+    // The description is the line under the title, in the card's smaller secondary type (its meta line).
+    const sub = description ? plain(description) : "";
     const named = (places ?? []).filter((p) => p.name);
     return {
       key: entry.key, ghost: gone, defaultOpen: false, forceOpen: editing,
@@ -505,6 +507,7 @@ export function DayCard({
         label: title,
         expandable: editing || !!hist,
         title: prev ? <InlineDiff prev={sanitizeHtml(actParts(prev).text)} next={sanitizeHtml(text)} paused={changePaused} ms={changeMs}>{title}</InlineDiff> : title,
+        meta: sub || undefined,
         menu: [
           ...(onEditActivity ? [{ label: "Edit", icon: "edit" as const, onSelect: () => setEditingAct(ai) }] : []),
           ...mapsItem(named[0], named.length > 1 ? `Open ${named[0]?.name} in Google Maps` : undefined),
@@ -520,6 +523,7 @@ export function DayCard({
         children: editing ? (
           <ActivityEditor
             initial={text}
+            initialDescription={description}
             initialPlaces={places}
             initialTime={typeof a === "string" ? undefined : a.time}
             initialEndTime={typeof a === "string" ? undefined : a.endTime}
