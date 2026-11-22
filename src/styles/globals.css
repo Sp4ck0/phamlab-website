@@ -998,6 +998,10 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
      as they come out, instead of being cut off at its edge. */
   .day-heading::after{content:"";position:absolute;left:0;right:0;top:100%;height:24px;background:linear-gradient(var(--card),transparent);pointer-events:none;opacity:0;transition:opacity .2s}
   .day-heading[data-stuck]::after{opacity:1}
+  /* A closed day is only its header, with nothing to scroll under it: it scrolls by like any card,
+     and has no fade (which would otherwise hang over the next day's top). */
+  .day-heading:has(> .day-head-btn[aria-expanded="false"]){position:relative;top:auto}
+  .day-heading:has(> .day-head-btn[aria-expanded="false"])::after{display:none}
   /* Moved down under the tabs and date strip while they scroll away (hideBars.ts): the space above it,
      up to the site bar, is filled with the page's colour, behind the bars, so if they move off faster
      than it follows, no tiles show through for that frame. */
