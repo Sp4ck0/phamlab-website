@@ -126,7 +126,9 @@ export function useScrollLinkedBars(page: RefObject<HTMLElement | null>, on: boo
         if (!head) continue;
         const had = moved.get(head) ?? 0;
         const box = card.getBoundingClientRect();
-        if (!released || box.bottom < 0 || box.top > line + 4) {
+        // A closed day is just its header: it never pins (CSS), so there is nothing to move.
+        const closed = head.querySelector(".day-head-btn")?.getAttribute("aria-expanded") === "false";
+        if (!released || closed || box.bottom < 0 || box.top > line + 4) {
           if (had) reads.push([head, 0]);
           continue;
         }
