@@ -1201,6 +1201,41 @@ test('an activity is one static card: time, icon and title, and all its actions 
   } finally { view.close(); }
 });
 
+test('a place offers Uber or Grab to it only where that app runs; Grab only on a touch device', () => {
+  const place = { name: 'Synthetic Cafe', address: 'Synthetic street' };
+  const withCountry = (country) => ({ ...day, country, acts: [{ tag: 'Food', time: '12:00', text: 'Synthetic Cafe', places: [place] }] });
+  const menuOf = (country) => {
+    const synthetic = withCountry(country);
+    const view = mount(React.createElement(DayCard, { ...props, day: synthetic, days: [synthetic], expanded: true }));
+    try { return openMenu(view.container.querySelector('.tl-tile')); } finally { view.close(); }
+  };
+  const labels = (items) => items.map((i) => i.textContent).filter((t) => /^(Uber|Grab) to/.test(t));
+  localStorage.setItem('phamlab.geocode.v1', JSON.stringify({ 'Synthetic street': { lat: 1.5, lng: 103.25 } }));
+  try {
+    // US: Uber. With the place's coordinates already known on this device it is a plain link.
+    const us = menuOf('US');
+    assert.deepEqual(labels(us), ['Uber to Synthetic Cafe']);
+    const uber = new URL(menuItem(us, 'Uber to Synthetic Cafe').getAttribute('href'));
+    assert.equal(uber.origin + uber.pathname, 'https://m.uber.com/ul/');
+    assert.equal(uber.searchParams.get('dropoff[latitude]'), '1.5');
+    assert.equal(menuItem(us, 'Uber to Synthetic Cafe').getAttribute('target'), '_blank');
+    // Thailand on a computer: Uber isn't there and Grab has no website, so neither is offered.
+    assert.deepEqual(labels(menuOf('TH')), []);
+    // Thailand on a phone: Grab, opened in the same tab.
+    globalThis.matchMedia = () => ({ matches: true });
+    const th = menuOf('TH');
+    assert.deepEqual(labels(th), ['Grab to Synthetic Cafe']);
+    assert.match(menuItem(th, 'Grab to Synthetic Cafe').getAttribute('href'), /^grab:\/\/open\?screenType=BOOKING&dropOffLatitude=1\.5&/);
+    assert.equal(menuItem(th, 'Grab to Synthetic Cafe').getAttribute('target'), null);
+    // A place the map hasn't looked up yet is a button that finds it on tap, not a link.
+    localStorage.removeItem('phamlab.geocode.v1');
+    const cold = menuItem(menuOf('US'), 'Uber to Synthetic Cafe');
+    assert.equal(cold.tagName, 'BUTTON');
+    // A day in a country with neither app gets none.
+    assert.deepEqual(labels(menuOf('ZZ')), []);
+  } finally { delete globalThis.matchMedia; localStorage.removeItem('phamlab.geocode.v1'); }
+});
+
 test('an activity approved from a suggestion opens to its History; a card opens from anywhere on it but its menu', () => {
   const synthetic = { ...day, acts: [{ text: 'Synthetic dinner', fromItem: 'x' }], hotels: [{ who: 'all', name: 'Synthetic Hotel', status: 'booked' }] };
   const task = consider('x', { title: 'Synthetic idea', done: true, outcome: 'chosen' });

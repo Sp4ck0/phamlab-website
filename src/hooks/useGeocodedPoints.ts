@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import type { MapPointData } from "../lib/types";
-import { loadGoogleMaps } from "../lib/googleMaps";
+
+// Loaded on first use, so a component that only reads the cache (DayCard's ride links) can be
+// imported where there is no Vite env, such as the node tests.
+const loadGoogleMaps = () => import("../lib/googleMaps").then((m) => m.loadGoogleMaps());
 
 const CACHE_KEY = "phamlab.geocode.v1";
 
@@ -27,8 +30,39 @@ export interface GeocodedPoint extends MapPointData {
 
 // Cache key and lookup input: a Place ID if there is one, else the address.
 // A point with neither can't be placed.
-function lookupKey(p: MapPointData): string | undefined {
+function lookupKey(p: Pick<MapPointData, "placeId" | "address">): string | undefined {
   return p.placeId ? `pid:${p.placeId}` : p.address;
+}
+
+type Findable = Pick<MapPointData, "placeId" | "address">;
+
+/** A place's coordinates if the map has already looked them up on this device, else undefined. */
+export function cachedLatLng(p: Findable): LatLng | undefined {
+  const lookup = lookupKey(p);
+  return lookup ? loadCache()[lookup] : undefined;
+}
+
+/** Looks one place up now (and caches it like the trip map does); null when it can't be found. */
+export async function geocodePlace(p: Findable): Promise<LatLng | null> {
+  const lookup = lookupKey(p);
+  if (!lookup) return null;
+  const cached = loadCache()[lookup];
+  if (cached) return cached;
+  try {
+    const google = await loadGoogleMaps();
+    const res = await new google.maps.Geocoder().geocode(p.placeId ? { placeId: p.placeId } : { address: p.address });
+    const loc = res.results[0]?.geometry?.location;
+    if (!loc) return null;
+    const latLng = { lat: loc.lat(), lng: loc.lng() };
+    try {
+      saveCache({ ...loadCache(), [lookup]: latLng });
+    } catch {
+      // a full or blocked localStorage only means the next tap looks it up again
+    }
+    return latLng;
+  } catch {
+    return null;
+  }
 }
 
 export function useGeocodedPoints(points: MapPointData[]) {

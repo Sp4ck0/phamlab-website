@@ -10,6 +10,8 @@ import { hotelHeader, isPlaceholderHotel, segmentsOf, transportHeader } from "..
 import { copyShareLink } from "../../lib/shareLink";
 import { TileMenu, type TileMenuItem } from "./TileMenu";
 import { routeSearchUrl } from "../../lib/segments";
+import { RIDE_APPS, rideAppsFor, rideUrl } from "../../lib/rideHail";
+import { cachedLatLng, geocodePlace } from "../../hooks/useGeocodedPoints";
 import { ALL_DAY, OWN_CLICK, TileStatePill, TimelineTile, type TimelineTileProps, type TileState } from "./TimelineTile";
 import { buildTimeline, timelineSpans, type ActRow, type DayItem, type TimelineEntry } from "../../lib/timeline";
 import type { TileOpen } from "../../hooks/useTileOpen";
@@ -314,6 +316,32 @@ export function DayCard({
     places.flatMap((p) => (placeKey(p) ? [{ label: places.length > 1 ? `Show ${p.name} on the trip map` : "Show on the trip map", icon: "map" as const, onSelect: () => focusOnMap(p) }] : []));
   // Opens a place in Google Maps (what the row's pin button did).
   const mapsItem = (p: Place | undefined, label = "Open in Google Maps"): TileMenuItem[] => (p?.name ? [{ label, icon: "pin", href: googleMapsUrl(p) }] : []);
+  // "Grab to …" / "Uber to …" for a place, for the apps that work in this day's country (both
+  // countries on a travel day). Grab has no website, so it only shows on a touch device. The link
+  // needs coordinates: the trip map has usually looked them up already (a plain link); if not, the
+  // tap looks them up, and a second tap opens it if the browser blocked the new tab.
+  const rideApps = rideAppsFor([d.country, d.toCountry]);
+  const touch = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
+  const rideItems = (p: Place | undefined): TileMenuItem[] => {
+    if (!p?.name || !placeKey(p)) return [];
+    return rideApps.filter((app) => app === "uber" || touch).map((app): TileMenuItem => {
+      const label = `${RIDE_APPS[app].label} to ${p.name}`;
+      const target = (at: { lat: number; lng: number }) => ({ ...at, name: p.name, address: p.address });
+      const known = cachedLatLng(p);
+      if (known) return { label, icon: "car", href: rideUrl(app, target(known)), sameTab: app === "grab" };
+      return {
+        label,
+        icon: "car",
+        onSelect: async () => {
+          const at = await geocodePlace(p);
+          if (!at) return "Couldn't find this place on the map";
+          const url = rideUrl(app, target(at));
+          if (app === "grab") window.location.href = url;
+          else if (!window.open(url, "_blank", "noopener")) return "Tap again to open Uber";
+        },
+      };
+    });
+  };
   // The booked toggle (the check that used to sit on the row).
   const bookedItem = (ids: string[], s: Status): TileMenuItem => ({
     label: s === "booked" ? "Mark as not booked" : "Mark as booked",
@@ -351,7 +379,7 @@ export function DayCard({
           title,
           menu: [
             bookedItem(g.srcs, s),
-            ...(chosen ? mapsItem(place) : []),
+            ...(chosen ? [...mapsItem(place), ...rideItems(place)] : []),
             copyItem({ day: d.date, tile: g.srcs[0] }),
             ...(g.phone ? [{ label: `Call ${g.phone}`, icon: "phone" as const, href: phoneHref(g.phone), sameTab: true }] : []),
             ...calendarItem(days ? hotelUrl(g.name, g.address, days, dayNumber) : null),
@@ -458,9 +486,10 @@ export function DayCard({
         menu: [
           ...(onEditActivity ? [{ label: "Edit", icon: "edit" as const, onSelect: () => setEditingAct(ai) }] : []),
           ...mapsItem(named[0], named.length > 1 ? `Open ${named[0]?.name} in Google Maps` : undefined),
+          ...rideItems(named[0]),
           copyItem({ day: d.date, tile: `act:${ai}` }),
           ...calendarItem(actUrl(a, d, dayNumber, ai)),
-          ...named.slice(1).flatMap((p) => mapsItem(p, `Open ${p.name} in Google Maps`)),
+          ...named.slice(1).flatMap((p) => [...mapsItem(p, `Open ${p.name} in Google Maps`), ...rideItems(p)]),
           ...onMapItems(named),
         ],
         headerEnd: live?.pill,
@@ -493,7 +522,7 @@ export function DayCard({
       : proposes.type === "hotel"
         ? (() => {
             const place = { name: proposes.entry.name, address: proposes.entry.address, placeId: proposes.entry.placeId };
-            return isPlaceholderHotel(proposes.entry) ? [] : [...mapsItem(place, `Open ${place.name} in Google Maps`), ...onMapItems([place])];
+            return isPlaceholderHotel(proposes.entry) ? [] : [...mapsItem(place, `Open ${place.name} in Google Maps`), ...rideItems(place), ...onMapItems([place])];
           })()
         : proposes.type === "transport"
           ? transportCalendarItems({ ...proposes.entry, who: [proposes.entry.who].flat(), ids: [`item:${id}`], statuses: [proposes.entry.status] })
@@ -505,6 +534,7 @@ export function DayCard({
       onToggleActionItem, onPromote, onUnpromote, onSetOutcome,
       menu: [
         ...mapsItem((places ?? [])[0]),
+        ...rideItems((places ?? [])[0]),
         // Jumps to this item in the Action Items or Under consideration list (where it is edited).
         { label: task ? "Edit in list" : "Open in list", icon: task ? "edit" : "list", onSelect: () => { if (slug) showFocus({ slug, target: { kind: "actionItem", id }, nonce: `${Date.now()}` }); } },
         copyItem({ task: `item:${id}` }),
