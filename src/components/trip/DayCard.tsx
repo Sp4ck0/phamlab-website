@@ -190,6 +190,33 @@ export function DayCard({
     seen.observe(el);
     return () => { live = false; seen.disconnect(); };
   }, [cityPhoto, d.city, d.country]);
+  // On a phone the header pins under the date strip while its day scrolls by. It is marked
+  // (data-stuck) while pinned, so the tiles fade as they slide under it instead of being cut off
+  // at its edge (CSS). Pinned means its top has reached the strip's bottom (--daynav-bottom): the
+  // observer's top edge sits 1px below that line, so a pinned header is never wholly inside.
+  useEffect(() => {
+    const el = headRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    let io: IntersectionObserver | undefined;
+    const watch = () => {
+      io?.disconnect();
+      const line = parseFloat(window.getComputedStyle(document.documentElement).getPropertyValue("--daynav-bottom")) || 0;
+      io = new IntersectionObserver((hits) => {
+        const hit = hits[hits.length - 1];
+        // Cut off at the top, not at the bottom of the screen.
+        const stuck = !!hit && hit.isIntersecting && hit.intersectionRatio < 1 && hit.boundingClientRect.top < (hit.rootBounds?.top ?? line + 1);
+        if (stuck) el.dataset.stuck = "";
+        else delete el.dataset.stuck;
+      }, { rootMargin: `${-(line + 1)}px 0px 0px 0px`, threshold: [0, 1] });
+      io.observe(el);
+    };
+    watch();
+    window.addEventListener("resize", watch);
+    return () => {
+      io?.disconnect();
+      window.removeEventListener("resize", watch);
+    };
+  }, []);
   // A collapsed panel is hidden="until-found": still in the page, so Ctrl+F finds its text,
   // and a match opens the day.
   const panelRef = useUntilFound(expanded, onExpandedChange);
