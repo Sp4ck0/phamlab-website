@@ -1023,6 +1023,180 @@ test('an AI edit to one item on a day scrolls straight to that item and plays it
   }
 });
 
+// ---- an AI edit plays red (old words) then green (new words), never just the plain blink ----
+// Every red/green phase each item shows, in order, caught on each DOM change (a fast phase lasts
+// well under 100ms), and whether anything fell back to the plain blink (.ai-focus-flash).
+function recordChanges(container) {
+  const seen = []; // [, 'red'|'green', words], each time a phase comes on screen
+  let flashed = false;
+  let shown = new Set();
+  const scan = () => {
+    if (container.querySelector('.ai-focus-flash')) flashed = true;
+    const now = new Set();
+    for (const layer of container.querySelectorAll('.chg-layer[data-on=true]')) {
+      for (const [cls, phase] of [['.chg-del', 'red'], ['.chg-ins', 'green']]) {
+        const words = [...layer.querySelectorAll(cls)].map((e) => e.textContent).join('|');
+        if (words) now.add(`${phase}\n${words}`);
+      }
+    }
+    for (const key of now) if (!shown.has(key)) seen.push([null, ...key.split('\n')]);
+    shown = now;
+  };
+  const observer = new window.MutationObserver(scan);
+  observer.observe(container, { subtree: true, childList: true, attributes: true, characterData: true });
+  return { seen, flashed: () => flashed, stop: () => observer.disconnect() };
+}
+// jsdom has no layout: every element is drawn below the fold, so the page scrolls to each change.
+function fakeLayout() {
+  const rects = window.Element.prototype.getClientRects;
+  const box = window.Element.prototype.getBoundingClientRect;
+  window.Element.prototype.getClientRects = function () { return [{}]; };
+  window.Element.prototype.getBoundingClientRect = function () { return { top: 2000, bottom: 2100, left: 0, right: 100, width: 100, height: 100 }; };
+  return () => { window.Element.prototype.getClientRects = rects; window.Element.prototype.getBoundingClientRect = box; };
+}
+// In short slices: act() holds React's updates until its callback ends, so one long wait would
+// skip straight past a phase that is on screen for less than that (a fast step's green).
+const wait = async (ms) => { for (let t = 0; t < ms; t += 20) await act(async () => { await new Promise((r) => setTimeout(r, 20)); }); };
+// The red then green phases one item went through (by its old and new words).
+const phasesOf = (seen, oldWord, newWord) => seen.filter(([, phase, words]) => (phase === 'red' && words.includes(oldWord)) || (phase === 'green' && words.includes(newWord))).map(([, phase]) => phase);
+
+async function playEdit({ acts, edited, pointers, waitMs, then }) {
+  localStorage.clear();
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const before = resolveDays({ days: [{ ...day, acts }] });
+  const after = resolveDays({ days: [{ ...day, acts: edited }] });
+  const out = await timelineView(before);
+  const restore = fakeLayout();
+  const rec = recordChanges(out.view.container);
+  try {
+    const [section] = dayCards(out.view.container);
+    act(() => section.querySelector('.day-head-btn').click());
+    out.setDays(after);
+    for (const [delay, target, nonce] of pointers) {
+      await wait(delay);
+      act(() => out.show({ slug: 'synthetic', target, nonce }));
+    }
+    // A later save to the day while it plays (e.g. the server filling in a place's Google id).
+    if (then) { await wait(then[0]); out.setDays(resolveDays({ days: [{ ...day, acts: then[1] }] })); }
+    await wait(waitMs);
+    return { seen: rec.seen, flashed: rec.flashed(), section };
+  } finally { rec.stop(); restore(); out.view.close(); localStorage.clear(); }
+}
+
+test('an AI edit, then a pointer at the item it changed: the change still plays red then green, not the plain blink', async () => {
+  const acts = ['Synthetic first', 'Synthetic second oldword', 'Synthetic third'];
+  const { seen, flashed } = await playEdit({
+    acts, edited: [acts[0], 'Synthetic second newword', acts[2]],
+    // The edit points at the day; the AI then points at the same item (show_on_page), as clients often do.
+    pointers: [[0, { kind: 'day', date: day.date }, 'n1'], [400, { kind: 'tile', date: day.date, tile: 'act:1' }, 'n2']],
+    waitMs: 5000,
+  });
+  assert.deepEqual(phasesOf(seen, 'oldword', 'newword'), ['red', 'green']);
+  assert.equal(flashed, false);
+});
+
+test('a pointer at the edited item alone (the edit\'s own pointer was overtaken) plays red then green, not the plain blink', async () => {
+  const acts = ['Synthetic first', 'Synthetic second oldword'];
+  const { seen, flashed } = await playEdit({
+    acts, edited: [acts[0], 'Synthetic second newword'],
+    pointers: [[0, { kind: 'tile', date: day.date, tile: 'act:1' }, 'n1']],
+    waitMs: 5000,
+  });
+  assert.deepEqual(phasesOf(seen, 'oldword', 'newword'), ['red', 'green']);
+  assert.equal(flashed, false);
+});
+
+test('an AI edit to several items plays each one red then green in turn, even with a pointer at one of them after', async () => {
+  const acts = ['Synthetic alpha oldA', 'Synthetic beta oldB', 'Synthetic gamma oldC', 'Synthetic delta oldD'];
+  const { seen, flashed } = await playEdit({
+    acts, edited: ['Synthetic alpha newA', 'Synthetic beta newB', 'Synthetic gamma newC', 'Synthetic delta newD'],
+    pointers: [[0, { kind: 'day', date: day.date }, 'n1'], [400, { kind: 'tile', date: day.date, tile: 'act:2' }, 'n2']],
+    waitMs: 16000,
+  });
+  for (const k of ['A', 'B', 'C', 'D']) assert.deepEqual(phasesOf(seen, `old${k}`, `new${k}`), ['red', 'green'], `item ${k}`);
+  // In turn: each item's change starts after the one before it ended.
+  const firstRed = (k) => seen.findIndex(([, p, w]) => p === 'red' && w.includes(`old${k}`));
+  assert.ok(firstRed('A') < firstRed('B') && firstRed('B') < firstRed('C') && firstRed('C') < firstRed('D'));
+  assert.equal(flashed, false);
+});
+
+test('the server filling in a place\'s Google id while an AI edit plays doesn\'t cut the red then green short', async () => {
+  const place = { name: 'Synthetic Museum', address: 'Synthetic street 1' };
+  const acts = ['Synthetic first', { text: 'Synthetic Museum oldword', places: [place] }];
+  const edited = [acts[0], { text: 'Synthetic Museum newword', places: [place] }];
+  const { seen, flashed } = await playEdit({
+    acts, edited,
+    pointers: [[0, { kind: 'day', date: day.date }, 'n1']],
+    then: [300, [acts[0], { text: 'Synthetic Museum newword', places: [{ ...place, placeId: 'synthetic-place-id' }] }]],
+    waitMs: 5000,
+  });
+  assert.deepEqual(phasesOf(seen, 'oldword', 'newword'), ['red', 'green']);
+  assert.equal(flashed, false);
+});
+
+test('a pointer at another day still ends an AI edit\'s playback', async () => {
+  localStorage.clear();
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const other = { ...day, date: '2040-01-03', _d: new Date(2040, 0, 3), acts: ['Synthetic elsewhere'] };
+  const before = resolveDays({ days: [{ ...day, acts: ['Synthetic one oldword', 'Synthetic two oldtwo'] }, other] });
+  const after = resolveDays({ days: [{ ...day, acts: ['Synthetic one newword', 'Synthetic two newtwo'] }, other] });
+  const out = await timelineView(before);
+  const restore = fakeLayout();
+  try {
+    const [section] = dayCards(out.view.container);
+    act(() => section.querySelector('.day-head-btn').click());
+    out.setDays(after);
+    act(() => out.show({ slug: 'synthetic', target: { kind: 'day', date: day.date }, nonce: 'n1' }));
+    await wait(600);
+    assert.ok(section.querySelector('.chg-inline')); // playing
+    act(() => out.show({ slug: 'synthetic', target: { kind: 'day', date: other.date }, nonce: 'n2' }));
+    await wait(50);
+    assert.equal(section.querySelector('.chg-inline, .chg-new, .chg-gone'), null); // ended: the day as it really is
+    assert.match(section.textContent, /newtwo/);
+  } finally { restore(); out.view.close(); localStorage.clear(); }
+});
+
+test('InlineDiff: paused holds the old words; then old (red) → new (green) → plain; new texts start over; a short ms still shows both', async () => {
+  const { InlineDiff } = await import('./InlineDiff.tsx');
+  const on = (c) => c.querySelector('.chg-layer[data-on=true]');
+  const el = (p) => React.createElement(InlineDiff, p, p.next);
+  const view = mount(el({ prev: 'go oldword now', next: 'go newword now', paused: true }));
+  const rec = recordChanges(view.container);
+  try {
+    await wait(1500);
+    assert.equal(on(view.container).querySelector('.chg-del').textContent, 'oldword'); // held while paused
+    act(() => view.root.render(el({ prev: 'go oldword now', next: 'go newword now', paused: false })));
+    await wait(300);
+    assert.ok(on(view.container).querySelector('.chg-del')); // red first
+    await wait(1100);
+    assert.equal(on(view.container).querySelector('.chg-ins').textContent, 'newword'); // then green
+    await wait(1600);
+    assert.equal(view.container.querySelector('.chg-inline'), null); // then the plain text
+    assert.equal(view.container.textContent, 'go newword now');
+    act(() => view.root.render(el({ prev: 'go newword now', next: 'go thirdword now' })));
+    assert.equal(on(view.container).querySelector('.chg-del').textContent, 'newword'); // starts over from the old words
+    act(() => view.root.render(el({ prev: 'go fast now', next: 'go quick now', ms: 200 })));
+    await wait(400);
+    assert.deepEqual(phasesOf(rec.seen, 'fast', 'quick'), ['red', 'green']);
+  } finally { rec.stop(); view.close(); }
+});
+
+test('changeSteps: one reworded activity is one step from its old to its new wording; several changes are one step each', async () => {
+  const { resolveDays } = await import('../../lib/tripLogic.ts');
+  const { changeVersions } = await import('../../lib/changeSteps.ts');
+  const [prev] = resolveDays({ days: [{ ...day, acts: ['Synthetic a', 'Synthetic b old', 'Synthetic c'] }] });
+  const [next] = resolveDays({ days: [{ ...day, acts: ['Synthetic a', 'Synthetic b new', 'Synthetic c'] }] });
+  const one = changeVersions(prev, next);
+  assert.equal(one.length, 2);
+  assert.deepEqual(one[0].acts, prev.acts);
+  assert.deepEqual(one[1].acts, next.acts);
+  const [many] = resolveDays({ days: [{ ...day, acts: ['Synthetic a new', 'Synthetic b new', 'Synthetic d'], highlight: 'Synthetic summary' }] });
+  const steps = changeVersions(prev, many);
+  assert.equal(steps.length, 1 + 4); // before, then after each step: the summary, a, b, c→d (a reword)
+  assert.deepEqual(steps.at(-1).acts, many.acts);
+  for (let k = 1; k < steps.length; k++) assert.notDeepEqual(steps[k], steps[k - 1]);
+});
+
 test('Only gaps: booked tiles start closed and actionable ones open, whatever the reader saved; every element id is unique', async () => {
   localStorage.clear();
   const { resolveDays } = await import('../../lib/tripLogic.ts');

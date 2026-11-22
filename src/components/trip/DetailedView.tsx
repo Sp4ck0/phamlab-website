@@ -64,6 +64,7 @@ interface Props {
 // FAST_MS while a long queue catches up (useChangeQueue).
 const STEP_MS = 3400;
 const FAST_MS = 200;
+const withoutPlaceIds = (d: ResolvedDay) => JSON.stringify(d, (key, value) => (key === "placeId" ? undefined : value));
 
 // Unified itinerary; name retained to keep the detail renderer's consumer small.
 export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps, isGap, dayGaps, onOnlyGapsChange, filterRef,
@@ -219,19 +220,23 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
       acts.forEach(event => window.removeEventListener(event, took, { capture: true }));
     };
   }, [diff]);
-  // Any newer AI pointer (a tile, another day, a to-do) ends the playback: what
-  // was left of it shows as it ends up, and the new pointer takes the page.
-  // So does any other change to the day being played (the reader's own edit, a
-  // later AI edit): the page then shows the day as it really is.
+  // A newer AI pointer elsewhere (another day, a to-do) ends the playback: what
+  // was left of it shows as it ends up, and the new pointer takes the page. One
+  // at the day being played, or an item on it (an AI often points at what it just
+  // edited), lets it play on: the playback already goes to each change.
+  // Any other change to the day being played (the reader's own edit, a later AI
+  // edit) ends it too: the page then shows the day as it really is. The server
+  // filling in places' Google ids just after an AI edit shows nothing, so it doesn't.
   useEffect(() => {
     if (!diff) return;
     const live = days.find(x => x.date === diff.date);
-    if (!live || JSON.stringify(live) !== diff.json) setDiff(null);
+    if (!live || withoutPlaceIds(live) !== diff.json) setDiff(null);
   }, [days, diff]);
   const newest = (focus ?? taskFocus ?? itemFocus)?.nonce;
+  const newestDate = focus?.target.date;
   useEffect(() => {
-    if (newest) setDiff(current => (current && current.nonce !== newest ? null : current));
-  }, [newest]);
+    if (newest) setDiff(current => (current && current.nonce !== newest && current.date !== newestDate ? null : current));
+  }, [newest, newestDate]);
   const step = useChangeQueue(diff?.nonce ?? null, diff ? diff.versions.length - 1 : 0, (i, quick, done) => {
     setFast(quick);
     let cancelScroll = () => {};
@@ -268,17 +273,20 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
       consume(focus.nonce);
       // The pointed-at tile opens (for this visit only); no other tile is touched.
       if (tile) tiles.reveal(`${date}#${tile}`);
+      // The day's edit is already playing (see above): it shows the change, so no blink over it.
+      if (diff?.date === date) return;
       const change = recent.take(date);
       if (!row) {
         if (change?.prev) setGhost(change.prev);
         return;
       }
       // An edit to the day: open it and play its changes one by one (the queue
-      // scrolls to each). The day was held at its old content until now.
+      // scrolls to each). The day was held at its old content until now. A pointer
+      // at one of its items plays it too (it may have overtaken the edit's own pointer).
       const next = days.find(x => x.date === date);
-      if (!tile && change?.prev && !change.gone && next) {
+      if (change?.prev && !change.gone && next) {
         recent.release(date);
-        setDiff({ date, versions: changeVersions(change.prev, next), nonce: focus.nonce, json: JSON.stringify(next) });
+        setDiff({ date, versions: changeVersions(change.prev, next), nonce: focus.nonce, json: withoutPlaceIds(next) });
         jump(row.id, false, false);
         return;
       }
