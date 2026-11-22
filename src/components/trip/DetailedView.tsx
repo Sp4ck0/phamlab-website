@@ -10,6 +10,8 @@ import { useTileOpen } from "../../hooks/useTileOpen";
 import { useHoldForAi } from "../../hooks/useHoldForAi";
 import { DOW, MON } from "../../lib/tripLogic";
 import { afterScroll, flash, scrollBehavior, SETTLE_MS } from "../../lib/flash";
+import { changeVersions } from "../../lib/changeSteps";
+import { useChangeQueue } from "../../hooks/useChangeQueue";
 import { tileDomId } from "../../lib/tileId";
 import { reconcileRows } from "../../lib/itineraryState";
 import { DayNav } from "./DayNav";
@@ -58,6 +60,11 @@ interface Props {
   placePhoto?: PlacePhotoFetcher;
 }
 
+// One change of an AI edit plays this long (the longest .chg-* animation), or
+// FAST_MS while a long queue catches up (useChangeQueue).
+const STEP_MS = 3400;
+const FAST_MS = 200;
+
 // Unified itinerary; name retained to keep the detail renderer's consumer small.
 export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps, isGap, dayGaps, onOnlyGapsChange, filterRef,
   onToggle, actionItems, considerations, pendingVotes, onVote, actionItemsDone, onToggleActionItem, onEditActivity, itemTasks, onPromote, onUnpromote, onSetOutcome, cityPhoto, placePhoto }: Props) {
@@ -81,7 +88,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
     const retained = new Set(rows.map(row => row.id));
     setState({ days: shown, rows, serial, expanded: new Set([...state.expanded].filter(id => retained.has(id))) });
   }
-  const [pending, setPending] = useState<{ id: string; focus: boolean } | null>(null);
+  const [pending, setPending] = useState<{ id: string; focus: boolean; scroll: boolean } | null>(null);
   const [message, setMessage] = useState("");
   const focusedRow = useRef<string | null>(null);
   const focusedControl = useRef<HTMLElement | null>(null);
@@ -141,7 +148,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
     const trigger = target && document.getElementById(`${target.id}-trigger`);
     if (trigger && pendingOpen) {
       if (pending.focus) trigger.focus({ preventScroll: true });
-      trigger.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+      if (pending.scroll) trigger.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
     } else {
       setMessage("That day is no longer available. Choose a day from the navigation.");
     }
@@ -150,7 +157,8 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
 
   // focus: a jump the reader asked for (a date chip, a link) moves keyboard focus to the day;
   // landing on today when the page opens doesn't (it would draw a focus ring nobody asked for).
-  function jump(id: string, focus = true) {
+  // scroll: false only opens the day (an AI edit then scrolls to each change itself).
+  function jump(id: string, focus = true, scroll = true) {
     const index = state.rows.findIndex(row => row.id === id);
     if (index < 0) {
       setMessage("That day is no longer available. Choose a day from the navigation.");
@@ -163,7 +171,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
     } else setMessage("");
     setState(current => ({ ...current, expanded: new Set([...current.expanded, id]) }));
     setGapsCollapsed(current => { const next = new Set(current); next.delete(id); return next; });
-    setPending({ id, focus }); // A new intent also makes repeat jumps work.
+    setPending({ id, focus, scroll }); // A new intent also makes repeat jumps work.
     setJumpedTo(id);
   }
 
@@ -172,36 +180,63 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   // not have arrived yet, so wait for it.
   //
   // When the AI edited the day, show what changed instead of a plain blink: the
-  // day is rendered against its previous version for a few seconds (DayCard's
-  // changedFrom), and a day it removed is shown as a ghost where it was.
+  // page goes straight to each change in turn and plays it (DayCard's
+  // changedFrom, one change at a time; see the queue below), and a day it
+  // removed is shown as a ghost where it was.
   const { focus: dayFocus, consume } = useAiFocus("day");
   const { focus: tileFocus } = useAiFocus("tile");
   const focus = dayFocus ?? tileFocus;
   // The AI pointing at a task or to-do: the list or its tile scrolls there, so today mustn't.
   const { focus: taskFocus } = useAiFocus("task");
   const { focus: itemFocus } = useAiFocus("actionItem");
-  const [diff, setDiff] = useState<{ date: string; prev: ResolvedDay } | null>(null);
+  // versions[k]: the day after its first k changes (lib/changeSteps.ts).
+  const [diff, setDiff] = useState<{ date: string; versions: ResolvedDay[]; nonce: string } | null>(null);
   const [ghost, setGhost] = useState<ResolvedDay | null>(null);
   useEffect(() => {
-    if (!diff && !ghost) return;
-    if (ghost) document.getElementById("removed-day")?.scrollIntoView({ block: "center", behavior: scrollBehavior() });
-    const t = setTimeout(() => { setDiff(null); setGhost(null); }, 4200);
+    if (!ghost) return;
+    document.getElementById("removed-day")?.scrollIntoView({ block: "center", behavior: scrollBehavior() });
+    const t = setTimeout(() => setGhost(null), 4200);
     return () => clearTimeout(t);
-  }, [diff, ghost]);
-  // Once the day's change is drawn, go to the first item that changed (not the
-  // day's top) and blink it. A change to the summary line alone stays at the top.
+  }, [ghost]);
+  // The change on screen (`step`) waits at its first frame until the page has
+  // scrolled to it (`playing` names the step that has started). A reader who
+  // scrolls or taps meanwhile keeps the page: the rest play where they are.
+  const [playing, setPlaying] = useState<string | null>(null);
+  const [fast, setFast] = useState(false);
+  const readerMoved = useRef(false);
   useEffect(() => {
     if (!diff) return;
-    const row = state.rows.find(r => r.day.date === diff.date);
-    const marks = row ? document.getElementById(row.id)?.querySelectorAll<HTMLElement>(".chg-new, .chg-gone, .chg-inline") : undefined;
-    const mark = [...(marks ?? [])].find(m => !m.closest(".day-summary"));
-    if (!mark) return;
-    const item = mark.closest<HTMLElement>("li.tl-entry, .note") ?? mark;
-    item.scrollIntoView({ block: "center", behavior: scrollBehavior() });
-    flash(item);
-    // Only when a new diff is drawn; the rows it reads are this render's.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    readerMoved.current = false;
+    const moved = () => { readerMoved.current = true; };
+    const events = ["wheel", "touchstart", "keydown"] as const;
+    events.forEach(event => window.addEventListener(event, moved, { passive: true }));
+    return () => events.forEach(event => window.removeEventListener(event, moved));
   }, [diff]);
+  const step = useChangeQueue(diff?.nonce ?? null, diff ? diff.versions.length - 1 : 0, (i, quick, done) => {
+    setFast(quick);
+    let cancelScroll = () => {};
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const frame = requestAnimationFrame(() => {
+      const row = state.rows.find(r => r.day.date === diff!.date);
+      // The first change the day shows (a hidden copy, like the summary's other layout, doesn't count).
+      const el = row && [...document.querySelectorAll<HTMLElement>(`#${CSS.escape(row.id)} :is(.chg-new, .chg-gone, .chg-inline)`)]
+        .find(e => e.getClientRects().length > 0);
+      if (!el) { done(); return; } // nothing on screen changed (a status, a field the day doesn't show)
+      const start = () => {
+        setPlaying(`${diff!.nonce}:${i}`);
+        timer = setTimeout(done, quick ? FAST_MS : STEP_MS);
+      };
+      const box = el.getBoundingClientRect();
+      if (readerMoved.current || (box.top >= 0 && box.bottom <= window.innerHeight)) { start(); return; }
+      el.scrollIntoView({ block: "center", behavior: quick ? "instant" : scrollBehavior() });
+      cancelScroll = afterScroll(start, quick ? 300 : 1000);
+    });
+    return () => { cancelAnimationFrame(frame); cancelScroll(); clearTimeout(timer); };
+  }, () => setDiff(null));
+  const stepView = (date: string) =>
+    diff?.date === date && step >= 0 && step < diff.versions.length - 1
+      ? { day: diff.versions[step + 1], from: diff.versions[step], paused: playing !== `${diff.nonce}:${step}`, ms: fast ? FAST_MS : undefined }
+      : null;
   useEffect(() => {
     if (!focus) return;
     const date = focus.target.date;
@@ -217,16 +252,23 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
         if (change?.prev) setGhost(change.prev);
         return;
       }
-      // Once the page has stopped scrolling, show the new content and play the
-      // change from the old (the day was held at its old content until now).
+      // An edit to the day: open it and play its changes one by one (the queue
+      // scrolls to each). The day was held at its old content until now.
+      const next = days.find(x => x.date === date);
+      if (!tile && change?.prev && !change.gone && next) {
+        recent.release(date);
+        setDiff({ date, versions: changeVersions(change.prev, next), nonce: focus.nonce });
+        jump(row.id, false, false);
+        return;
+      }
+      // Once the page has stopped scrolling, show the new content and blink it.
       afterScroll(() => {
         recent.release(date);
         // A tile that is gone (the booking changed) falls back to the day.
         const el = document.getElementById(tile ? tileDomId(row.id, tile) : row.id) ?? document.getElementById(row.id);
         if (!el) return;
         if (tile && el.id !== row.id) el.scrollIntoView({ block: "center", behavior: scrollBehavior() });
-        if (!tile && change?.prev && !change.gone) setDiff({ date, prev: change.prev });
-        else flash(el);
+        flash(el);
       });
       jump(row.id, false); // the flash shows where; no focus ring on top of it
     }, SETTLE_MS);
@@ -337,7 +379,8 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
         {state.rows.map(({ id, day: d }, i) => visible[i] && (
           <Fragment key={id}>
           {ghostAt === i && ghostDay}
-          <DayCard rowId={id} day={d} isToday={isDestToday(d, nowMs)} changedFrom={diff?.date === d.date ? diff.prev : undefined} days={days} dayNumber={i} legColor={legColors[i]} weather={weather[d.date]}
+          <DayCard rowId={id} day={stepView(d.date)?.day ?? d} isToday={isDestToday(d, nowMs)} changedFrom={stepView(d.date)?.from}
+            changePaused={stepView(d.date)?.paused} changeMs={stepView(d.date)?.ms} days={days} dayNumber={i} legColor={legColors[i]} weather={weather[d.date]}
             groups={groups} ticks={ticks} tiles={tiles} expanded={isOpen(id)} gapsOnly={gapsView} gaps={dayGaps?.[d.date]} onExpandedChange={() => {
               if (gapsView) {
                 setGapsCollapsed(current => {

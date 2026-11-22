@@ -38,3 +38,22 @@ export function diffLines<T>(prev: T[], next: T[], key: (item: T) => string): Ch
 
 /** The class a diffed line carries (see .chg-new / .chg-gone in globals.css). */
 export const changeClass = (state: ChangeState) => (state === "same" ? "" : ` chg-${state}`);
+
+// An edited line comes out of diffLines as old rows ("gone") then new rows. Pair
+// them in order so the new row can show the old wording's words in place
+// (InlineDiff) instead of a separate struck-through ghost above it.
+export function pairRewrites<T>(changes: Change<T>[]): (Change<T> & { prev?: T })[] {
+  const out: (Change<T> & { prev?: T })[] = [];
+  for (let i = 0; i < changes.length; ) {
+    if (changes[i].state !== "gone") { out.push(changes[i++]); continue; }
+    let g = i;
+    while (g < changes.length && changes[g].state === "gone") g++;
+    let n = g;
+    while (n < changes.length && changes[n].state === "new") n++;
+    const k = Math.min(g - i, n - g);
+    out.push(...changes.slice(i, g - k));
+    for (let j = 0; j < n - g; j++) out.push(j < k ? { ...changes[g + j], prev: changes[g - k + j].item } : changes[g + j]);
+    i = n;
+  }
+  return out;
+}
