@@ -74,6 +74,15 @@ test("the AI's marks add up; marking a place again moves it to the new call; a p
   assert.deepEqual(marks.map((m) => [m.name, m.batch, m.at]), [['Museum', 'n2', 2000], ['Tower', 'n2', 2000]]);
 });
 
+test("a mark keeps the emoji the AI gave it; marking the place again takes the new call's icon", async () => {
+  const { addMarks } = await import('./mapPoints.ts');
+  const tower = { name: 'Tower', placeId: 'P-tower' };
+  let marks = addMarks([], [{ ...tower, icon: '🗼' }], 'n1', 1000);
+  assert.deepEqual(marks.map((m) => [m.name, m.icon]), [['Tower', '🗼']]);
+  marks = addMarks(marks, [tower], 'n2', 2000);
+  assert.deepEqual(marks.map((m) => [m.name, m.icon]), [['Tower', undefined]]);
+});
+
 test('a derived task (not a stored item) has no ghost pin', () => {
   assert.deepEqual(deriveTaskPoints([{ ...item('x', { places: [{ name: 'X', placeId: 'P-x' }] }), key: 'booking:x' }], []), []);
 });

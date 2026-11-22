@@ -904,6 +904,9 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
    sending out rings for its first minute. A marker's own color goes in --mark-color. */
 .map-mark{position:relative;width:16px;height:16px;border-radius:50%;background:var(--mark-color,#e53935);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45)}
 .map-mark.is-pulsing::after{content:"";position:absolute;inset:-2px;border-radius:50%;border:3px solid var(--mark-color,#e53935);animation:map-mark-pulse 1.4s ease-out infinite;pointer-events:none}
+/* A mark with an emoji (mark_on_map's icon): a white disc edged in the mark's color, big enough
+   for the emoji to read on any map tile. */
+.map-mark.has-icon{width:30px;height:30px;display:grid;place-items:center;background:#fff;border-color:var(--mark-color,#e53935);font-size:17px;line-height:1;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
 @keyframes map-mark-pulse{from{transform:scale(1);opacity:.9}to{transform:scale(3.2);opacity:0}}
 @media(prefers-reduced-motion:reduce){.map-mark.is-pulsing::after{animation:none;transform:scale(1.8);opacity:.5}}
 .map-legend-item .map-mark-swatch{width:11px;height:11px;border-radius:50%;flex:none;background:#e53935;border:2px solid #fff;box-shadow:0 0 0 1px var(--border)}
