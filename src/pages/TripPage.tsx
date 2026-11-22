@@ -180,7 +180,7 @@ function TripPageEntry() {
     );
   }
 
-  const mapPlanPoints = derivePoints(resolvedDays, trip.mapPoints);
+  const mapPlanPoints = derivePoints(resolvedDays);
   const map = (
     <TripMap
       points={mapPlanPoints}

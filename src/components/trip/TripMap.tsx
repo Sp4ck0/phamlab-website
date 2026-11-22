@@ -35,23 +35,12 @@ interface Props {
   days: ResolvedDay[];
   route: MapPointData[];
   weatherStops: WeatherStop[];
-  // Places of considerations (not in the plan): drawn as rings, with a legend toggle.
+  // Places not in the plan yet (action items' places and drafts): ghost pins, with a legend toggle.
   candidates: MapPointData[];
   // The considerations behind them, for the vote tally in a pin's popup.
   considerations: Task[];
   // Desktop: the "Pin map" toggle. Pinned, the map follows the day and tile being looked at.
   pin?: { on: boolean; set: (on: boolean) => void };
-}
-
-// A dashed hollow ring for an open candidate, a solid one once chosen: the
-// opposite of the filled dots, so it reads as "maybe" at a glance.
-function ringIcon(chosen: boolean): string {
-  const color = chosen ? "#1baf7a" : "#2a78d6";
-  const svg =
-    `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 26 26">` +
-    `<circle cx="13" cy="13" r="9.5" fill="${color}" fill-opacity="${chosen ? 0.3 : 0.12}" stroke="${color}" stroke-width="2.5"` +
-    `${chosen ? "" : ' stroke-dasharray="4 3"'}/></svg>`;
-  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
 // A category's pin: its emoji on a white-rimmed disc in the category color.
@@ -83,6 +72,57 @@ function emojiIcon(emoji: string, color: string): string {
   ctx.fillText(emoji, size / 2, y);
   const icon = canvas.toDataURL("image/png");
   emojiIcons.set(key, icon);
+  return icon;
+}
+
+// A place not in the plan yet: its category's pin, faded, in a dashed rim of the category
+// color, with a badge: "?" while open, "✓" once chosen or done (but not yet added).
+const GHOST_SIZE = 34;
+const ghostIcons = new Map<string, string>();
+function ghostIcon(emoji: string, color: string, chosen: boolean): string {
+  const key = `${emoji}${color}${chosen}`;
+  const cached = ghostIcons.get(key);
+  if (cached) return cached;
+  const size = GHOST_SIZE;
+  const scale = 3;
+  const c = size / 2;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size * scale;
+  const ctx = canvas.getContext("2d")!;
+  ctx.scale(scale, scale);
+  ctx.globalAlpha = 0.5;
+  ctx.beginPath();
+  ctx.arc(c, c, 12, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.font = "15px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+  const m = ctx.measureText(emoji);
+  ctx.fillText(emoji, c, c + (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2);
+  ctx.globalAlpha = 1;
+  ctx.beginPath();
+  ctx.arc(c, c, 13.5, 0, Math.PI * 2);
+  ctx.setLineDash([3.5, 2.5]);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = color;
+  ctx.stroke();
+  ctx.setLineDash([]);
+  const b = size - 7;
+  ctx.beginPath();
+  ctx.arc(b, b, 6.5, 0, Math.PI * 2);
+  ctx.fillStyle = chosen ? "#1baf7a" : "#fff";
+  ctx.fill();
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = chosen ? "#fff" : color;
+  ctx.stroke();
+  ctx.fillStyle = chosen ? "#fff" : color;
+  ctx.font = "bold 9px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(chosen ? "✓" : "?", b, b + 0.5);
+  const icon = canvas.toDataURL("image/png");
+  ghostIcons.set(key, icon);
   return icon;
 }
 
@@ -271,6 +311,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
   const pinDates = useRef(new Map<Pin, string[] | undefined>());
   const tripBounds = useRef<google.maps.LatLngBounds | null>(null);
   const showDay = useRef<() => void>(() => {});
+  const dimOtherDays = useRef<() => void>(() => {});
   const styleCityLine = useRef<() => void>(() => {});
   const styleDayLines = useRef<() => void>(() => {});
   const glance = useRef<(key: string) => void>(() => {});
@@ -382,10 +423,12 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
       }
       const map = mapInstance.current;
 
-      markers.current.forEach((m) => (m.map = null));
+      markers.current.forEach((m) => {
+        m.map = null;
+        pinDates.current.delete(m);
+      });
       markers.current = [];
       planPins.current.clear();
-      pinDates.current.clear();
 
       const bounds = new google.maps.LatLngBounds();
       geocoded.forEach((p) => {
@@ -611,15 +654,16 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
     };
   }, [mapReady, geocodedWeather, weatherStops, tempUnit]);
 
-  // Consideration pins: their own layer, so a vote, a toggle or a new idea never
+  // Ghost pins (not in the plan yet): their own layer, so a vote, a toggle or a new idea never
   // rebuilds the planned pins or moves the view.
   useEffect(() => {
     const map = mapInstance.current;
     if (!mapReady || !map || !showCandidates) return;
     const made = geocodedCandidates.map((p) => {
       const chosen = p.candidate === "chosen";
-      const title = `${p.name} (${chosen ? "chosen" : "under consideration"})`;
-      const marker = makePin(map, { lat: p.lat, lng: p.lng }, title, pinElement(26, ringIcon(chosen)), () => {
+      const title = `${p.name} (${chosen ? "chosen, not in the plan yet" : "not settled yet"})`;
+      const look = pinElement(GHOST_SIZE, ghostIcon(CATEGORY_EMOJI[p.category] ?? "📍", CATEGORY_COLORS[p.category], chosen));
+      const marker = makePin(map, { lat: p.lat, lng: p.lng }, title, look, () => {
         const task = considerationById.current.get(p.id.split("|")[1] ?? "");
         const live =
           task?.kind === "consider"
@@ -630,17 +674,23 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
       }, 1);
       const key = placeKey(p);
       if (key) candidatePins.current.set(key, marker);
+      if (p.dates) pinDates.current.set(marker, p.dates);
       return marker;
     });
     candidateMarkers.current = made;
+    dimOtherDays.current();
     const pins = candidatePins.current;
+    const dates = pinDates.current;
     if (pendingFocus.current) {
       const key = pendingFocus.current;
       pendingFocus.current = null;
       focusHandler.current(key);
     }
     return () => {
-      made.forEach((m) => (m.map = null));
+      made.forEach((m) => {
+        m.map = null;
+        dates.delete(m);
+      });
       candidateMarkers.current = [];
       pins.clear();
     };
@@ -747,12 +797,18 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
     if (!map || !date || markers.current.length === 0) return;
     const inDay = markers.current.filter((m) => pinDates.current.get(m)?.includes(date));
     if (inDay.length === 0) return;
-    markers.current.forEach((m) => {
-      const dates = pinDates.current.get(m);
-      (m.content as HTMLElement | null)?.classList.toggle("is-dimmed", !!dates && !dates.includes(date));
-    });
+    dimOtherDays.current();
     const { center, zoom } = viewFor(map, inDay.map(positionOf));
     moveTo(map, center, zoom);
+  };
+  // Fades every pin (planned and ghost) that belongs to other days than the one looked at
+  // while pinned; unpinned, or with no day, nothing is faded.
+  dimOtherDays.current = () => {
+    const date = pinnedRef.current ? lookingAt.current : undefined;
+    [...markers.current, ...candidateMarkers.current].forEach((m) => {
+      const dates = pinDates.current.get(m);
+      (m.content as HTMLElement | null)?.classList.toggle("is-dimmed", !!date && !!dates && !dates.includes(date));
+    });
   };
 
   // Pinned: a tile under the pointer flies the map to its place and makes the pin pulse.
@@ -777,7 +833,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
       return;
     }
     const map = mapInstance.current;
-    markers.current.forEach((m) => (m.content as HTMLElement | null)?.classList.remove("is-dimmed"));
+    dimOtherDays.current();
     styleDayLines.current();
     flight.current?.();
     flight.current = null;
@@ -845,11 +901,11 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
                 type="button"
                 className="map-legend-item map-legend-toggle"
                 aria-pressed={showCandidates}
-                title={showCandidates ? "Hide places for ideas and to-dos" : "Show places for ideas and to-dos"}
+                title={showCandidates ? "Hide places that aren't in the plan yet (ideas and to-dos)" : "Show places that aren't in the plan yet (ideas and to-dos)"}
                 onClick={() => setShowCandidates((v) => !v)}
               >
-                <span className="ring" />
-                Ideas &amp; to-dos
+                <img className="ghost" src={ghostIcon("📍", CATEGORY_COLORS.other, false)} alt="" />
+                Not settled yet
               </button>
             )}
           </div>
