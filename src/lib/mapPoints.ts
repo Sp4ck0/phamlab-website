@@ -1,5 +1,6 @@
-import type { MapCategory, MapPointData, Place, ResolvedDay, Task, Trip } from "./types";
+import type { Act, MapCategory, MapPointData, Place, ResolvedDay, Task, Trip } from "./types";
 import { actParts, fmtShort } from "./tripLogic";
+import { isPlaceholderHotel } from "./tileHeaders";
 import type { DayWeather } from "./weather";
 
 export const CATEGORY_LABELS: Record<MapCategory, string> = {
@@ -290,6 +291,32 @@ export function deriveRouteAddresses(days: ResolvedDay[]): MapPointData[] {
     });
   });
   return route;
+}
+
+// Each day's own route, for the map zoomed in past the city line: the place keys in the
+// order the day's timeline shows them. The hotel being left first (else the one stayed
+// at), the activities' places (all-day ones first, then stored order, as the timeline
+// does), then that night's hotel. A hotel not chosen yet and a place with no key are
+// skipped, a stop repeated right after itself is one stop, and a day with fewer than two
+// stops has no route. Keys, not positions: the map finds them among its pins.
+export interface DayRoute {
+  date: string;
+  keys: string[];
+}
+export function deriveDayRoutes(days: ResolvedDay[]): DayRoute[] {
+  return days.flatMap((d) => {
+    const hotels = d.hotels.filter((h) => !isPlaceholderHotel(h));
+    const leaving = hotels.find((h) => h.checkOut && !h.checkIn);
+    const staying = hotels.find((h) => !(h.checkOut && !h.checkIn));
+    const allDay = (a: Act) => typeof a !== "string" && !!a.allDay;
+    const places = [...d.acts.filter(allDay), ...d.acts.filter((a) => !allDay(a))].flatMap((a) => actParts(a).places ?? []);
+    const keys: string[] = [];
+    [leaving ?? staying, ...places, staying].forEach((p) => {
+      const key = p && placeKey(p);
+      if (key && keys[keys.length - 1] !== key) keys.push(key);
+    });
+    return new Set(keys).size >= 2 ? [{ date: d.date, keys }] : [];
+  });
 }
 
 export interface WeatherStop extends MapPointData {

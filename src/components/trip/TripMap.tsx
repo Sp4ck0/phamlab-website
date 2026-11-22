@@ -1,16 +1,18 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useShowAiFocus } from "../../hooks/useAiFocus";
 import type { MapPointData, ResolvedDay, Task } from "../../lib/types";
-import { CATEGORY_COLORS, CATEGORY_EMOJI, CATEGORY_LABELS, MAP_DAY_EVENT, MAP_FOCUS_EVENT, MAP_GLANCE_EVENT, deriveJumpTargets, googleMapsUrl, jumpTargetFor, placeKey } from "../../lib/mapPoints";
+import { CATEGORY_COLORS, CATEGORY_EMOJI, CATEGORY_LABELS, MAP_DAY_EVENT, deriveDayRoutes, MAP_FOCUS_EVENT, MAP_GLANCE_EVENT, deriveJumpTargets, googleMapsUrl, jumpTargetFor, placeKey } from "../../lib/mapPoints";
 import type { JumpTarget, WeatherStop } from "../../lib/mapPoints";
-import { fmtShort } from "../../lib/tripLogic";
+import { assignLegColors, fmtShort } from "../../lib/tripLogic";
 import { summarizeStay, temp, weatherIcon, weatherText } from "../../lib/weather";
 import { useGeocodedPoints } from "../../hooks/useGeocodedPoints";
 import { useSettings, type TempUnit } from "../../hooks/useSettings";
 import { MAP_ID, loadGoogleMaps } from "../../lib/googleMaps";
 
 const ARROW_SPACING_PX = 28;
+// From this zoom in (about one city on screen) each day's own route shows and the city-to-city line fades.
+const DAY_ROUTE_ZOOM = 11;
 // Weather pills float this far above their city pin (matches .map-weather-pill's transform);
 // the info window is lifted by the same amount plus the pill's height so it opens above the pill.
 const PILL_INFO_OFFSET_PX = 42;
@@ -204,6 +206,22 @@ function flyTo(
   };
 }
 
+// A route line's arrowheads: open chevrons every ARROW_SPACING_PX.
+function arrows(color: string, opacity: number): google.maps.IconSequence[] {
+  return [{ icon: { path: google.maps.SymbolPath.FORWARD_OPEN_ARROW, scale: 2.5, strokeColor: color, strokeOpacity: opacity, strokeWeight: 2 }, offset: "0px", repeat: ARROW_SPACING_PX + "px" }];
+}
+// A line's look, keeping where its arrows have drifted to.
+function styleLine(line: google.maps.Polyline, lineOpacity: number, arrowOpacity: number) {
+  const icons = line.get("icons") as google.maps.IconSequence[] | undefined;
+  const icon = icons?.[0]?.icon;
+  line.setOptions({ strokeOpacity: lineOpacity, icons: icons && icon ? [{ ...icons[0], icon: { ...icon, strokeOpacity: arrowOpacity } }] : icons });
+}
+// A leg color is a CSS variable (it follows the theme); the map needs the color itself.
+function cssColor(color: string | undefined, el: Element): string {
+  const v = color ? /^var\((--[\w-]+)\)$/.exec(color) : null;
+  return (v ? getComputedStyle(el).getPropertyValue(v[1]).trim() : color) || CATEGORY_COLORS.city;
+}
+
 // The center and whole zoom that fit `points` in the map with `pad` pixels to spare, no closer than
 // `maxZoom` (one point, or several on one street, would otherwise zoom all the way in).
 function viewFor(map: google.maps.Map, points: google.maps.LatLngLiteral[], pad = 48, maxZoom = 15) {
@@ -253,9 +271,22 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
   const pinDates = useRef(new Map<Pin, string[] | undefined>());
   const tripBounds = useRef<google.maps.LatLngBounds | null>(null);
   const showDay = useRef<() => void>(() => {});
+  const styleCityLine = useRef<() => void>(() => {});
+  const styleDayLines = useRef<() => void>(() => {});
   const glance = useRef<(key: string) => void>(() => {});
   const weatherOverlays = useRef<google.maps.OverlayView[]>([]);
   const polyline = useRef<google.maps.Polyline | null>(null);
+  // Zoomed in to about one city: each day's own route (in its leg color) instead of the city line.
+  const [zoomedIn, setZoomedIn] = useState(false);
+  const zoomedInRef = useRef(zoomedIn);
+  zoomedInRef.current = zoomedIn;
+  const [pinsDrawn, setPinsDrawn] = useState(0); // bumped once the plan pins exist, which day routes join up
+  const dayLines = useRef(new Map<string, google.maps.Polyline>());
+  const dayRoutes = useMemo(() => {
+    const legs = assignLegColors(days);
+    const color = new Map(days.map((d, i) => [d.date, legs[i]?.color]));
+    return deriveDayRoutes(days).map((r) => ({ ...r, color: color.get(r.date) }));
+  }, [days]);
   const frame = useRef<number | null>(null);
   // Read at click time so a city pin shows weather that arrived after the pin was built.
   const stopsByAddress = useRef(new Map<string, WeatherStop>());
@@ -421,9 +452,11 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
           frame.current = requestAnimationFrame(tick);
         }
         path.forEach((pt) => bounds.extend(pt));
+        styleCityLine.current();
       }
 
       tripBounds.current = bounds;
+      setPinsDrawn((n) => n + 1);
       if (geocoded.length === 1 && geocodedRoute.length < 2) {
         map.setCenter({ lat: geocoded[0].lat, lng: geocoded[0].lng });
         map.setZoom(14);
@@ -438,6 +471,61 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
       cancelled = true;
     };
   }, [geocoded, geocodedRoute, status]);
+
+  // Which route shows: the city line zoomed out, day routes zoomed in. During a flight the zoom
+  // changes every frame, but the state only changes when it crosses the line.
+  useEffect(() => {
+    const map = mapInstance.current;
+    if (!mapReady || !map) return;
+    const update = () => setZoomedIn((map.getZoom() ?? 0) >= DAY_ROUTE_ZOOM);
+    update();
+    const listener = map.addListener("zoom_changed", update);
+    return () => listener.remove();
+  }, [mapReady]);
+  useEffect(() => styleCityLine.current(), [zoomedIn]);
+
+  // Day routes: one line per day through its stops (the hotel, the activities in the timeline's
+  // order, that night's hotel), drawn only while zoomed in. Stops are found among the plan pins,
+  // so a place that didn't geocode is simply left out. Their own layer: never refits the map.
+  useEffect(() => {
+    const map = mapInstance.current;
+    if (!mapReady || !map || !zoomedIn) return;
+    const el = map.getDiv();
+    const drawn = dayLines.current;
+    dayRoutes.forEach((r) => {
+      const path = r.keys.flatMap((k) => {
+        const pin = planPins.current.get(k);
+        return pin?.position ? [positionOf(pin)] : [];
+      });
+      if (path.length < 2) return;
+      const color = cssColor(r.color, el);
+      drawn.set(r.date, new google.maps.Polyline({ map, path, strokeColor: color, strokeOpacity: 0.4, strokeWeight: 3, icons: arrows(color, 0.7) }));
+    });
+    styleDayLines.current();
+    const lines = [...drawn.values()];
+    // The arrows drift forward like the city line's; with reduced motion they stay put.
+    let raf = 0;
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const start = performance.now();
+      const tick = (now: number) => {
+        const offset = (((now - start) / 40) % ARROW_SPACING_PX) + "px";
+        lines.forEach((line) => {
+          const icons = line.get("icons");
+          icons[0].offset = offset;
+          line.set("icons", icons);
+        });
+        raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    }
+    return () => {
+      cancelAnimationFrame(raf);
+      lines.forEach((line) => line.setMap(null));
+      drawn.clear();
+    };
+    // positionOf/styleDayLines are read fresh; the pins are tracked by pinsDrawn.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapReady, zoomedIn, dayRoutes, pinsDrawn]);
 
   // Per-city weather pills. A separate effect from the pins so weather
   // arriving or refreshing later doesn't re-fit the map under the viewer.
@@ -636,9 +724,24 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
   };
   const positionOf = (p: Pin) => new google.maps.LatLng(p.position as google.maps.LatLngLiteral).toJSON();
 
+  // The city line: as before zoomed out; zoomed in, a faint trace with no arrows under the day routes.
+  styleCityLine.current = () => {
+    if (polyline.current) styleLine(polyline.current, zoomedInRef.current ? 0.12 : 0.35, zoomedInRef.current ? 0 : 1);
+  };
+  // Day routes: pinned to a day, that day's stands out and the rest step back.
+  styleDayLines.current = () => {
+    const date = pinnedRef.current ? lookingAt.current : undefined;
+    dayLines.current.forEach((line, d) => {
+      const strength = !date ? 0.6 : d === date ? 1 : 0.2;
+      styleLine(line, 0.6 * strength, strength);
+      line.setOptions({ zIndex: d === date ? 2 : 1 });
+    });
+  };
+
   // Pinned: fit the day being looked at and fade the other days' pins. A day with no pins of its
   // own leaves the map as it is; points not tied to a day never fade.
   showDay.current = () => {
+    styleDayLines.current();
     const map = mapInstance.current;
     const date = pinnedRef.current ? lookingAt.current : undefined;
     if (!map || !date || markers.current.length === 0) return;
@@ -675,6 +778,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
     }
     const map = mapInstance.current;
     markers.current.forEach((m) => (m.content as HTMLElement | null)?.classList.remove("is-dimmed"));
+    styleDayLines.current();
     flight.current?.();
     flight.current = null;
     if (map && tripBounds.current && markers.current.length > 1) map.fitBounds(tripBounds.current, 48);

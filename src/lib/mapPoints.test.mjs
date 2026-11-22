@@ -32,3 +32,31 @@ test('a city with no place of its own gets a city pin for each of its days', () 
 test('a curated point is not tied to a day', () => {
   assert.equal(byName(derivePoints(days, curated)).Viewpoint.dates, undefined);
 });
+
+test('a day route runs hotel → activities in timeline order → that night\'s hotel; a moving day starts at the old hotel', async () => {
+  const { deriveDayRoutes } = await import('./mapPoints.ts');
+  const oldHotel = { src: 'o', name: 'Old Hotel', placeId: 'P-old', checkOut: true };
+  const newHotel = { src: 'n', name: 'New Hotel', placeId: 'P-new', checkIn: true };
+  const stay = { src: 's', name: 'Stay Hotel', placeId: 'P-stay' };
+  const routes = deriveDayRoutes([
+    // An all-day activity goes first, as on the timeline; the rest keep their stored order.
+    { date: '2030-02-01', hotels: [stay], acts: [{ text: 'Lunch', places: [{ name: 'L', placeId: 'P-lunch' }] }, { text: 'Park', allDay: true, places: [{ name: 'Park', placeId: 'P-park' }] }] },
+    { date: '2030-02-02', hotels: [newHotel, oldHotel], acts: ['No place here', { text: 'Museum', places: [{ name: 'M', address: 'Museum street' }] }] },
+  ]);
+  assert.deepEqual(routes, [
+    { date: '2030-02-01', keys: ['id:P-stay', 'id:P-park', 'id:P-lunch', 'id:P-stay'] },
+    { date: '2030-02-02', keys: ['id:P-old', 'addr:Museum street', 'id:P-new'] },
+  ]);
+});
+
+test('a day route skips a hotel not chosen yet, merges a stop repeated right after itself, and needs two stops', async () => {
+  const { deriveDayRoutes } = await import('./mapPoints.ts');
+  const tbd = { src: 't', name: 'TBD hotel', placeId: 'P-tbd' };
+  const hotel = { src: 'h', name: 'Hotel', placeId: 'P-h' };
+  const routes = deriveDayRoutes([
+    { date: '2030-03-01', hotels: [tbd], acts: [{ text: 'A', places: [{ name: 'A', placeId: 'P-a' }] }, { text: 'B', places: [{ name: 'B', placeId: 'P-b' }] }] },
+    { date: '2030-03-02', hotels: [hotel], acts: [{ text: 'Breakfast at the hotel', places: [{ name: 'Hotel', placeId: 'P-h' }] }] }, // only one place
+    { date: '2030-03-03', hotels: [], acts: [] },
+  ]);
+  assert.deepEqual(routes, [{ date: '2030-03-01', keys: ['id:P-a', 'id:P-b'] }]);
+});
