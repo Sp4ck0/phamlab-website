@@ -74,6 +74,16 @@ test("the AI's marks add up; marking a place again moves it to the new call; a p
   assert.deepEqual(marks.map((m) => [m.name, m.batch, m.at]), [['Museum', 'n2', 2000], ['Tower', 'n2', 2000]]);
 });
 
+test("a place's own icon (an emoji) wins over the call's; marking it again takes the new call's icon", async () => {
+  const { addMarks } = await import('./mapPoints.ts');
+  const tower = { name: 'Tower', placeId: 'P-tower' };
+  const museum = { name: 'Museum', placeId: 'P-museum' };
+  let marks = addMarks([], [{ ...tower, icon: '🗼' }, museum], 'n1', 1000, 'camera');
+  assert.deepEqual(marks.map((m) => [m.name, m.icon]), [['Tower', '🗼'], ['Museum', 'camera']]);
+  marks = addMarks(marks, [tower], 'n2', 2000);
+  assert.deepEqual(marks.map((m) => [m.name, m.icon]), [['Museum', 'camera'], ['Tower', undefined]]);
+});
+
 test("a call's icon goes on each of its marks; marking a place again takes the new call's icon", async () => {
   const { addMarks } = await import('./mapPoints.ts');
   const tower = { name: 'Tower', placeId: 'P-tower' };
