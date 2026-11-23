@@ -509,7 +509,8 @@ export function DayCard({
     // The sentence is the row's title; its places open from the menu.
     // With nothing more to open, the row has no chevron: it opens only for the editor, the
     // description, or the History of an approved suggestion.
-    const hist = history(typeof a === "string" ? undefined : a.fromItem);
+    const fromItem = typeof a === "string" ? undefined : a.fromItem;
+    const hist = history(fromItem);
     const title = plain(text);
     // The description is not on the card: it is what the card opens to, above any History.
     const sub = description ? plain(description) : "";
@@ -551,11 +552,19 @@ export function DayCard({
               setEditingAct(null);
             }}
             openedAct={a}
-            fromProposal={typeof a !== "string" && !!a.fromItem}
-            onDelete={onRemoveActivity && (async (expected) => {
-              await onRemoveActivity(d.date, ai, expected);
-              setEditingAct(null);
-            })}
+            fromProposal={!!fromItem}
+            onDelete={
+              fromItem
+                ? // Approved from an item: the server won't delete it outright (the item's votes are its history), so this takes it back out and reopens the item.
+                  onUnpromote && (async () => {
+                    await onUnpromote(fromItem);
+                    setEditingAct(null);
+                  })
+                : onRemoveActivity && (async (expected) => {
+                    await onRemoveActivity(d.date, ai, expected);
+                    setEditingAct(null);
+                  })
+            }
           />
         ) : sub ? (
           <>
