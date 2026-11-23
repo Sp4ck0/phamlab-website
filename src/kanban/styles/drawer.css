@@ -169,10 +169,11 @@
   border: none;
   cursor: pointer;
   color: var(--ink-soft);
-  font-size: 13px;
   padding: 6px 8px;
   border-radius: 2px;
-  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .drawer__link:hover {
   background: var(--rule);
