@@ -15,3 +15,18 @@ export function indexAtPointer(y: number, top: number, height: number, count: nu
   const f = Math.min(1, Math.max(0, (y - top) / height));
   return Math.round(f * (count - 1));
 }
+
+// The same, but not rounded: 2.5 means halfway between item 2 and item 3, so a drag can move the
+// page smoothly between days instead of snapping from one to the next.
+export function positionAtPointer(y: number, top: number, height: number, count: number): number {
+  if (count < 2 || height <= 0) return 0;
+  return Math.min(1, Math.max(0, (y - top) / height)) * (count - 1);
+}
+
+// The page offset for a position between items, given each item's page offset.
+export function offsetAtPosition(position: number, offsets: number[]): number {
+  if (offsets.length === 0) return 0;
+  const i = Math.min(offsets.length - 1, Math.max(0, Math.floor(position)));
+  const next = offsets[i + 1];
+  return next === undefined ? offsets[i] : offsets[i] + (position - i) * (next - offsets[i]);
+}

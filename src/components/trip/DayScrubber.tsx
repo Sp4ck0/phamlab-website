@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent } from "react";
 import type { ItineraryRow } from "../../lib/itineraryState";
 import { DOW, MON } from "../../lib/tripLogic";
-import { fractionOfIndex, indexAtPointer } from "../../lib/scrubber";
+import { offsetAtPosition, positionAtPointer } from "../../lib/scrubber";
 
 const label = (r: ItineraryRow) => `${DOW[r.day._d.getDay()]}, ${MON[r.day._d.getMonth()]} ${r.day._d.getDate()}`;
 
@@ -11,21 +11,35 @@ const label = (r: ItineraryRow) => `${DOW[r.day._d.getDay()]}, ${MON[r.day._d.ge
 // without opening it, so scrubbing past many days doesn't reflow the page.
 export function DayScrubber({ rows, currentId }: { rows: ItineraryRow[]; currentId?: string }) {
   const track = useRef<HTMLDivElement>(null);
+  // While dragging: where the finger is, as a position between days (2.5 = halfway from day 2 to 3).
   const [dragAt, setDragAt] = useState<number | null>(null);
+  const frame = useRef(0);
+  const latest = useRef(0);
   const currentIndex = Math.max(0, rows.findIndex(r => r.id === currentId));
-  const index = dragAt ?? currentIndex;
+  const position = dragAt ?? currentIndex;
+  const index = Math.round(position);
 
   function go(i: number) {
     const row = rows[i];
     if (!row) return;
-    const instant = !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches || dragAt !== null;
-    document.getElementById(row.id)?.scrollIntoView({ block: "start", behavior: instant ? "instant" : "smooth" });
+    const reduced = !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    document.getElementById(row.id)?.scrollIntoView({ block: "start", behavior: reduced ? "instant" : "smooth" });
+  }
+  // Follow the finger: scroll to the matching spot between two days' tops (past their sticky-bar margin).
+  function scrollTo(pos: number) {
+    const tops = rows.map(r => {
+      const el = document.getElementById(r.id);
+      return el ? el.getBoundingClientRect().top + window.scrollY - (parseFloat(getComputedStyle(el).scrollMarginTop) || 0) : 0;
+    });
+    window.scrollTo({ top: offsetAtPosition(pos, tops), behavior: "instant" });
   }
   function onMove(e: PointerEvent) {
     const box = track.current?.getBoundingClientRect();
     if (dragAt === null || !box) return;
-    const i = indexAtPointer(e.clientY, box.top, box.height, rows.length);
-    if (i !== dragAt) { setDragAt(i); go(i); }
+    const pos = positionAtPointer(e.clientY, box.top, box.height, rows.length);
+    setDragAt(pos);
+    latest.current = pos;
+    if (!frame.current) frame.current = requestAnimationFrame(() => { frame.current = 0; scrollTo(latest.current); });
   }
   function onKey(e: KeyboardEvent) {
     const step = { ArrowUp: -1, ArrowLeft: -1, ArrowDown: 1, ArrowRight: 1 }[e.key];
@@ -47,7 +61,7 @@ export function DayScrubber({ rows, currentId }: { rows: ItineraryRow[]; current
         aria-valuemax={rows.length}
         aria-valuenow={index + 1}
         aria-valuetext={label(rows[index])}
-        style={{ top: `${fractionOfIndex(index, rows.length) * 100}%` }}
+        style={{ top: `${rows.length < 2 ? 0 : (position / (rows.length - 1)) * 100}%` }}
         onKeyDown={onKey}
         onTouchStart={e => e.stopPropagation()}
         onTouchEnd={e => e.stopPropagation()}
