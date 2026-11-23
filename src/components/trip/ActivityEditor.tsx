@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { ActTiming, Place } from "../../lib/types";
+import type { Act, ActTiming, Place } from "../../lib/types";
 import { serverMessage } from "../../lib/serverError";
 import { PlacesEditor, cleanPlaces } from "./PlacesEditor";
 
@@ -17,20 +17,27 @@ interface Props {
   /** `timing` holds only what changed (null = a time cleared). */
   onSave: (text: string, places: Place[], timing: ActTiming) => Promise<unknown>;
   onCancel: () => void;
+  /** Removes the activity. The editor asks "Delete this activity?" first. Omitted = no Delete button. */
+  onDelete?: (expected: Act) => Promise<unknown>;
+  /** The whole activity as shown when the editor opened; a delete is checked against it. */
+  openedAct?: Act;
 }
 
 // Inline editor for one activity's timing (all day, or a time and an end time), text and
 // places. Opens with the cursor at the end of the text so appending a note ("— Dec 5 sold
 // out") is just type and save. The end time isn't shown on the card; it sets when the
 // Add to Google Calendar event ends.
-export function ActivityEditor({ initial, initialDescription, initialPlaces, initialTime, initialEndTime, initialAllDay = false, onSave, onCancel }: Props) {
+export function ActivityEditor({ initial, initialDescription, initialPlaces, initialTime, initialEndTime, initialAllDay = false, onSave, onCancel, onDelete, openedAct }: Props) {
   const [text, setText] = useState(initial);
+  // What the person opened, kept even if the day updates underneath: a delete is checked against this, not the current row.
+  const [opened] = useState<Act>(openedAct ?? initial);
   const [description, setDescription] = useState(initialDescription ?? "");
   const [allDay, setAllDay] = useState(initialAllDay);
   const [time, setTime] = useState(initialTime ?? "");
   const [endTime, setEndTime] = useState(initialEndTime ?? "");
   const [places, setPlaces] = useState<Place[]>(initialPlaces ?? []);
   const [saving, setSaving] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
 
@@ -76,6 +83,20 @@ export function ActivityEditor({ initial, initialDescription, initialPlaces, ini
     }
   }
 
+  async function confirmDelete() {
+    if (!onDelete || saving) return;
+    setSaving(true);
+    setError("");
+    try {
+      await onDelete(opened);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message.split("\n").pop() ?? "" : "";
+      setError(serverMessage(e, msg.replace(/^(Uncaught )?Error:\s*/, "") || "Couldn't delete — try again."));
+      setSaving(false);
+      setConfirmingDelete(false);
+    }
+  }
+
   return (
     <form
       className="ai-editor"
@@ -84,8 +105,11 @@ export function ActivityEditor({ initial, initialDescription, initialPlaces, ini
         void submit();
       }}
       onKeyDown={(e) => {
-        if (e.key === "Escape") onCancel();
-        else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+        if (e.key === "Escape") {
+          if (confirmingDelete) setConfirmingDelete(false);
+          else onCancel();
+        }
+        else if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !confirmingDelete) {
           e.preventDefault();
           void submit();
         }
@@ -136,12 +160,31 @@ export function ActivityEditor({ initial, initialDescription, initialPlaces, ini
       <PlacesEditor places={places} setPlaces={setPlaces} />
       <div className="ai-editor-actions">
         {error && <span className="ai-error">{error}</span>}
-        <button type="button" className="ai-btn" onClick={onCancel}>
-          Cancel
-        </button>
-        <button type="submit" className="ai-btn ai-btn-primary" disabled={!text.trim() || saving}>
-          {saving ? "Saving…" : "Save"}
-        </button>
+        {confirmingDelete ? (
+          <>
+            <span role="alert">Delete this activity?</span>
+            <button type="button" className="ai-btn" onClick={() => setConfirmingDelete(false)} disabled={saving} autoFocus>
+              Keep it
+            </button>
+            <button type="button" className="ai-btn ai-btn-danger" onClick={() => void confirmDelete()} disabled={saving}>
+              {saving ? "Deleting…" : "Yes, delete"}
+            </button>
+          </>
+        ) : (
+          <>
+            {onDelete && (
+              <button type="button" className="ai-btn ai-btn-danger ai-delete" onClick={() => setConfirmingDelete(true)} disabled={saving}>
+                Delete
+              </button>
+            )}
+            <button type="button" className="ai-btn" onClick={onCancel}>
+              Cancel
+            </button>
+            <button type="submit" className="ai-btn ai-btn-primary" disabled={!text.trim() || saving}>
+              {saving ? "Saving…" : "Save"}
+            </button>
+          </>
+        )}
       </div>
     </form>
   );

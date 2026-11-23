@@ -1439,6 +1439,44 @@ test('an activity is one static card: time, icon and title, and all its actions 
   } finally { view.close(); }
 });
 
+test('deleting an activity asks first: "Keep it" leaves it, "Yes, delete" removes it', async () => {
+  const synthetic = { ...day, acts: [{ tag: 'Food', time: '12:00', text: 'Synthetic Cafe' }] };
+  const removed = [];
+  const view = mount(React.createElement(DayCard, { ...props, day: synthetic, days: [synthetic], expanded: true, onEditActivity: async () => {}, onRemoveActivity: async (...a) => { removed.push(a); } }));
+  try {
+    const tile = view.container.querySelector('.tl-tile');
+    const items = openMenu(tile);
+    act(() => menuItem(items, 'Edit').click());
+    const button = (label) => [...view.container.querySelectorAll('.ai-editor button')].find((b) => b.textContent === label);
+    await act(async () => button('Delete').click());
+    assert.match(view.container.querySelector('.ai-editor').textContent, /Delete this activity\?/);
+    assert.deepEqual(removed, []); // asking is not deleting
+    await act(async () => button('Keep it').click());
+    assert.ok(button('Delete') && !button('Yes, delete'));
+    assert.deepEqual(removed, []);
+    await act(async () => button('Delete').click());
+    await act(async () => button('Yes, delete').click());
+    assert.deepEqual(removed, [[synthetic.date, 0, synthetic.acts[0]]]);
+  } finally { view.close(); }
+});
+
+test('a delete is checked against the activity that was opened, even if the day changes underneath the confirmation', async () => {
+  const before = { ...day, acts: [{ tag: 'Sightsee', time: '09:00', text: 'Synthetic museum' }, { tag: 'Food', time: '12:00', text: 'Synthetic cafe' }] };
+  const after = { ...day, acts: [{ tag: 'Food', time: '12:00', text: 'Synthetic cafe' }] }; // the museum was removed by someone else
+  const removed = [];
+  const render = (d) => React.createElement(Stateful, { ...props, day: d, days: [d], expanded: true, onEditActivity: async () => {}, onRemoveActivity: async (...a) => { removed.push(a); } });
+  const view = mount(render(before));
+  try {
+    const items = openMenu(view.container.querySelector('.tl-tile'));
+    act(() => menuItem(items, 'Edit').click());
+    const button = (label) => [...view.container.querySelectorAll('.ai-editor button')].find((b) => b.textContent === label);
+    await act(async () => button('Delete').click());
+    act(() => view.root.render(render(after)));
+    await act(async () => button('Yes, delete').click());
+    assert.deepEqual(removed, [[before.date, 0, before.acts[0]]]); // what was shown, so the server refuses
+  } finally { view.close(); }
+});
+
 test('a place offers Uber or Grab to it only where that app runs; Grab only on a touch device', () => {
   const place = { name: 'Synthetic Cafe', address: 'Synthetic street' };
   const withCountry = (country) => ({ ...day, country, acts: [{ tag: 'Food', time: '12:00', text: 'Synthetic Cafe', places: [place] }] });

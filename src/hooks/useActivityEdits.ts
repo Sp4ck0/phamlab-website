@@ -1,7 +1,7 @@
 import { useMutation } from "convex/react";
 import { api } from "@convex/api";
 import { useAccessCode } from "./useAccessCode";
-import type { ActTiming, Place } from "../lib/types";
+import type { Act, ActTiming, Place } from "../lib/types";
 
 // Edit one itinerary activity's text, places and time (activities.ts). Anyone with access to the
 // trip can do this, same as Action Items. `expected` is the text the editor
@@ -10,6 +10,7 @@ import type { ActTiming, Place } from "../lib/types";
 export function useActivityEdits(slug: string) {
   const { code } = useAccessCode();
   const updateMut = useMutation(api.activities.updateActivityText);
+  const removeMut = useMutation(api.activities.removeActivity);
 
   return {
     // `timing`: each of time / endTime / allDay is sent only when it changed (null clears a time);
@@ -22,5 +23,7 @@ export function useActivityEdits(slug: string) {
         ...(timing.allDay !== undefined ? { allDay: timing.allDay } : {}),
         ...(timing.description !== undefined ? { description: timing.description } : {}),
       }),
+    // `expected` is the whole activity the person saw; the server refuses if the activity at `index` changed.
+    removeActivity: (date: string, index: number, expected: Act) => removeMut({ slug, code, date, index, expected }),
   };
 }
