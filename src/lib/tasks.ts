@@ -1,5 +1,8 @@
 // Helpers for the backend's task list (convex/travel/tasks.ts).
 import type { Priority, Status, Task, TaskScope, Vote } from "./types";
+
+// A proposed item's kind: "proposed", or "consider" in data and links from before the rename.
+export const isProposed = (kind: string | undefined) => kind === "consider" || kind === "proposed";
 import { fmtDow, modeLabel } from "./tripLogic";
 
 // Yes / no counts for a consideration, with the viewer's own tap (`pending`,
@@ -37,7 +40,7 @@ export function kindLabel(t: Task): string | undefined {
   if (t.kind === "transport") return "Transport";
   if (t.kind === "details") return "Missing details";
   if (t.kind === "deadline") return "Free cancellation";
-  if (t.kind === "consider") return "Proposed";
+  if (isProposed(t.kind)) return "Proposed";
   return undefined;
 }
 
@@ -140,6 +143,6 @@ export function dayGaps(tasks: Task[]): Record<string, DayGaps> {
 // Stored item ids that are done, for the per-day checklists.
 export function doneItems(tasks: Task[]): Record<string, boolean> {
   const out: Record<string, boolean> = {};
-  for (const t of tasks) if (t.editable && t.kind !== "consider" && t.done) out[t.key.slice("item:".length)] = true;
+  for (const t of tasks) if (t.editable && !isProposed(t.kind) && t.done) out[t.key.slice("item:".length)] = true;
   return out;
 }

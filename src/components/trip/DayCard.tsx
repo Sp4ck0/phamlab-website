@@ -27,7 +27,7 @@ import { NOW_EMOJI, dayZone, nowPosition, untilText, viewerHint, type NowPositio
 import { sanitizeHtml } from "../../lib/sanitizeHtml";
 import type { DayWeather } from "../../lib/weather";
 import { useParams } from "react-router-dom";
-import { voteTally } from "../../lib/tasks";
+import { isProposed, voteTally } from "../../lib/tasks";
 import type { DayGaps } from "../../lib/tasks";
 import { useShowAiFocus } from "../../hooks/useAiFocus";
 import { useUntilFound } from "../../hooks/useUntilFound";
@@ -274,9 +274,9 @@ export function DayCard({
       <details className="tl-history">
         <summary>History</summary>
         <div className="tl-history-body">
-          <div className="cmeta"><b>{t.kind === "consider" ? "Proposed as" : "From the to-do"}:</b> {plain(sanitizeHtml(t.title))}</div>
+          <div className="cmeta"><b>{isProposed(t.kind) ? "Proposed as" : "From the to-do"}:</b> {plain(sanitizeHtml(t.title))}</div>
           {t.detail && <div className="cmeta" dangerouslySetInnerHTML={{ __html: sanitizeHtml(t.detail) }} />}
-          {t.kind === "consider" && (
+          {isProposed(t.kind) && (
             <div className="cmeta">
               👍 {yes}{t.votes?.yes.length ? ` (${t.votes.yes.join(", ")})` : ""} · 👎 {no}{t.votes?.no.length ? ` (${t.votes.no.join(", ")})` : ""}
               {t.outcome === "chosen" ? " · Chosen" : ""}

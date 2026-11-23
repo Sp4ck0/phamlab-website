@@ -2,7 +2,7 @@ import { Fragment, useEffect, useState, type ReactNode } from "react";
 import type { ActionItem, Group, Outcome, Priority, ResolvedDay, Task, Vote } from "../../lib/types";
 import { gapLabel } from "../../lib/tripLogic";
 import { dueLabel, dueState } from "../../lib/dueDates";
-import { kindLabel, PRIORITY_LABELS, priorityRank, scopeStart } from "../../lib/tasks";
+import { isProposed, kindLabel, PRIORITY_LABELS, priorityRank, scopeStart } from "../../lib/tasks";
 import type { ActionItemFields } from "../../hooks/useActionItemEdits";
 import { useAiFocus } from "../../hooks/useAiFocus";
 import { useRecentChanges } from "../../hooks/useRecentChanges";
@@ -138,12 +138,12 @@ export function ActionItems({
       }, SETTLE_MS);
       return () => clearTimeout(t);
     }
-    if (task.done) (task.kind === "consider" ? setSettledOpen : setCompletedOpen)(true);
+    if (task.done) (isProposed(task.kind) ? setSettledOpen : setCompletedOpen)(true);
     const t = setTimeout(() => {
       const el = document.getElementById(rowDomId(task));
       if (!el) return;
       consume(focus.nonce);
-      const change = focus.target.kind === "actionItem" && task.editable && task.kind !== "consider" ? recent.take(itemId(task)) : null;
+      const change = focus.target.kind === "actionItem" && task.editable && !isProposed(task.kind) ? recent.take(itemId(task)) : null;
       // An item the AI edited was held at its old text; once the page has
       // stopped scrolling, show the new text and play the change from the old.
       afterScroll(() => {
@@ -179,7 +179,7 @@ export function ActionItems({
     if (editing === item.id) setEditing(null);
     // A settled consideration comes back open: its votes are gone with it, and
     // done-without-an-outcome is not a state it can be in.
-    undoable.remove(task.kind === "consider" ? { ...task, done: false } : task, item);
+    undoable.remove(isProposed(task.kind) ? { ...task, done: false } : task, item);
   }
 
   const rowFor = (task: Task): Row => {
@@ -216,7 +216,7 @@ export function ActionItems({
         );
       }
       // Edited by the AI, not shown yet: keep the old wording until the page is pointed at it.
-      const held = task.kind !== "consider" ? recent.held(item.id) : undefined;
+      const held = !isProposed(task.kind) ? recent.held(item.id) : undefined;
       const reworded = diff?.id === item.id && (diff.prev.title !== item.title || diff.prev.detail !== item.detail);
       return row(
         <Fragment key={task.key}>
@@ -284,8 +284,8 @@ export function ActionItems({
     );
   };
 
-  const considerTasks = tasks.filter((t) => t.kind === "consider");
-  const rows = tasks.filter((t) => t.kind !== "consider").map(rowFor).sort(byPriorityDueDate);
+  const considerTasks = tasks.filter((t) => isProposed(t.kind));
+  const rows = tasks.filter((t) => !isProposed(t.kind)).map(rowFor).sort(byPriorityDueDate);
   const open = rows.filter((r) => !r.done);
   const completed = rows.filter((r) => r.done);
   const total = rows.length;

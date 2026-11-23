@@ -155,7 +155,7 @@ export function Considerations({
         <div className="consider">
           <ActionItemEditor
             {...editorProps}
-            defaultKind="consider"
+            defaultKind="proposed"
             onSave={async (fields) => {
               await onAddItem(fields);
               setEditing(null);

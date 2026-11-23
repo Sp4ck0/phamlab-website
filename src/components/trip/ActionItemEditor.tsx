@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import type { ActionItem, Group, Place, Priority } from "../../lib/types";
 import type { ActionItemFields } from "../../hooks/useActionItemEdits";
 import { fmtShort } from "../../lib/tripLogic";
-import { PRIORITY_LABELS } from "../../lib/tasks";
+import { isProposed, PRIORITY_LABELS } from "../../lib/tasks";
 import { TAG_EMOJI } from "../../lib/calendar";
 import { serverMessage } from "../../lib/serverError";
 import { AutoTextarea } from "./AutoTextarea";
@@ -10,7 +10,7 @@ import { PlacesEditor, cleanPlaces } from "./PlacesEditor";
 
 interface Props {
   // The kind a new item starts as (an existing item keeps its own).
-  defaultKind?: "custom" | "consider";
+  defaultKind?: "custom" | "proposed";
   groups: Group[];
   minDate: string;
   maxDate: string;
@@ -25,7 +25,7 @@ const SCOPES: { id: Scope; label: string }[] = [
   { id: "day", label: "One day" },
   { id: "range", label: "Date range" },
 ];
-const KIND_LABELS = { custom: "TO-DO", consider: "Proposed item" } as const;
+const KIND_LABELS = { custom: "TO-DO", proposed: "Proposed item" } as const;
 const PRIORITIES: Priority[] = ["high", "medium", "low"];
 
 // "Everyone" is stored as no `who` at all, so only real group ids are chips.
@@ -48,7 +48,7 @@ function errorText(e: unknown) {
 export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initial, onSave, onCancel }: Props) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [detail, setDetail] = useState(initial?.detail ?? "");
-  const [kind, setKind] = useState<"custom" | "consider">(initial?.kind ?? defaultKind ?? "custom");
+  const [kind, setKind] = useState<"custom" | "proposed">(isProposed(initial?.kind ?? defaultKind) ? "proposed" : "custom");
   const [priority, setPriority] = useState<Priority | undefined>(initial?.priority);
   const [places, setPlaces] = useState<Place[]>(initial?.places ?? []);
   // The scope follows from the fields: no date = whole trip, a date = that day,
@@ -91,8 +91,8 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
 
   async function submit() {
     if (!title.trim() || !scopeOk || saving) return;
-    if (kind === "consider" && adds === "activity" && endTime && !(time && scope !== "trip")) return setError("Set a day and start time before an end time.");
-    if (kind === "consider" && adds === "activity" && endTime && endTime <= time) return setError("End time must be after the start time.");
+    if (kind === "proposed" && adds === "activity" && endTime && !(time && scope !== "trip")) return setError("Set a day and start time before an end time.");
+    if (kind === "proposed" && adds === "activity" && endTime && endTime <= time) return setError("End time must be after the start time.");
     setSaving(true);
     setError("");
     try {
@@ -109,7 +109,7 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
         // A drafted activity takes the item's time; a hotel or transport draft (the AI's) is kept,
         // since the save replaces the whole item.
         proposes:
-          kind === "consider" && !aiDraft
+          kind === "proposed" && !aiDraft
             ? adds === "activity"
               ? {
                   type: "activity",
@@ -150,7 +150,7 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
   const summary = [
     whoIds.length === 0 ? "Everyone" : whoIds.map((id) => groups.find((g) => g.id === id)?.name ?? id).join(", "),
     KIND_LABELS[kind],
-    ...(kind === "consider" && !aiDraft && adds === "activity" ? ["Adds an activity"] : []),
+    ...(kind === "proposed" && !aiDraft && adds === "activity" ? ["Adds an activity"] : []),
     ...(priority ? [`${PRIORITY_LABELS[priority]} priority`] : []),
     time && scope !== "trip" ? `${when} · ${time}` : when,
     ...(placeNames.length === 0 ? [] : [placeNames.length === 1 ? placeNames[0] : `${placeNames.length} places`]),
@@ -173,7 +173,7 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
           <AutoTextarea
             ref={titleRef}
             className="ai-input"
-            placeholder={kind === "consider" ? "What are we proposing?" : "What needs doing?"}
+            placeholder={kind === "proposed" ? "What are we proposing?" : "What needs doing?"}
             maxLength={120}
             value={title}
             onChange={(e) => setTitle(oneLine(e.target.value))}
@@ -232,14 +232,14 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
           <div className="ai-row">
             <span className="ai-label">Kind</span>
             <div className="ai-who" role="group" aria-label="Kind">
-              {(["custom", "consider"] as const).map((k) => (
+              {(["custom", "proposed"] as const).map((k) => (
                 <button key={k} type="button" className="ai-chip" aria-pressed={kind === k} onClick={() => setKind(k)}>
                   {KIND_LABELS[k]}
                 </button>
               ))}
             </div>
           </div>
-          {kind === "consider" && (
+          {kind === "proposed" && (
             <div className="ai-row">
               <span className="ai-label">Adds</span>
               {aiDraft ? (
