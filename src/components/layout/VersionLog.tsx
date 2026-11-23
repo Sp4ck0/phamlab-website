@@ -19,6 +19,93 @@ function parseDate(date: string) {
   return { month: `${MONTHS[m - 1] ?? ""} ${y}`, day: `${(MONTHS[m - 1] ?? "").slice(0, 3)} ${d}` };
 }
 
+type AreaOption = { key: string; icon: string; label: string; count: number };
+
+// A styled stand-in for <select>: the system menu can't be themed. Arrow keys,
+// Enter/Space and Escape work as they do on a native select.
+function AreaFilter({ value, onChange, options }: { value: string; onChange: (key: string) => void; options: AreaOption[] }) {
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
+  const root = useRef<HTMLDivElement>(null);
+  const current = options.find((o) => o.key === value) ?? options[0];
+
+  useEffect(() => {
+    if (!open) return;
+    function onDown(e: MouseEvent) {
+      if (!root.current?.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  function show() {
+    setActive(Math.max(0, options.findIndex((o) => o.key === value)));
+    setOpen(true);
+  }
+  function pick(key: string) {
+    onChange(key);
+    setOpen(false);
+  }
+  function onKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Escape" && open) {
+      e.stopPropagation(); // don't also close the panel
+      e.nativeEvent.stopImmediatePropagation();
+      setOpen(false);
+    } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!open) return show();
+      setActive((i) => (i + (e.key === "ArrowDown" ? 1 : options.length - 1)) % options.length);
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if (open) pick(options[active].key);
+      else show();
+    } else if (e.key === "Tab") {
+      setOpen(false);
+    }
+  }
+
+  return (
+    <div className="vlog-dd" ref={root}>
+      <button
+        type="button"
+        className="vlog-select"
+        aria-label="Filter by area"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => (open ? setOpen(false) : show())}
+        onKeyDown={onKeyDown}
+      >
+        <span>
+          {current.label} ({current.count})
+        </span>
+        <svg className="vlog-chev" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path d="M3 5.25 7 9l4-3.75" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      {open && (
+        <ul className="vlog-menu" role="listbox" aria-label="Areas">
+          {options.map((o, i) => (
+            <li
+              key={o.key}
+              role="option"
+              aria-selected={o.key === value}
+              data-active={i === active}
+              onMouseEnter={() => setActive(i)}
+              onClick={() => pick(o.key)}
+            >
+              <span className="vlog-menu-icon" aria-hidden="true">
+                {o.icon}
+              </span>
+              <span className="vlog-menu-label">{o.label}</span>
+              <span className="vlog-menu-count">{o.count}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export function VersionLog({ onClose }: { onClose: () => void }) {
   const { entries, isLoading } = useVersionLog();
   const [filter, setFilter] = useState<string>("all");
@@ -73,21 +160,16 @@ export function VersionLog({ onClose }: { onClose: () => void }) {
         </div>
         {counts.size > 1 && (
           <div className="vlog-filters">
-            <select
-              className="vlog-select"
-              aria-label="Filter by area"
+            <AreaFilter
               value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-            >
-              <option value="all">All areas ({entries?.length})</option>
-              {Object.entries(AREA)
-                .filter(([key]) => counts.has(key))
-                .map(([key, a]) => (
-                  <option key={key} value={key}>
-                    {a.emoji} {a.label} ({counts.get(key)})
-                  </option>
-                ))}
-            </select>
+              onChange={setFilter}
+              options={[
+                { key: "all", icon: "", label: "All areas", count: entries?.length ?? 0 },
+                ...Object.entries(AREA)
+                  .filter(([key]) => counts.has(key))
+                  .map(([key, a]) => ({ key, icon: a.emoji, label: a.label, count: counts.get(key) ?? 0 })),
+              ]}
+            />
           </div>
         )}
         <div className="vlog-list">
