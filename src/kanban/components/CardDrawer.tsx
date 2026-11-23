@@ -105,6 +105,9 @@ export function CardDrawer({
     setNote(card?.note ?? '');
     setFollowUp(card?.followUp ?? '');
     setActionDrafts({});
+    // Deliberately keyed on the card id only: re-running on every echo of the
+    // open card would snap the inputs back to a stale value mid-typing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [card?.id]);
 
   useEffect(() => {
@@ -435,6 +438,7 @@ export function CardDrawer({
                 <span className="label">Check back on</span>
                 <input
                   type="date"
+                  max="9999-12-31"
                   value={followUp}
                   onChange={(e) => {
                     const { value, validity } = e.target;
