@@ -30,7 +30,7 @@ function textOf(task: Task) {
   return detail.startsWith(title.replace(/…$/, "")) ? detail : `${title} — ${detail}`;
 }
 
-// "High priority": the trip's high-priority to-dos and open proposedItems, open
+// "High priority": the trip's high-priority to-dos and open proposed items, open
 // ones counted. Ticking a to-do finishes it (it stays listed, struck through, so
 // it can be reopened). A proposed item has no tick; it is settled in its own
 // section, so here it only links there.
