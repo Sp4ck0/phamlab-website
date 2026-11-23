@@ -64,9 +64,11 @@ export interface TimelineInput {
 export function buildTimeline({ date, hotels, flights, acts, gaps, tour, items = [], plan = false }: TimelineInput): TimelineEntry[] {
   const out: TimelineEntry[] = [];
 
-  // A hotel being left goes first, then the rest, each in data order.
-  const leaving = (g: HotelGroup) => g.checkOut && !g.checkIn;
-  const ordered = [...hotels.filter((c) => leaving(c.item)), ...hotels.filter((c) => !leaving(c.item))];
+  // The hotel being left goes first, then one stayed in last night, then one checked into
+  // today, each in data order. The old hotel may also be listed on the next day, so
+  // "being left" alone isn't enough: anything not checked into today sits above what is.
+  const rank = (g: HotelGroup) => (g.checkOut && !g.checkIn ? 0 : !g.checkIn ? 1 : 2);
+  const ordered = [...hotels].sort((a, b) => rank(a.item) - rank(b.item));
   ordered.forEach((change, i) => {
     const gone = change.state === "gone";
     const key = gone ? `gone:hotel:${i}` : change.item.srcs[0];
