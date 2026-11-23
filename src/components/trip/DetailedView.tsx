@@ -25,6 +25,8 @@ import type { CityPhotoFetcher, PlacePhotoFetcher } from "../../lib/cityPhoto";
 import { isDestToday } from "../../lib/nowMarker";
 import { useNow } from "../../lib/useNow";
 
+export interface DaysControl { allOpen: boolean; toggle: () => void }
+
 interface Props {
   // Local date (YYYY-MM-DD). The trip opens on this day when it is one of the trip's days.
   days: ResolvedDay[];
@@ -40,6 +42,8 @@ interface Props {
   dayGaps?: Record<string, DayGaps>;
   onOnlyGapsChange: (value: boolean) => void;
   filterRef: RefObject<HTMLButtonElement | null>;
+  // Tells the page header how to open or close every day at once (null under Only gaps, where every day opens itself).
+  onDaysControl?: (control: DaysControl | null) => void;
   onToggle: (ids: string[], status: Status) => void;
   actionItems: ActionItem[];
   // ProposedItems (open or chosen), shown on the days they cover.
@@ -69,7 +73,7 @@ const FAST_MS = 200;
 const withoutPlaceIds = (d: ResolvedDay) => JSON.stringify(d, (key, value) => (key === "placeId" ? undefined : value));
 
 // Unified itinerary; name retained to keep the detail renderer's consumer small.
-export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps, isGap, dayGaps, onOnlyGapsChange, filterRef,
+export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps, isGap, dayGaps, onOnlyGapsChange, filterRef, onDaysControl,
   onToggle, actionItems, proposedItems, pendingVotes, onVote, actionItemsDone, onToggleActionItem, onEditActivity, itemTasks, onPromote, onUnpromote, onSetOutcome, cityPhoto, placePhoto }: Props) {
   const prefix = useId();
   const nowMs = useNow();
@@ -108,6 +112,14 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
     setGapsCollapsed(new Set());
   }
   const isOpen = (id: string) => (gapsView ? !gapsCollapsed.has(id) : state.expanded.has(id));
+  const allOpen = state.rows.length > 0 && state.rows.every(row => state.expanded.has(row.id));
+  useEffect(() => {
+    onDaysControl?.(gapsView ? null : {
+      allOpen,
+      toggle: () => setState(current => ({ ...current, expanded: allOpen ? new Set<string>() : new Set(current.rows.map(row => row.id)) })),
+    });
+  }, [onDaysControl, gapsView, allOpen]);
+  useEffect(() => () => onDaysControl?.(null), [onDaysControl]);
   const pendingOpen = !!pending && isOpen(pending.id);
   // Which tiles inside the days are open: the reader's choices are saved per trip; Only gaps starts afresh.
   const { slug } = useParams<{ slug: string }>();
