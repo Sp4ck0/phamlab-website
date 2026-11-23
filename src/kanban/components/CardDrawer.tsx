@@ -5,6 +5,7 @@ import { BOARD_COPY, PEOPLE } from '../types';
 import { boardLanes, pastedImages, uid } from '../lib';
 import { serverMessage } from '../../lib/serverError';
 import { copyCardLink } from '../../lib/shareLink';
+import { findLinks } from '../../lib/links';
 import { ImageGallery } from './ImageGallery';
 import { ImagePicker } from './ImagePicker';
 import { NoteBox } from './NoteBox';
@@ -66,6 +67,7 @@ export function CardDrawer({
   // since. Reset only when the open card actually changes.
   const [title, setTitle] = useState(card?.title ?? '');
   const [note, setNote] = useState(card?.note ?? '');
+  const noteLinks = findLinks(note);
   const [followUp, setFollowUp] = useState(card?.followUp ?? '');
   const [actionDrafts, setActionDrafts] = useState<Record<string, string>>({});
   const [noteBusy, setNoteBusy] = useState(false);
@@ -325,6 +327,16 @@ export function CardDrawer({
                   }}
                 />
               </label>
+              {noteLinks.length > 0 && (
+                <p className="note-links">
+                  <span className="label">Links</span>
+                  {noteLinks.map((l, i) => (
+                    <a key={i} href={l.href} target="_blank" rel="noopener noreferrer">
+                      {l.href}
+                    </a>
+                  ))}
+                </p>
+              )}
               <div className="field note-images">
                 <ImageGallery
                   images={card.noteImageUrls ?? []}

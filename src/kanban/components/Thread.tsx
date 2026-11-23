@@ -4,6 +4,7 @@ import { dayLabel, isMine, pastedImages, replyAuthor, viewerSeat } from '../lib'
 import { serverMessage } from '../../lib/serverError';
 import { ImageGallery } from './ImageGallery';
 import { ImagePicker } from './ImagePicker';
+import { Linkify } from '../../components/trip/Linkify';
 
 interface Props {
   card: Card;
@@ -131,7 +132,7 @@ export function Thread({ card, board, raisedBy, onReply, onRemoveReply, onRead }
                     <div className="msg__content">
                       {r.text && (
                         <p className="msg__bubble" title={new Date(r.at).toLocaleString()}>
-                          {r.text}
+                          <Linkify text={r.text} />
                         </p>
                       )}
                       {r.imageUrls && r.imageUrls.length > 0 && (
