@@ -1833,6 +1833,10 @@ test('the day being looked at is the last day whose card has reached the line un
   assert.equal(dayAtLine(cards, 600), 'c');
   assert.equal(dayAtLine([{ id: 'a', top: 300 }], 100), undefined); // page above the first day
   assert.equal(dayAtLine([], 100), undefined);
+  // A card reporting a position out of order doesn't send the answer back to the first day.
+  const odd = [{ id: 'a', top: -3000 }, { id: 'b', top: 9000 }, { id: 'c', top: -40 }, { id: 'd', top: 700 }];
+  assert.equal(dayAtLine(odd, 100), 'c');
+  assert.equal(dayAtLine([{ id: 'a', top: -3000 }, { id: 'b', top: NaN }, { id: 'c', top: -40 }], 100), 'c');
 });
 
 // A strip 300px wide with 100px chips, laid out by hand (jsdom has no layout).
