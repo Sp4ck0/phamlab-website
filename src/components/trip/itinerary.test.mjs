@@ -55,7 +55,7 @@ test('only-gaps dates come from open booking, plan and transport tasks (one per 
     { ...task('custom', ['item:synthetic'], [false]), done: false, scope: { kind: 'trip' } }, // a whole-trip to-do marks no day
     { ...task('custom', ['item:synthetic-day'], [false]), done: false, scope: { kind: 'day', date: '2040-01-09' } }, // an open to-do on a day
     { ...task('custom', ['item:synthetic-done'], [true]), done: true, scope: { kind: 'day', date: '2040-01-10' } }, // done: not a gap
-    { ...task('consider', ['item:synthetic-range'], [false]), done: false, scope: { kind: 'range', start: '2040-01-11', end: '2040-01-12' } }, // an open consideration covers its whole range
+    { ...task('proposed', ['item:synthetic-range'], [false]), done: false, scope: { kind: 'range', start: '2040-01-11', end: '2040-01-12' } }, // an open consideration covers its whole range
   ]);
   assert.deepEqual([...dates].sort(), ['2040-01-03', '2040-01-05', '2040-01-07', '2040-01-09', '2040-01-11', '2040-01-12']);
 });
@@ -1264,7 +1264,7 @@ test('Only gaps: booked tiles start closed and actionable ones open, whatever th
 });
 
 // ---- to-dos and considerations on the timeline ----
-const consider = (id, extra = {}) => ({ key: `item:${id}`, kind: 'consider', scope: { kind: 'day', date: day.date }, title: `Synthetic ${id}`, refs: [`item:${id}`], refsDone: [false], done: false, dueDate: null, dueDateIsDefault: true, editable: true, votes: { yes: [], no: [], mine: null }, ...extra });
+const consider = (id, extra = {}) => ({ key: `item:${id}`, kind: 'proposed', scope: { kind: 'day', date: day.date }, title: `Synthetic ${id}`, refs: [`item:${id}`], refsDone: [false], done: false, dueDate: null, dueDateIsDefault: true, editable: true, votes: { yes: [], no: [], mine: null }, ...extra });
 
 test('dated proposed items are tiles on the day, a timed one among the activities; to-dos sit in their own block at the bottom', async () => {
   const votes = [];
@@ -1339,7 +1339,7 @@ test('in the Under consideration list, an item already in the itinerary says whe
   const task = consider('dinner', { title: 'Synthetic dinner idea', detail: 'Synthetic reason', done: true, outcome: 'chosen', votes: { yes: ['Ann', 'Ben'], no: ['Cy'], mine: null } });
   const back = [];
   const view = mount(React.createElement(Considerations, {
-    tasks: [task], items: [{ id: 'dinner', title: task.title, detail: '', kind: 'consider', date: day.date }], groups: [], days, tripStart: '2040-01-02', tripEnd: '2040-01-02', editing: null, setEditing() {},
+    tasks: [task], items: [{ id: 'dinner', title: task.title, detail: '', kind: 'proposed', date: day.date }], groups: [], days, tripStart: '2040-01-02', tripEnd: '2040-01-02', editing: null, setEditing() {},
     pendingVotes: {}, onVote() {}, onSetOutcome() {}, onAddItem: async () => {}, onUpdateItem: async () => {}, onRemove() {}, onPromote: async () => {},
     onUnpromote: async (id) => { back.push(id); }, settledOpen: true, onSettledOpenChange() {},
   }));
@@ -1360,7 +1360,7 @@ test('the Under consideration list draws each idea as a tile: vote in its header
   const days = resolveDays({ days: [{ ...day, date: '2040-01-02' }, { ...day, date: '2040-01-03', _d: new Date(2040, 0, 3) }] });
   const idea = consider('anywhere', { scope: { kind: 'trip' }, title: 'Synthetic anywhere idea', votes: { yes: [], no: ['Ann'], mine: null } });
   const dated = consider('dated', { title: 'Synthetic dated idea', proposes: { type: 'activity', entry: { text: 'Synthetic proposed walk', tag: 'Trek' } } });
-  const items = [{ id: 'anywhere', title: idea.title, detail: '', kind: 'consider' }, { id: 'dated', title: dated.title, detail: '', kind: 'consider', date: day.date }];
+  const items = [{ id: 'anywhere', title: idea.title, detail: '', kind: 'proposed' }, { id: 'dated', title: dated.title, detail: '', kind: 'proposed', date: day.date }];
   const calls = [];
   const view = mount(React.createElement(Considerations, {
     tasks: [idea, dated], items, groups: [], days, tripStart: '2040-01-02', tripEnd: '2040-01-03', editing: null, setEditing() {},
@@ -1396,7 +1396,7 @@ test('the Under consideration list draws each idea as a tile: vote in its header
 test('the editor can draft the activity a consideration would add, and keeps an AI-drafted stay as it is', async () => {
   const { ActionItemEditor } = await import('./ActionItemEditor.tsx');
   const saved = [];
-  const initial = { id: 'x', title: 'Synthetic market', detail: '', kind: 'consider', date: day.date, time: '18:00' };
+  const initial = { id: 'x', title: 'Synthetic market', detail: '', kind: 'proposed', date: day.date, time: '18:00' };
   const view = mount(React.createElement(ActionItemEditor, { groups: [], minDate: day.date, maxDate: day.date, initial, onSave: async (f) => { saved.push(f); }, onCancel() {} }));
   try {
     const button = (text) => [...view.container.querySelectorAll('button')].find((b) => b.textContent === text);
@@ -1992,14 +1992,4 @@ test('opening a trip under way lands on today, unless a link points at a task (?
   };
   assert.ok(await open('/trip/synthetic')); // plain: today opens
   assert.ok(!(await open('/trip/synthetic?task=item%3Asynthetic'))); // a task link wins: today stays put
-});
-
-
-test('a task of kind proposed (the new name) is a proposed item just like one of kind consider', async () => {
-  const view = mount(React.createElement(DayCard, { ...props, day, expanded: true, dayConsiderations: [consider('renamed', { kind: 'proposed' })] }));
-  try {
-    const tile = view.container.querySelector('.tl-consider');
-    assert.ok(tile);
-    assert.equal(tile.querySelector('.consider-pill').textContent, 'Not finalized');
-  } finally { view.close(); }
 });

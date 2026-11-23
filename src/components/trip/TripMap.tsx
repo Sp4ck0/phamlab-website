@@ -4,7 +4,6 @@ import { useShowAiFocus } from "../../hooks/useAiFocus";
 import type { MapPointData, ResolvedDay, Task } from "../../lib/types";
 import { CATEGORY_COLORS, CATEGORY_EMOJI, CATEGORY_LABELS, MAP_DAY_EVENT, deriveDayRoutes, MAP_FOCUS_EVENT, MAP_GLANCE_EVENT, deriveJumpTargets, markPulseLeft, marksToFit, googleMapsUrl, jumpTargetFor, placeKey } from "../../lib/mapPoints";
 import type { JumpTarget, MapMark, WeatherStop } from "../../lib/mapPoints";
-import { isProposed } from "../../lib/tasks";
 import { assignLegColors, fmtShort } from "../../lib/tripLogic";
 import { summarizeStay, temp, weatherIcon, weatherText } from "../../lib/weather";
 import { markIconSvg } from "../../lib/markIcons";
@@ -705,7 +704,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
       const marker = makePin(map, { lat: p.lat, lng: p.lng }, title, look, () => {
         const task = considerationById.current.get(p.id.split("|")[1] ?? "");
         const live =
-          isProposed(task?.kind)
+          task?.kind === "proposed"
             ? task.outcome === "chosen" ? "Chosen" : "Proposed"
             : `To-do${task?.done ? " (done)" : ""}`;
         const votes = task?.votes ? ` · 👍 ${task.votes.yes.length} · 👎 ${task.votes.no.length}` : "";

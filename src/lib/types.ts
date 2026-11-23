@@ -153,8 +153,8 @@ export interface ActionItem {
   // Last day when the item covers a range starting at `date`.
   endDate?: string;
   who?: Who;
-  // Absent = "custom" (a to-do). "proposed" is a candidate the group is weighing (older data says "consider").
-  kind?: "custom" | "consider" | "proposed";
+  // Absent = "custom" (a to-do). "proposed" is a candidate the group is weighing.
+  kind?: "custom" | "proposed";
   // Absent = no priority (sorts like low). High items are listed at the top of the trip.
   priority?: Priority;
   // Where it is: a Maps link on the row, and a map pin for a consideration.
@@ -174,7 +174,7 @@ export type Proposal =
 // One row of the Action Items list, derived by the backend (convex/travel/tasks.ts).
 // `kind` is why it exists, `scope` is when it applies.
 // `details` is a booked transport tile that still lacks a required field.
-export type TaskKind = "booking" | "plan" | "transport" | "details" | "deadline" | "consider" | "proposed" | "custom";
+export type TaskKind = "booking" | "plan" | "transport" | "details" | "deadline" | "proposed" | "custom";
 export type Priority = "high" | "medium" | "low";
 export type Outcome = "chosen" | "dropped";
 export type Vote = "yes" | "no";

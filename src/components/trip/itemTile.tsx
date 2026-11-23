@@ -54,7 +54,7 @@ export function linkedItems(days: ResolvedDay[]): Map<string, string> {
 export type DescribedItem ={ defaultOpen: boolean; forceOpen?: boolean; tile: Omit<TimelineTileProps, "open" | "onToggle" | "onReveal"> };
 
 // A to-do or proposed item as a tile, the same on a day card and in the Proposed items list.
-// A proposed item (kind "consider") is a potential itinerary entry: drawn like the hotel, transport or activity it
+// A proposed item (kind "proposed") is a potential itinerary entry: drawn like the hotel, transport or activity it
 // proposes (dashed, as not yet in the plan), voted on with the buttons in its header, and added
 // to the itinerary (or dropped) from its body. A to-do is only ever ticked off, from its menu.
 export function describeItemTile(a: ItemTileArgs): DescribedItem {

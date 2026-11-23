@@ -18,7 +18,7 @@ import { useActivityEdits } from "../hooks/useActivityEdits";
 import { useTripWeather } from "../hooks/useTripWeather";
 import { todayISO } from "../lib/dueDates";
 import { assignLegColors } from "../lib/tripLogic";
-import { dayGaps, gapDates, isProposed } from "../lib/tasks";
+import { dayGaps, gapDates } from "../lib/tasks";
 import { MAP_FOCUS_EVENT, addMarks, deriveTaskPoints, derivePoints, deriveRouteAddresses, deriveWeatherStops, focusOnMapKey, type MapMark } from "../lib/mapPoints";
 import { TripTabs } from "../components/trip/TripTabs";
 import { tabFromHash, tripPanelId, tripTabId, withTab, type TripTab } from "../lib/tripTabs";
@@ -329,8 +329,8 @@ function TripPageEntry() {
               onToggle={toggle}
               onOnlyGapsChange={setOnlyGaps}
               filterRef={filterRef}
-              actionItems={(trip.actionItems || []).filter((i) => !isProposed(i.kind))}
-              considerations={tasks.filter((t) => isProposed(t.kind) && t.outcome !== "dropped")}
+              actionItems={(trip.actionItems || []).filter((i) => i.kind !== "proposed")}
+              considerations={tasks.filter((t) => t.kind === "proposed" && t.outcome !== "dropped")}
               pendingVotes={pendingVotes}
               onVote={vote}
               actionItemsDone={done}
