@@ -342,6 +342,9 @@ function TripPageEntry() {
               onEditActivity={updateActivity}
               onRemoveActivity={removeActivity}
               itemTasks={itemTasks}
+              storedItems={trip.actionItems || []}
+              onUpdateItem={updateItem}
+              onRemoveItem={removeItem}
               onPromote={promoteItem}
               onUnpromote={unpromoteItem}
               onSetOutcome={setOutcome}

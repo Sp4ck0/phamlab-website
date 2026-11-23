@@ -35,6 +35,8 @@ import { ActivityEditor } from "./ActivityEditor";
 import { tileDomId } from "../../lib/tileId";
 import { InlineDiff } from "./InlineDiff";
 import { describeItemTile, linkedItems } from "./itemTile";
+import { ActionItemEditor } from "./ActionItemEditor";
+import type { ActionItemFields } from "../../hooks/useActionItemEdits";
 
 // What a line is, for telling an edited line from an untouched one (not its
 // ids or ticks, which change without the content changing).
@@ -86,6 +88,10 @@ interface Props {
   onRemoveActivity?: (date: string, index: number, expected: Act) => Promise<unknown>;
   // Every stored item by id (its wording, votes and outcome), for the History of an entry approved from one.
   itemTasks?: Record<string, Task>;
+  // The stored items, and saving / removing one: a proposed item's tile edits in place with these.
+  storedItems?: ActionItem[];
+  onUpdateItem?: (id: string, fields: ActionItemFields) => Promise<unknown>;
+  onRemoveItem?: (id: string) => Promise<unknown>;
   // "Add to itinerary": approves an item into the days (convex actionItems.promoteActionItem).
   onPromote?: (id: string, date: string) => Promise<unknown>;
   // "Back to proposed": takes what was approved from an item back out (actionItems.unpromoteActionItem).
@@ -126,6 +132,9 @@ export function DayCard({
   onEditActivity,
   onRemoveActivity,
   itemTasks,
+  storedItems,
+  onUpdateItem,
+  onRemoveItem,
   onPromote,
   onUnpromote,
   onSetOutcome,
@@ -133,6 +142,8 @@ export function DayCard({
   placePhoto,
 }: Props) {
   const [editingAct, setEditingAct] = useState<number | null>(null);
+  // The proposed item (its id) being edited in its tile.
+  const [editingItem, setEditingItem] = useState<string | null>(null);
   // A pinned trip map flies to the place of the tile under the pointer (or keyboard focus) once it
   // has stayed there a moment, so sweeping across the list doesn't send the map hopping.
   const glanceTimer = useRef<number | undefined>(undefined);
@@ -540,6 +551,7 @@ export function DayCard({
               setEditingAct(null);
             }}
             openedAct={a}
+            fromProposal={typeof a !== "string" && !!a.fromItem}
             onDelete={onRemoveActivity && (async (expected) => {
               await onRemoveActivity(d.date, ai, expected);
               setEditingAct(null);
@@ -570,6 +582,8 @@ export function DayCard({
           ? transportCalendarItems({ ...proposes.entry, who: [proposes.entry.who].flat(), ids: [`item:${id}`], statuses: [proposes.entry.status] })
           : [];
     const places = task?.places ?? todo?.places;
+    // A proposed item edits right in its tile; anything else (or no way to save) jumps to its list.
+    const stored = task && onUpdateItem ? storedItems?.find((i) => i.id === id) : undefined;
     const x = describeItemTile({
       item: entry.item, domId: tileDomId(rowId, entry.domKey), time: entry.time, day: { day: d, dayNumber }, onDay: d.date,
       groups, pendingVotes, onVote, done: !!actionItemsDone[id], linkedOn: linkedOn.get(id), promoteDays: [d.date],
@@ -577,11 +591,31 @@ export function DayCard({
       menu: [
         ...mapsItem((places ?? [])[0]),
         ...rideItems((places ?? [])[0]),
-        // Jumps to this item in the Action Items or Proposed items list (where it is edited).
-        { label: task ? "Edit in list" : "Open in list", icon: task ? "edit" : "list", onSelect: () => { if (slug) showFocus({ slug, target: { kind: "actionItem", id }, nonce: `${Date.now()}` }); } },
+        stored
+          ? { label: "Edit", icon: "edit" as const, onSelect: () => setEditingItem(id) }
+          : { label: task ? "Edit in list" : "Open in list", icon: task ? "edit" as const : "list" as const, onSelect: () => { if (slug) showFocus({ slug, target: { kind: "actionItem", id }, nonce: `${Date.now()}` }); } },
         copyItem({ task: `item:${id}` }),
         ...draftItems,
       ],
+      editor:
+        stored && onUpdateItem && editingItem === id ? (
+          <ActionItemEditor
+            groups={groups}
+            minDate={(days ?? [d])[0].date}
+            maxDate={(days ?? [d])[(days ?? [d]).length - 1].date}
+            initial={stored}
+            linkedOn={linkedOn.get(id)}
+            onCancel={() => setEditingItem(null)}
+            onSave={async (fields) => {
+              await onUpdateItem(id, fields);
+              setEditingItem(null);
+            }}
+            onDelete={onRemoveItem && (async () => {
+              await onRemoveItem(id);
+              setEditingItem(null);
+            })}
+          />
+        ) : undefined,
     });
     return { key: entry.key, ghost: false, ...x, tile: { ...x.tile, photoPlaces: photoPlacesOf(places) } };
   }

@@ -2,6 +2,7 @@ import { Fragment, useEffect, useId, useLayoutEffect, useMemo, useRef, useState 
 import type { RefObject } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import type { Act, ActionItem, Group, LegColor, Outcome, Place, ResolvedDay, Status, Task, Vote, ActTiming } from "../../lib/types";
+import type { ActionItemFields } from "../../hooks/useActionItemEdits";
 import { coversDay } from "../../lib/tasks";
 import type { DayGaps } from "../../lib/tasks";
 import { useAiFocus } from "../../hooks/useAiFocus";
@@ -56,6 +57,10 @@ interface Props {
   onRemoveActivity?: (date: string, index: number, expected: Act) => Promise<unknown>;
   // Every stored item by id, for the History of an entry approved from one.
   itemTasks?: Record<string, Task>;
+  // The stored items, and saving / removing one: a proposed item's tile edits in place.
+  storedItems?: ActionItem[];
+  onUpdateItem?: (id: string, fields: ActionItemFields) => Promise<unknown>;
+  onRemoveItem?: (id: string) => Promise<unknown>;
   // "Add to itinerary" on an item tile.
   onPromote?: (id: string, date: string) => Promise<unknown>;
   // "Back to proposed", and drop / reopen, on a proposed item's tile.
@@ -131,7 +136,7 @@ function CurrentDay({ rows, shownRows, todayId, setJumped, onJump }: {
 
 // Unified itinerary; name retained to keep the detail renderer's consumer small.
 export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps, isGap, dayGaps, onOnlyGapsChange, filterRef, onDaysControl,
-  onToggle, actionItems, proposedItems, pendingVotes, onVote, actionItemsDone, onToggleActionItem, onEditActivity, onRemoveActivity, itemTasks, onPromote, onUnpromote, onSetOutcome, cityPhoto, placePhoto }: Props) {
+  onToggle, actionItems, proposedItems, pendingVotes, onVote, actionItemsDone, onToggleActionItem, onEditActivity, onRemoveActivity, itemTasks, storedItems, onUpdateItem, onRemoveItem, onPromote, onUnpromote, onSetOutcome, cityPhoto, placePhoto }: Props) {
   const prefix = useId();
   const nowMs = useNow();
   // A day the AI just edited keeps showing its old content until the page is
@@ -536,7 +541,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
             }} onToggle={onToggle} dayActionItems={actionItems.filter(item => item.date !== undefined && item.date <= d.date && d.date <= (item.endDate ?? item.date))}
             dayProposed={proposedItems.filter(t => t.scope.kind !== "trip" && coversDay(t.scope, d.date))}
             pendingVotes={pendingVotes} onVote={onVote}
-            actionItemsDone={actionItemsDone} onToggleActionItem={onToggleActionItem} onEditActivity={editActivity} onRemoveActivity={removeActivity} itemTasks={itemTasks} onPromote={onPromote} onUnpromote={onUnpromote} onSetOutcome={onSetOutcome} cityPhoto={cityPhoto} placePhoto={placePhoto} />
+            actionItemsDone={actionItemsDone} onToggleActionItem={onToggleActionItem} onEditActivity={editActivity} onRemoveActivity={removeActivity} itemTasks={itemTasks} storedItems={storedItems} onUpdateItem={onUpdateItem} onRemoveItem={onRemoveItem} onPromote={onPromote} onUnpromote={onUnpromote} onSetOutcome={onSetOutcome} cityPhoto={cityPhoto} placePhoto={placePhoto} />
           </Fragment>
         ))}
         {ghostAt === -1 && ghostDay}

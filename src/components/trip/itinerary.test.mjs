@@ -1477,6 +1477,62 @@ test('a delete is checked against the activity that was opened, even if the day 
   } finally { view.close(); }
 });
 
+test('a proposed item edits in its day tile; Delete there asks first, and a failed delete says why', async () => {
+  const item = { id: 'lunch', kind: 'proposed', title: 'Synthetic lunch', detail: '', date: day.date };
+  const removed = [];
+  let fail = false;
+  const view = mount(React.createElement(DayCard, { ...props, day, days: [day], expanded: true, dayProposed: [proposedTask('lunch')], storedItems: [item],
+    onUpdateItem: async () => {}, onRemoveItem: async (id) => { if (fail) throw new Error('Synthetic refusal'); removed.push(id); } }));
+  try {
+    const tile = view.container.querySelector('.tl-proposed');
+    const items = openMenu(tile);
+    assert.equal(menuItem(items, 'Edit in list'), undefined); // no jump away: it edits right here
+    act(() => menuItem(items, 'Edit').click());
+    const button = (label) => [...view.container.querySelectorAll('.ai-editor button')].find((b) => b.textContent === label);
+    await act(async () => button('Delete').click());
+    assert.match(view.container.querySelector('.ai-editor').textContent, /Delete this proposal\?/);
+    assert.deepEqual(removed, []); // asking is not deleting
+    await act(async () => button('Keep it').click());
+    assert.deepEqual(removed, []);
+    fail = true;
+    await act(async () => button('Delete').click());
+    await act(async () => button('Yes, delete').click());
+    assert.match(view.container.querySelector('.ai-error').textContent, /Synthetic refusal/);
+    assert.ok(view.container.querySelector('.ai-editor')); // still open
+    fail = false;
+    await act(async () => button('Delete').click());
+    await act(async () => button('Yes, delete').click());
+    assert.deepEqual(removed, ['lunch']);
+    assert.equal(view.container.querySelector('.ai-editor'), null); // closed once removed
+  } finally { view.close(); }
+});
+
+test('a proposal already in the itinerary has no Delete in its editor, only where to undo that', async () => {
+  const { ActionItemEditor } = await import('./ActionItemEditor.tsx');
+  const item = { id: 'lunch', kind: 'proposed', title: 'Synthetic lunch', detail: '', date: day.date };
+  const editor = (linkedOn) => React.createElement(ActionItemEditor, { groups: [], minDate: day.date, maxDate: day.date, initial: item, linkedOn, onSave: async () => {}, onCancel() {}, onDelete: async () => {} });
+  const hasDelete = (c) => [...c.querySelectorAll('.ai-editor button')].some((b) => b.textContent === 'Delete');
+  const free = mount(editor(undefined));
+  try { assert.ok(hasDelete(free.container)); } finally { free.close(); }
+  const linked = mount(editor(day.date));
+  try {
+    assert.ok(!hasDelete(linked.container));
+    assert.match(linked.container.querySelector('.ai-editor').textContent, /In the itinerary on .*Back to proposed/);
+  } finally { linked.close(); }
+});
+
+test('an activity that came from a proposal has no Delete, and says where to take it out', () => {
+  const synthetic = { ...day, acts: [{ tag: 'Food', time: '12:00', text: 'Synthetic Cafe', fromItem: 'cafe' }] };
+  const view = mount(React.createElement(DayCard, { ...props, day: synthetic, days: [synthetic], expanded: true, onEditActivity: async () => {}, onRemoveActivity: async () => {} }));
+  try {
+    const items = openMenu(view.container.querySelector('.tl-tile'));
+    act(() => menuItem(items, 'Edit').click());
+    const editor = view.container.querySelector('.ai-editor');
+    assert.ok(![...editor.querySelectorAll('button')].some((b) => b.textContent === 'Delete'));
+    assert.match(editor.textContent, /Back to proposed/);
+  } finally { view.close(); }
+});
+
 test('a place offers Uber or Grab to it only where that app runs; Grab only on a touch device', () => {
   const place = { name: 'Synthetic Cafe', address: 'Synthetic street' };
   const withCountry = (country) => ({ ...day, country, acts: [{ tag: 'Food', time: '12:00', text: 'Synthetic Cafe', places: [place] }] });

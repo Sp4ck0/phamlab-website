@@ -17,6 +17,10 @@ interface Props {
   initial?: ActionItem;
   onSave: (fields: ActionItemFields) => Promise<unknown>;
   onCancel: () => void;
+  // Removes the item (an existing one only). The editor asks "Delete this ...?" first. Omitted = no Delete button.
+  onDelete?: () => Promise<unknown>;
+  // The day an itinerary entry was approved from this item: while it is there, the item can't be deleted.
+  linkedOn?: string;
 }
 
 type Scope = "trip" | "day" | "range";
@@ -45,7 +49,7 @@ function errorText(e: unknown) {
 // Inline add/edit row for an Action Item. Title and details are always shown;
 // who / kind / places / when sit behind a one-line summary. Enter saves,
 // Escape cancels.
-export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initial, onSave, onCancel }: Props) {
+export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initial, onSave, onCancel, onDelete, linkedOn }: Props) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [detail, setDetail] = useState(initial?.detail ?? "");
   const [kind, setKind] = useState<"custom" | "proposed">((initial?.kind ?? defaultKind) === "proposed" ? "proposed" : "custom");
@@ -71,6 +75,7 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const optionsId = useId();
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const detailRef = useRef<HTMLTextAreaElement>(null);
@@ -129,10 +134,23 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
     }
   }
 
+  async function confirmDelete() {
+    if (!onDelete || saving) return;
+    setSaving(true);
+    setError("");
+    try {
+      await onDelete();
+    } catch (e) {
+      setError(errorText(e).replace("Couldn't save", "Couldn't delete"));
+      setSaving(false);
+      setConfirmingDelete(false);
+    }
+  }
+
   function enterSaves(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
     e.preventDefault();
-    void submit();
+    if (!confirmingDelete) void submit();
   }
 
   // What the collapsed options hold, e.g. "Everyone · To-do · Dec 5 · Line Esthe".
@@ -164,7 +182,10 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
         void submit();
       }}
       onKeyDown={(e) => {
-        if (e.key === "Escape") onCancel();
+        if (e.key === "Escape") {
+          if (confirmingDelete) setConfirmingDelete(false);
+          else onCancel();
+        }
       }}
     >
       <div className="ai-editor-text">
@@ -345,12 +366,34 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
       )}
       <div className="ai-editor-actions">
         {error && <span className="ai-error">{error}</span>}
-        <button type="button" className="ai-btn" onClick={onCancel}>
-          Cancel
-        </button>
-        <button type="submit" className="ai-btn ai-btn-primary" disabled={!title.trim() || !scopeOk || saving}>
-          {saving ? "Saving…" : "Save"}
-        </button>
+        {confirmingDelete ? (
+          <>
+            <span role="alert">Delete this {kind === "proposed" ? "proposal" : "item"}?</span>
+            <button type="button" className="ai-btn" onClick={() => setConfirmingDelete(false)} disabled={saving} autoFocus>
+              Keep it
+            </button>
+            <button type="button" className="ai-btn ai-btn-danger" onClick={() => void confirmDelete()} disabled={saving}>
+              {saving ? "Deleting…" : "Yes, delete"}
+            </button>
+          </>
+        ) : (
+          <>
+            {initial && onDelete && linkedOn && (
+              <span className="cmeta ai-delete">In the itinerary on {fmtShort(linkedOn)}. Use “Back to proposed” first to delete it.</span>
+            )}
+            {initial && onDelete && !linkedOn && (
+              <button type="button" className="ai-btn ai-btn-danger ai-delete" onClick={() => setConfirmingDelete(true)} disabled={saving}>
+                Delete
+              </button>
+            )}
+            <button type="button" className="ai-btn" onClick={onCancel}>
+              Cancel
+            </button>
+            <button type="submit" className="ai-btn ai-btn-primary" disabled={!title.trim() || !scopeOk || saving}>
+              {saving ? "Saving…" : "Save"}
+            </button>
+          </>
+        )}
       </div>
     </form>
   );
