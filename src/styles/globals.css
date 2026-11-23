@@ -1281,7 +1281,7 @@ textarea.ai-input{display:block;width:100%;resize:none;overflow:hidden;line-heig
 .day-scrubber{display:none}
 @media(pointer:coarse){
   .day-scrubber{display:block;position:fixed;z-index:15;right:calc(6px + env(safe-area-inset-right));top:calc(var(--daynav-bottom,176px) + 24px);bottom:calc(24px + env(safe-area-inset-bottom));width:28px;pointer-events:none}
-  .day-scrubber-handle{position:absolute;right:0;width:28px;height:56px;margin-top:-28px;pointer-events:auto;touch-action:none;display:flex;align-items:center;justify-content:flex-end;opacity:.4;transition:opacity .2s}
+  .day-scrubber-handle{position:absolute;right:0;width:28px;height:56px;margin-top:-28px;pointer-events:auto;touch-action:none;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;display:flex;align-items:center;justify-content:flex-end;opacity:.4;transition:opacity .2s}
   .day-scrubber-handle::before{content:"";width:6px;height:36px;border-radius:3px;background:var(--text-secondary)}
   .day-scrubber.is-dragging .day-scrubber-handle,.day-scrubber-handle:focus-visible{opacity:1}
   .day-scrubber.is-dragging .day-scrubber-handle::before{background:var(--accent-1);width:8px}

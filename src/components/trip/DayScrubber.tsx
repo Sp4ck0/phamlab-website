@@ -5,6 +5,7 @@ import { DOW, MON } from "../../lib/tripLogic";
 import { SCRUBBER_EVENT } from "../../lib/hideBars";
 import { fractionAtOffset, fractionAtPointer, indexAtOffset, offsetAtFraction, smoothDamp } from "../../lib/scrubber";
 
+const HOLD_MS = 250;
 const tell = (active: boolean) => window.dispatchEvent(new CustomEvent(SCRUBBER_EVENT, { detail: { active } }));
 // TEMPORARY diagnostics, shown after Expand all (see DetailedView): what a scrub measured.
 const scrubParts = { down: "", move: "" };
@@ -66,9 +67,10 @@ export function DayScrubber({ rows, currentId }: { rows: ItineraryRow[]; current
     window.scrollTo({ top: arrived ? g.target : g.y, behavior: "instant" });
     g.frame = arrived && !g.dragging ? 0 : requestAnimationFrame(tick);
   }
-  function onDown(e: PointerEvent<HTMLDivElement>) {
-    const g = glide.current, box = e.currentTarget.getBoundingClientRect();
-    e.currentTarget.setPointerCapture(e.pointerId);
+  // Starting to scrub: measure the page and take hold of the finger. Done on a deliberate press (see onDown).
+  function begin(handle: HTMLElement, pointerId: number, finger: number | null) {
+    const g = glide.current;
+    try { handle.setPointerCapture(pointerId); } catch { /* the finger already lifted */ }
     tell(true); // the bars go away first, so the tops below are measured with them gone
     // Each day's page offset (past its sticky-bar margin), measured once: nothing reflows while dragging.
     g.tops = rows.map(r => {
@@ -80,18 +82,38 @@ export function DayScrubber({ rows, currentId }: { rows: ItineraryRow[]; current
     g.end = Math.max(g.start, document.documentElement.scrollHeight - window.innerHeight);
     // The handle moves to where the page really is, and the finger keeps its grip on it: touching
     // doesn't move the page, and the page only moves as the finger does.
-    const trackBox = e.currentTarget.parentElement?.getBoundingClientRect() ?? box;
+    const trackBox = handle.parentElement?.getBoundingClientRect() ?? handle.getBoundingClientRect();
     const here = fractionAtOffset(g.y, g.start, g.end);
-    g.grab = (fingerY(e) ?? trackBox.top + here * trackBox.height) - (trackBox.top + here * trackBox.height);
+    g.grab = (finger ?? trackBox.top + here * trackBox.height) - (trackBox.top + here * trackBox.height);
     g.target = g.y;
     g.velocity = 0;
     g.dragging = true;
     setDragAt({ fraction: here, index: indexAtOffset(g.y, g.tops) });
-    scrubNote(`DOWN y=${Math.round(g.y)} start=${Math.round(g.start)} end=${Math.round(g.end)} here=${here.toFixed(3)} idx=${indexAtOffset(g.y, g.tops)} tops=${g.tops.slice(0, 3).map(Math.round)}..${g.tops.slice(-2).map(Math.round)} grab=${Math.round(g.grab)} track=${Math.round(trackBox.top)}+${Math.round(trackBox.height)} finger=${Math.round(e.clientY)} sh=${document.documentElement.scrollHeight}`);
+    scrubNote(`DOWN y=${Math.round(g.y)} start=${Math.round(g.start)} end=${Math.round(g.end)} here=${here.toFixed(3)} idx=${indexAtOffset(g.y, g.tops)} tops=${g.tops.slice(0, 3).map(Math.round)}..${g.tops.slice(-2).map(Math.round)} grab=${Math.round(g.grab)} track=${Math.round(trackBox.top)}+${Math.round(trackBox.height)} finger=${Math.round(finger ?? -1)} sh=${document.documentElement.scrollHeight}`);
   }
+  // The handle sits where a thumb rests while scrolling, so a quick flick that starts on it must not throw
+  // the page across the whole trip: a finger (or pen) has to stay put on it for HOLD_MS before it scrubs.
+  // Moving sooner starts nothing. A mouse scrubs at once.
+  const press = useRef({ timer: 0, x: 0, y: 0, lastY: null as number | null });
+  function onDown(e: PointerEvent<HTMLDivElement>) {
+    const handle = e.currentTarget, id = e.pointerId, p = press.current;
+    window.clearTimeout(p.timer);
+    p.x = e.clientX; p.y = e.clientY; p.lastY = fingerY(e);
+    if (e.pointerType === "mouse") { begin(handle, id, p.lastY); return; }
+    p.timer = window.setTimeout(() => { p.timer = 0; begin(handle, id, p.lastY); }, HOLD_MS);
+  }
+  useEffect(() => () => window.clearTimeout(press.current.timer), []);
   function onMove(e: PointerEvent<HTMLDivElement>) {
     const g = glide.current, box = track.current?.getBoundingClientRect();
-    if (!g.dragging || !box) return;
+    if (!g.dragging) {
+      // Moved before the hold finished: this is a scroll, not a scrub.
+      if (press.current.timer && Math.hypot(e.clientX - press.current.x, e.clientY - press.current.y) > 8) {
+        window.clearTimeout(press.current.timer);
+        press.current.timer = 0;
+      } else press.current.lastY = fingerY(e) ?? press.current.lastY;
+      return;
+    }
+    if (!box) return;
     const finger = fingerY(e);
     if (finger === null) return; // an impossible reading: keep the last target
     const fraction = fractionAtPointer(finger - g.grab, box.top, box.height);
@@ -101,6 +123,9 @@ export function DayScrubber({ rows, currentId }: { rows: ItineraryRow[]; current
     if (!g.frame) { g.last = performance.now(); g.frame = requestAnimationFrame(tick); }
   }
   function onUp() {
+    window.clearTimeout(press.current.timer);
+    press.current.timer = 0;
+    if (!glide.current.dragging) return; // never held long enough to scrub: nothing was started
     glide.current.dragging = false;
     setDragAt(null);
     tell(false);
