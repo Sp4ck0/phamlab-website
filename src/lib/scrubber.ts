@@ -16,19 +16,29 @@ export function indexAtPointer(y: number, top: number, height: number, count: nu
   return Math.round(f * (count - 1));
 }
 
-// The same, but not rounded: 2.5 means halfway between item 2 and item 3, so a drag can move the
-// page smoothly between days instead of snapping from one to the next.
-export function positionAtPointer(y: number, top: number, height: number, count: number): number {
-  if (count < 2 || height <= 0) return 0;
-  return Math.min(1, Math.max(0, (y - top) / height)) * (count - 1);
+// Where a pointer at `y` sits along the track, 0 at the top to 1 at the bottom.
+export function fractionAtPointer(y: number, top: number, height: number): number {
+  if (height <= 0) return 0;
+  return Math.min(1, Math.max(0, (y - top) / height));
 }
 
-// The page offset for a position between items, given each item's page offset.
-export function offsetAtPosition(position: number, offsets: number[]): number {
-  if (offsets.length === 0) return 0;
-  const i = Math.min(offsets.length - 1, Math.max(0, Math.floor(position)));
-  const next = offsets[i + 1];
-  return next === undefined ? offsets[i] : offsets[i] + (position - i) * (next - offsets[i]);
+// The scrubber works like a native scrollbar: the handle's place along the track is the share of
+// the page scrolled (from `start`, the first day, to `end`, the furthest the page scrolls), so a
+// tall opened-up day takes a long stretch of track instead of a leap in a tiny one.
+export function offsetAtFraction(fraction: number, start: number, end: number): number {
+  return start + Math.min(1, Math.max(0, fraction)) * Math.max(0, end - start);
+}
+
+export function fractionAtOffset(offset: number, start: number, end: number): number {
+  if (end <= start) return 0;
+  return Math.min(1, Math.max(0, (offset - start) / (end - start)));
+}
+
+// The day shown at a page offset: the last one whose top is at or above it (`tops` ascending).
+export function indexAtOffset(offset: number, tops: number[]): number {
+  let found = 0;
+  for (let i = 0; i < tops.length; i++) if (tops[i] <= offset + 1) found = i;
+  return found;
 }
 
 // One step of a critically damped spring toward `target`: it speeds up away from rest and slows

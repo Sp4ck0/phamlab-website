@@ -3,7 +3,7 @@ import type { KeyboardEvent, PointerEvent } from "react";
 import type { ItineraryRow } from "../../lib/itineraryState";
 import { DOW, MON } from "../../lib/tripLogic";
 import { SCRUBBER_EVENT } from "../../lib/hideBars";
-import { offsetAtPosition, positionAtPointer, smoothDamp } from "../../lib/scrubber";
+import { fractionAtOffset, fractionAtPointer, indexAtOffset, offsetAtFraction, smoothDamp } from "../../lib/scrubber";
 
 const tell = (active: boolean) => window.dispatchEvent(new CustomEvent(SCRUBBER_EVENT, { detail: { active } }));
 const label = (r: ItineraryRow) => `${DOW[r.day._d.getDay()]}, ${MON[r.day._d.getMonth()]} ${r.day._d.getDate()}`;
@@ -13,15 +13,16 @@ const label = (r: ItineraryRow) => `${DOW[r.day._d.getDay()]}, ${MON[r.day._d.ge
 // without opening it, so scrubbing past many days doesn't reflow the page.
 export function DayScrubber({ rows, currentId }: { rows: ItineraryRow[]; currentId?: string }) {
   const track = useRef<HTMLDivElement>(null);
-  // While dragging: where the finger is, as a position between days (2.5 = halfway from day 2 to 3).
-  const [dragAt, setDragAt] = useState<number | null>(null);
+  // While dragging: how far down the track the handle is (0 to 1, the share of the page scrolled)
+  // and the day the page is at there.
+  const [dragAt, setDragAt] = useState<{ fraction: number; index: number } | null>(null);
   const currentIndex = Math.max(0, rows.findIndex(r => r.id === currentId));
-  const position = dragAt ?? currentIndex;
-  const index = Math.round(position);
+  const index = dragAt?.index ?? currentIndex;
+  const handleTop = dragAt ? dragAt.fraction : rows.length < 2 ? 0 : currentIndex / (rows.length - 1);
   // The page glides toward where the finger points instead of being pinned to it: a spring chases
   // the target scroll offset each frame, so it speeds up, slows into place, and carries on a moment
   // after the finger lifts.
-  const glide = useRef({ frame: 0, last: 0, y: 0, velocity: 0, target: 0, tops: [] as number[], grab: 0, dragging: false });
+  const glide = useRef({ frame: 0, last: 0, y: 0, velocity: 0, target: 0, tops: [] as number[], start: 0, end: 0, grab: 0, dragging: false });
 
   useEffect(() => () => cancelAnimationFrame(glide.current.frame), []);
 
@@ -51,19 +52,25 @@ export function DayScrubber({ rows, currentId }: { rows: ItineraryRow[]; current
       const el = document.getElementById(r.id);
       return el ? el.getBoundingClientRect().top + window.scrollY - (parseFloat(getComputedStyle(el).scrollMarginTop) || 0) : 0;
     });
-    g.grab = e.clientY - (box.top + box.height / 2); // grabbed off-centre: the handle doesn't jump to the finger
     g.y = window.scrollY;
+    g.start = g.tops[0] ?? 0;
+    g.end = Math.max(g.start, document.documentElement.scrollHeight - window.innerHeight);
+    // The handle moves to where the page really is, and the finger keeps its grip on it: touching
+    // doesn't move the page, and the page only moves as the finger does.
+    const trackBox = e.currentTarget.parentElement?.getBoundingClientRect() ?? box;
+    const here = fractionAtOffset(g.y, g.start, g.end);
+    g.grab = e.clientY - (trackBox.top + here * trackBox.height);
     g.target = g.y;
     g.velocity = 0;
     g.dragging = true;
-    setDragAt(currentIndex);
+    setDragAt({ fraction: here, index: indexAtOffset(g.y, g.tops) });
   }
   function onMove(e: PointerEvent<HTMLDivElement>) {
     const g = glide.current, box = track.current?.getBoundingClientRect();
     if (!g.dragging || !box) return;
-    const pos = positionAtPointer(e.clientY - g.grab, box.top, box.height, rows.length);
-    setDragAt(pos);
-    g.target = offsetAtPosition(pos, g.tops);
+    const fraction = fractionAtPointer(e.clientY - g.grab, box.top, box.height);
+    g.target = offsetAtFraction(fraction, g.start, g.end);
+    setDragAt({ fraction, index: indexAtOffset(g.target, g.tops) });
     if (!g.frame) { g.last = performance.now(); g.frame = requestAnimationFrame(tick); }
   }
   function onUp() {
@@ -91,7 +98,7 @@ export function DayScrubber({ rows, currentId }: { rows: ItineraryRow[]; current
         aria-valuemax={rows.length}
         aria-valuenow={index + 1}
         aria-valuetext={label(rows[index])}
-        style={{ top: `${rows.length < 2 ? 0 : (position / (rows.length - 1)) * 100}%` }}
+        style={{ top: `${handleTop * 100}%` }}
         onKeyDown={onKey}
         onTouchStart={e => e.stopPropagation()}
         onTouchEnd={e => e.stopPropagation()}
