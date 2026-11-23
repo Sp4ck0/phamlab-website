@@ -35,7 +35,7 @@ test('every pin comes from an entry: removing the activity removes its pin', () 
   assert.equal(byName(derivePoints(without)).Noodles, undefined);
 });
 
-const item = (id, fields) => ({ key: `item:${id}`, kind: 'consider', scope: { kind: 'trip' }, title: `Idea ${id}`, refs: [], refsDone: [], done: false, dueDate: null, dueDateIsDefault: false, editable: true, ...fields });
+const item = (id, fields) => ({ key: `item:${id}`, kind: 'proposed', scope: { kind: 'trip' }, title: `Idea ${id}`, refs: [], refsDone: [], done: false, dueDate: null, dueDateIsDefault: false, editable: true, ...fields });
 
 test("an item's places and its draft hotel or activity are ghost pins, with the draft's category and the item's days", () => {
   const tasks = [

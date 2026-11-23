@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import type { ActionItem, Group, Place, Priority } from "../../lib/types";
 import type { ActionItemFields } from "../../hooks/useActionItemEdits";
 import { fmtShort } from "../../lib/tripLogic";
-import { isProposed, PRIORITY_LABELS } from "../../lib/tasks";
+import { PRIORITY_LABELS } from "../../lib/tasks";
 import { TAG_EMOJI } from "../../lib/calendar";
 import { serverMessage } from "../../lib/serverError";
 import { AutoTextarea } from "./AutoTextarea";
@@ -48,7 +48,7 @@ function errorText(e: unknown) {
 export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initial, onSave, onCancel }: Props) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [detail, setDetail] = useState(initial?.detail ?? "");
-  const [kind, setKind] = useState<"custom" | "proposed">(isProposed(initial?.kind ?? defaultKind) ? "proposed" : "custom");
+  const [kind, setKind] = useState<"custom" | "proposed">((initial?.kind ?? defaultKind) === "proposed" ? "proposed" : "custom");
   const [priority, setPriority] = useState<Priority | undefined>(initial?.priority);
   const [places, setPlaces] = useState<Place[]>(initial?.places ?? []);
   // The scope follows from the fields: no date = whole trip, a date = that day,
