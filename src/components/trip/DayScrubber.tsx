@@ -2,8 +2,10 @@ import { useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent } from "react";
 import type { ItineraryRow } from "../../lib/itineraryState";
 import { DOW, MON } from "../../lib/tripLogic";
+import { SCRUBBER_EVENT } from "../../lib/hideBars";
 import { offsetAtPosition, positionAtPointer } from "../../lib/scrubber";
 
+const tell = (active: boolean) => window.dispatchEvent(new CustomEvent(SCRUBBER_EVENT, { detail: { active } }));
 const label = (r: ItineraryRow) => `${DOW[r.day._d.getDay()]}, ${MON[r.day._d.getMonth()]} ${r.day._d.getDate()}`;
 
 // A slim drag handle down the right edge for long itineraries, on touch screens only (CSS). Only the
@@ -65,10 +67,10 @@ export function DayScrubber({ rows, currentId }: { rows: ItineraryRow[]; current
         onKeyDown={onKey}
         onTouchStart={e => e.stopPropagation()}
         onTouchEnd={e => e.stopPropagation()}
-        onPointerDown={e => { e.currentTarget.setPointerCapture(e.pointerId); setDragAt(currentIndex); }}
+        onPointerDown={e => { e.currentTarget.setPointerCapture(e.pointerId); setDragAt(currentIndex); tell(true); }}
         onPointerMove={onMove}
-        onPointerUp={() => setDragAt(null)}
-        onPointerCancel={() => setDragAt(null)}
+        onPointerUp={() => { setDragAt(null); tell(false); }}
+        onPointerCancel={() => { setDragAt(null); tell(false); }}
       >
         {dragAt !== null && <span className="day-scrubber-bubble" aria-hidden="true">{label(rows[index])}</span>}
       </div>

@@ -44,6 +44,9 @@ export function headerOffset(top: number, line: number, maxTop: number): number 
   return Math.min(Math.max(top, line), maxTop) - top;
 }
 
+// The day scrubber (DayScrubber) sends this, with `active` true while it is being dragged.
+export const SCRUBBER_EVENT = "day-scrubber";
+
 const SETTLE_AFTER_MS = 120; // no scroll events for this long (and no finger down): scrolling has stopped
 const SETTLE_MS = 180;
 
@@ -66,6 +69,9 @@ export function useScrollLinkedBars(page: RefObject<HTMLElement | null>, on: boo
     let frame = 0;
     let idle = 0;
     let tween = 0;
+    // While the day scrubber is dragged the bars stay hidden, and stay hidden after it lets go: only
+    // the reader scrolling back up by hand brings them back (the same path as after any scroll down).
+    let scrubbing = false;
 
     // Each bar's pinned line and own margins, read while it is still pinned by CSS.
     const pinned = new Map<HTMLElement, { line: number; mb: number }>();
@@ -240,6 +246,11 @@ export function useScrollLinkedBars(page: RefObject<HTMLElement | null>, on: boo
       const y = window.scrollY;
       const dy = y - lastY;
       lastY = y;
+      if (scrubbing) {
+        stack("bottom");
+        placeHeaders();
+        return;
+      }
       if (!released) {
         if (byHand && dy > 0 && y > 0) release();
       } else {
@@ -270,6 +281,18 @@ export function useScrollLinkedBars(page: RefObject<HTMLElement | null>, on: boo
       stopTween();
     };
     const tap = () => { byHand = false; };
+    const onScrubber = (e: Event) => {
+      scrubbing = !!(e as CustomEvent<{ active: boolean }>).detail?.active;
+      stopTween();
+      window.clearTimeout(idle);
+      if (scrubbing && !released) release();
+      if (!released) return;
+      // Hidden behind the site bar right away (also when it lets go), and the page's own bar logic
+      // ignores this scrolling: it is not the reader scrolling by hand.
+      stack("bottom");
+      placeHeaders();
+      byHand = false;
+    };
     const onKey = (e: KeyboardEvent) => { if (/^(Arrow(Up|Down)|Page(Up|Down)|Home|End| )$/.test(e.key)) byHand = true; };
     // Keyboard focus reaching a bar brings them back, so you can see where you are.
     const onFocus = (e: FocusEvent) => {
@@ -289,6 +312,7 @@ export function useScrollLinkedBars(page: RefObject<HTMLElement | null>, on: boo
     window.addEventListener("touchcancel", onTouchEnd, { passive: true });
     window.addEventListener("wheel", hand, { passive: true });
     window.addEventListener("click", tap, true);
+    window.addEventListener(SCRUBBER_EVENT, onScrubber);
     window.addEventListener("keydown", onKey);
     document.addEventListener("focusin", onFocus);
     return () => {
@@ -302,6 +326,7 @@ export function useScrollLinkedBars(page: RefObject<HTMLElement | null>, on: boo
       window.removeEventListener("touchcancel", onTouchEnd);
       window.removeEventListener("wheel", hand);
       window.removeEventListener("click", tap, true);
+      window.removeEventListener(SCRUBBER_EVENT, onScrubber);
       window.removeEventListener("keydown", onKey);
       document.removeEventListener("focusin", onFocus);
       pin();
