@@ -469,6 +469,8 @@ button.route-chip[aria-expanded=true]{box-shadow:inset 0 0 0 1.5px var(--text-mu
    closed, up open) and opens or closes from a tap anywhere on it. A static card has neither. */
 .tl{list-style:none;margin:0;padding:0}
 .tl-heading-row{display:flex;align-items:center;gap:8px;margin:4px 0 8px}
+.day-todos{margin-top:14px}
+.day-todos .action-completed{margin-top:8px}
 .tl-heading-row h3{margin:0;font-size:15px;font-weight:700;color:var(--text-primary)}
 .tl-count{font-size:12px;font-weight:600;color:var(--text-secondary);border:1px solid var(--border);border-radius:999px;padding:1px 8px}
 .tl-entry,.tl-now{position:relative;scroll-margin-top:66px}

@@ -37,7 +37,7 @@ export function kindLabel(t: Task): string | undefined {
   if (t.kind === "transport") return "Transport";
   if (t.kind === "details") return "Missing details";
   if (t.kind === "deadline") return "Free cancellation";
-  if (t.kind === "consider") return "Considering";
+  if (t.kind === "consider") return "Proposed";
   return undefined;
 }
 

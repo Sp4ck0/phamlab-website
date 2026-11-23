@@ -22,7 +22,7 @@ export interface ItemTileArgs {
   groups: Group[];
   pendingVotes: Record<string, Vote | null>;
   onVote: (itemId: string, vote: Vote | null) => void;
-  // A to-do's tick (a consideration's state is its task's).
+  // A to-do's tick (a proposed item's state is its task's).
   done: boolean;
   // The day an itinerary entry approved from this item is on, if any.
   linkedOn?: string;
@@ -53,10 +53,10 @@ export function linkedItems(days: ResolvedDay[]): Map<string, string> {
 
 export type DescribedItem ={ defaultOpen: boolean; forceOpen?: boolean; tile: Omit<TimelineTileProps, "open" | "onToggle" | "onReveal"> };
 
-// A to-do or consideration as a tile, the same on a day card and in the Under consideration list.
-// A consideration is a potential itinerary entry: drawn like the hotel, transport or activity it
+// A to-do or proposed item as a tile, the same on a day card and in the Proposed items list.
+// A proposed item (kind "consider") is a potential itinerary entry: drawn like the hotel, transport or activity it
 // proposes (dashed, as not yet in the plan), voted on with the buttons in its header, and added
-// to the itinerary (or dropped) from its body. A to-do ticks off in its menu.
+// to the itinerary (or dropped) from its body. A to-do is only ever ticked off, from its menu.
 export function describeItemTile(a: ItemTileArgs): DescribedItem {
   const { id, task, todo } = a.item;
   const consider = !!task;
@@ -85,22 +85,6 @@ export function describeItemTile(a: ItemTileArgs): DescribedItem {
   const date = a.day?.day.date;
 
   const doneItem: TileMenuItem[] = consider || !a.onToggleActionItem ? [] : [{ label: done ? "Mark as not done" : "Mark as done", icon: done ? "uncheck" : "check", onSelect: () => a.onToggleActionItem!(id) }];
-  // A to-do is added from its menu; a consideration from its body (ConsiderActions).
-  const approveItem: TileMenuItem[] =
-    !consider && open && a.onPromote && proposes && a.onDay
-      ? [{
-          label: "Add to itinerary",
-          icon: "add",
-          onSelect: async () => {
-            try {
-              await a.onPromote!(id, a.onDay!);
-              return "Added to the itinerary";
-            } catch (e) {
-              return serverMessage(e, "Couldn't add it — try again.");
-            }
-          },
-        }]
-      : [];
   // Settling without adding it, for something that isn't an itinerary entry ("we'll take taxis").
   const chooseItem: TileMenuItem[] =
     consider && !task!.outcome && !linked && a.onSetOutcome ? [{ label: "Mark chosen without adding", icon: "check", onSelect: () => a.onSetOutcome!(task!.key, "chosen") }] : [];
@@ -128,13 +112,13 @@ export function describeItemTile(a: ItemTileArgs): DescribedItem {
     );
   })();
 
-  const state = consider ? (task!.outcome === "chosen" ? "Chosen" : task!.outcome === "dropped" ? "Dropped" : "Idea") : undefined;
+  const state = consider ? (task!.outcome === "chosen" ? "Chosen" : task!.outcome === "dropped" ? "Dropped" : "Not finalized") : undefined;
   return {
     defaultOpen: open,
     forceOpen: !!a.editor,
     tile: {
       domId: a.domId, time: a.time, icon, title, warn: !consider && open,
-      menu: [...doneItem, ...approveItem, ...chooseItem, ...a.menu],
+      menu: [...doneItem, ...chooseItem, ...a.menu],
       meta: [consider ? undefined : done ? "Done" : "To-do", what, range, who ? gapLabel(who, a.groups, start ?? date ?? "")?.label : undefined, priority ? `${PRIORITY_LABELS[priority]} priority` : undefined].filter(Boolean).join(" · "),
       className: `tl-item${consider ? " tl-consider" : ""}${done ? " is-done" : ""}`,
       headerEnd: consider ? (
@@ -178,7 +162,7 @@ export function describeItemTile(a: ItemTileArgs): DescribedItem {
   };
 }
 
-// 👍 / 👎 in a consideration's header: a tap votes, a second tap takes it back. Voting is over once it is settled.
+// 👍 / 👎 in a proposed item's header: a tap votes, a second tap takes it back. Voting is over once it is settled.
 export function VoteButtons({ id, title, task, pending, onVote }: { id: string; title: string; task: Task; pending: Vote | null | undefined; onVote: (itemId: string, vote: Vote | null) => void }) {
   const { mine, yes, no } = voteTally(task, pending);
   const over = !!task.outcome;
@@ -247,8 +231,8 @@ function ConsiderActions({ id, task, pending, linkedOn, days, hotel, onPromote, 
           </button>
         )}
         {linkedOn && onUnpromote && (
-          <button type="button" className="ai-btn" disabled={busy} onClick={() => run(() => onUnpromote(id), "Back under consideration")}>
-            Back to considering
+          <button type="button" className="ai-btn" disabled={busy} onClick={() => run(() => onUnpromote(id), "Back to proposed items")}>
+            Back to proposed
           </button>
         )}
         {!task.outcome && !linkedOn && onSetOutcome && (

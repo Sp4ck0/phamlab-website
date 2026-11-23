@@ -5,7 +5,7 @@
 // transport with no usable time, then the activities in their stored order. A
 // transport row with a real departure time on this day is slotted in among the
 // activities that have times; nothing else moves. Only-gaps placeholders and the
-// tour box close the day. To-dos and considerations that cover the day follow the
+// tour box close the day. Proposed items that cover the day follow the
 // same rule as transport: one with a time is slotted among the timed activities, one
 // without goes after the activities.
 import type { Change } from "./changeDiff";
@@ -18,7 +18,7 @@ import type { Act, ActionItem, ResolvedDay, Task } from "./types";
 /** An activity row as DayCard builds it: its diff state, its real index (-1 for a ghost) and, for a rewrite, the old wording. */
 export type ActRow = Change<Act> & { prev?: Act; ai: number };
 
-/** An action item on a day: a to-do (`todo`) or a consideration (`task`). `time` only counts on its own first day. */
+/** An action item on a day: a to-do (`todo`, shown in the day's own block, not the timeline) or a proposed item (`task`). `time` only counts on its own first day. */
 export interface DayItem {
   id: string;
   time?: string;
@@ -54,7 +54,7 @@ export interface TimelineInput {
   acts: ActRow[];
   /** Only gaps: transport still to be entered, as placeholder tiles. */
   gaps: Task[];
-  /** To-dos and considerations that cover this day. */
+  /** Proposed items that cover this day. */
   items?: DayItem[];
   /** Nothing is planned for the day yet: a placeholder tile where the activities would be. */
   plan?: boolean;

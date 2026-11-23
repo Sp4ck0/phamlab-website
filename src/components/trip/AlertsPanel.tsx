@@ -92,10 +92,10 @@ export function AlertsPanel({
                   <button
                     type="button"
                     className="ai-chip"
-                    aria-label={`Go to ${t.title} under consideration`}
+                    aria-label={`Go to ${t.title} as a proposed item`}
                     onClick={() => document.getElementById(`ai-row-${id}`)?.scrollIntoView({ block: "center", behavior: "smooth" })}
                   >
-                    Considering ↓
+                    Proposed ↓
                   </button>
                 ) : (
                   <input
