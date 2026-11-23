@@ -434,10 +434,15 @@ export function CardDrawer({
                 </div>
               </div>
 
-              <label className="field">
-                <span className="label">Check back on</span>
+              {/* A div, not a label: the Clear button must not sit inside a label,
+                  or on iOS a tap that misses its text opens the calendar instead. */}
+              <div className="field">
+                <label className="label" htmlFor="check-back-on">
+                  Check back on
+                </label>
                 <div className="field__row">
                   <input
+                    id="check-back-on"
                     type="date"
                     max="9999-12-31"
                     value={followUp}
@@ -467,7 +472,7 @@ export function CardDrawer({
                     </button>
                   )}
                 </div>
-              </label>
+              </div>
 
               <Thread
                 card={card}
