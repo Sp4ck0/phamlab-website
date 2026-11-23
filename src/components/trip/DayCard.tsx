@@ -73,7 +73,7 @@ interface Props {
   tiles: TileOpen;
   onToggle: (ids: string[], status: Status) => void;
   dayActionItems: ActionItem[];
-  // Considerations that cover this day (day / range scope; open or chosen), shown
+  // Proposed items that cover this day (day / range scope; open or chosen), shown
   // as a dashed strip so they read as candidates, not plans.
   dayConsiderations: Task[];
   pendingVotes: Record<string, Vote | null>;
@@ -87,9 +87,9 @@ interface Props {
   itemTasks?: Record<string, Task>;
   // "Add to itinerary": approves an item into the days (convex actionItems.promoteActionItem).
   onPromote?: (id: string, date: string) => Promise<unknown>;
-  // "Back to considering": takes what was approved from an item back out (actionItems.unpromoteActionItem).
+  // "Back to proposed": takes what was approved from an item back out (actionItems.unpromoteActionItem).
   onUnpromote?: (id: string) => Promise<unknown>;
-  // Drop or reopen a consideration.
+  // Drop or reopen a proposed item.
   onSetOutcome?: (key: string, outcome: Outcome | null) => void;
   // A photo of the day's city for its header; without it the header shows the leg's colour.
   cityPhoto?: CityPhotoFetcher;
@@ -247,19 +247,24 @@ export function DayCard({
   // A booked transport tile that still lacks a required field has an open `details` task
   // (until it is dismissed). A merged tile matches any of its rows.
   const missingDetails = (g: FlightGroup) => (gaps?.details ?? []).some((t) => g.ids.some((id) => t.key === `details:${id}`));
-  // Under Only gaps, a to-do or consideration that is done or settled is not a gap.
+  // Under Only gaps, a to-do or proposed item that is done or settled is not a gap.
   const shownConsiderations = gapsOnly ? dayConsiderations.filter((t) => !t.done) : dayConsiderations;
   const shownActionItems = gapsOnly ? dayActionItems.filter((item) => !actionItemsDone[item.id]) : dayActionItems;
   // Items already written into the itinerary (an entry links back to them), with the first day each is on.
   const linkedOn = linkedItems(days ?? [d]);
-  // To-dos and considerations that cover this day are tiles too; a time only counts on the item's own first day.
+  // Proposed items that cover this day are tiles on the timeline; a time only counts on the item's own first day.
   // Once an entry has been written from an item, the entry is the tile (its votes are the History
-  // folded into it), so the item doesn't show a second time; it stays in the Under consideration
+  // folded into it), so the item doesn't show a second time; it stays in the Proposed items
   // list, where it can be taken back out of the itinerary.
-  const dayItems: DayItem[] = [
-    ...shownConsiderations.map((t) => ({ id: t.key.slice("item:".length), task: t, time: (t.scope.kind === "day" ? t.scope.date : t.scope.kind === "range" ? t.scope.start : undefined) === d.date ? t.time : undefined })),
-    ...shownActionItems.map((i) => ({ id: i.id, todo: i, time: i.date === d.date ? i.time : undefined })),
-  ].filter((x) => !linkedOn.has(x.id));
+  const dayItems: DayItem[] = shownConsiderations
+    .map((t) => ({ id: t.key.slice("item:".length), task: t, time: (t.scope.kind === "day" ? t.scope.date : t.scope.kind === "range" ? t.scope.start : undefined) === d.date ? t.time : undefined }))
+    .filter((x) => !linkedOn.has(x.id));
+  // To-dos are not part of the schedule: they sit in a block at the bottom of the day, done ones folded away.
+  const dayTodos: DayItem[] = shownActionItems
+    .filter((i) => !linkedOn.has(i.id))
+    .map((i) => ({ id: i.id, todo: i, time: i.date === d.date ? i.time : undefined }));
+  const openTodos = dayTodos.filter((x) => !actionItemsDone[x.id]);
+  const doneTodos = dayTodos.filter((x) => actionItemsDone[x.id]);
   // An entry approved from an item: what was weighed and how the votes went, folded away at the end of the tile.
   const history = (fromItem?: string) => {
     const t = fromItem ? itemTasks?.[fromItem] : undefined;
@@ -269,7 +274,7 @@ export function DayCard({
       <details className="tl-history">
         <summary>History</summary>
         <div className="tl-history-body">
-          <div className="cmeta"><b>{t.kind === "consider" ? "Considered as" : "From the to-do"}:</b> {plain(sanitizeHtml(t.title))}</div>
+          <div className="cmeta"><b>{t.kind === "consider" ? "Proposed as" : "From the to-do"}:</b> {plain(sanitizeHtml(t.title))}</div>
           {t.detail && <div className="cmeta" dangerouslySetInnerHTML={{ __html: sanitizeHtml(t.detail) }} />}
           {t.kind === "consider" && (
             <div className="cmeta">
@@ -542,7 +547,7 @@ export function DayCard({
       },
     };
   };
-  // A to-do or consideration on the timeline (itemTile.tsx, shared with the Under consideration list).
+  // A proposed item on the timeline, or a to-do in the day's block (itemTile.tsx, shared with the Proposed items list).
   function describeItem(entry: Extract<TimelineEntry, { kind: "item" }>): Described {
     const { id, task, todo } = entry.item;
     const proposes = task?.proposes ?? todo?.proposes;
@@ -565,7 +570,7 @@ export function DayCard({
       menu: [
         ...mapsItem((places ?? [])[0]),
         ...rideItems((places ?? [])[0]),
-        // Jumps to this item in the Action Items or Under consideration list (where it is edited).
+        // Jumps to this item in the Action Items or Proposed items list (where it is edited).
         { label: task ? "Edit in list" : "Open in list", icon: task ? "edit" : "list", onSelect: () => { if (slug) showFocus({ slug, target: { kind: "actionItem", id }, nonce: `${Date.now()}` }); } },
         copyItem({ task: `item:${id}` }),
         ...draftItems,
@@ -698,6 +703,33 @@ export function DayCard({
           )}
 
 
+
+          {dayTodos.length > 0 && (
+            <div className="day-todos">
+              <div className="tl-heading-row">
+                <h3>Action items</h3>
+                <span className="tl-count">{openTodos.length} open</span>
+              </div>
+              {[openTodos, doneTodos].map((list, n) => {
+                if (list.length === 0) return null;
+                const rows = (
+                  <ol className="tl">
+                    {list.map((item) => {
+                      const key = `item:${item.id}`;
+                      const x = describeItem({ kind: "item", key, domKey: key, time: item.time, item });
+                      return <TimelineTile key={key} {...x.tile} placePhoto={placePhoto} open={isOpenTile(x)} onToggle={() => tiles.toggle(idOf(x.key), x.defaultOpen)} onReveal={() => tiles.reveal(idOf(x.key))} />;
+                    })}
+                  </ol>
+                );
+                return n === 0 ? <Fragment key="open">{rows}</Fragment> : (
+                  <details key="done" className="action-completed">
+                    <summary>Completed ({list.length})</summary>
+                    {rows}
+                  </details>
+                );
+              })}
+            </div>
+          )}
 
           {!gapsOnly && d.callout && (
             <div className={`note${old && !old.callout && old.callout !== d.callout ? " chg-new" : ""}`}>

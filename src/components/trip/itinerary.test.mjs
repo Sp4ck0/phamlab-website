@@ -1266,7 +1266,7 @@ test('Only gaps: booked tiles start closed and actionable ones open, whatever th
 // ---- to-dos and considerations on the timeline ----
 const consider = (id, extra = {}) => ({ key: `item:${id}`, kind: 'consider', scope: { kind: 'day', date: day.date }, title: `Synthetic ${id}`, refs: [`item:${id}`], refsDone: [false], done: false, dueDate: null, dueDateIsDefault: true, editable: true, votes: { yes: [], no: [], mine: null }, ...extra });
 
-test('dated to-dos and considerations are tiles on the day: a timed one among the activities, an untimed one after them', async () => {
+test('dated proposed items are tiles on the day, a timed one among the activities; to-dos sit in their own block at the bottom', async () => {
   const votes = [];
   const ticks = [];
   const synthetic = { ...day, acts: [{ time: '09:00', text: 'Synthetic morning' }, { time: '15:00', text: 'Synthetic afternoon' }] };
@@ -1275,11 +1275,14 @@ test('dated to-dos and considerations are tiles on the day: a timed one among th
     dayConsiderations: [consider('lunch', { time: '12:00', votes: { yes: ['Ann'], no: [], mine: null } })], dayActionItems: [todo],
     onVote: (...a) => votes.push(a), onToggleActionItem: (id) => ticks.push(id) }));
   try {
-    const titles = [...view.container.querySelectorAll('.tl-entry .tl-title')].map((t) => t.textContent);
-    assert.deepEqual(titles, ['Synthetic morning', 'Synthetic lunch', 'Synthetic afternoon', 'Synthetic to-do']);
+    const titles = [...view.container.querySelectorAll('.tl-entry .tl-title')].filter((t) => !t.closest('.day-todos')).map((t) => t.textContent);
+    assert.deepEqual(titles, ['Synthetic morning', 'Synthetic lunch', 'Synthetic afternoon']); // the to-do is not on the timeline
+    const block = view.container.querySelector('.day-todos');
+    assert.deepEqual([...block.querySelectorAll('.tl-title')].map((t) => t.textContent), ['Synthetic to-do']);
+    assert.equal(block.compareDocumentPosition(view.container.querySelector('.tl-consider')) & 2, 2); // the block comes after the schedule
     const lunch = view.container.querySelector('.tl-consider');
     assert.equal(lunch.closest('.tl-entry').querySelector('.tl-time').textContent, '12:00');
-    assert.equal(lunch.querySelector('.consider-pill').textContent, 'Idea');
+    assert.equal(lunch.querySelector('.consider-pill').textContent, 'Not finalized');
     // Voting is the 👍 / 👎 in the card's header, so it works while the card is closed, and never toggles it.
     const before = lunch.querySelector('.tl-toggle').getAttribute('aria-expanded');
     const yes = lunch.querySelector('.tl-head .vote-btn[data-vote=yes]');
@@ -1344,7 +1347,7 @@ test('in the Under consideration list, an item already in the itinerary says whe
     const item = view.container.querySelector('.tl-consider');
     assert.ok(item.textContent.includes('In the itinerary on Jan 2.'));
     const buttons = [...item.querySelectorAll('.consider-actions button')].map((b) => b.textContent);
-    assert.deepEqual(buttons, ['Back to considering']); // already added: no Add, no Drop
+    assert.deepEqual(buttons, ['Back to proposed']); // already added: no Add, no Drop
     assert.ok([...item.querySelectorAll('.vote-btn')].every((b) => b.disabled)); // voting is over
     await act(async () => item.querySelector('.consider-actions button').click());
     assert.deepEqual(back, ['dinner']);

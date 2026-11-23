@@ -25,7 +25,7 @@ const SCOPES: { id: Scope; label: string }[] = [
   { id: "day", label: "One day" },
   { id: "range", label: "Date range" },
 ];
-const KIND_LABELS = { custom: "TO-DO", consider: "Consider" } as const;
+const KIND_LABELS = { custom: "TO-DO", consider: "Proposed item" } as const;
 const PRIORITIES: Priority[] = ["high", "medium", "low"];
 
 // "Everyone" is stored as no `who` at all, so only real group ids are chips.
@@ -173,7 +173,7 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
           <AutoTextarea
             ref={titleRef}
             className="ai-input"
-            placeholder={kind === "consider" ? "What are we weighing?" : "What needs doing?"}
+            placeholder={kind === "consider" ? "What are we proposing?" : "What needs doing?"}
             maxLength={120}
             value={title}
             onChange={(e) => setTitle(oneLine(e.target.value))}

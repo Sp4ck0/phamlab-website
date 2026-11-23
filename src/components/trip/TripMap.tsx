@@ -705,7 +705,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
         const task = considerationById.current.get(p.id.split("|")[1] ?? "");
         const live =
           task?.kind === "consider"
-            ? task.outcome === "chosen" ? "Chosen" : "Under consideration"
+            ? task.outcome === "chosen" ? "Chosen" : "Proposed"
             : `To-do${task?.done ? " (done)" : ""}`;
         const votes = task?.votes ? ` · 👍 ${task.votes.yes.length} · 👎 ${task.votes.no.length}` : "";
         openInfo(map, infoHtml(p.name, `${live}${task ? `: ${task.title}` : ""}${votes}`, tempUnitRef.current, undefined, googleMapsUrl(p), jumpTargetFor(jumpTargets.current, p)), marker);

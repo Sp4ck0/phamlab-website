@@ -55,7 +55,7 @@ function promoteDays(task: Task, days: ResolvedDay[]) {
     .filter((date) => (s.kind === "trip" ? true : s.kind === "day" ? date === s.date : date >= s.start && date <= s.end));
 }
 
-// Ideas the group is still weighing, each drawn as the tile it would become on its day (itemTile.tsx):
+// Proposed items the group is still weighing, each drawn as the tile it would become on its day (itemTile.tsx):
 // dashed, voted on in its header, added to the itinerary or dropped from its body. Settled ones fold away.
 export function Considerations({
   tasks,
@@ -141,15 +141,15 @@ export function Considerations({
   return (
     <>
       <div className="section-head-row">
-        <h2 className="section-title">Under consideration</h2>
+        <h2 className="section-title">Proposed items</h2>
         <div className="head-actions">
           <button type="button" className="add-btn" onClick={() => setEditing("new-consider")}>
-            + Consider
+            + Propose
           </button>
         </div>
       </div>
       <p className="section-sub">
-        Possible additions to the itinerary. Vote 👍 or 👎 (one vote each), then add the winner to the itinerary or drop it.
+        Not finalized: possible additions to the itinerary. Vote 👍 or 👎 (one vote each), then add the winner to the itinerary or drop it.
       </p>
       {editing === "new-consider" && (
         <div className="consider">
@@ -166,7 +166,7 @@ export function Considerations({
       {open.length > 0 ? (
         <ol className="tl considerations">{open.map(tile)}</ol>
       ) : (
-        editing !== "new-consider" && <div className="action-items action-items-empty">Nothing under consideration.</div>
+        editing !== "new-consider" && <div className="action-items action-items-empty">No proposed items.</div>
       )}
       {settled.length > 0 && (
         <details className="action-completed" open={settledOpen} onToggle={(e) => onSettledOpenChange(e.currentTarget.open)}>
