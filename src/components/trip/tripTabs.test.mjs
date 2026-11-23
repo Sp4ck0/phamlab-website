@@ -23,14 +23,14 @@ function mount(element) {
   return { container, render: (next) => act(() => root.render(next)), close() { act(() => root.unmount()); container.remove(); } };
 }
 
-test('three tabs, the current one selected and the only one in the tab order; each names its panel', () => {
+test('four tabs, the current one selected and the only one in the tab order; each names its panel', () => {
   const view = mount(React.createElement(TripTabs, { tab: 'map', onChange() {} }));
   try {
     const tabs = [...view.container.querySelectorAll('[role=tab]')];
-    assert.deepEqual(tabs.map((t) => t.textContent), ['Agenda', 'Map', 'Notes']);
-    assert.deepEqual(tabs.map((t) => t.getAttribute('aria-selected')), ['false', 'true', 'false']);
-    assert.deepEqual(tabs.map((t) => t.tabIndex), [-1, 0, -1]);
-    assert.equal(tabs[1].getAttribute('aria-controls'), 'trip-panel-map');
+    assert.deepEqual(tabs.map((t) => t.textContent), ['Agenda', 'Tasks', 'Map', 'Notes']);
+    assert.deepEqual(tabs.map((t) => t.getAttribute('aria-selected')), ['false', 'false', 'true', 'false']);
+    assert.deepEqual(tabs.map((t) => t.tabIndex), [-1, -1, 0, -1]);
+    assert.equal(tabs[2].getAttribute('aria-controls'), 'trip-panel-map');
   } finally { view.close(); }
 });
 
@@ -44,7 +44,7 @@ test('a click or the arrow keys change the tab, wrapping at the ends', () => {
     key('ArrowLeft'); // from Agenda, wraps to Notes
     key('End');
     act(() => view.container.querySelectorAll('[role=tab]')[1].click());
-    assert.deepEqual(picked, ['map', 'notes', 'notes', 'map']);
+    assert.deepEqual(picked, ['tasks', 'notes', 'notes', 'tasks']);
   } finally { view.close(); }
 });
 

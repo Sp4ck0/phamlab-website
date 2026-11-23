@@ -1029,7 +1029,7 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
   .trip-page > .trip-bars-spacer{order:-1}
   .trip-tabs-bar{order:-1;position:sticky;top:56px;z-index:22;background:var(--page);padding:6px 0}
   .trip-tabs{margin:0}
-  .trip-tab{min-height:34px;padding:4px 8px}
+  .trip-tab{min-height:34px;padding:4px;gap:5px;font-size:13px}
   .daynav-shell{top:112px}
   .tl-entry,.tl-now{scroll-margin-top:180px}
   .day-head-btn{scroll-margin-top:188px}
