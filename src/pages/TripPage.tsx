@@ -199,7 +199,7 @@ function TripPageEntry() {
   }, [getCityPhotos, slug, code]);
   const placePhoto = useMemo(() => batchedPhotos((placeId: string) => placeId, (placeIds) => getPlacePhotos({ slug: slug || "", code, placeIds })), [getPlacePhotos, slug, code]);
   const itemTasks = useMemo(() => Object.fromEntries(tasks.filter((t) => t.key.startsWith("item:")).map((t) => [t.key.slice("item:".length), t])), [tasks]);
-  const { updateActivity } = useActivityEdits(slug || "");
+  const { updateActivity, removeActivity } = useActivityEdits(slug || "");
   const weather = useTripWeather(slug);
   const weatherStops = useMemo(() => deriveWeatherStops(resolvedDays, weather), [resolvedDays, weather]);
 
@@ -340,6 +340,7 @@ function TripPageEntry() {
               actionItemsDone={done}
               onToggleActionItem={toggleActionItem}
               onEditActivity={updateActivity}
+              onRemoveActivity={removeActivity}
               itemTasks={itemTasks}
               onPromote={promoteItem}
               onUnpromote={unpromoteItem}

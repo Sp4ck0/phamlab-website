@@ -1217,6 +1217,8 @@ textarea.ai-input{display:block;width:100%;resize:none;overflow:hidden;line-heig
 .ai-error{font-size:12px;color:var(--danger);margin-right:auto}
 .ai-btn{font:inherit;font-size:13px;font-weight:700;color:var(--text-secondary);background:var(--chip-bg);border:none;border-radius:8px;padding:6px 14px;cursor:pointer}
 .ai-btn-primary{background:var(--good);color:#fff}
+.ai-btn-danger{background:var(--danger-tint);color:var(--danger)}
+.ai-delete{margin-right:auto}
 .ai-btn:disabled{opacity:.5;cursor:default}
 .row-actions{flex:none;display:flex;gap:2px;opacity:0;transition:opacity .12s}
 .action-item:hover .row-actions,.action-item:focus-within .row-actions{opacity:1}

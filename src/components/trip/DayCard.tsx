@@ -83,6 +83,7 @@ interface Props {
   // Saves new text and places for the activity at `index`; `expected` is the text it had
   // when the editor opened. The pencil only shows when this is passed.
   onEditActivity?: (date: string, index: number, expected: string, text: string, places: Place[], timing?: ActTiming) => Promise<unknown>;
+  onRemoveActivity?: (date: string, index: number, expected: Act) => Promise<unknown>;
   // Every stored item by id (its wording, votes and outcome), for the History of an entry approved from one.
   itemTasks?: Record<string, Task>;
   // "Add to itinerary": approves an item into the days (convex actionItems.promoteActionItem).
@@ -123,6 +124,7 @@ export function DayCard({
   actionItemsDone,
   onToggleActionItem,
   onEditActivity,
+  onRemoveActivity,
   itemTasks,
   onPromote,
   onUnpromote,
@@ -537,6 +539,11 @@ export function DayCard({
               await onEditActivity(d.date, ai, text, next, nextPlaces, timing);
               setEditingAct(null);
             }}
+            openedAct={a}
+            onDelete={onRemoveActivity && (async (expected) => {
+              await onRemoveActivity(d.date, ai, expected);
+              setEditingAct(null);
+            })}
           />
         ) : sub ? (
           <>
