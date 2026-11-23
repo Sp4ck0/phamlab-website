@@ -28,6 +28,13 @@ test('hotels come first, the hotel being left before the others', () => {
   assert.deepEqual(keys(out), [stay.item.srcs[0], incoming.item.srcs[0], `${DATE}|f|F1|a`, 'act:0']);
 });
 
+test('a hotel stayed in last night goes above the one checked into today, even if it is also listed tomorrow', () => {
+  const old = hotel('Old', { checkIn: false, checkOut: false });
+  const incoming = hotel('New');
+  const out = build({ hotels: [incoming, old] });
+  assert.deepEqual(keys(out), [old.item.srcs[0], incoming.item.srcs[0]]);
+});
+
 test('a day with no times keeps today\'s order: transport, then activities, in data order', () => {
   const out = build({ flights: [flight('F1'), flight('F2')], acts: acts('plain', { text: 'b' }, { text: 'c' }) });
   assert.deepEqual(keys(out), [`${DATE}|f|F1|a`, `${DATE}|f|F2|a`, 'act:0', 'act:1', 'act:2']);
