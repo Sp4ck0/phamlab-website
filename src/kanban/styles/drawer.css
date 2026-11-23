@@ -20,6 +20,8 @@
   box-shadow: -20px 0 50px var(--shadow);
   z-index: 50;
   overflow-y: auto;
+  /* The pane only scrolls up and down; anything wider than it is clipped. */
+  overflow-x: hidden;
   overscroll-behavior: contain;
 }
 .drawer::before {
@@ -139,9 +141,15 @@
   background: var(--paper);
   border-bottom: 1px solid var(--rule);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+}
+.drawer__inner > .seg {
+  flex-wrap: wrap;
+  align-self: flex-start;
+  max-width: 100%;
+  border-radius: 18px;
 }
 .drawer__close {
   background: none;
@@ -158,11 +166,15 @@
 }
 
 .drawer__title {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   background: none;
   border: none;
-  resize: vertical;
-  font-size: 22px;
+  resize: none;
+  /* Grows with the text up to three lines, so the pinned row stays short. */
+  field-sizing: content;
+  max-height: 3.9em;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1.3;
   letter-spacing: -0.01em;
