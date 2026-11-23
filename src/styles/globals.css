@@ -1263,3 +1263,17 @@ textarea.ai-input{display:block;width:100%;resize:none;overflow:hidden;line-heig
 .seg-terminal{font-size:12px;font-weight:600;color:var(--text-muted)}
 .seg-gates{display:flex;flex-wrap:wrap;gap:2px 12px;margin-top:4px}
 .next-up-line{font-size:12.5px;font-weight:700;color:var(--accent-1);margin-bottom:6px}
+
+/* Day scrubber: a touch-screen drag handle down the right edge of a long itinerary. Faint until used;
+   only the handle takes touches (its hit area is bigger than what shows), the rest lets the page scroll. */
+.day-scrubber{display:none}
+@media(pointer:coarse){
+  .day-scrubber{display:block;position:fixed;z-index:15;right:calc(6px + env(safe-area-inset-right));top:calc(var(--daynav-bottom,176px) + 24px);bottom:calc(24px + env(safe-area-inset-bottom));width:28px;pointer-events:none}
+  .day-scrubber-handle{position:absolute;right:0;width:28px;height:56px;margin-top:-28px;pointer-events:auto;touch-action:none;display:flex;align-items:center;justify-content:flex-end;opacity:.4;transition:opacity .2s}
+  .day-scrubber-handle::before{content:"";width:6px;height:36px;border-radius:3px;background:var(--text-secondary)}
+  .day-scrubber.is-dragging .day-scrubber-handle,.day-scrubber-handle:focus-visible{opacity:1}
+  .day-scrubber.is-dragging .day-scrubber-handle::before{background:var(--accent-1);width:8px}
+  .day-scrubber-handle:focus-visible{outline:3px solid var(--accent-1);outline-offset:2px;border-radius:6px}
+  .day-scrubber-bubble{position:absolute;right:30px;top:50%;transform:translateY(-50%);white-space:nowrap;padding:6px 10px;border-radius:8px;background:var(--accent-1);color:#fff;font-size:14px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+}
+@media(prefers-reduced-motion:reduce){.day-scrubber-handle{transition:none}}
