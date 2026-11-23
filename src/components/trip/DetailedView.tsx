@@ -191,11 +191,66 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   }
   const isOpen = (id: string) => (gapsView ? !gapsCollapsed.has(id) : state.expanded.has(id));
   const allOpen = state.rows.length > 0 && state.rows.every(row => state.expanded.has(row.id));
+  // Expand all / Collapse all change the height of every day above the one being read, and Safari can
+  // finish laying them out a moment later. The browser's own scroll anchoring doesn't exist there, so
+  // from the first press on, the day being read is held at the same place on screen: whenever the page
+  // changes height, the scroll position is moved by how far that day moved.
+  const anchor = useRef<{ id: string; top: number; y: number } | null>(null);
+  const anchoring = useRef(false);
+  const rowsRef = useRef(state.rows);
+  rowsRef.current = state.rows;
+  const noteAnchor = (pickNew: boolean) => {
+    const here = anchor.current;
+    if (!pickNew && here) {
+      const el = document.getElementById(here.id);
+      if (el) anchor.current = { id: here.id, top: el.getBoundingClientRect().top, y: window.scrollY };
+      return;
+    }
+    const line = Math.max(0, document.querySelector(".daynav-shell")?.getBoundingClientRect().bottom ?? 0) + 32;
+    const cards = rowsRef.current.flatMap(r => {
+      const el = document.getElementById(r.id);
+      return el ? [{ id: r.id, top: el.getBoundingClientRect().top }] : [];
+    });
+    const id = dayAtLine(cards, line);
+    const top = cards.find(c => c.id === id)?.top;
+    anchor.current = id !== undefined && top !== undefined ? { id, top, y: window.scrollY } : null;
+  };
+  const holdPlace = () => {
+    const a = anchor.current;
+    const el = a && document.getElementById(a.id);
+    if (!a || !el) return;
+    // Only a layout change that left the scroll position alone is corrected: where the scroll position
+    // moved (the reader, or a browser that anchors by itself), the day is where it should be.
+    const drift = window.scrollY === a.y ? el.getBoundingClientRect().top - a.top : 0;
+    if (Math.abs(drift) > 1) window.scrollBy({ top: drift, behavior: "instant" });
+    noteAnchor(false);
+  };
+  useLayoutEffect(() => {
+    if (anchoring.current) holdPlace();
+  });
+  useEffect(() => {
+    const timeline = document.querySelector(".timeline");
+    const ro = typeof ResizeObserver === "function" && timeline ? new ResizeObserver(() => { if (anchoring.current) holdPlace(); }) : undefined;
+    if (timeline) ro?.observe(timeline);
+    const onScroll = () => { if (anchoring.current) noteAnchor(false); };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener("scroll", onScroll);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     onDaysControl?.(gapsView ? null : {
       allOpen,
-      toggle: () => { if (!allOpen) document.documentElement.dataset.scrollDebug = "1"; setState(current => ({ ...current, expanded: allOpen ? new Set<string>() : new Set(current.rows.map(row => row.id)) })); },
+      toggle: () => {
+        if (!allOpen) document.documentElement.dataset.scrollDebug = "1"; // temporary readout, see CurrentDay
+        noteAnchor(true);
+        anchoring.current = anchor.current !== null;
+        setState(current => ({ ...current, expanded: allOpen ? new Set<string>() : new Set(current.rows.map(row => row.id)) }));
+      },
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onDaysControl, gapsView, allOpen]);
   useEffect(() => () => onDaysControl?.(null), [onDaysControl]);
   const pendingOpen = !!pending && isOpen(pending.id);
