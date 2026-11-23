@@ -56,6 +56,7 @@ export function CardDrawer({
   // since. Reset only when the open card actually changes.
   const [title, setTitle] = useState(card?.title ?? '');
   const [note, setNote] = useState(card?.note ?? '');
+  const [followUp, setFollowUp] = useState(card?.followUp ?? '');
   const [actionDrafts, setActionDrafts] = useState<Record<string, string>>({});
   const [noteBusy, setNoteBusy] = useState(false);
   const [noteError, setNoteError] = useState('');
@@ -90,6 +91,7 @@ export function CardDrawer({
     setNoteError('');
     setTitle(card?.title ?? '');
     setNote(card?.note ?? '');
+    setFollowUp(card?.followUp ?? '');
     setActionDrafts({});
   }, [card?.id]);
 
@@ -392,8 +394,16 @@ export function CardDrawer({
                 <span className="label">Check back on</span>
                 <input
                   type="date"
-                  value={card.followUp ?? ''}
-                  onChange={(e) => onChange(card.id, { followUp: e.target.value || null })}
+                  value={followUp}
+                  onChange={(e) => {
+                    const { value, validity } = e.target;
+                    const id = card.id;
+                    setFollowUp(value);
+                    // Half-typed, the browser reports '' (badInput): that's not
+                    // "cleared", so don't save it or the field resets.
+                    if (!value && validity.badInput) return;
+                    saveSoon('followUp', () => onChange(id, { followUp: value || null }));
+                  }}
                 />
               </label>
 
