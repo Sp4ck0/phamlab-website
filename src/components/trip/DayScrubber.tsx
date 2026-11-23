@@ -3,7 +3,7 @@ import type { KeyboardEvent, PointerEvent } from "react";
 import type { ItineraryRow } from "../../lib/itineraryState";
 import { DOW, MON } from "../../lib/tripLogic";
 import { SCRUBBER_EVENT } from "../../lib/hideBars";
-import { fractionAtOffset, fractionAtPointer, indexAtOffset, offsetAtFraction, smoothDamp } from "../../lib/scrubber";
+import { fractionAtOffset, indexAtOffset, offsetAtFraction, smoothDamp } from "../../lib/scrubber";
 
 const tell = (active: boolean) => window.dispatchEvent(new CustomEvent(SCRUBBER_EVENT, { detail: { active } }));
 // TEMPORARY diagnostics, shown after Expand all (see DetailedView): what a scrub measured.
@@ -36,7 +36,7 @@ export function DayScrubber({ rows, currentId }: { rows: ItineraryRow[]; current
   // The page glides toward where the finger points instead of being pinned to it: a spring chases
   // the target scroll offset each frame, so it speeds up, slows into place, and carries on a moment
   // after the finger lifts.
-  const glide = useRef({ frame: 0, last: 0, y: 0, velocity: 0, target: 0, tops: [] as number[], start: 0, end: 0, grab: 0, dragging: false });
+  const glide = useRef({ frame: 0, last: 0, y: 0, velocity: 0, target: 0, tops: [] as number[], start: 0, end: 0, grab: 0, screen0: 0, here: 0, dragging: false });
 
   useEffect(() => () => cancelAnimationFrame(glide.current.frame), []);
 
@@ -74,6 +74,11 @@ export function DayScrubber({ rows, currentId }: { rows: ItineraryRow[]; current
     const trackBox = e.currentTarget.parentElement?.getBoundingClientRect() ?? box;
     const here = fractionAtOffset(g.y, g.start, g.end);
     g.grab = e.clientY - (trackBox.top + here * trackBox.height);
+    // The finger's travel is measured on the screen (screenY), not in the page's coordinates: on an iPhone,
+    // once the page scrolls under the finger, clientY can report a position far off the screen, which sent
+    // the page to the end of the trip (or the start) on the first move.
+    g.screen0 = e.screenY;
+    g.here = here;
     g.target = g.y;
     g.velocity = 0;
     g.dragging = true;
@@ -83,10 +88,10 @@ export function DayScrubber({ rows, currentId }: { rows: ItineraryRow[]; current
   function onMove(e: PointerEvent<HTMLDivElement>) {
     const g = glide.current, box = track.current?.getBoundingClientRect();
     if (!g.dragging || !box) return;
-    const fraction = fractionAtPointer(e.clientY - g.grab, box.top, box.height);
+    const fraction = Math.min(1, Math.max(0, g.here + (e.screenY - g.screen0) / Math.max(1, box.height)));
     g.target = offsetAtFraction(fraction, g.start, g.end);
     setDragAt({ fraction, index: indexAtOffset(g.target, g.tops) });
-    scrubNote(`MOVE finger=${Math.round(e.clientY)} frac=${fraction.toFixed(3)} target=${Math.round(g.target)} idx=${indexAtOffset(g.target, g.tops)} y=${Math.round(window.scrollY)}`);
+    scrubNote(`MOVE finger=${Math.round(e.clientY)} screenY=${Math.round(e.screenY)} down=${Math.round(g.screen0)} frac=${fraction.toFixed(3)} target=${Math.round(g.target)} idx=${indexAtOffset(g.target, g.tops)} y=${Math.round(window.scrollY)}`);
     if (!g.frame) { g.last = performance.now(); g.frame = requestAnimationFrame(tick); }
   }
   function onUp() {
