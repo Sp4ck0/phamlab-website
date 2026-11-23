@@ -4,7 +4,7 @@ import type { Board, Card, Kind, LaneId, PersonId } from '../types';
 import { BOARD_COPY, PEOPLE } from '../types';
 import { boardLanes, pastedImages, uid } from '../lib';
 import { serverMessage } from '../../lib/serverError';
-import { copyCardLink } from '../../lib/shareLink';
+import { shareCardLink } from '../../lib/shareLink';
 import { ImageGallery } from './ImageGallery';
 import { ImagePicker } from './ImagePicker';
 import { NoteBox } from './NoteBox';
@@ -51,7 +51,7 @@ export function CardDrawer({
   onRead,
 }: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
-  // "Copy link" says how it went for a moment (the link never carries the access code).
+  // Share says how it went for a moment when it copied instead (the link never carries the access code).
   const [linkStatus, setLinkStatus] = useState('');
   useEffect(() => {
     if (!linkStatus) return;
@@ -197,13 +197,23 @@ export function CardDrawer({
                   onBlur={flush}
                 />
                 {boardId && (
-                  <button
-                    className="drawer__link"
-                    onClick={() => void copyCardLink(boardId, card.id).then(setLinkStatus)}
-                    aria-label="Copy link to this card"
-                  >
-                    {linkStatus || 'Copy link'}
-                  </button>
+                  <span className="share-wrap">
+                    <button
+                      className="drawer__link"
+                      onClick={() => void shareCardLink(boardId, card.id, title || card.title).then(setLinkStatus)}
+                      aria-label="Share link to this card"
+                      title="Share link to this card"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <path d="M12 15V3" />
+                        <path d="m7 8 5-5 5 5" />
+                        <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
+                      </svg>
+                    </button>
+                    <span role="status" className="share-status">
+                      {linkStatus}
+                    </span>
+                  </span>
                 )}
                 <button className="drawer__close" onClick={onClose} aria-label="Close">
                   ✕

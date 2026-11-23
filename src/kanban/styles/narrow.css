@@ -218,6 +218,9 @@
     font-size: 24px;
     padding: 2px 10px;
   }
+  .drawer__link {
+    min-width: 44px;
+  }
 
   /* 16px inputs: iOS Safari zooms the page in on anything smaller. */
   .field textarea,
