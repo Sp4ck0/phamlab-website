@@ -51,8 +51,8 @@ interface Props {
   weatherStops: WeatherStop[];
   // Places not in the plan yet (action items' places and drafts): ghost pins, with a legend toggle.
   candidates: MapPointData[];
-  // The considerations behind them, for the vote tally in a pin's popup.
-  considerations: Task[];
+  // The proposed items behind them, for the vote tally in a pin's popup.
+  proposedItems: Task[];
   // Desktop: the "Pin map" toggle. Pinned, the map follows the day and tile being looked at.
   // `side` (wide windows only): pinned at the side, itinerary on the left, instead of on top.
   pin?: { on: boolean; set: (on: boolean) => void; side?: { on: boolean; set: (side: boolean) => void } };
@@ -296,7 +296,7 @@ function viewFor(map: google.maps.Map, points: google.maps.LatLngLiteral[], pad 
   return { center: fromWorld((x0 + x1) / 2, (y0 + y1) / 2), zoom: Math.max(2, Math.min(maxZoom, Math.floor(zoom))) };
 }
 
-export function TripMap({ points, days, route, weatherStops, candidates, considerations, pin, marks = [], fitMarks, onMarksFitted, onClearMarks }: Props) {
+export function TripMap({ points, days, route, weatherStops, candidates, proposedItems, pin, marks = [], fitMarks, onMarksFitted, onClearMarks }: Props) {
   const { points: geocoded, status, error } = useGeocodedPoints(points);
   const { points: geocodedMarks } = useGeocodedPoints(marks);
   const { points: geocodedRoute } = useGeocodedPoints(route);
@@ -305,8 +305,8 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
   const [showCandidates, setShowCandidates] = useState(true);
   const candidateMarkers = useRef<Pin[]>([]);
   // Read at click time, so a vote that lands later shows in the popup without rebuilding the pins.
-  const considerationById = useRef(new Map<string, Task>());
-  considerationById.current = new Map(considerations.map((t) => [t.key.slice("item:".length), t]));
+  const proposedById = useRef(new Map<string, Task>());
+  proposedById.current = new Map(proposedItems.map((t) => [t.key.slice("item:".length), t]));
   const mapRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   // Pinned: the height dragged to with the divider under the map (null: the stylesheet's).
@@ -371,7 +371,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
   // and hands off to the same focus signal the AI and shared links use.
   // Read at click time, so a task added later still gets its button without rebuilding pins.
   const jumpTargets = useRef(new Map<string, JumpTarget>());
-  jumpTargets.current = deriveJumpTargets(days, considerations);
+  jumpTargets.current = deriveJumpTargets(days, proposedItems);
   const jumpRef = useRef<(day?: string, item?: string) => void>(() => {});
   jumpRef.current = (day, item) => {
     if (!slug) return;
@@ -702,7 +702,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, conside
       const title = `${p.name} (${chosen ? "chosen, not in the plan yet" : "not settled yet"})`;
       const look = pinElement(GHOST_SIZE, ghostIcon(CATEGORY_EMOJI[p.category] ?? "📍", CATEGORY_COLORS[p.category], chosen));
       const marker = makePin(map, { lat: p.lat, lng: p.lng }, title, look, () => {
-        const task = considerationById.current.get(p.id.split("|")[1] ?? "");
+        const task = proposedById.current.get(p.id.split("|")[1] ?? "");
         const live =
           task?.kind === "proposed"
             ? task.outcome === "chosen" ? "Chosen" : "Proposed"

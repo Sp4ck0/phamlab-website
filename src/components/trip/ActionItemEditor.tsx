@@ -59,7 +59,7 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
   // A time of day places a dated item on its day's timeline.
   const [time, setTime] = useState(initial?.time ?? "");
   const [whoIds, setWhoIds] = useState<string[]>(() => toIds(initial?.who));
-  // What a consideration would add once chosen: nothing in particular (an activity from its title), or an
+  // What a proposed item would add once chosen: nothing in particular (an activity from its title), or an
   // activity drafted here. A hotel or transport draft comes from the AI and is kept as it is.
   const draft = initial?.proposes;
   const aiDraft = draft && draft.type !== "activity" ? draft : undefined;
@@ -294,7 +294,7 @@ export function ActionItemEditor({ defaultKind, groups, minDate, maxDate, initia
               ))}
             </div>
           </div>
-          {/* Any kind can name a place (a Google Maps link on the row); a consideration also gets a map pin. */}
+          {/* Any kind can name a place (a Google Maps link on the row); a proposed item also gets a map pin. */}
           <div className="ai-row">
             <span className="ai-label">Places</span>
             <PlacesEditor places={places} setPlaces={setPlaces} />

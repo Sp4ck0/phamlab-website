@@ -225,7 +225,7 @@ function TripPageEntry() {
       route={deriveRouteAddresses(resolvedDays)}
       weatherStops={weatherStops}
       candidates={deriveTaskPoints(tasks, mapPlanPoints)}
-      considerations={tasks.filter((t) => !!t.places?.length)}
+      proposedItems={tasks.filter((t) => !!t.places?.length)}
       pin={desktop ? { on: pinMap, set: setPinMap, side: wide ? { on: pinSide, set: setPinSide } : undefined } : undefined}
       marks={marks}
       fitMarks={fitMarks}
@@ -330,7 +330,7 @@ function TripPageEntry() {
               onOnlyGapsChange={setOnlyGaps}
               filterRef={filterRef}
               actionItems={(trip.actionItems || []).filter((i) => i.kind !== "proposed")}
-              considerations={tasks.filter((t) => t.kind === "proposed" && t.outcome !== "dropped")}
+              proposedItems={tasks.filter((t) => t.kind === "proposed" && t.outcome !== "dropped")}
               pendingVotes={pendingVotes}
               onVote={vote}
               actionItemsDone={done}

@@ -222,9 +222,9 @@ function scopeDates(scope: TaskScope): string[] | undefined {
   return out;
 }
 
-// Pins for what isn't in the plan yet: the places on considerations and to-dos, and the
+// Pins for what isn't in the plan yet: the places on proposed items and to-dos, and the
 // hotel or activity an item proposes. The map draws them as ghost pins (open, or chosen /
-// done until the item is added to the itinerary); a dropped consideration has none. Each
+// done until the item is added to the itinerary); a dropped proposed item has none. Each
 // takes its category from the draft (a hotel, or the activity's tag), else "other", and its
 // item's days. A place already pinned for real (`existing`, from derivePoints) or by an
 // earlier item is skipped, so a ghost never sits on top of the plan; once the item is added,
