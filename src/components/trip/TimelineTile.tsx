@@ -111,7 +111,7 @@ export function TimelineTile({
     if (window.getSelection?.()?.toString()) return;
     onToggle();
   };
-  const showWarn = !!warn && (!canOpen || !open);
+  const showWarn = !!warn;
   const heading = (
     <>
       <span className="tl-title" ref={titleRef}>{title}</span>

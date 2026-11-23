@@ -74,11 +74,11 @@ test('the header\'s plain parts toggle, but controls inside the header and the b
   view.close();
 });
 
-test('the warning dot shows only while an unresolved tile is closed', () => {
+test('the warning dot stays on an unresolved tile whether it is closed or open', () => {
   const view = mount(h('ol', null, h(Probe, { warn: true })));
   assert.ok(view.container.querySelector('.tl-warn'));
   act(() => toggle(view.container).click());
-  assert.equal(view.container.querySelector('.tl-warn'), null);
+  assert.ok(view.container.querySelector('.tl-warn'));
   view.close();
 });
 

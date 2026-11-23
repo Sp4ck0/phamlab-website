@@ -521,14 +521,14 @@ test('every night of a stay is a tile that opens and closes on its own: first, m
       assert.equal(toggle.getAttribute('aria-expanded'), 'false');
     } finally { view.close(); }
   }
-  // An unbooked night starts open with nothing hiding it, and the reader can still close it: a dot then says it is unresolved.
+  // An unbooked night starts open, and the dot says it is unresolved whether it is open or closed.
   localStorage.clear(); // the loop above saved this hotel's first night as closed
   const open = resolveDays({ days: [{ ...day, hotels: [stay({ status: 'needed' })] }] });
   const view = mount(React.createElement(Stateful, { ...props, day: open[0], days: open, expanded: true, onToggle() {} }));
   try {
     const toggle = view.container.querySelector('.tl-hotel .tl-toggle');
     assert.equal(toggle.getAttribute('aria-expanded'), 'true');
-    assert.equal(view.container.querySelector('.tl-warn'), null);
+    assert.ok(view.container.querySelector('.tl-warn'));
     act(() => toggle.click());
     assert.equal(toggle.getAttribute('aria-expanded'), 'false');
     assert.ok(view.container.querySelector('.tl-warn'));
