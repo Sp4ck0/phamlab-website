@@ -111,7 +111,7 @@ test('spans: activities by their window, transport from departure to arrival, un
   ]);
 });
 
-test('to-dos and considerations: a timed one slots in by time like transport; untimed ones follow the activities', () => {
+test('to-dos and proposedItems: a timed one slots in by time like transport; untimed ones follow the activities', () => {
   const items = [{ id: 'late', time: '21:00' }, { id: 'open' }, { id: 'noon', time: '12:00' }];
   const out = build({ flights: [flight('F1', `${DATE}T12:00`)], acts: acts({ time: '09:00', text: 'a' }, { time: '15:00', text: 'b' }, 'untimed'), items, tour: true });
   assert.deepEqual(keys(out), ['act:0', `${DATE}|f|F1|a`, 'item:noon', 'act:1', 'item:late', 'act:2', 'item:open', 'tour']);

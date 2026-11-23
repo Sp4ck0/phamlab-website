@@ -3,7 +3,7 @@ import type { Priority, Status, Task, TaskScope, Vote } from "./types";
 
 import { fmtDow, modeLabel } from "./tripLogic";
 
-// Yes / no counts for a consideration, with the viewer's own tap (`pending`,
+// Yes / no counts for a proposed item, with the viewer's own tap (`pending`,
 // null = cleared) laid over what the server last said.
 export function voteTally(task: Task, pending: Vote | null | undefined) {
   const votes = task.votes ?? { yes: [], no: [], mine: null };
@@ -68,7 +68,7 @@ export function ticksFromTasks(tasks: Task[]): Record<string, Status> {
 
 // Dates that still have something open: a hotel/transport still to book, a
 // blank day still to plan, a move with no transport entered, or an open
-// decision / consideration / to-do tied to a day or date range (it marks each
+// decision / proposed item / to-do tied to a day or date range (it marks each
 // date it covers; a whole-trip item would mark every day, so it marks none).
 // A free-cancellation `deadline` is information, not something missing, so it
 // marks nothing (it stays in the task list).

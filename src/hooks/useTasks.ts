@@ -5,7 +5,7 @@ import { useAccessCode } from "./useAccessCode";
 import { bookingKey, doneItems, ticksFromTasks } from "../lib/tasks";
 import type { Outcome, Status, Task, Vote } from "../lib/types";
 
-// A trip's tasks — bookings to make, days to plan, considerations, to-dos — with
+// A trip's tasks — bookings to make, days to plan, proposedItems, to-dos — with
 // done-state and due dates shared by everyone with access to the trip and
 // persisted in Convex (tasks.ts). The backend derives the list; `today` is the
 // viewer's local date, so a blank day that's already over isn't a gap. Until the
@@ -25,7 +25,7 @@ export function useTasks(slug: string, today: string) {
       api.tasks.listTasks,
       q,
       current.map((t: Task) => {
-        // Settling a consideration: chosen / dropped closes it, null reopens it.
+        // Settling a proposed item: chosen / dropped closes it, null reopens it.
         if (a.outcome !== undefined && keys.has(t.key)) {
           const { outcome: _prev, ...rest } = t;
           return a.outcome === null
@@ -87,7 +87,7 @@ export function useTasks(slug: string, today: string) {
 
   // Votes tapped but not yet confirmed (null = a cleared vote). The server's tally
   // names who voted, which can't be adjusted here without knowing the caller's
-  // name, so the list shows this override on top of it (see Considerations).
+  // name, so the list shows this override on top of it (see ProposedItems).
   const voteMut = useMutation(api.votes.setVote);
   const [pendingVotes, setPendingVotes] = useState<Record<string, Vote | null>>({});
   const vote = useCallback(
@@ -105,7 +105,7 @@ export function useTasks(slug: string, today: string) {
     [voteMut, slug, code]
   );
 
-  // Choose or drop a consideration (closing it), or reopen it with null.
+  // Choose or drop a proposed item (closing it), or reopen it with null.
   const setOutcome = useCallback(
     (key: string, outcome: Outcome | null) => {
       void setStateMut({ slug, code, keys: [key], outcome });

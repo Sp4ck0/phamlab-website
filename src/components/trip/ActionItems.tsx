@@ -11,7 +11,7 @@ import { sanitizeHtml } from "../../lib/sanitizeHtml";
 import { useUndoableDelete } from "../../hooks/useUndoableDelete";
 import { afterScroll, flash, scrollBehavior, SETTLE_MS } from "../../lib/flash";
 import { ActionItemEditor } from "./ActionItemEditor";
-import { Considerations } from "./Considerations";
+import { ProposedItems } from "./ProposedItems";
 import { ShareLinkButton } from "./ShareLinkButton";
 import { PencilIcon, PlaceLinks, ScopeLinks, TrashIcon } from "./taskParts";
 import { DueDateInput } from "./DueDateInput";
@@ -35,11 +35,11 @@ interface Props {
   onAddItem: (fields: ActionItemFields & { id?: string }) => Promise<unknown>;
   onUpdateItem: (id: string, fields: ActionItemFields) => Promise<unknown>;
   onRemoveItem: (id: string) => Promise<unknown>;
-  // Considerations: voting and settling (see Considerations.tsx).
+  // ProposedItems: voting and settling (see ProposedItems.tsx).
   pendingVotes: Record<string, Vote | null>;
   onVote: (itemId: string, vote: Vote | null) => void;
   onSetOutcome: (key: string, outcome: Outcome | null) => void;
-  // The trip's days, and adding an idea to them / taking it back out (Considerations.tsx).
+  // The trip's days, and adding an idea to them / taking it back out (ProposedItems.tsx).
   days: ResolvedDay[];
   onPromote?: (id: string, date: string) => Promise<unknown>;
   onUnpromote?: (id: string) => Promise<unknown>;
@@ -90,9 +90,9 @@ export function ActionItems({
   onPromote,
   onUnpromote,
 }: Props) {
-  // "new" = the composer is open; "new-consider" = the considerations composer;
+  // "new" = the composer is open; "new-proposed" = the proposed items composer;
   // an id = that item's row is being edited.
-  const [editing, setEditing] = useState<"new" | "new-consider" | string | null>(null);
+  const [editing, setEditing] = useState<"new" | "new-proposed" | string | null>(null);
   const [completedOpen, setCompletedOpen] = useState(false);
   const [settledOpen, setSettledOpen] = useState(false);
   const undoable = useUndoableDelete({ onAddItem, onRemoveItem, onSetDone, onSetDue });
@@ -177,7 +177,7 @@ export function ActionItems({
 
   function remove(task: Task, item: ActionItem) {
     if (editing === item.id) setEditing(null);
-    // A settled consideration comes back open: its votes are gone with it, and
+    // A settled proposed item comes back open: its votes are gone with it, and
     // done-without-an-outcome is not a state it can be in.
     undoable.remove(task.kind === "proposed" ? { ...task, done: false } : task, item);
   }
@@ -284,7 +284,7 @@ export function ActionItems({
     );
   };
 
-  const considerTasks = tasks.filter((t) => t.kind === "proposed");
+  const proposedTasks = tasks.filter((t) => t.kind === "proposed");
   const rows = tasks.filter((t) => t.kind !== "proposed").map(rowFor).sort(byPriorityDueDate);
   const open = rows.filter((r) => !r.done);
   const completed = rows.filter((r) => r.done);
@@ -337,8 +337,8 @@ export function ActionItems({
           <div className="action-items">{completed.map((r) => r.node)}</div>
         </details>
       )}
-      <Considerations
-        tasks={considerTasks}
+      <ProposedItems
+        tasks={proposedTasks}
         items={items}
         groups={groups}
         tripStart={tripStart}

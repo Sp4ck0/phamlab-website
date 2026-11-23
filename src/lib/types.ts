@@ -157,7 +157,7 @@ export interface ActionItem {
   kind?: "custom" | "proposed";
   // Absent = no priority (sorts like low). High items are listed at the top of the trip.
   priority?: Priority;
-  // Where it is: a Maps link on the row, and a map pin for a consideration.
+  // Where it is: a Maps link on the row, and a map pin for a proposed item.
   places?: Place[];
   // Local "HH:MM" on its day: places it on that day's timeline (else it sits at the end).
   time?: string;
@@ -198,11 +198,11 @@ export interface Task {
   done: boolean;
   dueDate: string | null;
   dueDateIsDefault: boolean;
-  // Stored items (consider/custom) can be edited and removed.
+  // Stored items (proposed/custom) can be edited and removed.
   editable: boolean;
   // Stored items only.
   priority?: Priority;
-  // Stored items: where it is. Consider only: how it was settled, and who voted which way.
+  // Stored items: where it is. Proposed only: how it was settled, and who voted which way.
   places?: Place[];
   outcome?: Outcome;
   votes?: { yes: string[]; no: string[]; mine: Vote | null };
@@ -226,7 +226,7 @@ export interface MapPointData extends Place {
   // None: not tied to a day (an action item for the whole trip).
   dates?: string[];
   // A place not in the plan yet (an action item's place or draft), drawn as a ghost pin:
-  // open, or chosen (a picked consideration or a done to-do).
+  // open, or chosen (a picked proposed item or a done to-do).
   candidate?: "open" | "chosen";
 }
 

@@ -23,7 +23,7 @@ export function useActionItemEdits(slug: string) {
     removeItem: (id: string) => removeMut({ slug, code, id }),
     // "Add to itinerary": writes what the item proposes (or an activity from its title) into the days.
     promoteItem: (id: string, date: string) => promoteMut({ slug, code, id, date }),
-    // "Back to considering": takes what was approved from the item back out and reopens it.
+    // "Back to proposed": takes what was approved from the item back out and reopens it.
     unpromoteItem: (id: string) => unpromoteMut({ slug, code, id }),
   };
 }

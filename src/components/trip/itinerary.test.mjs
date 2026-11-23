@@ -17,7 +17,7 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const day = { date: '2040-01-02', city: 'Synthetic stop', leg: 'synthetic', _d: new Date(2040, 0, 2), flights: [], hotels: [], acts: ['Synthetic activity'] };
 // Tile open state: a stub that follows each tile's own default; tests that toggle tiles use a stateful wrapper.
 const tilesStub = { isOpen: (_id, defaultOpen) => defaultOpen, toggle() {}, setMany() {}, reveal() {} };
-const props = { tiles: tilesStub, day, dayNumber: 0, legColor: { color: '#333', tint: '#eee', label: 'Synthetic leg' }, groups: [], ticks: {}, onlyGaps: false, onToggle() {}, dayActionItems: [], dayConsiderations: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {}, rowId: 'synthetic-row', expanded: false, onExpandedChange() {} };
+const props = { tiles: tilesStub, day, dayNumber: 0, legColor: { color: '#333', tint: '#eee', label: 'Synthetic leg' }, groups: [], ticks: {}, onlyGaps: false, onToggle() {}, dayActionItems: [], dayProposed: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {}, rowId: 'synthetic-row', expanded: false, onExpandedChange() {} };
 // sanitizeHtml parses callouts/activities with these, so the page's DOM globals come from jsdom.
 for (const name of ['DOMParser', 'Node', 'Element', 'NodeFilter', 'Text', 'Comment', 'DocumentFragment', 'Event', 'CustomEvent', 'KeyboardEvent', 'MouseEvent', 'FocusEvent']) globalThis[name] = dom.window[name];
 const { AiFocusProvider } = await import('../../hooks/useAiFocus.tsx');
@@ -55,7 +55,7 @@ test('only-gaps dates come from open booking, plan and transport tasks (one per 
     { ...task('custom', ['item:synthetic'], [false]), done: false, scope: { kind: 'trip' } }, // a whole-trip to-do marks no day
     { ...task('custom', ['item:synthetic-day'], [false]), done: false, scope: { kind: 'day', date: '2040-01-09' } }, // an open to-do on a day
     { ...task('custom', ['item:synthetic-done'], [true]), done: true, scope: { kind: 'day', date: '2040-01-10' } }, // done: not a gap
-    { ...task('proposed', ['item:synthetic-range'], [false]), done: false, scope: { kind: 'range', start: '2040-01-11', end: '2040-01-12' } }, // an open consideration covers its whole range
+    { ...task('proposed', ['item:synthetic-range'], [false]), done: false, scope: { kind: 'range', start: '2040-01-11', end: '2040-01-12' } }, // an open proposed item covers its whole range
   ]);
   assert.deepEqual([...dates].sort(), ['2040-01-03', '2040-01-05', '2040-01-07', '2040-01-09', '2040-01-11', '2040-01-12']);
 });
@@ -124,7 +124,7 @@ test('unified list independently toggles duplicate occurrences and jumps reveal 
     const filterRef = React.useRef(null);
     return React.createElement(React.Fragment, null,
       React.createElement('button', { ref: filterRef, 'data-filter': '', onClick: () => setOnlyGaps(!onlyGaps) }, 'Only gaps'),
-      React.createElement(DetailedView, { days, legColors: [props.legColor, props.legColor], weather: {}, groups: [], ticks: {}, onlyGaps, isGap: d => !d.acts.length, onOnlyGapsChange: setOnlyGaps, filterRef, onToggle() {}, onJump() {}, actionItems: [], considerations: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} }));
+      React.createElement(DetailedView, { days, legColors: [props.legColor, props.legColor], weather: {}, groups: [], ticks: {}, onlyGaps, isGap: d => !d.acts.length, onOnlyGapsChange: setOnlyGaps, filterRef, onToggle() {}, onJump() {}, actionItems: [], proposedItems: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} }));
   }
   const view = mount(React.createElement(Harness));
   try {
@@ -228,7 +228,7 @@ test('live gaps removal returns focus to filter while retaining hidden disclosur
     const filterRef = React.useRef(null);
     return React.createElement(React.Fragment, null,
       React.createElement('button', { ref: filterRef, 'data-filter': '', onClick: () => setOnlyGaps(!onlyGaps) }, 'Only gaps'),
-      React.createElement(DetailedView, { days, legColors: [props.legColor], weather: {}, groups: [], ticks, onlyGaps, isGap: d => d.flights.length > 0 && Object.keys(ticks).length === 0, onOnlyGapsChange: setOnlyGaps, filterRef, onToggle(ids) { setTicks(Object.fromEntries(ids.map(id => [id, 'booked']))); }, actionItems: [], considerations: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} }));
+      React.createElement(DetailedView, { days, legColors: [props.legColor], weather: {}, groups: [], ticks, onlyGaps, isGap: d => d.flights.length > 0 && Object.keys(ticks).length === 0, onOnlyGapsChange: setOnlyGaps, filterRef, onToggle(ids) { setTicks(Object.fromEntries(ids.map(id => [id, 'booked']))); }, actionItems: [], proposedItems: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} }));
   }
   const view = mount(React.createElement(Harness));
   try {
@@ -247,7 +247,7 @@ test('live gaps removal returns focus to filter while retaining hidden disclosur
 });
 test('reactive full payload updates preserve unique occurrences but reset ambiguous identical duplicates', async () => {
   const { DetailedView } = await import('./DetailedView.tsx');
-  const shared = { days: [day, day, { ...day, date: '2040-01-03' }], legColors: [props.legColor, props.legColor, props.legColor], weather: {}, groups: [], ticks: {}, onlyGaps: false, onOnlyGapsChange() {}, filterRef: { current: null }, onToggle() {}, actionItems: [], considerations: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} };
+  const shared = { days: [day, day, { ...day, date: '2040-01-03' }], legColors: [props.legColor, props.legColor, props.legColor], weather: {}, groups: [], ticks: {}, onlyGaps: false, onOnlyGapsChange() {}, filterRef: { current: null }, onToggle() {}, actionItems: [], proposedItems: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} };
   const view = mount(React.createElement(DetailedView, shared));
   try {
     act(() => { for (const b of view.container.querySelectorAll('.day-head-btn[aria-expanded]')) b.click(); });
@@ -261,7 +261,7 @@ test('reactive full payload updates preserve unique occurrences but reset ambigu
 test('live removal of a focused inner control keeps focus on its day header while the day remains', async () => {
   const { DetailedView } = await import('./DetailedView.tsx');
   const filter = document.createElement('button'); document.body.append(filter);
-  const shared = { days: [{ ...day, flights: [{ who: 'all', route: 'Synthetic A → Synthetic B', status: 'booked' }] }], legColors: [props.legColor], weather: {}, groups: [], ticks: {}, onlyGaps: false, onOnlyGapsChange() {}, filterRef: { current: filter }, onToggle() {}, actionItems: [], considerations: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} };
+  const shared = { days: [{ ...day, flights: [{ who: 'all', route: 'Synthetic A → Synthetic B', status: 'booked' }] }], legColors: [props.legColor], weather: {}, groups: [], ticks: {}, onlyGaps: false, onOnlyGapsChange() {}, filterRef: { current: filter }, onToggle() {}, actionItems: [], proposedItems: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} };
   const view = mount(React.createElement(DetailedView, shared));
   try {
     act(() => view.container.querySelector('.day-head-btn[aria-expanded]').click());
@@ -576,7 +576,7 @@ test('latest jump wins and a removed pending occurrence never scrolls to a survi
   function Harness() {
     const [days, setDays] = React.useState([day, { ...day, date: '2040-01-03' }]);
     updateDays = setDays;
-    return React.createElement(DetailedView, { days, legColors: [props.legColor, props.legColor], weather: {}, groups: [], ticks: {}, onlyGaps: false, onOnlyGapsChange() {}, filterRef: { current: null }, onToggle() {}, actionItems: [], considerations: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} });
+    return React.createElement(DetailedView, { days, legColors: [props.legColor, props.legColor], weather: {}, groups: [], ticks: {}, onlyGaps: false, onOnlyGapsChange() {}, filterRef: { current: null }, onToggle() {}, actionItems: [], proposedItems: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} });
   }
   const view = mount(React.createElement(Harness));
   try {
@@ -648,7 +648,7 @@ test('Only gaps opens each day and shows just the open items, each with why it i
     const filterRef = React.useRef(null);
     return React.createElement(React.Fragment, null,
       React.createElement('button', { ref: filterRef, 'data-filter': '', onClick: () => setOnlyGaps(!onlyGaps) }, 'Only gaps'),
-      React.createElement(DetailedView, { days, legColors: [props.legColor, props.legColor], weather: {}, groups: [], ticks: {}, onlyGaps, isGap: () => true, dayGaps: gaps, onOnlyGapsChange: setOnlyGaps, filterRef, onToggle() {}, actionItems: [], considerations: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} }));
+      React.createElement(DetailedView, { days, legColors: [props.legColor, props.legColor], weather: {}, groups: [], ticks: {}, onlyGaps, isGap: () => true, dayGaps: gaps, onOnlyGapsChange: setOnlyGaps, filterRef, onToggle() {}, actionItems: [], proposedItems: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} }));
   }
   const view = mount(React.createElement(MemoryRouter, null, React.createElement(Harness)));
   const triggers = () => [...view.container.querySelectorAll('.day-head-btn[aria-expanded]')];
@@ -922,7 +922,7 @@ const timelineView = async (days, extra = {}) => {
   window.HTMLElement.prototype.scrollIntoView = () => {};
   const out = { show: null };
   function Pointer() { out.show = useShowAiFocus(); return null; }
-  const shared = { days, legColors: days.map(() => props.legColor), weather: {}, groups: [], ticks: {}, onlyGaps: false, onOnlyGapsChange() {}, filterRef: { current: null }, onToggle() {}, actionItems: [], considerations: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {}, ...extra };
+  const shared = { days, legColors: days.map(() => props.legColor), weather: {}, groups: [], ticks: {}, onlyGaps: false, onOnlyGapsChange() {}, filterRef: { current: null }, onToggle() {}, actionItems: [], proposedItems: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {}, ...extra };
   const tree = (list) => React.createElement(DefaultRouter, { initialEntries: ['/trip/synthetic'] },
     React.createElement(Routes, null, React.createElement(Route, { path: '/trip/:slug', element: React.createElement(React.Fragment, null, React.createElement(DetailedView, { ...shared, days: list }), React.createElement(Pointer)) })));
   out.view = mount(tree(days));
@@ -1263,8 +1263,8 @@ test('Only gaps: booked tiles start closed and actionable ones open, whatever th
   } finally { view.close(); localStorage.clear(); }
 });
 
-// ---- to-dos and considerations on the timeline ----
-const consider = (id, extra = {}) => ({ key: `item:${id}`, kind: 'proposed', scope: { kind: 'day', date: day.date }, title: `Synthetic ${id}`, refs: [`item:${id}`], refsDone: [false], done: false, dueDate: null, dueDateIsDefault: true, editable: true, votes: { yes: [], no: [], mine: null }, ...extra });
+// ---- to-dos and proposed items on the timeline ----
+const proposedTask = (id, extra = {}) => ({ key: `item:${id}`, kind: 'proposed', scope: { kind: 'day', date: day.date }, title: `Synthetic ${id}`, refs: [`item:${id}`], refsDone: [false], done: false, dueDate: null, dueDateIsDefault: true, editable: true, votes: { yes: [], no: [], mine: null }, ...extra });
 
 test('dated proposed items are tiles on the day, a timed one among the activities; to-dos sit in their own block at the bottom', async () => {
   const votes = [];
@@ -1272,17 +1272,17 @@ test('dated proposed items are tiles on the day, a timed one among the activitie
   const synthetic = { ...day, acts: [{ time: '09:00', text: 'Synthetic morning' }, { time: '15:00', text: 'Synthetic afternoon' }] };
   const todo = { id: 'todo1', date: day.date, title: 'Synthetic to-do', detail: '' };
   const view = mount(React.createElement(DayCard, { ...props, day: synthetic, expanded: true,
-    dayConsiderations: [consider('lunch', { time: '12:00', votes: { yes: ['Ann'], no: [], mine: null } })], dayActionItems: [todo],
+    dayProposed: [proposedTask('lunch', { time: '12:00', votes: { yes: ['Ann'], no: [], mine: null } })], dayActionItems: [todo],
     onVote: (...a) => votes.push(a), onToggleActionItem: (id) => ticks.push(id) }));
   try {
     const titles = [...view.container.querySelectorAll('.tl-entry .tl-title')].filter((t) => !t.closest('.day-todos')).map((t) => t.textContent);
     assert.deepEqual(titles, ['Synthetic morning', 'Synthetic lunch', 'Synthetic afternoon']); // the to-do is not on the timeline
     const block = view.container.querySelector('.day-todos');
     assert.deepEqual([...block.querySelectorAll('.tl-title')].map((t) => t.textContent), ['Synthetic to-do']);
-    assert.equal(block.compareDocumentPosition(view.container.querySelector('.tl-consider')) & 2, 2); // the block comes after the schedule
-    const lunch = view.container.querySelector('.tl-consider');
+    assert.equal(block.compareDocumentPosition(view.container.querySelector('.tl-proposed')) & 2, 2); // the block comes after the schedule
+    const lunch = view.container.querySelector('.tl-proposed');
     assert.equal(lunch.closest('.tl-entry').querySelector('.tl-time').textContent, '12:00');
-    assert.equal(lunch.querySelector('.consider-pill').textContent, 'Not finalized');
+    assert.equal(lunch.querySelector('.proposed-pill').textContent, 'Not finalized');
     // Voting is the 👍 / 👎 in the card's header, so it works while the card is closed, and never toggles it.
     const before = lunch.querySelector('.tl-toggle').getAttribute('aria-expanded');
     const yes = lunch.querySelector('.tl-head .vote-btn[data-vote=yes]');
@@ -1291,86 +1291,86 @@ test('dated proposed items are tiles on the day, a timed one among the activitie
     assert.deepEqual(votes, [['lunch', 'yes']]);
     assert.equal(lunch.querySelector('.tl-toggle').getAttribute('aria-expanded'), before);
     assert.equal(menuItem(openMenu(lunch), 'Vote yes'), undefined); // not in the menu any more
-    const tick = menuItem(openMenu(view.container.querySelector('.tl-item:not(.tl-consider)')), 'Mark as done');
+    const tick = menuItem(openMenu(view.container.querySelector('.tl-item:not(.tl-proposed)')), 'Mark as done');
     await act(async () => tick.click());
     assert.deepEqual(ticks, ['todo1']);
   } finally { view.close(); }
 });
 
-test('a consideration proposing a hotel shows it as a Proposed tile, and Add to itinerary approves it for that day', async () => {
+test('a proposed item proposing a hotel shows it as a Proposed tile, and Add to itinerary approves it for that day', async () => {
   const promoted = [];
   const hotel = { who: 'all', name: 'Synthetic Proposed Hotel', status: 'needed', checkInTime: '15:00' };
-  const task = consider('stay', { scope: { kind: 'range', start: day.date, end: '2040-01-04' }, proposes: { type: 'hotel', entry: hotel } });
-  const view = mount(React.createElement(DayCard, { ...props, day, expanded: true, dayConsiderations: [task], onPromote: async (...a) => { promoted.push(a); } }));
+  const task = proposedTask('stay', { scope: { kind: 'range', start: day.date, end: '2040-01-04' }, proposes: { type: 'hotel', entry: hotel } });
+  const view = mount(React.createElement(DayCard, { ...props, day, expanded: true, dayProposed: [task], onPromote: async (...a) => { promoted.push(a); } }));
   try {
-    const tile = view.container.querySelector('.tl-consider');
+    const tile = view.container.querySelector('.tl-proposed');
     assert.equal(tile.closest('.tl-entry').querySelector('.tl-dot').textContent, '🏨');
     assert.match(tile.querySelector('.tl-meta').textContent, /Proposed stay · Synthetic Proposed Hotel/);
     assert.equal(tile.querySelector('.tl-toggle').getAttribute('aria-expanded'), 'true'); // unsettled: open
     const proposal = tile.querySelector('.tl-proposal');
     assert.ok(proposal.textContent.includes('Proposed') && proposal.textContent.includes('Synthetic Proposed Hotel'));
     assert.equal(proposal.querySelector('.tl-actions'), null); // the draft has no actions of its own
-    const add = [...tile.querySelectorAll('.consider-actions button')].find((b) => b.textContent === 'Add stay to itinerary');
+    const add = [...tile.querySelectorAll('.proposed-actions button')].find((b) => b.textContent === 'Add stay to itinerary');
     await act(async () => { add.click(); });
     assert.deepEqual(promoted, [['stay', day.date]]);
-    assert.equal(tile.querySelector('.consider-status').textContent, 'Added to the itinerary');
+    assert.equal(tile.querySelector('.proposed-status').textContent, 'Added to the itinerary');
   } finally { view.close(); }
 });
 
 test('an entry approved from an item shows its History (wording and votes), and the item is not drawn a second time on the day', () => {
   const synthetic = { ...day, acts: [{ text: 'Synthetic chosen dinner', time: '19:00', fromItem: 'dinner' }] };
-  const task = consider('dinner', { title: 'Synthetic dinner idea', detail: 'Synthetic reason', done: true, outcome: 'chosen', votes: { yes: ['Ann', 'Ben'], no: ['Cy'], mine: null } });
-  const view = mount(React.createElement(DayCard, { ...props, day: synthetic, days: [synthetic], expanded: true, dayConsiderations: [task], itemTasks: { dinner: task }, onPromote: async () => {}, onUnpromote: async () => {} }));
+  const task = proposedTask('dinner', { title: 'Synthetic dinner idea', detail: 'Synthetic reason', done: true, outcome: 'chosen', votes: { yes: ['Ann', 'Ben'], no: ['Cy'], mine: null } });
+  const view = mount(React.createElement(DayCard, { ...props, day: synthetic, days: [synthetic], expanded: true, dayProposed: [task], itemTasks: { dinner: task }, onPromote: async () => {}, onUnpromote: async () => {} }));
   try {
     const entry = [...view.container.querySelectorAll('.tl-tile')].find((t) => t.querySelector('.tl-title').textContent === 'Synthetic chosen dinner');
     const hist = entry.querySelector('details.tl-history');
     assert.ok(hist && !hist.open); // folded away
     assert.ok(hist.textContent.includes('Synthetic dinner idea') && hist.textContent.includes('Synthetic reason'));
     assert.match(hist.textContent, /👍 2 \(Ann, Ben\) · 👎 1 \(Cy\) · Chosen/);
-    assert.equal(view.container.querySelector('.tl-consider'), null); // the entry is the tile; no "Proposed" twin beside it
+    assert.equal(view.container.querySelector('.tl-proposed'), null); // the entry is the tile; no "Proposed" twin beside it
     assert.equal(view.container.querySelectorAll('.tl-tile').length, 1);
   } finally { view.close(); }
 });
 
-test('in the Under consideration list, an item already in the itinerary says where it is and can go back', async () => {
-  const { Considerations } = await import('./Considerations.tsx');
+test('in the Proposed items list, an item already in the itinerary says where it is and can go back', async () => {
+  const { ProposedItems } = await import('./ProposedItems.tsx');
   const { resolveDays } = await import('../../lib/tripLogic.ts');
   const days = resolveDays({ days: [{ ...day, date: '2040-01-02', acts: [{ text: 'Synthetic chosen dinner', time: '19:00', fromItem: 'dinner' }] }] });
-  const task = consider('dinner', { title: 'Synthetic dinner idea', detail: 'Synthetic reason', done: true, outcome: 'chosen', votes: { yes: ['Ann', 'Ben'], no: ['Cy'], mine: null } });
+  const task = proposedTask('dinner', { title: 'Synthetic dinner idea', detail: 'Synthetic reason', done: true, outcome: 'chosen', votes: { yes: ['Ann', 'Ben'], no: ['Cy'], mine: null } });
   const back = [];
-  const view = mount(React.createElement(Considerations, {
+  const view = mount(React.createElement(ProposedItems, {
     tasks: [task], items: [{ id: 'dinner', title: task.title, detail: '', kind: 'proposed', date: day.date }], groups: [], days, tripStart: '2040-01-02', tripEnd: '2040-01-02', editing: null, setEditing() {},
     pendingVotes: {}, onVote() {}, onSetOutcome() {}, onAddItem: async () => {}, onUpdateItem: async () => {}, onRemove() {}, onPromote: async () => {},
     onUnpromote: async (id) => { back.push(id); }, settledOpen: true, onSettledOpenChange() {},
   }));
   try {
-    const item = view.container.querySelector('.tl-consider');
+    const item = view.container.querySelector('.tl-proposed');
     assert.ok(item.textContent.includes('In the itinerary on Jan 2.'));
-    const buttons = [...item.querySelectorAll('.consider-actions button')].map((b) => b.textContent);
+    const buttons = [...item.querySelectorAll('.proposed-actions button')].map((b) => b.textContent);
     assert.deepEqual(buttons, ['Back to proposed']); // already added: no Add, no Drop
     assert.ok([...item.querySelectorAll('.vote-btn')].every((b) => b.disabled)); // voting is over
-    await act(async () => item.querySelector('.consider-actions button').click());
+    await act(async () => item.querySelector('.proposed-actions button').click());
     assert.deepEqual(back, ['dinner']);
   } finally { view.close(); }
 });
 
-test('the Under consideration list draws each idea as a tile: vote in its header, pick a day and add it, or drop it', async () => {
-  const { Considerations } = await import('./Considerations.tsx');
+test('the Proposed items list draws each idea as a tile: vote in its header, pick a day and add it, or drop it', async () => {
+  const { ProposedItems } = await import('./ProposedItems.tsx');
   const { resolveDays } = await import('../../lib/tripLogic.ts');
   const days = resolveDays({ days: [{ ...day, date: '2040-01-02' }, { ...day, date: '2040-01-03', _d: new Date(2040, 0, 3) }] });
-  const idea = consider('anywhere', { scope: { kind: 'trip' }, title: 'Synthetic anywhere idea', votes: { yes: [], no: ['Ann'], mine: null } });
-  const dated = consider('dated', { title: 'Synthetic dated idea', proposes: { type: 'activity', entry: { text: 'Synthetic proposed walk', tag: 'Trek' } } });
+  const idea = proposedTask('anywhere', { scope: { kind: 'trip' }, title: 'Synthetic anywhere idea', votes: { yes: [], no: ['Ann'], mine: null } });
+  const dated = proposedTask('dated', { title: 'Synthetic dated idea', proposes: { type: 'activity', entry: { text: 'Synthetic proposed walk', tag: 'Trek' } } });
   const items = [{ id: 'anywhere', title: idea.title, detail: '', kind: 'proposed' }, { id: 'dated', title: dated.title, detail: '', kind: 'proposed', date: day.date }];
   const calls = [];
-  const view = mount(React.createElement(Considerations, {
+  const view = mount(React.createElement(ProposedItems, {
     tasks: [idea, dated], items, groups: [], days, tripStart: '2040-01-02', tripEnd: '2040-01-03', editing: null, setEditing() {},
     pendingVotes: {}, onVote: (...a) => calls.push(['vote', ...a]), onSetOutcome: (...a) => calls.push(['outcome', ...a]),
     onAddItem: async () => {}, onUpdateItem: async () => {}, onRemove() {}, onPromote: async (...a) => { calls.push(['promote', ...a]); },
     onUnpromote: async () => {}, settledOpen: false, onSettledOpenChange() {},
   }));
   try {
-    assert.equal(view.container.querySelector('.consider'), null); // no separate card design
-    const tiles = [...view.container.querySelectorAll('.tl-consider')];
+    assert.equal(view.container.querySelector('.proposed-composer'), null); // no separate card design
+    const tiles = [...view.container.querySelectorAll('.tl-proposed')];
     assert.deepEqual(tiles.map((t) => t.querySelector('.tl-title').textContent), ['Synthetic dated idea', 'Synthetic anywhere idea']);
     assert.equal(tiles[0].closest('li').id, 'ai-row-dated'); // ?task= links and the alerts still land on it
     assert.equal(tiles[0].closest('.tl-entry').querySelector('.tl-dot').textContent, '🥾'); // drawn as the activity it proposes
@@ -1385,7 +1385,7 @@ test('the Under consideration list draws each idea as a tile: vote in its header
     assert.deepEqual([...select.options].map((o) => o.textContent), ['Jan 2', 'Jan 3']);
     const setValue = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value').set;
     act(() => { setValue.call(select, '2040-01-03'); select.dispatchEvent(new window.Event('change', { bubbles: true })); });
-    const button = (tile, text) => [...tile.querySelectorAll('.consider-actions button')].find((b) => b.textContent === text);
+    const button = (tile, text) => [...tile.querySelectorAll('.proposed-actions button')].find((b) => b.textContent === text);
     await act(async () => button(anywhere, 'Add to itinerary').click());
     await act(async () => button(anywhere, 'Drop').click());
     await act(async () => anywhere.querySelector('.vote-btn[data-vote=yes]').click());
@@ -1393,7 +1393,7 @@ test('the Under consideration list draws each idea as a tile: vote in its header
   } finally { view.close(); }
 });
 
-test('the editor can draft the activity a consideration would add, and keeps an AI-drafted stay as it is', async () => {
+test('the editor can draft the activity a proposed item would add, and keeps an AI-drafted stay as it is', async () => {
   const { ActionItemEditor } = await import('./ActionItemEditor.tsx');
   const saved = [];
   const initial = { id: 'x', title: 'Synthetic market', detail: '', kind: 'proposed', date: day.date, time: '18:00' };
@@ -1490,7 +1490,7 @@ test('a place offers Uber or Grab to it only where that app runs; Grab only on a
 
 test('an activity approved from a suggestion opens to its History; a card opens from anywhere on it but its menu', () => {
   const synthetic = { ...day, acts: [{ text: 'Synthetic dinner', fromItem: 'x' }], hotels: [{ who: 'all', name: 'Synthetic Hotel', status: 'booked' }] };
-  const task = consider('x', { title: 'Synthetic idea', done: true, outcome: 'chosen' });
+  const task = proposedTask('x', { title: 'Synthetic idea', done: true, outcome: 'chosen' });
   const view = mount(React.createElement(Stateful, { ...props, day: { ...synthetic, _d: day._d, hotels: [{ ...synthetic.hotels[0], src: `${day.date}|h|Synthetic Hotel|all`, checkIn: true, checkOut: true }] }, days: [synthetic], expanded: true, itemTasks: { x: task } }));
   try {
     const dinner = [...view.container.querySelectorAll('.tl-tile')].find((t) => t.textContent.includes('Synthetic dinner'));
@@ -1648,10 +1648,10 @@ test('the Not planned card is one line: the label is its title, said once', () =
 
 test('the "⋯" menu: arrow keys move through it, Escape closes it back to its button, and a settled vote is shown but unavailable', async () => {
   const votes = [];
-  const task = consider('settled', { done: true, outcome: 'chosen', votes: { yes: ['Ann'], no: [], mine: null } });
-  const view = mount(React.createElement(DayCard, { ...props, day, expanded: true, dayConsiderations: [task], onVote: (...a) => votes.push(a), onPromote: async () => {} }));
+  const task = proposedTask('settled', { done: true, outcome: 'chosen', votes: { yes: ['Ann'], no: [], mine: null } });
+  const view = mount(React.createElement(DayCard, { ...props, day, expanded: true, dayProposed: [task], onVote: (...a) => votes.push(a), onPromote: async () => {} }));
   try {
-    const tile = view.container.querySelector('.tl-consider');
+    const tile = view.container.querySelector('.tl-proposed');
     const yes = tile.querySelector('.vote-btn[data-vote=yes]');
     assert.ok(yes.disabled);
     await act(async () => yes.click());
@@ -1896,7 +1896,7 @@ test('date strip follows the page: a clicked day stays filled until the reader s
   const toMap = [];
   const onDay = (e) => toMap.push(e.detail);
   window.addEventListener(MAP_DAY_EVENT, onDay);
-  const view = mount(React.createElement(DetailedView, { days, legColors: [props.legColor, props.legColor], weather: {}, groups: [], ticks: {}, onlyGaps: false, onOnlyGapsChange() {}, filterRef: { current: null }, onToggle() {}, actionItems: [], considerations: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} }));
+  const view = mount(React.createElement(DetailedView, { days, legColors: [props.legColor, props.legColor], weather: {}, groups: [], ticks: {}, onlyGaps: false, onOnlyGapsChange() {}, filterRef: { current: null }, onToggle() {}, actionItems: [], proposedItems: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} }));
   try {
     const chips = () => [...view.container.querySelectorAll('nav.daynav button')];
     const filled = () => chips().map(b => b.classList.contains('daynav-current'));
@@ -1982,7 +1982,7 @@ test('opening a trip under way lands on today, unless a link points at a task (?
   const local = (offset) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(Date.now() + offset * 864e5));
   const days = resolveDays({ days: [-1, 0, 1].map((o) => ({ ...day, date: local(o), city: 'Bangkok', country: 'TH', hotels: [], flights: [], acts: [] })) });
   const open = async (url) => {
-    const shared = { days, legColors: days.map(() => props.legColor), weather: {}, groups: [], ticks: {}, onlyGaps: false, onOnlyGapsChange() {}, filterRef: { current: null }, onToggle() {}, actionItems: [], considerations: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} };
+    const shared = { days, legColors: days.map(() => props.legColor), weather: {}, groups: [], ticks: {}, onlyGaps: false, onOnlyGapsChange() {}, filterRef: { current: null }, onToggle() {}, actionItems: [], proposedItems: [], pendingVotes: {}, onVote() {}, actionItemsDone: {}, onToggleActionItem() {} };
     const view = mount(React.createElement(DefaultRouter, { initialEntries: [url] },
       React.createElement(Routes, null, React.createElement(Route, { path: '/trip/:slug', element: React.createElement(DetailedView, shared) }))));
     await act(async () => { await new Promise((r) => setTimeout(r, 400)); }); // past the settle delay

@@ -10,7 +10,7 @@ import { TimelineTile } from "./TimelineTile";
 import { describeItemTile, linkedItems } from "./itemTile";
 
 interface Props {
-  // Only the consider tasks.
+  // Only the proposed tasks.
   tasks: Task[];
   items: ActionItem[];
   groups: Group[];
@@ -18,7 +18,7 @@ interface Props {
   days: ResolvedDay[];
   tripStart: string;
   tripEnd: string;
-  // "new-consider" = the composer is open; an id = that item is being edited.
+  // "new-proposed" = the composer is open; an id = that item is being edited.
   editing: string | null;
   setEditing: (v: string | null) => void;
   pendingVotes: Record<string, Vote | null>;
@@ -57,7 +57,7 @@ function promoteDays(task: Task, days: ResolvedDay[]) {
 
 // Proposed items the group is still weighing, each drawn as the tile it would become on its day (itemTile.tsx):
 // dashed, voted on in its header, added to the itinerary or dropped from its body. Settled ones fold away.
-export function Considerations({
+export function ProposedItems({
   tasks,
   items,
   groups,
@@ -143,7 +143,7 @@ export function Considerations({
       <div className="section-head-row">
         <h2 className="section-title">Proposed items</h2>
         <div className="head-actions">
-          <button type="button" className="add-btn" onClick={() => setEditing("new-consider")}>
+          <button type="button" className="add-btn" onClick={() => setEditing("new-proposed")}>
             + Propose
           </button>
         </div>
@@ -151,8 +151,8 @@ export function Considerations({
       <p className="section-sub">
         Not finalized: possible additions to the itinerary. Vote 👍 or 👎 (one vote each), then add the winner to the itinerary or drop it.
       </p>
-      {editing === "new-consider" && (
-        <div className="consider">
+      {editing === "new-proposed" && (
+        <div className="proposed-composer">
           <ActionItemEditor
             {...editorProps}
             defaultKind="proposed"
@@ -164,14 +164,14 @@ export function Considerations({
         </div>
       )}
       {open.length > 0 ? (
-        <ol className="tl considerations">{open.map(tile)}</ol>
+        <ol className="tl proposed-list">{open.map(tile)}</ol>
       ) : (
-        editing !== "new-consider" && <div className="action-items action-items-empty">No proposed items.</div>
+        editing !== "new-proposed" && <div className="action-items action-items-empty">No proposed items.</div>
       )}
       {settled.length > 0 && (
         <details className="action-completed" open={settledOpen} onToggle={(e) => onSettledOpenChange(e.currentTarget.open)}>
           <summary>Settled ({settled.length})</summary>
-          <ol className="tl considerations">{settled.map(tile)}</ol>
+          <ol className="tl proposed-list">{settled.map(tile)}</ol>
         </details>
       )}
     </>

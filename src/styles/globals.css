@@ -571,7 +571,7 @@ button.route-chip[aria-expanded=true]{box-shadow:inset 0 0 0 1.5px var(--text-mu
 .tl-now-label{display:block;border-top:2px solid var(--now);padding-top:4px;font-size:12px;font-weight:700;color:var(--now);font-variant-numeric:tabular-nums}
 .tl-tile.tl-item{border-style:dashed}
 .tl-tile.tl-item.is-done :is(.tl-time,.tl-dot,.tl-toggle,.tl-heading,.tl-end,.tl-body){opacity:.7}
-.tl-tile.tl-item.is-done:not(.tl-consider) .tl-title{text-decoration:line-through;text-decoration-color:var(--text-muted)}
+.tl-tile.tl-item.is-done:not(.tl-proposed) .tl-title{text-decoration:line-through;text-decoration-color:var(--text-muted)}
 /* A proposed hotel, transport or activity: drawn like the real card, inside a labelled box. */
 .tl-proposal{position:relative;margin-top:8px;padding:14px 12px 10px;border:1px dashed var(--accent-1);border-radius:8px;background:color-mix(in srgb,var(--accent-1) 4%,transparent)}
 .tl-proposal-label{position:absolute;top:-9px;left:10px;padding:0 6px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-1);background:var(--card)}
@@ -838,19 +838,19 @@ details.tour-box[open] summary::after{content:"Hide"}
 .day-link:focus-visible{outline:2px solid currentColor;outline-offset:2px;border-radius:3px}
 .action-item.done .at,.action-item.done .ad{text-decoration:line-through;text-decoration-color:var(--text-muted);color:var(--text-muted)}
 
-/* ── considerations: candidates the group is weighing (dashed + tinted = "not decided") ── */
-.considerations{display:grid;gap:14px;padding-top:8px}
-.consider{background:var(--accent-1-tint);border:1.5px dashed var(--accent-1);border-radius:14px;padding:14px 18px;scroll-margin-top:96px;margin-bottom:10px}
-.consider-pill{display:inline-block;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent-1);border:1px dashed var(--accent-1);white-space:nowrap}
-.consider-pill[data-outcome="chosen"]{color:var(--good);border:1px solid var(--good)}
-.consider-pill[data-outcome="dropped"]{color:var(--text-muted);border:1px solid var(--gridline)}
-.consider-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
-.consider-status:empty{display:none}
-/* A consideration's header: its state, then 👍 / 👎 to vote right on the tile. */
-.tl-consider-head{display:inline-flex;align-items:center;gap:8px}
+/* ── proposed items: candidates the group is weighing (dashed + tinted = "not decided") ── */
+.proposed-list{display:grid;gap:14px;padding-top:8px}
+.proposed-composer{background:var(--accent-1-tint);border:1.5px dashed var(--accent-1);border-radius:14px;padding:14px 18px;scroll-margin-top:96px;margin-bottom:10px}
+.proposed-pill{display:inline-block;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent-1);border:1px dashed var(--accent-1);white-space:nowrap}
+.proposed-pill[data-outcome="chosen"]{color:var(--good);border:1px solid var(--good)}
+.proposed-pill[data-outcome="dropped"]{color:var(--text-muted);border:1px solid var(--gridline)}
+.proposed-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
+.proposed-status:empty{display:none}
+/* A proposed item's header: its state, then 👍 / 👎 to vote right on the tile. */
+.tl-proposed-head{display:inline-flex;align-items:center;gap:8px}
 .tl-votes .vote-btn{padding:2px 9px;font-size:12.5px}
 .vote-btn:disabled{cursor:default;opacity:.6}
-.tl-consider.tl-tile:has(.consider-pill[data-outcome="dropped"]) .tl-title{text-decoration:line-through;text-decoration-color:var(--text-muted)}
+.tl-proposed.tl-tile:has(.proposed-pill[data-outcome="dropped"]) .tl-title{text-decoration:line-through;text-decoration-color:var(--text-muted)}
 .vote-bar{display:flex;gap:6px}
 .vote-btn{font:inherit;font-size:13px;display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--text-primary);cursor:pointer}
 .vote-btn:hover{border-color:var(--text-secondary)}

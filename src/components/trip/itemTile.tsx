@@ -59,19 +59,19 @@ export type DescribedItem ={ defaultOpen: boolean; forceOpen?: boolean; tile: Om
 // to the itinerary (or dropped) from its body. A to-do is only ever ticked off, from its menu.
 export function describeItemTile(a: ItemTileArgs): DescribedItem {
   const { id, task, todo } = a.item;
-  const consider = !!task;
+  const proposed = !!task;
   // The header has the title as plain text (it sits in a button); a title with links shows them again in the body.
   const richTitle = sanitizeHtml(task?.title ?? todo?.title ?? "");
   const titleHasLinks = /<a\b/i.test(richTitle);
   const title = plain(richTitle);
   const detail = task?.detail ?? todo?.detail;
   const proposes = task?.proposes ?? todo?.proposes;
-  const done = consider ? !!task!.done : a.done;
+  const done = proposed ? !!task!.done : a.done;
   const linked = !!a.linkedOn;
   const open = !done && !linked;
   const start = task ? (task.scope.kind === "day" ? task.scope.date : task.scope.kind === "range" ? task.scope.start : undefined) : todo?.date;
   const end = task ? (task.scope.kind === "range" ? task.scope.end : start) : todo?.endDate ?? todo?.date;
-  const icon = !proposes ? (consider ? "🗳️" : "☑️")
+  const icon = !proposes ? (proposed ? "🗳️" : "☑️")
     : proposes.type === "hotel" ? "🏨"
     : proposes.type === "transport" ? MODE_EMOJI[proposes.entry.mode || "flight"]
     : (proposes.entry.tag && TAG_EMOJI[proposes.entry.tag]) || "📍";
@@ -84,10 +84,10 @@ export function describeItemTile(a: ItemTileArgs): DescribedItem {
   const priority = task?.priority ?? todo?.priority;
   const date = a.day?.day.date;
 
-  const doneItem: TileMenuItem[] = consider || !a.onToggleActionItem ? [] : [{ label: done ? "Mark as not done" : "Mark as done", icon: done ? "uncheck" : "check", onSelect: () => a.onToggleActionItem!(id) }];
+  const doneItem: TileMenuItem[] = proposed || !a.onToggleActionItem ? [] : [{ label: done ? "Mark as not done" : "Mark as done", icon: done ? "uncheck" : "check", onSelect: () => a.onToggleActionItem!(id) }];
   // Settling without adding it, for something that isn't an itinerary entry ("we'll take taxis").
   const chooseItem: TileMenuItem[] =
-    consider && !task!.outcome && !linked && a.onSetOutcome ? [{ label: "Mark chosen without adding", icon: "check", onSelect: () => a.onSetOutcome!(task!.key, "chosen") }] : [];
+    proposed && !task!.outcome && !linked && a.onSetOutcome ? [{ label: "Mark chosen without adding", icon: "check", onSelect: () => a.onSetOutcome!(task!.key, "chosen") }] : [];
 
   const draftBody = (() => {
     if (!proposes) return null;
@@ -112,18 +112,18 @@ export function describeItemTile(a: ItemTileArgs): DescribedItem {
     );
   })();
 
-  const state = consider ? (task!.outcome === "chosen" ? "Chosen" : task!.outcome === "dropped" ? "Dropped" : "Not finalized") : undefined;
+  const state = proposed ? (task!.outcome === "chosen" ? "Chosen" : task!.outcome === "dropped" ? "Dropped" : "Not finalized") : undefined;
   return {
     defaultOpen: open,
     forceOpen: !!a.editor,
     tile: {
-      domId: a.domId, time: a.time, icon, title, warn: !consider && open,
+      domId: a.domId, time: a.time, icon, title, warn: !proposed && open,
       menu: [...doneItem, ...chooseItem, ...a.menu],
-      meta: [consider ? undefined : done ? "Done" : "To-do", what, range, who ? gapLabel(who, a.groups, start ?? date ?? "")?.label : undefined, priority ? `${PRIORITY_LABELS[priority]} priority` : undefined].filter(Boolean).join(" · "),
-      className: `tl-item${consider ? " tl-consider" : ""}${done ? " is-done" : ""}`,
-      headerEnd: consider ? (
-        <span className="tl-consider-head">
-          <span className="consider-pill" data-outcome={task!.outcome}>{state}</span>
+      meta: [proposed ? undefined : done ? "Done" : "To-do", what, range, who ? gapLabel(who, a.groups, start ?? date ?? "")?.label : undefined, priority ? `${PRIORITY_LABELS[priority]} priority` : undefined].filter(Boolean).join(" · "),
+      className: `tl-item${proposed ? " tl-proposed" : ""}${done ? " is-done" : ""}`,
+      headerEnd: proposed ? (
+        <span className="tl-proposed-head">
+          <span className="proposed-pill" data-outcome={task!.outcome}>{state}</span>
           <VoteButtons id={id} title={title} task={task!} pending={a.pendingVotes[id]} onVote={a.onVote} />
         </span>
       ) : undefined,
@@ -141,8 +141,8 @@ export function describeItemTile(a: ItemTileArgs): DescribedItem {
               {draftBody}
             </div>
           )}
-          {consider ? (
-            <ConsiderActions
+          {proposed ? (
+            <ProposedActions
               id={id}
               task={task!}
               pending={a.pendingVotes[id]}
@@ -181,7 +181,7 @@ export function VoteButtons({ id, title, task, pending, onVote }: { id: string; 
 
 // The body's actions: who voted, then add to the itinerary (on which day, when it could be several) or
 // drop it; once added, where it is and how to take it back out; once dropped, reopen it.
-function ConsiderActions({ id, task, pending, linkedOn, days, hotel, onPromote, onUnpromote, onSetOutcome }: {
+function ProposedActions({ id, task, pending, linkedOn, days, hotel, onPromote, onUnpromote, onSetOutcome }: {
   id: string;
   task: Task;
   pending: Vote | null | undefined;
@@ -218,7 +218,7 @@ function ConsiderActions({ id, task, pending, linkedOn, days, hotel, onPromote, 
           {votes.no.length > 0 && <span>👎 {votes.no.join(", ")}</span>}
         </div>
       )}
-      <div className="consider-actions">
+      <div className="proposed-actions">
         {linkedOn && <span className="cmeta tl-linked">In the itinerary on {fmtShort(linkedOn)}.</span>}
         {canAdd && !hotel && days.length > 1 && (
           <select className="due-input" aria-label="Day to add it to" value={pickDay} onChange={(e) => setDay(e.target.value)}>
@@ -245,7 +245,7 @@ function ConsiderActions({ id, task, pending, linkedOn, days, hotel, onPromote, 
             Reopen
           </button>
         )}
-        <span className="cmeta consider-status" role="status">{msg}</span>
+        <span className="cmeta proposed-status" role="status">{msg}</span>
       </div>
     </>
   );

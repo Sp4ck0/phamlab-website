@@ -75,7 +75,7 @@ interface Props {
   dayActionItems: ActionItem[];
   // Proposed items that cover this day (day / range scope; open or chosen), shown
   // as a dashed strip so they read as candidates, not plans.
-  dayConsiderations: Task[];
+  dayProposed: Task[];
   pendingVotes: Record<string, Vote | null>;
   onVote: (itemId: string, vote: Vote | null) => void;
   actionItemsDone: Record<string, boolean>;
@@ -117,7 +117,7 @@ export function DayCard({
   tiles,
   onToggle,
   dayActionItems,
-  dayConsiderations,
+  dayProposed,
   pendingVotes,
   onVote,
   actionItemsDone,
@@ -248,7 +248,7 @@ export function DayCard({
   // (until it is dismissed). A merged tile matches any of its rows.
   const missingDetails = (g: FlightGroup) => (gaps?.details ?? []).some((t) => g.ids.some((id) => t.key === `details:${id}`));
   // Under Only gaps, a to-do or proposed item that is done or settled is not a gap.
-  const shownConsiderations = gapsOnly ? dayConsiderations.filter((t) => !t.done) : dayConsiderations;
+  const shownProposed = gapsOnly ? dayProposed.filter((t) => !t.done) : dayProposed;
   const shownActionItems = gapsOnly ? dayActionItems.filter((item) => !actionItemsDone[item.id]) : dayActionItems;
   // Items already written into the itinerary (an entry links back to them), with the first day each is on.
   const linkedOn = linkedItems(days ?? [d]);
@@ -256,7 +256,7 @@ export function DayCard({
   // Once an entry has been written from an item, the entry is the tile (its votes are the History
   // folded into it), so the item doesn't show a second time; it stays in the Proposed items
   // list, where it can be taken back out of the itinerary.
-  const dayItems: DayItem[] = shownConsiderations
+  const dayItems: DayItem[] = shownProposed
     .map((t) => ({ id: t.key.slice("item:".length), task: t, time: (t.scope.kind === "day" ? t.scope.date : t.scope.kind === "range" ? t.scope.start : undefined) === d.date ? t.time : undefined }))
     .filter((x) => !linkedOn.has(x.id));
   // To-dos are not part of the schedule: they sit in a block at the bottom of the day, done ones folded away.

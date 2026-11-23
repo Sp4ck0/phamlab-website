@@ -42,8 +42,8 @@ interface Props {
   filterRef: RefObject<HTMLButtonElement | null>;
   onToggle: (ids: string[], status: Status) => void;
   actionItems: ActionItem[];
-  // Considerations (open or chosen), shown on the days they cover.
-  considerations: Task[];
+  // ProposedItems (open or chosen), shown on the days they cover.
+  proposedItems: Task[];
   pendingVotes: Record<string, Vote | null>;
   onVote: (itemId: string, vote: Vote | null) => void;
   actionItemsDone: Record<string, boolean>;
@@ -53,7 +53,7 @@ interface Props {
   itemTasks?: Record<string, Task>;
   // "Add to itinerary" on an item tile.
   onPromote?: (id: string, date: string) => Promise<unknown>;
-  // "Back to considering", and drop / reopen, on a consideration's tile.
+  // "Back to proposed", and drop / reopen, on a proposed item's tile.
   onUnpromote?: (id: string) => Promise<unknown>;
   onSetOutcome?: (key: string, outcome: Outcome | null) => void;
   // A photo of each day's city for its header.
@@ -70,7 +70,7 @@ const withoutPlaceIds = (d: ResolvedDay) => JSON.stringify(d, (key, value) => (k
 
 // Unified itinerary; name retained to keep the detail renderer's consumer small.
 export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps, isGap, dayGaps, onOnlyGapsChange, filterRef,
-  onToggle, actionItems, considerations, pendingVotes, onVote, actionItemsDone, onToggleActionItem, onEditActivity, itemTasks, onPromote, onUnpromote, onSetOutcome, cityPhoto, placePhoto }: Props) {
+  onToggle, actionItems, proposedItems, pendingVotes, onVote, actionItemsDone, onToggleActionItem, onEditActivity, itemTasks, onPromote, onUnpromote, onSetOutcome, cityPhoto, placePhoto }: Props) {
   const prefix = useId();
   const nowMs = useNow();
   // A day the AI just edited keeps showing its old content until the page is
@@ -444,7 +444,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
                 return { ...current, expanded };
               });
             }} onToggle={onToggle} dayActionItems={actionItems.filter(item => item.date !== undefined && item.date <= d.date && d.date <= (item.endDate ?? item.date))}
-            dayConsiderations={considerations.filter(t => t.scope.kind !== "trip" && coversDay(t.scope, d.date))}
+            dayProposed={proposedItems.filter(t => t.scope.kind !== "trip" && coversDay(t.scope, d.date))}
             pendingVotes={pendingVotes} onVote={onVote}
             actionItemsDone={actionItemsDone} onToggleActionItem={onToggleActionItem} onEditActivity={editActivity} itemTasks={itemTasks} onPromote={onPromote} onUnpromote={onUnpromote} onSetOutcome={onSetOutcome} cityPhoto={cityPhoto} placePhoto={placePhoto} />
           </Fragment>
