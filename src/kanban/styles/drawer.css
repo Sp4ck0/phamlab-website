@@ -243,6 +243,18 @@
   outline: none;
   border-color: var(--ink);
 }
+/* An input with a small button beside it (the check-back date's Clear).
+   min-width: 0 lets iOS's date box shrink instead of spilling past the drawer. */
+.field__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.field__row input {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
 /* "The longer version": starts about 8 lines tall, grows with the note
    (NoteBox), and scrolls inside past two thirds of the screen. */
 .field textarea.note-box {
