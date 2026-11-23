@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { fractionOfIndex, indexAtPointer, positionAtPointer, offsetAtPosition } from "./scrubber.ts";
+import { fractionOfIndex, indexAtPointer, positionAtPointer, offsetAtPosition, smoothDamp } from "./scrubber.ts";
 
 test("fractionOfIndex spans the track and stays inside it", () => {
   assert.equal(fractionOfIndex(0, 10), 0);
@@ -35,4 +35,18 @@ test("offsetAtPosition moves smoothly between item offsets and stops at the last
   assert.equal(offsetAtPosition(2, offsets), 400);
   assert.equal(offsetAtPosition(9, offsets), 400);
   assert.equal(offsetAtPosition(0, []), 0);
+});
+
+test("smoothDamp eases toward the target: slow start, no overshoot, arrives", () => {
+  let x = 0, v = 0;
+  const steps = [];
+  for (let i = 0; i < 120; i++) {
+    [x, v] = smoothDamp(x, 1000, v, 0.2, 1 / 60);
+    steps.push(x);
+    assert.ok(x <= 1000 + 1e-6);
+  }
+  assert.ok(steps[0] > 0, "moves forward");
+  assert.ok(steps[1] - steps[0] > steps[0], "speeds up from rest");
+  assert.ok(Math.abs(x - 1000) < 1);
+  assert.equal(smoothDamp(5, 5, 0, 0.2, 1 / 60)[0], 5);
 });

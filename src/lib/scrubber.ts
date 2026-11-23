@@ -30,3 +30,15 @@ export function offsetAtPosition(position: number, offsets: number[]): number {
   const next = offsets[i + 1];
   return next === undefined ? offsets[i] : offsets[i] + (position - i) * (next - offsets[i]);
 }
+
+// One step of a critically damped spring toward `target`: it speeds up away from rest and slows
+// into the target without overshooting. `smoothTime` is roughly how long (s) it takes to arrive;
+// `dt` is the step (s). Returns the new value and velocity.
+export function smoothDamp(current: number, target: number, velocity: number, smoothTime: number, dt: number): [number, number] {
+  const omega = 2 / Math.max(0.0001, smoothTime);
+  const x = omega * dt;
+  const decay = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
+  const change = current - target;
+  const temp = (velocity + omega * change) * dt;
+  return [target + (change + temp) * decay, (velocity - omega * temp) * decay];
+}

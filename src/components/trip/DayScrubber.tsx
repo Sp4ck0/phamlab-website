@@ -1,9 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent } from "react";
 import type { ItineraryRow } from "../../lib/itineraryState";
 import { DOW, MON } from "../../lib/tripLogic";
 import { SCRUBBER_EVENT } from "../../lib/hideBars";
-import { offsetAtPosition, positionAtPointer } from "../../lib/scrubber";
+import { offsetAtPosition, positionAtPointer, smoothDamp } from "../../lib/scrubber";
 
 const tell = (active: boolean) => window.dispatchEvent(new CustomEvent(SCRUBBER_EVENT, { detail: { active } }));
 const label = (r: ItineraryRow) => `${DOW[r.day._d.getDay()]}, ${MON[r.day._d.getMonth()]} ${r.day._d.getDate()}`;
@@ -15,11 +15,15 @@ export function DayScrubber({ rows, currentId }: { rows: ItineraryRow[]; current
   const track = useRef<HTMLDivElement>(null);
   // While dragging: where the finger is, as a position between days (2.5 = halfway from day 2 to 3).
   const [dragAt, setDragAt] = useState<number | null>(null);
-  const frame = useRef(0);
-  const latest = useRef(0);
   const currentIndex = Math.max(0, rows.findIndex(r => r.id === currentId));
   const position = dragAt ?? currentIndex;
   const index = Math.round(position);
+  // The page glides toward where the finger points instead of being pinned to it: a spring chases
+  // the target scroll offset each frame, so it speeds up, slows into place, and carries on a moment
+  // after the finger lifts.
+  const glide = useRef({ frame: 0, last: 0, y: 0, velocity: 0, target: 0, tops: [] as number[], grab: 0, dragging: false });
+
+  useEffect(() => () => cancelAnimationFrame(glide.current.frame), []);
 
   function go(i: number) {
     const row = rows[i];
@@ -27,21 +31,45 @@ export function DayScrubber({ rows, currentId }: { rows: ItineraryRow[]; current
     const reduced = !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     document.getElementById(row.id)?.scrollIntoView({ block: "start", behavior: reduced ? "instant" : "smooth" });
   }
-  // Follow the finger: scroll to the matching spot between two days' tops (past their sticky-bar margin).
-  function scrollTo(pos: number) {
-    const tops = rows.map(r => {
+  function tick(now: number) {
+    const g = glide.current;
+    const dt = Math.min(0.05, (now - g.last) / 1000);
+    g.last = now;
+    const reduced = !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) { g.y = g.target; g.velocity = 0; }
+    else [g.y, g.velocity] = smoothDamp(g.y, g.target, g.velocity, 0.22, dt);
+    const arrived = Math.abs(g.y - g.target) < 0.5 && Math.abs(g.velocity) < 5;
+    window.scrollTo({ top: arrived ? g.target : g.y, behavior: "instant" });
+    g.frame = arrived && !g.dragging ? 0 : requestAnimationFrame(tick);
+  }
+  function onDown(e: PointerEvent<HTMLDivElement>) {
+    const g = glide.current, box = e.currentTarget.getBoundingClientRect();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    tell(true); // the bars go away first, so the tops below are measured with them gone
+    // Each day's page offset (past its sticky-bar margin), measured once: nothing reflows while dragging.
+    g.tops = rows.map(r => {
       const el = document.getElementById(r.id);
       return el ? el.getBoundingClientRect().top + window.scrollY - (parseFloat(getComputedStyle(el).scrollMarginTop) || 0) : 0;
     });
-    window.scrollTo({ top: offsetAtPosition(pos, tops), behavior: "instant" });
+    g.grab = e.clientY - (box.top + box.height / 2); // grabbed off-centre: the handle doesn't jump to the finger
+    g.y = window.scrollY;
+    g.target = g.y;
+    g.velocity = 0;
+    g.dragging = true;
+    setDragAt(currentIndex);
   }
-  function onMove(e: PointerEvent) {
-    const box = track.current?.getBoundingClientRect();
-    if (dragAt === null || !box) return;
-    const pos = positionAtPointer(e.clientY, box.top, box.height, rows.length);
+  function onMove(e: PointerEvent<HTMLDivElement>) {
+    const g = glide.current, box = track.current?.getBoundingClientRect();
+    if (!g.dragging || !box) return;
+    const pos = positionAtPointer(e.clientY - g.grab, box.top, box.height, rows.length);
     setDragAt(pos);
-    latest.current = pos;
-    if (!frame.current) frame.current = requestAnimationFrame(() => { frame.current = 0; scrollTo(latest.current); });
+    g.target = offsetAtPosition(pos, g.tops);
+    if (!g.frame) { g.last = performance.now(); g.frame = requestAnimationFrame(tick); }
+  }
+  function onUp() {
+    glide.current.dragging = false;
+    setDragAt(null);
+    tell(false);
   }
   function onKey(e: KeyboardEvent) {
     const step = { ArrowUp: -1, ArrowLeft: -1, ArrowDown: 1, ArrowRight: 1 }[e.key];
@@ -67,10 +95,10 @@ export function DayScrubber({ rows, currentId }: { rows: ItineraryRow[]; current
         onKeyDown={onKey}
         onTouchStart={e => e.stopPropagation()}
         onTouchEnd={e => e.stopPropagation()}
-        onPointerDown={e => { e.currentTarget.setPointerCapture(e.pointerId); setDragAt(currentIndex); tell(true); }}
+        onPointerDown={onDown}
         onPointerMove={onMove}
-        onPointerUp={() => { setDragAt(null); tell(false); }}
-        onPointerCancel={() => { setDragAt(null); tell(false); }}
+        onPointerUp={onUp}
+        onPointerCancel={onUp}
       >
         {dragAt !== null && <span className="day-scrubber-bubble" aria-hidden="true">{label(rows[index])}</span>}
       </div>
