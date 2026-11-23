@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { ActionItem, Group, Task } from "../../lib/types";
 import { gapLabel } from "../../lib/tripLogic";
-import { scopeLabel, scopeStart } from "../../lib/tasks";
+import { isProposed, scopeLabel, scopeStart } from "../../lib/tasks";
 import type { ActionItemFields } from "../../hooks/useActionItemEdits";
 import { useUndoableDelete } from "../../hooks/useUndoableDelete";
 import { ActionItemEditor } from "./ActionItemEditor";
@@ -48,7 +48,7 @@ export function AlertsPanel({
 }: Props) {
   const [editing, setEditing] = useState<string | null>(null);
   const undoable = useUndoableDelete({ onAddItem, onRemoveItem, onSetDone, onSetDue });
-  const urgent = tasks.filter((t) => t.editable && t.priority === "high" && !(t.kind === "consider" && t.outcome));
+  const urgent = tasks.filter((t) => t.editable && t.priority === "high" && !(isProposed(t.kind) && t.outcome));
   // Deleting the last one must not take the panel, and its Undo, with it.
   if (urgent.length === 0 && !undoable.deletedTitle) return null;
 
@@ -88,7 +88,7 @@ export function AlertsPanel({
             const badge = t.who !== undefined ? gapLabel(t.who, groups, scopeStart(t.scope) ?? "") : null;
             return (
               <li key={t.key} style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
-                {t.kind === "consider" ? (
+                {isProposed(t.kind) ? (
                   <button
                     type="button"
                     className="ai-chip"

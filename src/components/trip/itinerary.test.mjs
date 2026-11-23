@@ -1994,3 +1994,12 @@ test('opening a trip under way lands on today, unless a link points at a task (?
   assert.ok(!(await open('/trip/synthetic?task=item%3Asynthetic'))); // a task link wins: today stays put
 });
 
+
+test('a task of kind proposed (the new name) is a proposed item just like one of kind consider', async () => {
+  const view = mount(React.createElement(DayCard, { ...props, day, expanded: true, dayConsiderations: [consider('renamed', { kind: 'proposed' })] }));
+  try {
+    const tile = view.container.querySelector('.tl-consider');
+    assert.ok(tile);
+    assert.equal(tile.querySelector('.consider-pill').textContent, 'Not finalized');
+  } finally { view.close(); }
+});

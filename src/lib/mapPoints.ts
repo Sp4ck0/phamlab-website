@@ -1,6 +1,7 @@
 import type { Act, MapCategory, MapPointData, Place, ResolvedDay, Task, TaskScope } from "./types";
 import { actParts, fmtShort } from "./tripLogic";
 import { isPlaceholderHotel } from "./tileHeaders";
+import { isProposed } from "./tasks";
 import type { DayWeather } from "./weather";
 
 export const CATEGORY_LABELS: Record<MapCategory, string> = {
@@ -237,7 +238,7 @@ export function deriveTaskPoints(tasks: Task[], existing: MapPointData[]): MapPo
   for (const t of tasks) {
     if (!t.key.startsWith("item:") || t.outcome === "dropped") continue;
     const itemId = t.key.slice("item:".length);
-    const settled = t.kind === "consider" ? t.outcome === "chosen" : t.done;
+    const settled = isProposed(t.kind) ? t.outcome === "chosen" : t.done;
     const draft = t.proposes;
     const draftCategory: MapCategory =
       draft?.type === "hotel" ? "hotel" : draft?.type === "activity" ? (draft.entry.tag && ACT_CATEGORY[draft.entry.tag]) || "event" : "other";
