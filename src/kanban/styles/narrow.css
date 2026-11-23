@@ -232,6 +232,12 @@
     font-size: 16px;
   }
 
+  /* Clear beside the check-back date: a finger-sized target. */
+  .field__row .ghost {
+    min-height: 44px;
+    padding-inline: 12px;
+  }
+
   .drawer__inner {
     --drawer-pad-x: 18px;
     padding-bottom: 36px;

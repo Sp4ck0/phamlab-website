@@ -436,20 +436,37 @@ export function CardDrawer({
 
               <label className="field">
                 <span className="label">Check back on</span>
-                <input
-                  type="date"
-                  max="9999-12-31"
-                  value={followUp}
-                  onChange={(e) => {
-                    const { value, validity } = e.target;
-                    const id = card.id;
-                    setFollowUp(value);
-                    // Half-typed, the browser reports '' (badInput): that's not
-                    // "cleared", so don't save it or the field resets.
-                    if (!value && validity.badInput) return;
-                    saveSoon('followUp', () => onChange(id, { followUp: value || null }));
-                  }}
-                />
+                <div className="field__row">
+                  <input
+                    type="date"
+                    max="9999-12-31"
+                    value={followUp}
+                    onChange={(e) => {
+                      const { value, validity } = e.target;
+                      const id = card.id;
+                      setFollowUp(value);
+                      // Half-typed, the browser reports '' (badInput): that's not
+                      // "cleared", so don't save it or the field resets.
+                      if (!value && validity.badInput) return;
+                      saveSoon('followUp', () => onChange(id, { followUp: value || null }));
+                    }}
+                  />
+                  {/* iOS's calendar has no way to empty the field, so offer one. */}
+                  {followUp && (
+                    <button
+                      type="button"
+                      className="ghost"
+                      aria-label="Clear check-back date"
+                      onClick={() => {
+                        const id = card.id;
+                        setFollowUp('');
+                        saveSoon('followUp', () => onChange(id, { followUp: null }));
+                      }}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
               </label>
 
               <Thread
