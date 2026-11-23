@@ -214,6 +214,8 @@
   }
   .drawer__close {
     min-width: 44px;
+    font-size: 24px;
+    padding: 2px 10px;
   }
 
   /* 16px inputs: iOS Safari zooms the page in on anything smaller. */
