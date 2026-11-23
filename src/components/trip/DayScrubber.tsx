@@ -6,6 +6,20 @@ import { SCRUBBER_EVENT } from "../../lib/hideBars";
 import { fractionAtOffset, fractionAtPointer, indexAtOffset, offsetAtFraction, smoothDamp } from "../../lib/scrubber";
 
 const tell = (active: boolean) => window.dispatchEvent(new CustomEvent(SCRUBBER_EVENT, { detail: { active } }));
+// TEMPORARY diagnostics, shown after Expand all (see DetailedView): what a scrub measured.
+const scrubParts = { down: "", move: "" };
+function scrubNote(text: string) {
+  if (!document.documentElement.dataset.scrollDebug) return;
+  let box = document.getElementById("scrub-debug");
+  if (!box) {
+    box = document.createElement("pre");
+    box.id = "scrub-debug";
+    box.style.cssText = "position:fixed;left:0;right:0;bottom:62px;z-index:99999;margin:0;padding:4px 6px;font:10px/1.25 monospace;background:rgba(60,0,0,.9);color:#fc8;white-space:pre-wrap;pointer-events:none";
+    document.body.appendChild(box);
+  }
+  if (text.startsWith("DOWN")) scrubParts.down = text; else scrubParts.move = text;
+  box.textContent = `${scrubParts.down}\n${scrubParts.move}`;
+}
 const label = (r: ItineraryRow) => `${DOW[r.day._d.getDay()]}, ${MON[r.day._d.getMonth()]} ${r.day._d.getDate()}`;
 
 // A slim drag handle down the right edge for long itineraries, on touch screens only (CSS). Only the
@@ -64,6 +78,7 @@ export function DayScrubber({ rows, currentId }: { rows: ItineraryRow[]; current
     g.velocity = 0;
     g.dragging = true;
     setDragAt({ fraction: here, index: indexAtOffset(g.y, g.tops) });
+    scrubNote(`DOWN y=${Math.round(g.y)} start=${Math.round(g.start)} end=${Math.round(g.end)} here=${here.toFixed(3)} idx=${indexAtOffset(g.y, g.tops)} tops=${g.tops.slice(0, 3).map(Math.round)}..${g.tops.slice(-2).map(Math.round)} grab=${Math.round(g.grab)} track=${Math.round(trackBox.top)}+${Math.round(trackBox.height)} finger=${Math.round(e.clientY)} sh=${document.documentElement.scrollHeight}`);
   }
   function onMove(e: PointerEvent<HTMLDivElement>) {
     const g = glide.current, box = track.current?.getBoundingClientRect();
@@ -71,6 +86,7 @@ export function DayScrubber({ rows, currentId }: { rows: ItineraryRow[]; current
     const fraction = fractionAtPointer(e.clientY - g.grab, box.top, box.height);
     g.target = offsetAtFraction(fraction, g.start, g.end);
     setDragAt({ fraction, index: indexAtOffset(g.target, g.tops) });
+    scrubNote(`MOVE finger=${Math.round(e.clientY)} frac=${fraction.toFixed(3)} target=${Math.round(g.target)} idx=${indexAtOffset(g.target, g.tops)} y=${Math.round(window.scrollY)}`);
     if (!g.frame) { g.last = performance.now(); g.frame = requestAnimationFrame(tick); }
   }
   function onUp() {
