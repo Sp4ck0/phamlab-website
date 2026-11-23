@@ -85,12 +85,7 @@ function CurrentDay({ rows, shownRows, todayId, setJumped, onJump }: {
   // The day the reader is looking at, marked on the date strip: the day they last jumped to, until
   // they scroll by hand (a day near the page's end can't reach the strip); else the day under the strip.
   const [jumpedTo, setJumpedTo] = useState<string>();
-  // TEMPORARY diagnostics (shown after Expand all): what the page measured when the highlight changed.
-  const dbg = useRef({ snap: "", jumps: [] as string[] });
-  setJumped.current = (id?: string) => {
-    if (id) dbg.current.jumps = [`jump→${rows.findIndex(r => r.id === id)} y=${Math.round(window.scrollY)}`, ...dbg.current.jumps].slice(0, 4);
-    setJumpedTo(id);
-  };
+  setJumped.current = setJumpedTo;
   const [scrolledTo, setScrolledTo] = useState<string>();
   useEffect(() => {
     let frame = 0;
@@ -105,24 +100,7 @@ function CurrentDay({ rows, shownRows, todayId, setJumped, onJump }: {
         const el = document.getElementById(r.id);
         return el ? [{ id: r.id, top: el.getBoundingClientRect().top }] : [];
       });
-      const pick = dayAtLine(cards, line);
-      setScrolledTo(pick);
-      if (document.documentElement.dataset.scrollDebug) {
-        let box = document.getElementById("scroll-debug");
-        if (!box) {
-          box = document.createElement("pre");
-          box.id = "scroll-debug";
-          box.style.cssText = "position:fixed;left:0;right:0;bottom:0;z-index:99999;margin:0;padding:4px 6px;font:10px/1.25 monospace;background:rgba(0,0,0,.85);color:#7f7;white-space:pre-wrap;pointer-events:none";
-          document.body.appendChild(box);
-        }
-        const idx = pick ? cards.findIndex(c => c.id === pick) : -1;
-        const y = Math.round(window.scrollY);
-        const tops = (list: { top: number }[]) => list.map(c => Math.round(c.top)).join(",");
-        if (idx <= 0 && y > 1500) {
-          dbg.current.snap = `FLIP y=${y} idx=${idx} line=${Math.round(line)} strip=${Math.round(strip.getBoundingClientRect().bottom)} cards=${cards.length}/${rows.length} first=${tops(cards.slice(0, 4))} last=${tops(cards.slice(-3))} nan=${cards.filter(c => !Number.isFinite(c.top)).length}`;
-        }
-        box.textContent = `now y=${y} idx=${idx} line=${Math.round(line)} cards=${cards.length} first=${tops(cards.slice(0, 3))}\n${dbg.current.snap || "no flip yet"}\n${dbg.current.jumps.join(" | ")}`;
-      }
+      setScrolledTo(dayAtLine(cards, line));
     };
     const onScroll = () => { if (!frame) frame = requestAnimationFrame(measure); };
     const byHand = () => setJumpedTo(undefined);
@@ -245,7 +223,6 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
     onDaysControl?.(gapsView ? null : {
       allOpen,
       toggle: () => {
-        if (!allOpen) document.documentElement.dataset.scrollDebug = "1"; // temporary readout, see CurrentDay
         noteAnchor(true);
         anchoring.current = anchor.current !== null;
         setState(current => ({ ...current, expanded: allOpen ? new Set<string>() : new Set(current.rows.map(row => row.id)) }));
