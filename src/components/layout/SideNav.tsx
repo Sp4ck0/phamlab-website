@@ -105,7 +105,7 @@ export function SideNav() {
             </svg>
           )}
         </button>
-        <span className="navmark">🧳</span>
+        <span className="navmark"><img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" /></span>
         <span className="navtitle">Pham Lab</span>
         {headerButtons}
       </div>
@@ -124,7 +124,7 @@ export function SideNav() {
         onTouchEnd={onTouchEnd}
       >
         <div className="navhead">
-          <span className="navmark">🧳</span>
+          <span className="navmark"><img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" /></span>
           <span className="navtitle">Pham Lab</span>
           {headerButtons}
         </div>
