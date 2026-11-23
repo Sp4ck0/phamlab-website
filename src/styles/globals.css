@@ -1285,6 +1285,9 @@ textarea.ai-input{display:block;width:100%;resize:none;overflow:hidden;line-heig
   .day-scrubber-handle::before{content:"";width:6px;height:36px;border-radius:3px;background:var(--text-secondary)}
   .day-scrubber.is-dragging .day-scrubber-handle,.day-scrubber-handle:focus-visible{opacity:1}
   .day-scrubber.is-dragging .day-scrubber-handle::before{background:var(--accent-1);width:8px}
+  /* The scrubber stands in for the browser's own scroll indicator on these pages: two bars side by side confuse. */
+  html:has(.day-scrubber){scrollbar-width:none}
+  html:has(.day-scrubber)::-webkit-scrollbar{display:none}
   .day-scrubber-handle:focus-visible{outline:3px solid var(--accent-1);outline-offset:2px;border-radius:6px}
   .day-scrubber-bubble{position:absolute;right:30px;top:50%;transform:translateY(-50%);white-space:nowrap;padding:6px 10px;border-radius:8px;background:var(--accent-1);color:#fff;font-size:14px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 }
