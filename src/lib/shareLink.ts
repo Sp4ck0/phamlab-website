@@ -2,8 +2,15 @@
 // It never carries the access code: whoever opens it needs their own access.
 
 /** Copies a link that opens this trip at one day, tile or task (see ShareLinkButton); says whether it worked. */
-export async function copyShareLink(slug: string | undefined, param: Record<string, string>): Promise<string> {
-  const url = `${location.origin}${location.pathname}#/trip/${slug}?${new URLSearchParams(param)}`;
+export const copyShareLink = (slug: string | undefined, param: Record<string, string>) =>
+  copyHashLink(`/trip/${slug}?${new URLSearchParams(param)}`);
+
+/** Copies a link that opens this board with one card open (KanbanPage reads ?card=); says whether it worked. */
+export const copyCardLink = (boardId: string, cardId: string) =>
+  copyHashLink(`/kanban/${boardId}?${new URLSearchParams({ card: cardId })}`);
+
+async function copyHashLink(path: string): Promise<string> {
+  const url = `${location.origin}${location.pathname}#${path}`;
   try {
     await navigator.clipboard.writeText(url);
     return "Link copied";
