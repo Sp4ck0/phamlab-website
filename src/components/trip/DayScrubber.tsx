@@ -3,7 +3,7 @@ import type { KeyboardEvent, PointerEvent } from "react";
 import type { ItineraryRow } from "../../lib/itineraryState";
 import { DOW, MON } from "../../lib/tripLogic";
 import { SCRUBBER_EVENT } from "../../lib/hideBars";
-import { fractionAtOffset, indexAtOffset, offsetAtFraction, smoothDamp } from "../../lib/scrubber";
+import { fractionAtOffset, fractionAtPointer, indexAtOffset, offsetAtFraction, smoothDamp } from "../../lib/scrubber";
 
 const tell = (active: boolean) => window.dispatchEvent(new CustomEvent(SCRUBBER_EVENT, { detail: { active } }));
 // TEMPORARY diagnostics, shown after Expand all (see DetailedView): what a scrub measured.
@@ -19,6 +19,15 @@ function scrubNote(text: string) {
   }
   if (text.startsWith("DOWN")) scrubParts.down = text; else scrubParts.move = text;
   box.textContent = `${scrubParts.down}\n${scrubParts.move}`;
+}
+// Where the finger is on the screen. On an iPhone (installed app) the page scrolling under the finger can
+// leave scroll offsets in these readings: clientY has read ~4000 on a 780-tall screen, and screenY has
+// included the page's whole scroll position. Each reading is tried, with the scroll offset taken off
+// where that explains it, and the first one that lies on the screen is used. None: ignore this event.
+function fingerY(e: PointerEvent): number | null {
+  const sy = window.scrollY, h = window.innerHeight;
+  for (const y of [e.clientY, e.screenY - sy, e.pageY - sy]) if (Number.isFinite(y) && y >= -40 && y <= h + 40) return y;
+  return null;
 }
 const label = (r: ItineraryRow) => `${DOW[r.day._d.getDay()]}, ${MON[r.day._d.getMonth()]} ${r.day._d.getDate()}`;
 
@@ -36,7 +45,7 @@ export function DayScrubber({ rows, currentId }: { rows: ItineraryRow[]; current
   // The page glides toward where the finger points instead of being pinned to it: a spring chases
   // the target scroll offset each frame, so it speeds up, slows into place, and carries on a moment
   // after the finger lifts.
-  const glide = useRef({ frame: 0, last: 0, y: 0, velocity: 0, target: 0, tops: [] as number[], start: 0, end: 0, grab: 0, screen0: 0, here: 0, dragging: false });
+  const glide = useRef({ frame: 0, last: 0, y: 0, velocity: 0, target: 0, tops: [] as number[], start: 0, end: 0, grab: 0, dragging: false });
 
   useEffect(() => () => cancelAnimationFrame(glide.current.frame), []);
 
@@ -73,12 +82,7 @@ export function DayScrubber({ rows, currentId }: { rows: ItineraryRow[]; current
     // doesn't move the page, and the page only moves as the finger does.
     const trackBox = e.currentTarget.parentElement?.getBoundingClientRect() ?? box;
     const here = fractionAtOffset(g.y, g.start, g.end);
-    g.grab = e.clientY - (trackBox.top + here * trackBox.height);
-    // The finger's travel is measured on the screen (screenY), not in the page's coordinates: on an iPhone,
-    // once the page scrolls under the finger, clientY can report a position far off the screen, which sent
-    // the page to the end of the trip (or the start) on the first move.
-    g.screen0 = e.screenY;
-    g.here = here;
+    g.grab = (fingerY(e) ?? trackBox.top + here * trackBox.height) - (trackBox.top + here * trackBox.height);
     g.target = g.y;
     g.velocity = 0;
     g.dragging = true;
@@ -88,10 +92,12 @@ export function DayScrubber({ rows, currentId }: { rows: ItineraryRow[]; current
   function onMove(e: PointerEvent<HTMLDivElement>) {
     const g = glide.current, box = track.current?.getBoundingClientRect();
     if (!g.dragging || !box) return;
-    const fraction = Math.min(1, Math.max(0, g.here + (e.screenY - g.screen0) / Math.max(1, box.height)));
+    const finger = fingerY(e);
+    if (finger === null) return; // an impossible reading: keep the last target
+    const fraction = fractionAtPointer(finger - g.grab, box.top, box.height);
     g.target = offsetAtFraction(fraction, g.start, g.end);
     setDragAt({ fraction, index: indexAtOffset(g.target, g.tops) });
-    scrubNote(`MOVE finger=${Math.round(e.clientY)} screenY=${Math.round(e.screenY)} down=${Math.round(g.screen0)} frac=${fraction.toFixed(3)} target=${Math.round(g.target)} idx=${indexAtOffset(g.target, g.tops)} y=${Math.round(window.scrollY)}`);
+    scrubNote(`MOVE finger=${Math.round(finger)} client=${Math.round(e.clientY)} screenY=${Math.round(e.screenY)} sy=${Math.round(window.scrollY)} frac=${fraction.toFixed(3)} target=${Math.round(g.target)} idx=${indexAtOffset(g.target, g.tops)} y=${Math.round(window.scrollY)}`);
     if (!g.frame) { g.last = performance.now(); g.frame = requestAnimationFrame(tick); }
   }
   function onUp() {
