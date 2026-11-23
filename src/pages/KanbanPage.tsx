@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { DragDropProvider, KeyboardSensor, PointerSensor } from "@dnd-kit/react";
 import { PointerActivationConstraints } from "@dnd-kit/dom";
 import { move } from "@dnd-kit/helpers";
@@ -92,7 +92,24 @@ export function KanbanPage() {
     return () => document.removeEventListener("scroll", onScroll, { capture: true });
   }, []);
 
-  const [openId, setOpenId] = useState<string | null>(null);
+  // The open card lives in the address (?card=<id>): copying the address shares the card, opening
+  // a shared link opens it, and closing it puts the address back to the board. It replaces the
+  // history entry, since opening and closing a card isn't a page change.
+  const [params, setParams] = useSearchParams();
+  const openId = params.get("card");
+  const setOpenId = useCallback(
+    (id: string | null) =>
+      setParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (id) next.set("card", id);
+          else next.delete("card");
+          return next;
+        },
+        { replace: true }
+      ),
+    [setParams]
+  );
   // The board only holds tile summaries; the open card is loaded whole.
   const openCard = useKanbanCard(boardId as Id<"kanban_boards"> | undefined, openId);
   // The card being written in the new-card pane. Minimizing only hides the
@@ -407,6 +424,7 @@ export function KanbanPage() {
 
             <CardDrawer
               card={openCard}
+              boardId={boardId}
               board={displayBoard}
               lane={openCard ? laneOf(displayBoard, openCard.id) : null}
               onClose={() => setOpenId(null)}

@@ -204,6 +204,7 @@
   /* Tap targets: Apple's 44pt minimum. */
   .seg button,
   .drawer__close,
+  .drawer__link,
   .lane__add,
   .lane__more,
   .nudge {

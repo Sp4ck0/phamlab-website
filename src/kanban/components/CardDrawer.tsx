@@ -4,6 +4,7 @@ import type { Board, Card, Kind, LaneId, PersonId } from '../types';
 import { BOARD_COPY, PEOPLE } from '../types';
 import { boardLanes, pastedImages, uid } from '../lib';
 import { serverMessage } from '../../lib/serverError';
+import { copyCardLink } from '../../lib/shareLink';
 import { ImageGallery } from './ImageGallery';
 import { ImagePicker } from './ImagePicker';
 import { NoteBox } from './NoteBox';
@@ -11,6 +12,7 @@ import { Thread } from './Thread';
 
 interface Props {
   card: Card | null;
+  boardId?: string;
   board: Board;
   lane: LaneId | null;
   onClose: () => void;
@@ -35,6 +37,7 @@ const withDrafts = (actions: Actions, drafts: Record<string, string>): Actions =
 
 export function CardDrawer({
   card,
+  boardId,
   board,
   lane,
   onClose,
@@ -48,6 +51,13 @@ export function CardDrawer({
   onRead,
 }: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // "Copy link" says how it went for a moment (the link never carries the access code).
+  const [linkStatus, setLinkStatus] = useState('');
+  useEffect(() => {
+    if (!linkStatus) return;
+    const t = window.setTimeout(() => setLinkStatus(''), 2000);
+    return () => window.clearTimeout(t);
+  }, [linkStatus]);
   // Local buffers for fields the user types into directly (title, note,
   // action item text). These are edited live and pushed to the server on
   // every keystroke, but the *displayed* value comes from here, not from
@@ -186,6 +196,15 @@ export function CardDrawer({
                   }}
                   onBlur={flush}
                 />
+                {boardId && (
+                  <button
+                    className="drawer__link"
+                    onClick={() => void copyCardLink(boardId, card.id).then(setLinkStatus)}
+                    aria-label="Copy link to this card"
+                  >
+                    {linkStatus || 'Copy link'}
+                  </button>
+                )}
                 <button className="drawer__close" onClick={onClose} aria-label="Close">
                   ✕
                 </button>

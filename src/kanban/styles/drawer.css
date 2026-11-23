@@ -164,6 +164,20 @@
   background: var(--rule);
   color: var(--ink);
 }
+.drawer__link {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-soft);
+  font-size: 13px;
+  padding: 6px 8px;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+.drawer__link:hover {
+  background: var(--rule);
+  color: var(--ink);
+}
 
 .drawer__title {
   flex: 1;
