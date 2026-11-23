@@ -4,6 +4,7 @@ import type { Day, Group, HighlightStat } from "../../lib/types";
 import { assignLegColors, dateRangeFromDays, deriveCountries, deriveRoute, renderCountdown } from "../../lib/tripLogic";
 import { ExportMenu } from "./ExportMenu";
 import { RouteStepper } from "./RouteStepper";
+import type { DaysControl } from "./DetailedView";
 
 export function TripHeader({
   kicker,
@@ -15,6 +16,7 @@ export function TripHeader({
   filterRef,
   onlyGaps,
   onOnlyGapsChange,
+  daysControl,
 }: {
   kicker: string;
   title: string;
@@ -25,6 +27,7 @@ export function TripHeader({
   filterRef: RefObject<HTMLButtonElement | null>;
   onlyGaps: boolean;
   onOnlyGapsChange: (v: boolean) => void;
+  daysControl: DaysControl | null;
 }) {
   const { slug } = useParams<{ slug: string }>();
   const legColors = assignLegColors(days);
@@ -48,6 +51,11 @@ export function TripHeader({
         <button ref={filterRef} type="button" className="btn" aria-pressed={onlyGaps} onClick={() => onOnlyGapsChange(!onlyGaps)}>
           {onlyGaps ? "Show all days" : "Only gaps"}
         </button>
+        {daysControl && (
+          <button type="button" className="btn" onClick={daysControl.toggle}>
+            {daysControl.allOpen ? "Collapse all" : "Expand all"}
+          </button>
+        )}
         {slug && <ExportMenu slug={slug} />}
       </div>
     </header>

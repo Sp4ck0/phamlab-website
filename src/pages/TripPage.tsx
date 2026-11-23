@@ -4,6 +4,7 @@ import { PageShell } from "../components/layout/PageShell";
 import { TripHeader } from "../components/trip/TripHeader";
 import { AlertsPanel } from "../components/trip/AlertsPanel";
 import { DetailedView } from "../components/trip/DetailedView";
+import type { DaysControl } from "../components/trip/DetailedView";
 import { ActionItems } from "../components/trip/ActionItems";
 import { TripMap } from "../components/trip/TripMap";
 import { TripNote } from "../components/trip/TripNote";
@@ -45,6 +46,7 @@ function TripPageEntry() {
   useRememberTab(trip ? `/trip/${slug}` : null);
 
   const [onlyGaps, setOnlyGaps] = useState(false);
+  const [daysControl, setDaysControl] = useState<DaysControl | null>(null);
 
   // Agenda / Tasks / Map / Notes. The choice is mirrored into the URL (?tab=) so a reload or a shared link
   // keeps the view, but quietly: through the router it would count as a new page, which scrolls to
@@ -294,6 +296,7 @@ function TripPageEntry() {
           filterRef={filterRef}
           onlyGaps={onlyGaps}
           onOnlyGapsChange={setOnlyGaps}
+          daysControl={daysControl}
         />
         </div>
 
@@ -329,6 +332,7 @@ function TripPageEntry() {
               onToggle={toggle}
               onOnlyGapsChange={setOnlyGaps}
               filterRef={filterRef}
+              onDaysControl={setDaysControl}
               actionItems={(trip.actionItems || []).filter((i) => i.kind !== "proposed")}
               proposedItems={tasks.filter((t) => t.kind === "proposed" && t.outcome !== "dropped")}
               pendingVotes={pendingVotes}
