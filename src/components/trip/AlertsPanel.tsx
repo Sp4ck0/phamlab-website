@@ -88,24 +88,26 @@ export function AlertsPanel({
             const badge = t.who !== undefined ? gapLabel(t.who, groups, scopeStart(t.scope) ?? "") : null;
             return (
               <li key={t.key} style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
-                {isProposed(t.kind) ? (
-                  <button
-                    type="button"
-                    className="ai-chip"
-                    aria-label={`Go to ${t.title} as a proposed item`}
-                    onClick={() => document.getElementById(`ai-row-${id}`)?.scrollIntoView({ block: "center", behavior: "smooth" })}
-                  >
-                    Proposed ↓
-                  </button>
-                ) : (
-                  <input
-                    type="checkbox"
-                    id={`priority-${id}`}
-                    aria-labelledby={`priority-${id}-text`}
-                    checked={t.done}
-                    onChange={() => onSetDone(t.refs, !t.done)}
-                  />
-                )}
+                <span className="ai-lead">
+                  {isProposed(t.kind) ? (
+                    <button
+                      type="button"
+                      className="ai-chip"
+                      aria-label={`Go to ${t.title} as a proposed item`}
+                      onClick={() => document.getElementById(`ai-row-${id}`)?.scrollIntoView({ block: "center", behavior: "smooth" })}
+                    >
+                      Proposed ↓
+                    </button>
+                  ) : (
+                    <input
+                      type="checkbox"
+                      id={`priority-${id}`}
+                      aria-labelledby={`priority-${id}-text`}
+                      checked={t.done}
+                      onChange={() => onSetDone(t.refs, !t.done)}
+                    />
+                  )}
+                </span>
                 <span id={`priority-${id}-text`} style={t.done ? { textDecoration: "line-through", opacity: 0.6 } : undefined}>
                   {badge && <strong>{badge.label}: </strong>}
                   {textOf(t)}
