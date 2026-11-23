@@ -46,7 +46,7 @@ function TripPageEntry() {
 
   const [onlyGaps, setOnlyGaps] = useState(false);
 
-  // Agenda / Map / Notes. The choice is mirrored into the URL (?tab=) so a reload or a shared link
+  // Agenda / Tasks / Map / Notes. The choice is mirrored into the URL (?tab=) so a reload or a shared link
   // keeps the view, but quietly: through the router it would count as a new page, which scrolls to
   // the top and rebuilds the whole trip page.
   const [params] = useSearchParams();
@@ -131,12 +131,16 @@ function TripPageEntry() {
     pendingMapKey.current = null;
     focusOnMapKey(key);
   }, [tab]);
-  // A shared link, the AI or the map's "See in itinerary" points at a day, tile or task: show the agenda.
-  const pointers = [useAiFocus("day").focus, useAiFocus("tile").focus, useAiFocus("task").focus, useAiFocus("actionItem").focus];
-  const pointed = pointers.find(Boolean)?.nonce;
+  // A shared link, the AI or the map's "See in itinerary" points at a day or tile (the agenda) or at a task or
+  // action item (the Tasks tab, where its row is).
+  const dayPointer = [useAiFocus("day").focus, useAiFocus("tile").focus].find(Boolean)?.nonce;
+  const taskPointer = [useAiFocus("task").focus, useAiFocus("actionItem").focus].find(Boolean)?.nonce;
   useEffect(() => {
-    if (pointed && tabRef.current !== "agenda") setTab("agenda");
-  }, [pointed, setTab]);
+    if (dayPointer && tabRef.current !== "agenda") setTab("agenda");
+  }, [dayPointer, setTab]);
+  useEffect(() => {
+    if (taskPointer && tabRef.current !== "tasks") setTab("tasks");
+  }, [taskPointer, setTab]);
   // Places the AI marked (mark_on_map), kept only while this page is open: gone on reload or
   // when the tab closes, and not carried to another trip. Each call adds its places, opens the
   // map (the Map tab on a phone; on desktop, scrolls to it unless pinned) and has it fit them.
@@ -232,6 +236,44 @@ function TripPageEntry() {
       }}
     />
   );
+  // The High priority panel and the two lists (action items, proposed items): on desktop part of the one page,
+  // on a phone the Tasks tab.
+  const alerts = (
+  <AlertsPanel
+    tasks={tasks}
+    items={trip.actionItems || []}
+    groups={trip.groups}
+    tripStart={trip.days[0]?.date ?? today}
+    tripEnd={trip.days[trip.days.length - 1]?.date ?? today}
+    onSetDone={setDone}
+    onSetDue={setDue}
+    onAddItem={addItem}
+    onUpdateItem={updateItem}
+    onRemoveItem={removeItem}
+  />
+  );
+  const taskLists = (
+  <ActionItems
+    tasks={tasks}
+    items={trip.actionItems || []}
+    groups={trip.groups}
+    onSetDone={setDone}
+    today={today}
+    defaultDue={trip.days[0]?.date ?? today}
+    onSetDue={setDue}
+    tripStart={trip.days[0]?.date ?? today}
+    tripEnd={trip.days[trip.days.length - 1]?.date ?? today}
+    onAddItem={addItem}
+    onUpdateItem={updateItem}
+    onRemoveItem={removeItem}
+    pendingVotes={pendingVotes}
+    onVote={vote}
+    onSetOutcome={setOutcome}
+    days={resolvedDays}
+    onPromote={promoteItem}
+    onUnpromote={unpromoteItem}
+  />
+  );
   // On a phone, the agenda is a tab panel; on desktop it is just the page.
   const agendaPanel = desktop
     ? {}
@@ -265,18 +307,7 @@ function TripPageEntry() {
         )}
 
         <div {...agendaPanel}>
-          <AlertsPanel
-            tasks={tasks}
-            items={trip.actionItems || []}
-            groups={trip.groups}
-            tripStart={trip.days[0]?.date ?? today}
-            tripEnd={trip.days[trip.days.length - 1]?.date ?? today}
-            onSetDone={setDone}
-            onSetDue={setDue}
-            onAddItem={addItem}
-            onUpdateItem={updateItem}
-            onRemoveItem={removeItem}
-          />
+          {desktop && alerts}
 
           {/* Desktop: the map between the trip summary and the day picker (TripMap has its own heading). */}
           {desktop && (
@@ -314,32 +345,19 @@ function TripPageEntry() {
             />
           </Fragment>
 
-          <ActionItems
-            tasks={tasks}
-            items={trip.actionItems || []}
-            groups={trip.groups}
-            onSetDone={setDone}
-            today={today}
-            defaultDue={trip.days[0]?.date ?? today}
-            onSetDue={setDue}
-            tripStart={trip.days[0]?.date ?? today}
-            tripEnd={trip.days[trip.days.length - 1]?.date ?? today}
-            onAddItem={addItem}
-            onUpdateItem={updateItem}
-            onRemoveItem={removeItem}
-            pendingVotes={pendingVotes}
-            onVote={vote}
-            onSetOutcome={setOutcome}
-            days={resolvedDays}
-            onPromote={promoteItem}
-            onUnpromote={unpromoteItem}
-          />
+          {desktop && taskLists}
 
           <footer>
             Trip content is stored in Convex — ask to have a change made rather than editing code. Check-offs are saved
             for everyone with access to this trip.
           </footer>
         </div>
+        {!desktop && (
+          <div role="tabpanel" id={tripPanelId("tasks")} aria-labelledby={tripTabId("tasks")} hidden={tab !== "tasks"}>
+            {alerts}
+            {taskLists}
+          </div>
+        )}
         {!desktop && (seen.map || tab === "map") && (
           <div role="tabpanel" id={tripPanelId("map")} aria-labelledby={tripTabId("map")} hidden={tab !== "map"}>
             {map}
