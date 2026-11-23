@@ -108,6 +108,22 @@ a{color:inherit}
 }
 .navhead{display:flex;align-items:center;gap:11px;padding:0 4px}
 .navhandle{display:none}
+.navcollapse,.navexpand{display:none}
+/* Desktop: a handle on the menu's right edge tucks it away to the left and the page takes its
+   width back; a matching handle at the left edge brings it back. Phones use the drawer instead. */
+@media(min-width:781px){
+  .navcollapse,html[data-nav-collapsed] .navexpand{
+    display:block;position:fixed;top:50%;transform:translateY(-50%);z-index:31;
+    width:28px;height:56px;padding:0;font-size:20px;line-height:1;cursor:pointer;
+    background:var(--card);color:var(--text-muted);border:1px solid var(--border);border-left:none;
+    border-radius:0 10px 10px 0;
+  }
+  .navcollapse{left:var(--sidenav-w)}
+  .navexpand{left:0}
+  .navcollapse:hover,.navexpand:hover{color:var(--text-primary)}
+  html[data-nav-collapsed] body{padding-left:0}
+  html[data-nav-collapsed] .sidenav,html[data-nav-collapsed] .navcollapse{display:none}
+}
 .navmark{
   width:34px;height:34px;border-radius:9px;flex-shrink:0;
   display:grid;place-items:center;font-size:16px;
@@ -1136,7 +1152,7 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
 body:has(.print-doc){padding:0}
 @media(prefers-reduced-motion:reduce){.day-chev{transition:none}}
 @media print{
-  .sidenav,.status,.navtoggle,.navbackdrop,.navhandle,.mobile-topbar{display:none}
+  .sidenav,.status,.navtoggle,.navbackdrop,.navhandle,.navcollapse,.navexpand,.mobile-topbar{display:none!important}
 }
 
 /* ── printable itinerary (/trip/:slug/print) ───────────────

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type TouchEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type TouchEvent } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "@convex/api";
@@ -7,6 +7,7 @@ import { useAccessCode } from "../../hooks/useAccessCode";
 import { useTheme } from "../../hooks/useTheme";
 import { useKanbanBoardUnread } from "../../kanban/useKanbanBoards";
 import { flagEmoji, navCountdown, navMonthLabel } from "../../lib/tripLogic";
+import { loadNavCollapsed, saveNavCollapsed, subscribeNavCollapsed } from "../../lib/navCollapsed";
 import { useVersionLogUnseen } from "../../hooks/useVersionLog";
 import { VersionLog } from "./VersionLog";
 import { ThemeIcon } from "./ThemeIcon";
@@ -25,6 +26,13 @@ export function SideNav() {
   const [isOpen, setIsOpen] = useState(false);
   const [showLog, setShowLog] = useState(false);
   const unseen = useVersionLogUnseen();
+
+  // Desktop only: the stylesheet ignores this on phones, which have their own drawer.
+  const collapsed = useSyncExternalStore(subscribeNavCollapsed, loadNavCollapsed, () => false);
+  useLayoutEffect(() => {
+    document.documentElement.toggleAttribute("data-nav-collapsed", collapsed);
+    return () => document.documentElement.removeAttribute("data-nav-collapsed");
+  }, [collapsed]);
 
   // Close the mobile drawer whenever the route changes (link tap, back/forward).
   useEffect(() => {
@@ -241,6 +249,22 @@ export function SideNav() {
           </Link>
         </div>
       </nav>
+      <button
+        className="navcollapse"
+        onClick={() => saveNavCollapsed(true)}
+        aria-label="Collapse menu"
+        title="Collapse menu"
+      >
+        ‹
+      </button>
+      <button
+        className="navexpand"
+        onClick={() => saveNavCollapsed(false)}
+        aria-label="Open menu"
+        title="Open menu"
+      >
+        ›
+      </button>
       {isOpen && (
         <button className="navhandle" onClick={() => setIsOpen(false)} aria-label="Minimize menu">
           ‹
