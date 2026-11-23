@@ -15,6 +15,8 @@ import { useChangeQueue } from "../../hooks/useChangeQueue";
 import { tileDomId } from "../../lib/tileId";
 import { reconcileRows } from "../../lib/itineraryState";
 import { DayNav } from "./DayNav";
+import { DayScrubber } from "./DayScrubber";
+import { SCRUBBER_MIN_DAYS } from "../../lib/scrubber";
 import { dayAtLine } from "../../lib/dayInView";
 import { focusMapDay } from "../../lib/mapPoints";
 import { DayCard } from "./DayCard";
@@ -397,6 +399,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
     recent.skip(date);
     return onEditActivity(date, ...rest);
   });
+  const shownRows = state.rows.filter((_, i) => visible[i]);
   const ghostAt = ghost ? state.rows.findIndex(r => r.day.date > ghost.date) : -1;
   const ghostDay = ghost && (
     <section key="removed-day" id="removed-day" className="day-card chg-gone" inert aria-hidden="true">
@@ -415,6 +418,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
     <>
       {/* Picking a day ends an AI edit's playback, so it can't scroll the page back. */}
       <DayNav rows={state.rows} todayId={todayRow?.id} currentId={currentId} onJump={id => { setDiff(null); jump(id); }} />
+      {shownRows.length >= SCRUBBER_MIN_DAYS && <DayScrubber rows={shownRows} currentId={currentId} />}
       <p role="status" className="itinerary-status">{message}</p>
       {days.length === 0 ? <p>No itinerary days yet.</p> : !visible.some(Boolean) ? (
         <div className="itinerary-empty"><p>No days match Only gaps.</p><button type="button" className="btn" onClick={() => onOnlyGapsChange(false)}>Show all days</button></div>
