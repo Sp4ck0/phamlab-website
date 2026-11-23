@@ -1521,15 +1521,22 @@ test('a proposal already in the itinerary has no Delete in its editor, only wher
   } finally { linked.close(); }
 });
 
-test('an activity that came from a proposal has no Delete, and says where to take it out', () => {
+test('an activity approved from an item is taken back out (after asking), not deleted, and the item is named to the server', async () => {
   const synthetic = { ...day, acts: [{ tag: 'Food', time: '12:00', text: 'Synthetic Cafe', fromItem: 'cafe' }] };
-  const view = mount(React.createElement(DayCard, { ...props, day: synthetic, days: [synthetic], expanded: true, onEditActivity: async () => {}, onRemoveActivity: async () => {} }));
+  const taken = [];
+  const removed = [];
+  const view = mount(React.createElement(DayCard, { ...props, day: synthetic, days: [synthetic], expanded: true, onEditActivity: async () => {}, onRemoveActivity: async (...a) => { removed.push(a); }, onUnpromote: async (id) => { taken.push(id); } }));
   try {
     const items = openMenu(view.container.querySelector('.tl-tile'));
     act(() => menuItem(items, 'Edit').click());
-    const editor = view.container.querySelector('.ai-editor');
-    assert.ok(![...editor.querySelectorAll('button')].some((b) => b.textContent === 'Delete'));
-    assert.match(editor.textContent, /Back to proposed/);
+    const button = (label) => [...view.container.querySelectorAll('.ai-editor button')].find((b) => b.textContent === label);
+    assert.equal(button('Delete'), undefined);
+    await act(async () => button('Take out of itinerary').click());
+    assert.match(view.container.querySelector('.ai-editor').textContent, /Take this out of the itinerary\?/);
+    assert.deepEqual(taken, []); // asking is not doing
+    await act(async () => button('Yes, take it out').click());
+    assert.deepEqual(taken, ['cafe']);
+    assert.deepEqual(removed, []);
   } finally { view.close(); }
 });
 

@@ -21,7 +21,7 @@ interface Props {
   onDelete?: (expected: Act) => Promise<unknown>;
   /** The whole activity as shown when the editor opened; a delete is checked against it. */
   openedAct?: Act;
-  /** It was approved from a proposed item: it can't be deleted here, so the Delete button is replaced by where to undo that. */
+  /** It was approved from an item: `onDelete` then takes it back out of the itinerary (the item reopens) instead of deleting it. */
   fromProposal?: boolean;
 }
 
@@ -164,22 +164,19 @@ export function ActivityEditor({ initial, initialDescription, initialPlaces, ini
         {error && <span className="ai-error">{error}</span>}
         {confirmingDelete ? (
           <>
-            <span role="alert">Delete this activity?</span>
+            <span role="alert">{fromProposal ? "Take this out of the itinerary? Its item goes back to Action Items." : "Delete this activity?"}</span>
             <button type="button" className="ai-btn" onClick={() => setConfirmingDelete(false)} disabled={saving} autoFocus>
               Keep it
             </button>
             <button type="button" className="ai-btn ai-btn-danger" onClick={() => void confirmDelete()} disabled={saving}>
-              {saving ? "Deleting…" : "Yes, delete"}
+              {saving ? (fromProposal ? "Taking out…" : "Deleting…") : fromProposal ? "Yes, take it out" : "Yes, delete"}
             </button>
           </>
         ) : (
           <>
-            {onDelete && fromProposal && (
-              <span className="cmeta ai-delete">Approved from a proposal. Use “Back to proposed” on its tile to take it out.</span>
-            )}
-            {onDelete && !fromProposal && (
+            {onDelete && (
               <button type="button" className="ai-btn ai-btn-danger ai-delete" onClick={() => setConfirmingDelete(true)} disabled={saving}>
-                Delete
+                {fromProposal ? "Take out of itinerary" : "Delete"}
               </button>
             )}
             <button type="button" className="ai-btn" onClick={onCancel}>
