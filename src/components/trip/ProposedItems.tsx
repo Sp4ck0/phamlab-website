@@ -27,6 +27,8 @@ interface Props {
   onAddItem: (fields: ActionItemFields) => Promise<unknown>;
   onUpdateItem: (id: string, fields: ActionItemFields) => Promise<unknown>;
   onRemove: (task: Task, item: ActionItem) => void;
+  // The editor's Delete (asked to confirm first): resolves once removed, rejects with the reason.
+  onRemoveItem: (id: string) => Promise<unknown>;
   onPromote?: (id: string, date: string) => Promise<unknown>;
   onUnpromote?: (id: string) => Promise<unknown>;
   settledOpen: boolean;
@@ -72,6 +74,7 @@ export function ProposedItems({
   onAddItem,
   onUpdateItem,
   onRemove,
+  onRemoveItem,
   onPromote,
   onUnpromote,
   settledOpen,
@@ -115,8 +118,13 @@ export function ProposedItems({
           <ActionItemEditor
             {...editorProps}
             initial={item}
+            linkedOn={linkedOn.get(id)}
             onSave={async (fields) => {
               await onUpdateItem(id, fields);
+              setEditing(null);
+            }}
+            onDelete={async () => {
+              await onRemoveItem(id);
               setEditing(null);
             }}
           />

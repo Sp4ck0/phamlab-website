@@ -21,13 +21,15 @@ interface Props {
   onDelete?: (expected: Act) => Promise<unknown>;
   /** The whole activity as shown when the editor opened; a delete is checked against it. */
   openedAct?: Act;
+  /** It was approved from a proposed item: it can't be deleted here, so the Delete button is replaced by where to undo that. */
+  fromProposal?: boolean;
 }
 
 // Inline editor for one activity's timing (all day, or a time and an end time), text and
 // places. Opens with the cursor at the end of the text so appending a note ("— Dec 5 sold
 // out") is just type and save. The end time isn't shown on the card; it sets when the
 // Add to Google Calendar event ends.
-export function ActivityEditor({ initial, initialDescription, initialPlaces, initialTime, initialEndTime, initialAllDay = false, onSave, onCancel, onDelete, openedAct }: Props) {
+export function ActivityEditor({ initial, initialDescription, initialPlaces, initialTime, initialEndTime, initialAllDay = false, onSave, onCancel, onDelete, openedAct, fromProposal = false }: Props) {
   const [text, setText] = useState(initial);
   // What the person opened, kept even if the day updates underneath: a delete is checked against this, not the current row.
   const [opened] = useState<Act>(openedAct ?? initial);
@@ -172,7 +174,10 @@ export function ActivityEditor({ initial, initialDescription, initialPlaces, ini
           </>
         ) : (
           <>
-            {onDelete && (
+            {onDelete && fromProposal && (
+              <span className="cmeta ai-delete">Approved from a proposal. Use “Back to proposed” on its tile to take it out.</span>
+            )}
+            {onDelete && !fromProposal && (
               <button type="button" className="ai-btn ai-btn-danger ai-delete" onClick={() => setConfirmingDelete(true)} disabled={saving}>
                 Delete
               </button>

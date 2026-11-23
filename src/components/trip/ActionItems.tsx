@@ -354,6 +354,7 @@ export function ActionItems({
         onAddItem={onAddItem}
         onUpdateItem={updateItem}
         onRemove={remove}
+        onRemoveItem={onRemoveItem}
         settledOpen={settledOpen}
         onSettledOpenChange={setSettledOpen}
       />
