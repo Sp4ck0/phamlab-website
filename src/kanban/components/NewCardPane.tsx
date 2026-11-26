@@ -1,8 +1,9 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { Board, NewCardDraft } from '../types';
 import { BOARD_COPY } from '../types';
 import { boardLanes, pastedImages } from '../lib';
+import { guardPaneKeyboard } from '../paneKeyboard';
 import { ImagePicker } from './ImagePicker';
 import { NoteBox } from './NoteBox';
 
@@ -34,6 +35,11 @@ export function NewCardPane({ board, draft, open, onChange, onMinimize, onExpand
     if (draft) onChange({ images: [...draft.images, ...files].slice(0, MAX_IMAGES) });
   };
 
+  // On a phone: the pane opens with the keyboard down, and scrolling puts it away.
+  const pane = useRef<HTMLElement>(null);
+  const shown = !!draft && open;
+  useEffect(() => (shown && pane.current ? guardPaneKeyboard(pane.current) : undefined), [shown]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -57,6 +63,7 @@ export function NewCardPane({ board, draft, open, onChange, onMinimize, onExpand
               transition={{ duration: 0.2 }}
             />
             <motion.aside
+              ref={pane}
               className="drawer"
               data-kind={draft.kind}
               initial={{ x: '100%' }}
