@@ -227,15 +227,15 @@ function TripPageEntry() {
   const gapsByDate = useMemo(() => dayGaps(tasks), [tasks]);
   const { addItem, updateItem, removeItem, promoteItem, unpromoteItem } = blockedWhileOffline(useActionItemEdits(slug || ""), offline);
   // Every stored item by id: an itinerary entry approved from one shows its wording and votes as History.
-  // Day headers' city photos and tiles' place photos: each asked for once while the page is open,
-  // in one call for whatever scrolled into view together.
+  // Day headers' city photos and tiles' place photos: each asked for once while the page is open
+  // (and kept in this browser for later visits), in one call for whatever scrolled into view together.
   const getCityPhotos = useAction(api.cityPhotos.getCityPhotos);
   const getPlacePhotos = useAction(api.cityPhotos.getPlacePhotos);
   const cityPhoto = useMemo(() => {
-    const one = batchedPhotos((c: { city: string; country: string }) => `${c.city}|${c.country}`, (cities) => getCityPhotos({ slug: slug || "", code, cities }));
+    const one = batchedPhotos((c: { city: string; country: string }) => `${c.city}|${c.country}`, (cities) => getCityPhotos({ slug: slug || "", code, cities }), undefined, "city");
     return (city: string, country: string) => one({ city, country });
   }, [getCityPhotos, slug, code]);
-  const placePhoto = useMemo(() => batchedPhotos((placeId: string) => placeId, (placeIds) => getPlacePhotos({ slug: slug || "", code, placeIds })), [getPlacePhotos, slug, code]);
+  const placePhoto = useMemo(() => batchedPhotos((placeId: string) => placeId, (placeIds) => getPlacePhotos({ slug: slug || "", code, placeIds }), undefined, "place"), [getPlacePhotos, slug, code]);
   const itemTasks = useMemo(() => Object.fromEntries(tasks.filter((t) => t.key.startsWith("item:")).map((t) => [t.key.slice("item:".length), t])), [tasks]);
   const { updateActivity, removeActivity } = blockedWhileOffline(useActivityEdits(slug || ""), offline);
   const weather = useTripWeather(slug);
