@@ -2,7 +2,8 @@ import { useEffect, useId, useRef, useState } from "react";
 import type { Group, Who } from "../../lib/types";
 import { participantLabel, participants } from "../../lib/tripLogic";
 
-// Who is joining an activity, in a pill beside its time: "Everyone", or up to two names and "+N".
+// Who is joining an activity, hotel or transport, in a pill beside its time: up to two names and "+N".
+// Shown only when some travelers present aren't joining: "Everyone" on every row was clutter.
 // Tapping it lists everyone joining; a tap outside or Escape closes the list. Nothing on a trip with no travelers.
 export function ParticipantPill({ who, groups, date }: { who?: Who; groups: Group[]; date: string }) {
   const [open, setOpen] = useState(false);
@@ -30,7 +31,7 @@ export function ParticipantPill({ who, groups, date }: { who?: Who; groups: Grou
   }, [open]);
 
   const p = participants(who, groups, date);
-  if (!p) return null;
+  if (!p || p.everyone) return null;
   const label = participantLabel(p);
   return (
     // A tap inside the list stays here, so it never opens or closes the card under it.
@@ -48,19 +49,15 @@ export function ParticipantPill({ who, groups, date }: { who?: Who; groups: Grou
       </button>
       {open && (
         <span className="who-join-list" id={listId} role="dialog" aria-label="Who's joining">
-          <span className="who-join-head">{p.everyone ? "Everyone" : "Joining"}</span>
-          {p.people.length ? (
-            <ul>
-              {p.people.map((g) => (
-                <li key={g.id}>
-                  <span className="who-join-dot" style={{ background: g.color }} aria-hidden="true" />
-                  {g.name}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <span className="who-join-none">No one is on the trip this day.</span>
-          )}
+          <span className="who-join-head">Joining</span>
+          <ul>
+            {p.people.map((g) => (
+              <li key={g.id}>
+                <span className="who-join-dot" style={{ background: g.color }} aria-hidden="true" />
+                {g.name}
+              </li>
+            ))}
+          </ul>
         </span>
       )}
     </span>
