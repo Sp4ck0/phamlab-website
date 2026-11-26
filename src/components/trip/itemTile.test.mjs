@@ -1,7 +1,7 @@
 // Synthetic-only checks for where "Show in itinerary" takes a proposed item.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { itineraryTarget } from './itemTile.tsx';
+import { itineraryTarget, proposalInItinerary } from './itemTile.tsx';
 
 const day = (date, extra = {}) => ({ date, flights: [], hotels: [], acts: [], ...extra });
 const days = [day('2040-01-01'), day('2040-01-02'), day('2040-01-03')];
@@ -36,4 +36,17 @@ test('once added: the transport tile, else just the day', () => {
   const d = day('2040-01-02', { flights: [{ route: 'AAA → BBB', who: 'a', status: 'booked', fromItem: 'p1' }] });
   assert.deepEqual(itineraryTarget(proposal({ kind: 'trip' }), [d], '2040-01-02'), { date: '2040-01-02', tile: '2040-01-02|f|AAA → BBB|a' });
   assert.deepEqual(itineraryTarget(proposal({ kind: 'trip' }), [day('2040-01-02')], '2040-01-02'), { date: '2040-01-02' });
+});
+
+test('Follow AI edits: a dated proposal goes to its tile, an added one to what it became', () => {
+  const tasks = [proposal({ kind: 'day', date: '2040-01-02' })];
+  assert.deepEqual(proposalInItinerary('p1', tasks, days), { date: '2040-01-02', tile: 'item:p1' });
+  const d = day('2040-01-03', { acts: [{ text: 'Synthetic museum', fromItem: 'p1' }] });
+  assert.deepEqual(proposalInItinerary('p1', tasks, [day('2040-01-02'), d]), { date: '2040-01-03', tile: 'act:0' });
+});
+
+test('Follow AI edits: a to-do, a whole-trip proposal or an unknown item stays in the list', () => {
+  assert.equal(proposalInItinerary('p1', [proposal({ kind: 'day', date: '2040-01-02' }, { kind: 'custom' })], days), null);
+  assert.equal(proposalInItinerary('p1', [proposal({ kind: 'trip' })], days), null);
+  assert.equal(proposalInItinerary('p2', [proposal({ kind: 'day', date: '2040-01-02' })], days), null);
 });
