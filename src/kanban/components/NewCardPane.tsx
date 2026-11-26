@@ -5,6 +5,7 @@ import { BOARD_COPY } from '../types';
 import { boardLanes, pastedImages } from '../lib';
 import { guardPaneKeyboard } from '../paneKeyboard';
 import { ImagePicker } from './ImagePicker';
+import { useImageDrop } from '../useImageDrop';
 import { NoteBox } from './NoteBox';
 
 const MAX_IMAGES = 8;
@@ -34,6 +35,7 @@ export function NewCardPane({ board, draft, open, onChange, onMinimize, onExpand
   const attach = (files: File[]) => {
     if (draft) onChange({ images: [...draft.images, ...files].slice(0, MAX_IMAGES) });
   };
+  const drop = useImageDrop(attach);
 
   // On a phone: the pane opens with the keyboard down, and scrolling puts it away.
   const pane = useRef<HTMLElement>(null);
@@ -66,6 +68,8 @@ export function NewCardPane({ board, draft, open, onChange, onMinimize, onExpand
               ref={pane}
               className="drawer"
               data-kind={draft.kind}
+              data-drop={drop.dragging || undefined}
+              {...drop.handlers}
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
@@ -162,7 +166,7 @@ export function NewCardPane({ board, draft, open, onChange, onMinimize, onExpand
                     <span className="thread__hint">
                       {draft.images.length >= MAX_IMAGES
                         ? `Up to ${MAX_IMAGES} images`
-                        : 'Paste a screenshot or tap 📎 to add images'}
+                        : 'Paste, drop or tap 📎 to add images'}
                     </span>
                   </div>
                   {error && (

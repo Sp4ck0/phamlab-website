@@ -4,6 +4,7 @@ import { dayLabel, isMine, pastedImages, replyAuthor, viewerSeat } from '../lib'
 import { serverMessage } from '../../lib/serverError';
 import { ImageGallery } from './ImageGallery';
 import { ImagePicker } from './ImagePicker';
+import { useImageDrop } from '../useImageDrop';
 import { Linkify } from '../../components/trip/Linkify';
 
 interface Props {
@@ -43,6 +44,10 @@ export function Thread({ card, board, raisedBy, onReply, onRemoveReply, onRead }
   const previews = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
   useEffect(() => () => previews.forEach(URL.revokeObjectURL), [previews]);
   const addFiles = (picked: File[]) => setFiles((prev) => [...prev, ...picked].slice(0, MAX_REPLY_IMAGES));
+  // Images dropped on the reply box go with the reply, not onto the card's note.
+  const drop = useImageDrop((picked) => {
+    if (!sending) addFiles(picked);
+  });
 
   // Grow the composer with what's typed instead of scrolling inside one line.
   useEffect(() => {
@@ -185,7 +190,7 @@ export function Thread({ card, board, raisedBy, onReply, onRemoveReply, onRead }
         </ul>
       )}
 
-      <div className="thread__composer">
+      <div className="thread__composer" data-drop={drop.dragging || undefined} {...drop.handlers}>
         <ImagePicker onPick={addFiles} disabled={sending || files.length >= MAX_REPLY_IMAGES} />
         <textarea
           ref={input}

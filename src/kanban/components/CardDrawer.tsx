@@ -9,6 +9,7 @@ import { findLinks } from '../../lib/links';
 import { guardPaneKeyboard } from '../paneKeyboard';
 import { ImageGallery } from './ImageGallery';
 import { ImagePicker } from './ImagePicker';
+import { useImageDrop } from '../useImageDrop';
 import { NoteBox } from './NoteBox';
 import { Thread } from './Thread';
 
@@ -135,6 +136,8 @@ export function CardDrawer({
       setNoteBusy(false);
     }
   };
+  // Images dropped anywhere on the pane go onto the note (the reply box takes its own).
+  const drop = useImageDrop((files) => void attach(files));
 
   const name = (who: PersonId) => board.people[who].name;
   const copy = BOARD_COPY[board.type];
@@ -186,6 +189,8 @@ export function CardDrawer({
             ref={pane}
             className="drawer"
             data-kind={card.kind}
+            data-drop={drop.dragging || undefined}
+            {...drop.handlers}
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
@@ -355,7 +360,7 @@ export function CardDrawer({
                 <div className="note-images__bar">
                   <ImagePicker onPick={(files) => void attach(files)} disabled={noteBusy} />
                   <span className="thread__hint">
-                    {noteBusy ? 'Uploading…' : 'Paste a screenshot or tap 📎 to add images'}
+                    {noteBusy ? 'Uploading…' : 'Paste, drop or tap 📎 to add images'}
                   </span>
                 </div>
                 {noteError && (

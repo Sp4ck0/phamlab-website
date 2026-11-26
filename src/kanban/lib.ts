@@ -110,6 +110,14 @@ export async function uploadImages(files: File[], getUploadUrl: () => Promise<st
 export const pastedImages = (e: React.ClipboardEvent) =>
   Array.from(e.clipboardData.files).filter((f) => f.type.startsWith("image/"));
 
+/** True when a drag holds files (from the desktop), not text or a link. */
+export const carriesFiles = (dt: Pick<DataTransfer, "types"> | null) =>
+  !!dt && Array.from(dt.types).includes("Files");
+
+/** Image files from a drop; anything else dropped alongside is left out. */
+export const droppedImages = (dt: Pick<DataTransfer, "files">) =>
+  Array.from(dt.files).filter((f) => f.type.startsWith("image/"));
+
 export function progress(card: Card) {
   const total = card.actions.length;
   const done = card.actions.filter((a) => a.done).length;
