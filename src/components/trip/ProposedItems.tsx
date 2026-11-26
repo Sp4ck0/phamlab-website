@@ -4,10 +4,11 @@ import type { ActionItem, Group, Outcome, ResolvedDay, Task, Vote } from "../../
 import { priorityRank, scopeStart } from "../../lib/tasks";
 import { googleMapsUrl } from "../../lib/mapPoints";
 import { copyShareLink } from "../../lib/shareLink";
+import { useShowAiFocus } from "../../hooks/useAiFocus";
 import type { ActionItemFields } from "../../hooks/useActionItemEdits";
 import { ActionItemEditor } from "./ActionItemEditor";
 import { TimelineTile } from "./TimelineTile";
-import { describeItemTile, linkedItems } from "./itemTile";
+import { describeItemTile, itineraryTarget, linkedItems } from "./itemTile";
 
 interface Props {
   // Only the proposed tasks.
@@ -81,6 +82,7 @@ export function ProposedItems({
   onSettledOpenChange,
 }: Props) {
   const { slug } = useParams<{ slug: string }>();
+  const showFocus = useShowAiFocus();
   const [opened, setOpened] = useState<Record<string, boolean>>({});
   const editorProps = { groups, minDate: tripStart, maxDate: tripEnd, onCancel: () => setEditing(null) };
   const linkedOn = linkedItems(days);
@@ -92,6 +94,8 @@ export function ProposedItems({
     const start = scopeStart(task.scope);
     const at = Math.max(0, start ? days.findIndex((d) => d.date === start) : 0);
     const place = task.places?.[0];
+    // Up to it on its day in the itinerary (the Agenda tab on a phone), opened and blinked.
+    const there = slug ? itineraryTarget(task, days, linkedOn.get(id)) : null;
     const x = describeItemTile({
       item: { id, task },
       domId: `ai-row-${id}`,
@@ -110,6 +114,9 @@ export function ProposedItems({
       menu: [
         { label: "Edit", icon: "edit", onSelect: () => setEditing(id) },
         ...(place?.name ? [{ label: "Open in Google Maps", icon: "pin" as const, href: googleMapsUrl(place) }] : []),
+        ...(there
+          ? [{ label: "Show in itinerary", icon: "list" as const, onSelect: () => showFocus({ slug: slug!, target: there.tile ? { kind: "tile", date: there.date, tile: there.tile } : { kind: "day", date: there.date }, nonce: `${Date.now()}` }) }]
+          : []),
         { label: "Copy link", icon: "link", onSelect: () => copyShareLink(slug, { task: task.key }) },
         { label: "Delete", onSelect: () => onRemove(task, item) },
       ],
