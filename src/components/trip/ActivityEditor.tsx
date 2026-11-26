@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { Act, ActTiming, Place } from "../../lib/types";
+import type { Act, ActTiming, Group, Place, Who } from "../../lib/types";
 import { serverMessage } from "../../lib/serverError";
 import { PlacesEditor, cleanPlaces } from "./PlacesEditor";
 
@@ -14,6 +14,9 @@ interface Props {
   initialEndTime?: string;
   /** It takes the whole day, like a hotel. */
   initialAllDay?: boolean;
+  /** Who is joining (absent = everyone), and the trip's travelers to pick from; no picker without any. */
+  initialWho?: Who;
+  groups?: Group[];
   /** `timing` holds only what changed (null = a time cleared). */
   onSave: (text: string, places: Place[], timing: ActTiming) => Promise<unknown>;
   onCancel: () => void;
@@ -25,11 +28,14 @@ interface Props {
   fromProposal?: boolean;
 }
 
+const whoIds = (who: Who | undefined) => (who === undefined ? [] : Array.isArray(who) ? who : [who]).filter((id) => id !== "all");
+const sameIds = (a: string[], b: string[]) => a.length === b.length && a.every((id) => b.includes(id));
+
 // Inline editor for one activity's timing (all day, or a time and an end time), text and
 // places. Opens with the cursor at the end of the text so appending a note ("— Dec 5 sold
 // out") is just type and save. The end time isn't shown on the card; it sets when the
 // Add to Google Calendar event ends.
-export function ActivityEditor({ initial, initialDescription, initialPlaces, initialTime, initialEndTime, initialAllDay = false, onSave, onCancel, onDelete, openedAct, fromProposal = false }: Props) {
+export function ActivityEditor({ initial, initialDescription, initialPlaces, initialTime, initialEndTime, initialAllDay = false, initialWho, groups = [], onSave, onCancel, onDelete, openedAct, fromProposal = false }: Props) {
   const [text, setText] = useState(initial);
   // What the person opened, kept even if the day updates underneath: a delete is checked against this, not the current row.
   const [opened] = useState<Act>(openedAct ?? initial);
@@ -38,6 +44,9 @@ export function ActivityEditor({ initial, initialDescription, initialPlaces, ini
   const [time, setTime] = useState(initialTime ?? "");
   const [endTime, setEndTime] = useState(initialEndTime ?? "");
   const [places, setPlaces] = useState<Place[]>(initialPlaces ?? []);
+  // Everyone is no ids at all.
+  const [startWho] = useState(() => whoIds(initialWho));
+  const [who, setWho] = useState<string[]>(startWho);
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState("");
@@ -75,6 +84,7 @@ export function ActivityEditor({ initial, initialDescription, initialPlaces, ini
       }
       // Same for the description: only a change is sent, and an emptied box clears it.
       if (description.trim() !== (initialDescription ?? "").trim()) timing.description = description.trim() || null;
+      if (!sameIds(who, startWho)) timing.who = who.length ? who : null;
       await onSave(text, cleanPlaces(places), timing);
     } catch (e) {
       // A ConvexError carries what the backend meant to say; otherwise Convex
@@ -160,6 +170,31 @@ export function ActivityEditor({ initial, initialDescription, initialPlaces, ini
         onChange={(e) => setDescription(e.target.value)}
       />
       <PlacesEditor places={places} setPlaces={setPlaces} />
+      {groups.length > 0 && (
+        <div className="ai-row">
+          <span className="ai-label">Who</span>
+          <div className="ai-who" role="group" aria-label="Who's joining">
+            <button type="button" className="ai-chip" aria-pressed={who.length === 0} onClick={() => setWho([])}>
+              Everyone
+            </button>
+            {groups.map((g) => {
+              const on = who.includes(g.id);
+              return (
+                <button
+                  key={g.id}
+                  type="button"
+                  className="ai-chip"
+                  aria-pressed={on}
+                  onClick={() => setWho((w) => (on ? w.filter((id) => id !== g.id) : [...w, g.id]))}
+                  style={on ? { background: `${g.color}1a`, color: g.color, borderColor: g.color } : undefined}
+                >
+                  {g.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <div className="ai-editor-actions">
         {error && <span className="ai-error">{error}</span>}
         {confirmingDelete ? (
