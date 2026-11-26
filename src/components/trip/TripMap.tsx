@@ -11,6 +11,7 @@ import { CLUSTER_MAX_ZOOM, clusterCenter, clusterPoints } from "../../lib/mapClu
 import { useGeocodedPoints } from "../../hooks/useGeocodedPoints";
 import { useSettings, type TempUnit } from "../../hooks/useSettings";
 import { MAP_ID, loadGoogleMaps } from "../../lib/googleMaps";
+import { mapsAuthFailed, onMapsAuthFailure } from "../../lib/mapsAuth";
 import {
   MAP_MIN_H,
   MAP_MIN_W,
@@ -300,7 +301,12 @@ function viewFor(map: google.maps.Map, points: google.maps.LatLngLiteral[], pad 
 }
 
 export function TripMap({ points, days, route, weatherStops, candidates, proposedItems, pin, marks = [], fitMarks, onMarksFitted, view, onViewed, onClearMarks }: Props) {
-  const { points: geocoded, status, error } = useGeocodedPoints(points);
+  const { points: geocoded, status: geoStatus } = useGeocodedPoints(points);
+  // Google refusing the key can come after the pins are found (they're cached); it then
+  // draws its own error box over the map, so drop the map and show our note instead.
+  const [authFailed, setAuthFailed] = useState(mapsAuthFailed);
+  useEffect(() => onMapsAuthFailure(() => setAuthFailed(true)), []);
+  const status = authFailed ? "error" : geoStatus;
   const { points: geocodedMarks } = useGeocodedPoints(marks);
   const { points: geocodedRoute } = useGeocodedPoints(route);
   const { points: geocodedWeather } = useGeocodedPoints(weatherStops);
@@ -1144,8 +1150,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, propose
       </div>
       {status === "error" && (
         <div className="note">
-          Couldn't load the map{error ? `: ${error}` : ""}. Make sure{" "}
-          <code>VITE_GOOGLE_MAPS_API_KEY</code> is set.
+          The map isn't available right now. Every place is still listed in its day below.
         </div>
       )}
       {status === "loading" && <div className="note">Loading map…</div>}
