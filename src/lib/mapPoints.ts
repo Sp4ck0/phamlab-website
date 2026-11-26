@@ -274,6 +274,19 @@ export const MARK_PULSE_MS = 60_000;
 // marked, so a later call's marks don't restart an earlier call's.
 export const markPulseLeft = (mark: MapMark | undefined, now: number) => Math.max(0, (mark?.at ?? 0) + MARK_PULSE_MS - now);
 
+// show_on_map: the points the map fits into view, from each place's area (a country's or city's
+// viewport, two corners) or, with none, the place itself.
+export interface ViewSpot {
+  lat: number;
+  lng: number;
+  viewport?: { north: number; south: number; east: number; west: number };
+}
+export function viewCorners(spots: ViewSpot[]): { lat: number; lng: number }[] {
+  return spots.flatMap((s) =>
+    s.viewport ? [{ lat: s.viewport.north, lng: s.viewport.west }, { lat: s.viewport.south, lng: s.viewport.east }] : [{ lat: s.lat, lng: s.lng }]
+  );
+}
+
 // The drawn marks the map fits into view: only those of the call just made (`batch`), not the
 // marks already on the map; none once that call has been fitted (`batch` null).
 export function marksToFit<P extends { id: string }>(points: P[], marks: MapMark[], batch: string | null | undefined): P[] {

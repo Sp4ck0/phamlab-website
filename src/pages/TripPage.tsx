@@ -24,6 +24,7 @@ import { MAP_FOCUS_EVENT, addMarks, deriveTaskPoints, derivePoints, deriveRouteA
 import { TripTabs } from "../components/trip/TripTabs";
 import { tabFromHash, tripPanelId, tripTabId, withTab, type TripTab } from "../lib/tripTabs";
 import { useAiFocus } from "../hooks/useAiFocus";
+import type { Place } from "../lib/types";
 import { NotFoundOrDenied } from "./NotFoundOrDenied";
 import { useAction, useMutation } from "convex/react";
 import { api } from "@convex/api";
@@ -162,6 +163,17 @@ function TripPageEntry() {
       if (!pinnedRef.current) document.getElementById(TRIP_MAP_ID)?.scrollIntoView({ behavior: "smooth", block: "start" });
     } else if (tabRef.current !== "map") setTab("map");
   }, [markFocus, consumeMark, setTab]);
+  // show_on_map: open the map like a mark does and have it fit these places, adding nothing.
+  const [mapView, setMapView] = useState<{ nonce: string; places: Place[] } | null>(null);
+  const { focus: viewFocus, consume: consumeView } = useAiFocus("mapView");
+  useEffect(() => {
+    if (!viewFocus) return;
+    consumeView(viewFocus.nonce);
+    setMapView({ nonce: viewFocus.nonce, places: viewFocus.target.places });
+    if (desktopRef.current) {
+      if (!pinnedRef.current) document.getElementById(TRIP_MAP_ID)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else if (tabRef.current !== "map") setTab("map");
+  }, [viewFocus, consumeView, setTab]);
   // clear_map_markers: drop every mark (itinerary pins aren't marks) and tell the AI how many went.
   const { code } = useAccessCode();
   const reportCleared = useMutation(api.mcpFocus.reportCleared);
@@ -232,6 +244,8 @@ function TripPageEntry() {
       marks={marks}
       fitMarks={fitMarks}
       onMarksFitted={() => setFitMarks(null)}
+      view={mapView}
+      onViewed={() => setMapView(null)}
       onClearMarks={() => {
         setMarks([]);
         setFitMarks(null);
