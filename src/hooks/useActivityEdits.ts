@@ -22,6 +22,7 @@ export function useActivityEdits(slug: string) {
         ...(timing.endTime !== undefined ? { endTime: timing.endTime } : {}),
         ...(timing.allDay !== undefined ? { allDay: timing.allDay } : {}),
         ...(timing.description !== undefined ? { description: timing.description } : {}),
+        ...(timing.who !== undefined ? { who: timing.who } : {}),
       }),
     // `expected` is the whole activity the person saw; the server refuses if the activity at `index` changed.
     removeActivity: (date: string, index: number, expected: Act) => removeMut({ slug, code, date, index, expected }),

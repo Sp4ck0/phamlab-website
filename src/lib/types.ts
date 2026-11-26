@@ -118,10 +118,11 @@ export type Tag = "" | "move" | "transit" | "event" | undefined;
 // `endTime` (local HH:MM) is never displayed; it only sets the calendar link's end.
 // `allDay`: takes the whole day, like a hotel (no times; All day at the top of the day).
 // `text` is the title; `description` is an optional supporting line shown under it.
-export type Act = string | { tag?: string; time?: string; endTime?: string; allDay?: boolean; text: string; description?: string; places?: Place[]; fromItem?: string };
+// `who`: the group(s) joining; absent = everyone present that day.
+export type Act = string | { tag?: string; time?: string; endTime?: string; allDay?: boolean; text: string; description?: string; places?: Place[]; fromItem?: string; who?: Who };
 /** A change to an activity from the editor besides its text and places: each field undefined = unchanged, null = cleared
- *  (the timing, and its description). */
-export type ActTiming = { time?: string | null; endTime?: string | null; allDay?: boolean; description?: string | null };
+ *  (the timing, and its description; for `who`, null = everyone). */
+export type ActTiming = { time?: string | null; endTime?: string | null; allDay?: boolean; description?: string | null; who?: string[] | null };
 
 export interface TourDetails {
   summary: string;

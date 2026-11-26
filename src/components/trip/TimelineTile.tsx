@@ -24,6 +24,8 @@ export interface TimelineTileProps {
   domId?: string;
   /** The time, in a pill set into the card's top border: "09:30", ALL_DAY, or nothing when the tile has no time. */
   time?: string;
+  /** Who is joining, in the top border after the time (or the icon, when there is no time). */
+  participants?: ReactNode;
   /** The tile's type icon, before its title. */
   icon: ReactNode;
   /** What the icon stands for ("Food"), as its tooltip. */
@@ -73,7 +75,7 @@ export const OWN_CLICK = "button, a, input, label, select, textarea, summary, [r
 // The body always stays in the page, so find-in-page reaches a closed card and opens it
 // (hidden="until-found"). A static card whose title is cut off opens too, to show all of it.
 export function TimelineTile({
-  domId, mapKey, time, icon, iconLabel, title, expandable = true, meta, headerEnd, menu, label, warn, open, onToggle, onReveal,
+  domId, mapKey, time, participants, icon, iconLabel, title, expandable = true, meta, headerEnd, menu, label, warn, open, onToggle, onReveal,
   change = "same", className, nextUpLine, now, progress, photoPlaces, placePhoto, children,
 }: TimelineTileProps) {
   const bodyId = useId();
@@ -145,6 +147,7 @@ export function TimelineTile({
               </span>
             )}
             {time && <span className="tl-time" data-all-day={time === ALL_DAY ? "true" : undefined}>{time}</span>}
+            {participants}
           </span>
         )}
         <div className={`tl-head${shown ? " has-photo" : ""}`}>

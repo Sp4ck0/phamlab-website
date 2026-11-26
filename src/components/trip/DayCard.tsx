@@ -32,6 +32,7 @@ import type { DayGaps } from "../../lib/tasks";
 import { useShowAiFocus } from "../../hooks/useAiFocus";
 import { useUntilFound } from "../../hooks/useUntilFound";
 import { ActivityEditor } from "./ActivityEditor";
+import { ParticipantPill } from "./ParticipantPill";
 import { tileDomId } from "../../lib/tileId";
 import { InlineDiff } from "./InlineDiff";
 import { describeItemTile, linkedItems } from "./itemTile";
@@ -520,6 +521,7 @@ export function DayCard({
       tile: {
         // An all-day activity reads All day, like a hotel.
         domId: entry.domKey && tileDomId(rowId, entry.domKey), time: typeof a !== "string" && a.allDay ? ALL_DAY : entry.time,
+        participants: !gone && <ParticipantPill who={typeof a === "string" ? undefined : a.who} groups={groups} date={d.date} />,
         mapKey: named.map(placeKey).find(Boolean),
         // The tag (Food, Sightsee…) is the icon; its name is the icon's tooltip, not a second line.
         icon: (tag && TAG_EMOJI[tag]) || "📍", iconLabel: tag, change: state, now: !!live,
@@ -546,6 +548,8 @@ export function DayCard({
             initialTime={typeof a === "string" ? undefined : a.time}
             initialEndTime={typeof a === "string" ? undefined : a.endTime}
             initialAllDay={typeof a !== "string" && !!a.allDay}
+            initialWho={typeof a === "string" ? undefined : a.who}
+            groups={groups}
             onCancel={() => setEditingAct(null)}
             onSave={async (next, nextPlaces, timing) => {
               await onEditActivity(d.date, ai, text, next, nextPlaces, timing);

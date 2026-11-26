@@ -535,6 +535,21 @@ button.route-chip[aria-expanded=true]{box-shadow:inset 0 0 0 1.5px var(--text-mu
 .tl-time{padding:2px 10px;border:1px solid color-mix(in srgb,var(--accent-1) 45%,var(--border));border-radius:999px;background:linear-gradient(var(--accent-1-tint),var(--accent-1-tint)),var(--card);color:var(--accent-1);font-size:12.5px;font-weight:700;line-height:1.3;font-variant-numeric:tabular-nums;white-space:nowrap}
 .tl-time[data-all-day]{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase}
 .tl-entry--now .tl-time{background:var(--now);border-color:var(--now);color:#fff}
+/* Who is joining an activity: a pill after its time; tapping it lists everyone. */
+.who-join{position:relative;display:inline-flex}
+.who-join-btn{padding:2px 9px;border:1px solid var(--border);border-radius:999px;background:var(--card);color:var(--text-secondary);font:inherit;font-size:11.5px;font-weight:700;line-height:1.3;white-space:nowrap;max-width:min(220px,calc(100vw - 180px));overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.who-join-btn:hover,.who-join-btn[aria-expanded="true"]{color:var(--text-primary);border-color:var(--text-secondary)}
+.who-join-btn:focus-visible{outline:2px solid var(--accent-1);outline-offset:1px}
+.who-join-list{position:absolute;left:0;top:calc(100% + 4px);z-index:30;display:flex;flex-direction:column;gap:4px;min-width:170px;max-width:min(300px,calc(100vw - 32px));padding:8px 10px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.28);cursor:default}
+.who-join-head{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted)}
+.who-join-list ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.who-join-list li{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:500;color:var(--text-primary)}
+.who-join-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.who-join-none{font-size:13px;color:var(--text-secondary)}
+/* An open list sits above the cards and days after it, like an open "⋯" menu. */
+.tl-entry:has(.who-join-list){z-index:5}
+.day-card:has(.who-join-list){z-index:7}
+.tl-tile:has(.who-join-list) .tl-pins{z-index:4}
 .tl-head{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto 44px;align-items:center;column-gap:10px;min-height:56px;padding:6px 0 6px 12px;border-radius:11px}
 .tl-entry--pinned .tl-head{padding-top:12px}
 .tl-tile:not(.tl-flat) .tl-head{padding-bottom:12px}

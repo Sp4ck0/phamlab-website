@@ -48,6 +48,25 @@ export function presentGroups(groups: Group[], date: string): Group[] {
   return groups.filter((g) => presence(g, date));
 }
 
+// Who is joining an activity on a date. No `who` (or "all") is everyone present that day; picked
+// groups that cover everyone present also read as everyone. `people` keeps the trip's group order.
+// null on a trip with no travelers, where there is no one to name.
+export function participants(who: Who | undefined, groups: Group[], date: string): { everyone: boolean; people: Group[] } | null {
+  if (!groups.length) return null;
+  const present = presentGroups(groups, date);
+  const ids = (who === undefined ? [] : Array.isArray(who) ? who : [who]).filter((id) => id !== "all");
+  const people = groups.filter((g) => ids.includes(g.id));
+  if (!people.length) return { everyone: true, people: present };
+  return { everyone: present.length > 0 && present.every((g) => ids.includes(g.id)), people };
+}
+
+// "Everyone", or up to two names and a count for the rest ("A, B +2").
+export function participantLabel(p: { everyone: boolean; people: Group[] }): string {
+  if (p.everyone) return "Everyone";
+  const names = p.people.map((g) => g.name);
+  return names.length <= 2 ? names.join(", ") : `${names.slice(0, 2).join(", ")} +${names.length - 2}`;
+}
+
 // Compact { label, color } for a card/cell where `who` might be a single
 // group id, 'all' (resolved to whoever is present that day), or an array
 // of ids (a shared booking).
