@@ -544,7 +544,6 @@ button.route-chip[aria-expanded=true]{box-shadow:inset 0 0 0 1.5px var(--text-mu
 .who-join-list ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
 .who-join-list li{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:500;color:var(--text-primary)}
 .who-join-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.who-join-none{font-size:13px;color:var(--text-secondary)}
 /* An open list sits above the cards and days after it, like an open "⋯" menu. */
 .tl-entry:has(.who-join-list){z-index:5}
 .day-card:has(.who-join-list){z-index:7}
