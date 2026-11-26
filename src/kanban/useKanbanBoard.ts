@@ -69,7 +69,7 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined, { allDo
   const [actionError, setActionError] = useState("");
   const report = (call: Promise<unknown>) => {
     setActionError("");
-    call.catch((e) => setActionError(serverMessage(e, "Couldn't save that change — try again.")));
+    return call.catch((e) => setActionError(serverMessage(e, "Couldn't save that change — try again.")));
   };
 
   const board: Board | null = useMemo(() => {
@@ -102,9 +102,10 @@ export function useKanbanBoard(boardId: Id<"kanban_boards"> | undefined, { allDo
   const isLoading = !!(code && boardId) && result === undefined;
   const authorized = result?.authorized ?? false;
 
+  // Resolves once the save has finished, whether or not it worked.
   function setLanes(update: (lanes: Board["lanes"]) => Board["lanes"]) {
-    if (!code || !boardId || !board) return;
-    report(setLanesMut({ code, boardId, lanes: update(board.lanes) as Board["lanes"] }));
+    if (!code || !boardId || !board) return Promise.resolve();
+    return report(setLanesMut({ code, boardId, lanes: update(board.lanes) as Board["lanes"] }));
   }
 
   function updateCard(id: string, patch: Partial<Card>) {

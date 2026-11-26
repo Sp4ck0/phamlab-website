@@ -34,6 +34,11 @@ function sameCardIds(a: Board["lanes"], b: Board["lanes"]) {
   return idsA.length === idsB.length && idsA.every((id, i) => id === idsB[i]);
 }
 
+// Every lane holds the same cards in the same order.
+function sameLanes(a: Board["lanes"], b: Board["lanes"]) {
+  return (Object.keys(a) as (keyof Board["lanes"])[]).every((l) => a[l].join() === b[l].join());
+}
+
 // Ref callback: tells the board how much page sits above and below it
 // (mobile top bar, wrap padding) so its CSS height can fill the rest of the
 // viewport. Re-measured on resize.
@@ -134,8 +139,9 @@ export function KanbanPage() {
   const due = useDue(board);
   // While dragging, reordering happens against this local copy only — the
   // server mutation fires once on drop, not on every dragover frame. Once
-  // the server's board.lanes catches up to what we predicted, drop the
-  // local override so future drags start from a fresh server snapshot.
+  // the server's board.lanes catches up to what we predicted, or the save
+  // settles (see onDragEnd), drop the local override so the live board
+  // shows again and future drags start from a fresh server snapshot.
   const [dragLanes, setDragLanes] = useState<Board["lanes"] | null>(null);
   useEffect(() => {
     if (dragLanes && board && JSON.stringify(dragLanes) === JSON.stringify(board.lanes)) {
@@ -308,9 +314,15 @@ export function KanbanPage() {
             // edge case in dnd-kit's collision detection) can hand back a
             // lanes object that's silently missing or duplicating a card.
             // Never let that reach the server — just drop the drag.
-            if (sameCardIds(board.lanes, next)) {
+            if (sameLanes(board.lanes, next)) {
+              // Dropped back where it started: nothing to save.
+              setDragLanes(null);
+            } else if (sameCardIds(board.lanes, next)) {
               setDragLanes(next);
-              setLanes(() => next);
+              // Once the save is done (or failed), show the live board again,
+              // even if someone else changed it meanwhile so it no longer
+              // matches exactly; a newer drag keeps its own copy.
+              void setLanes(() => next).then(() => setDragLanes((cur) => (cur === next ? null : cur)));
             } else {
               setDragLanes(null);
             }
