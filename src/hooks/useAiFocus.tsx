@@ -17,7 +17,9 @@ export type FocusTarget =
   // `icon` overrides it.
   | { kind: "mark"; places: (Place & { icon?: string })[]; icon?: string }
   // Remove all of those marks and answer with how many went (clear_map_markers); see TripPage.
-  | { kind: "clearMarks" };
+  | { kind: "clearMarks" }
+  // Move the trip's map to fit these places, adding no marks (show_on_map); see TripPage.
+  | { kind: "mapView"; places: Place[] };
 
 // Mirrors the backend's mcp_focus row (mcpFocus.ts getFocus). For the board
 // and card targets, `slug` is the board's id.

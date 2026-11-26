@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useShowAiFocus } from "../../hooks/useAiFocus";
-import type { MapPointData, ResolvedDay, Task } from "../../lib/types";
-import { CATEGORY_COLORS, CATEGORY_EMOJI, CATEGORY_LABELS, MAP_DAY_EVENT, deriveDayRoutes, MAP_FOCUS_EVENT, MAP_GLANCE_EVENT, deriveJumpTargets, markPulseLeft, marksToFit, googleMapsUrl, jumpTargetFor, placeKey } from "../../lib/mapPoints";
-import type { JumpTarget, MapMark, WeatherStop } from "../../lib/mapPoints";
+import type { MapPointData, Place, ResolvedDay, Task } from "../../lib/types";
+import { CATEGORY_COLORS, CATEGORY_EMOJI, CATEGORY_LABELS, MAP_DAY_EVENT, deriveDayRoutes, MAP_FOCUS_EVENT, MAP_GLANCE_EVENT, deriveJumpTargets, markPulseLeft, marksToFit, googleMapsUrl, jumpTargetFor, placeKey, viewCorners } from "../../lib/mapPoints";
+import type { JumpTarget, MapMark, ViewSpot, WeatherStop } from "../../lib/mapPoints";
 import { assignLegColors, fmtShort } from "../../lib/tripLogic";
 import { summarizeStay, temp, weatherIcon, weatherText } from "../../lib/weather";
 import { markIconSvg } from "../../lib/markIcons";
@@ -61,6 +61,9 @@ interface Props {
   marks?: MapMark[];
   fitMarks?: string | null;
   onMarksFitted?: () => void;
+  // Places the AI asked the map to fit into view (show_on_map), adding no pins; then onViewed.
+  view?: { nonce: string; places: Place[] } | null;
+  onViewed?: () => void;
   // The "Clear marks" button: removes every mark (the trip's own pins stay).
   onClearMarks?: () => void;
 }
@@ -296,7 +299,7 @@ function viewFor(map: google.maps.Map, points: google.maps.LatLngLiteral[], pad 
   return { center: fromWorld((x0 + x1) / 2, (y0 + y1) / 2), zoom: Math.max(2, Math.min(maxZoom, Math.floor(zoom))) };
 }
 
-export function TripMap({ points, days, route, weatherStops, candidates, proposedItems, pin, marks = [], fitMarks, onMarksFitted, onClearMarks }: Props) {
+export function TripMap({ points, days, route, weatherStops, candidates, proposedItems, pin, marks = [], fitMarks, onMarksFitted, view, onViewed, onClearMarks }: Props) {
   const { points: geocoded, status, error } = useGeocodedPoints(points);
   const { points: geocodedMarks } = useGeocodedPoints(marks);
   const { points: geocodedRoute } = useGeocodedPoints(route);
@@ -816,6 +819,38 @@ export function TripMap({ points, days, route, weatherStops, candidates, propose
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- marks only add `at`/`batch` to geocodedMarks; redraw when those land
   }, [mapReady, geocodedMarks, fitMarks]);
+
+  // show_on_map: fly to fit the places, a country or city by its whole area, adding no pins.
+  useEffect(() => {
+    const map = mapInstance.current;
+    if (!mapReady || !map || !view) return;
+    let cancelled = false;
+    (async () => {
+      const geocoder = new google.maps.Geocoder();
+      const spots: ViewSpot[] = [];
+      for (const p of view.places) {
+        if (!p.placeId && !p.address) continue;
+        try {
+          const res = await geocoder.geocode(p.placeId ? { placeId: p.placeId } : { address: p.address });
+          const g = res.results[0]?.geometry;
+          if (g) spots.push({ ...g.location.toJSON(), ...(g.viewport ? { viewport: g.viewport.toJSON() } : {}) });
+        } catch {
+          // a place that can't be found is left out of the view
+        }
+      }
+      if (cancelled) return;
+      const corners = viewCorners(spots);
+      if (corners.length > 0) {
+        const { center, zoom } = viewFor(map, corners);
+        moveTo(map, center, zoom);
+      }
+      onViewed?.();
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- a new call is a new `view`; moveTo/onViewed are read fresh
+  }, [mapReady, view]);
 
   // Scroll to the map, zoom in on the pin and open its popup, as if it had been tapped.
   focusHandler.current = (key) => {

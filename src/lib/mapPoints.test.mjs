@@ -175,3 +175,15 @@ test('a day route skips a hotel not chosen yet, merges a stop repeated right aft
   ]);
   assert.deepEqual(routes, [{ date: '2030-03-01', keys: ['id:P-a', 'id:P-b'] }]);
 });
+
+test("show_on_map fits a country by its area and a building by its point", async () => {
+  const { viewCorners } = await import('./mapPoints.ts');
+  const country = { lat: 16, lng: 106, viewport: { north: 23, south: 8, east: 110, west: 102 } };
+  const building = { lat: 21.03, lng: 105.85 };
+  assert.deepEqual(viewCorners([country, building]), [
+    { lat: 23, lng: 102 },
+    { lat: 8, lng: 110 },
+    { lat: 21.03, lng: 105.85 },
+  ]);
+  assert.deepEqual(viewCorners([]), []);
+});
