@@ -18,3 +18,14 @@ export function rampSpeed(offset: number, max: number, dead = 10, range = 140): 
   const share = Math.min(1, past / range);
   return Math.sign(offset) * max * share * share;
 }
+
+// A jump guard for the finger's on-screen position while scrubbing. A thumb moves only a little between
+// two events, so a reading `jump` px or more from the last accepted one is held back (a stray reading, as
+// an iPhone gives while the page scrolls under the finger) and only taken once `agree` readings in a row
+// land together out there. `held` and `count` track those readings.
+export type SteadyFinger = { y: number; held: number | null; count: number };
+export function steadyFinger(s: SteadyFinger, reading: number, jump = 80, agree = 3): SteadyFinger {
+  if (Math.abs(reading - s.y) < jump) return { y: reading, held: null, count: 0 };
+  const count = s.held !== null && Math.abs(reading - s.held) < jump ? s.count + 1 : 1;
+  return count >= agree ? { y: reading, held: null, count: 0 } : { y: s.y, held: reading, count };
+}

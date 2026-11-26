@@ -2110,3 +2110,29 @@ test('opening a trip under way lands on today, unless a link points at a task (?
   assert.ok(await open('/trip/synthetic')); // plain: today opens
   assert.ok(!(await open('/trip/synthetic?task=item%3Asynthetic'))); // a task link wins: today stays put
 });
+
+test('the day scrubber peeks its knob when it first shows, and a quick tap on the strip goes to what is under it', async () => {
+  const { DayScrubber } = await import('./DayScrubber.tsx');
+  const rows = Array.from({ length: 8 }, (_, i) => ({ id: `synthetic-day-${i}`, day: { ...day, _d: new Date(2040, 0, 2 + i) } }));
+  const under = document.createElement('button');
+  let clicks = 0;
+  under.addEventListener('click', () => { clicks++; });
+  document.body.append(under);
+  const view = mount(React.createElement(DayScrubber, { rows, currentId: 'synthetic-day-3' }));
+  const original = document.elementsFromPoint;
+  try {
+    const strip = view.container.querySelector('.day-scrubber');
+    assert.ok(strip.classList.contains('is-peeking'), 'the knob peeks in on load');
+    document.elementsFromPoint = () => [strip.querySelector('.day-scrubber-knob'), strip, under, document.body];
+    const at = { bubbles: true, clientX: 380, clientY: 400 };
+    act(() => { strip.dispatchEvent(new MouseEvent('pointerdown', at)); strip.dispatchEvent(new MouseEvent('pointerup', at)); });
+    assert.equal(clicks, 1, 'the tap reached the button under the strip');
+    assert.ok(!strip.classList.contains('is-dragging'), 'a tap never scrubs');
+    await act(async () => { await new Promise((r) => setTimeout(r, 1600)); });
+    assert.ok(!strip.classList.contains('is-peeking'), 'then it slides away');
+  } finally {
+    document.elementsFromPoint = original;
+    view.close();
+    under.remove();
+  }
+});

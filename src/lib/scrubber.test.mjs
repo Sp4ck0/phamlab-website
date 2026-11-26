@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { indexAtOffset, rampSpeed } from "./scrubber.ts";
+import { indexAtOffset, rampSpeed, steadyFinger } from "./scrubber.ts";
 
 test("indexAtOffset picks the last day whose top is at or above the offset", () => {
   const tops = [0, 100, 3100];
@@ -20,4 +20,21 @@ test("rampSpeed: still in the dead zone, faster the farther out, capped, signed"
   assert.equal(rampSpeed(150, 1000), 1000);
   assert.equal(rampSpeed(900, 1000), 1000);
   assert.equal(rampSpeed(-900, 1000), -1000);
+});
+
+test("steadyFinger follows a moving finger, ignores a stray leap, and takes a leap that keeps reading the same", () => {
+  let s = { y: 300, held: null, count: 0 };
+  for (const y of [310, 330, 360]) s = steadyFinger(s, y);
+  assert.equal(s.y, 360);
+  // One stray reading 200px off, then back: the finger never left.
+  s = steadyFinger(s, 160);
+  assert.equal(s.y, 360);
+  s = steadyFinger(s, 365);
+  assert.deepEqual(s, { y: 365, held: null, count: 0 });
+  // Two strays that disagree with each other: still held.
+  s = steadyFinger(steadyFinger(s, 100), 600);
+  assert.equal(s.y, 365);
+  // Three readings together out there: it really is there.
+  s = steadyFinger(steadyFinger(steadyFinger(s, 150), 155), 160);
+  assert.equal(s.y, 160);
 });

@@ -1331,21 +1331,29 @@ textarea.ai-input{display:block;width:100%;max-height:50vh;resize:none;overflow:
 .seg-gates{display:flex;flex-wrap:wrap;gap:2px 12px;margin-top:4px}
 .next-up-line{font-size:12.5px;font-weight:700;color:var(--accent-1);margin-bottom:6px}
 
-/* Day scrubber: a touch-screen drag handle down the right edge of a long itinerary. Faint until used;
-   only the handle takes touches (its hit area is bigger than what shows), the rest lets the page scroll. */
+/* Day scrubber: a touch-screen strip down the right edge of a long itinerary. A faint marker shows the day
+   the page is at; a press-and-hold anywhere on the strip grabs it. The strip still lets a flick scroll the
+   page (pan-y); the script stops the browser scrolling only once a hold has started a scrub. */
 .day-scrubber{display:none}
 @media(pointer:coarse){
-  .day-scrubber{display:block;position:fixed;z-index:15;right:calc(6px + env(safe-area-inset-right));top:calc(var(--daynav-bottom,176px) + 24px);bottom:calc(24px + env(safe-area-inset-bottom));width:28px;pointer-events:none}
-  .day-scrubber-handle{position:absolute;right:0;width:28px;height:56px;margin-top:-28px;pointer-events:auto;touch-action:none;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;display:flex;align-items:center;justify-content:flex-end;opacity:.4;transition:opacity .2s}
-  .day-scrubber-handle::before{content:"";flex-shrink:0;width:6px;height:36px;border-radius:3px;background:var(--text-secondary);transition:width .15s,height .15s,border-radius .15s}
-  .day-scrubber.is-dragging .day-scrubber-handle,.day-scrubber-handle:focus-visible{opacity:1}
-  /* Held: the bar grows into a thumb-sized knob (it spills left of the handle, so the touch area stays put). */
-  .day-scrubber.is-dragging .day-scrubber-handle::before{background:var(--accent-1);width:44px;height:44px;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+  .day-scrubber{display:block;position:fixed;z-index:15;right:env(safe-area-inset-right);top:calc(var(--daynav-bottom,176px) + 24px);bottom:calc(24px + env(safe-area-inset-bottom));width:28px;touch-action:pan-y;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+  .day-scrubber-marker{position:absolute;right:6px;width:6px;height:36px;margin-top:-18px;border-radius:3px;background:var(--text-secondary);opacity:.4;pointer-events:none;transition:opacity .2s}
+  .day-scrubber.is-dragging .day-scrubber-marker{opacity:0}
+  /* The thumb-sized knob: off the edge until the strip is held (it then sits under the thumb), or while
+     it peeks in at the marker when the page opens. It spills left of the strip. */
+  .day-scrubber-knob{position:absolute;right:6px;width:44px;height:44px;margin-top:-22px;border-radius:50%;background:var(--accent-1);box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none;opacity:0;transform:translateX(64px);transition:transform .35s ease,opacity .35s ease}
+  .day-scrubber.is-dragging .day-scrubber-knob,.day-scrubber.is-peeking .day-scrubber-knob{opacity:1;transform:none}
+  .day-scrubber.is-dragging .day-scrubber-knob{transition:none}
   /* The scrubber stands in for the browser's own scroll indicator on these pages: two bars side by side confuse. */
   html:has(.day-scrubber){scrollbar-width:none}
   html:has(.day-scrubber)::-webkit-scrollbar{display:none}
-  .day-scrubber-handle:focus-visible{outline:3px solid var(--accent-1);outline-offset:2px;border-radius:6px}
+  .day-scrubber:focus-visible{outline:3px solid var(--accent-1);outline-offset:-3px;border-radius:6px}
+  .day-scrubber:focus-visible .day-scrubber-marker{opacity:1}
   /* Well left of the knob, so the thumb on it doesn't cover the date. */
-  .day-scrubber-bubble{position:absolute;right:72px;top:50%;transform:translateY(-50%);white-space:nowrap;padding:6px 10px;border-radius:8px;background:var(--accent-1);color:#fff;font-size:14px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+  .day-scrubber-bubble{position:absolute;right:66px;top:50%;transform:translateY(-50%);white-space:nowrap;padding:6px 10px;border-radius:8px;background:var(--accent-1);color:#fff;font-size:14px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 }
-@media(prefers-reduced-motion:reduce){.day-scrubber-handle,.day-scrubber-handle::before{transition:none}}
+/* Reduced motion: the knob fades in and out where it is instead of sliding. */
+@media(prefers-reduced-motion:reduce){
+  .day-scrubber-marker{transition:none}
+  .day-scrubber-knob{transform:none;transition:opacity .35s ease}
+}
