@@ -42,7 +42,21 @@ export function Lane({ lane, board, onOpen, onStartAdd, hasDraft, expanded, onEx
           <h2 className="lane__name">{meta.name}</h2>
           <p className="lane__blurb">{meta.blurb}</p>
         </div>
-        <span className="lane__count">{visible.length || ''}</span>
+        <div className="lane__tools">
+          {!compact && (
+            <button
+              type="button"
+              className="lane__add-top"
+              data-draft={hasDraft || undefined}
+              aria-label={hasDraft ? 'Go to draft' : `Write a new card in ${meta.name}`}
+              title={hasDraft ? 'Go to draft' : `Write a new card in ${meta.name}`}
+              onClick={() => onStartAdd(lane)}
+            >
+              {hasDraft ? '✎' : '+'}
+            </button>
+          )}
+          <span className="lane__count">{visible.length || ''}</span>
+        </div>
       </header>
 
       <div className="lane__body" ref={ref}>
