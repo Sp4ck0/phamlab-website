@@ -83,8 +83,8 @@ type DayRow = { id: string; day: ResolvedDay };
 // The date strip and the scrubber, with the day the reader is looking at. That day changes as they
 // scroll (and on their first touch after a jump), so it is kept here: the change re-renders just
 // these, not the whole page of open days.
-function CurrentDay({ rows, shownRows, todayId, setJumped, onJump }: {
-  rows: DayRow[]; shownRows: DayRow[]; todayId: string | undefined;
+function CurrentDay({ rows, shownRows, todayId, todayOpen, setJumped, onJump }: {
+  rows: DayRow[]; shownRows: DayRow[]; todayId: string | undefined; todayOpen: boolean;
   setJumped: RefObject<(id?: string) => void>; onJump: (id: string) => void;
 }) {
   // The day the reader is looking at, marked on the date strip: the day they last jumped to, until
@@ -128,7 +128,7 @@ function CurrentDay({ rows, shownRows, todayId, setJumped, onJump }: {
   useEffect(() => { focusMapDay(currentDate); }, [currentDate]);
   return (
     <>
-      <DayNav rows={rows} todayId={todayId} currentId={currentId} onJump={onJump} />
+      <DayNav rows={rows} todayId={todayId} currentId={currentId} todayOpen={todayOpen} onJump={onJump} />
       {shownRows.length >= SCRUBBER_MIN_DAYS && <DayScrubber rows={shownRows} currentId={currentId} />}
     </>
   );
@@ -513,7 +513,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   return (
     <>
       {/* Picking a day ends an AI edit's playback, so it can't scroll the page back. */}
-      <CurrentDay rows={state.rows} shownRows={shownRows} todayId={todayRow?.id} setJumped={setJumped} onJump={id => { setDiff(null); jump(id); }} />
+      <CurrentDay rows={state.rows} shownRows={shownRows} todayId={todayRow?.id} todayOpen={!!todayRow && isOpen(todayRow.id)} setJumped={setJumped} onJump={id => { setDiff(null); jump(id); }} />
       <p role="status" className="itinerary-status">{message}</p>
       {days.length === 0 ? <p>No itinerary days yet.</p> : !visible.some(Boolean) ? (
         <div className="itinerary-empty"><p>No days match Only gaps.</p><button type="button" className="btn" onClick={() => onOnlyGapsChange(false)}>Show all days</button></div>
