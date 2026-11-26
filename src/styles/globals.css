@@ -700,6 +700,14 @@ details.tour-box[open] summary::after{content:"Hide"}
 }
 .note b{color:var(--text-primary)}
 
+/* Offline mode (TripPage, Home): the trip is the copy on this device and can't be edited. */
+.offline-banner{
+  margin:0 0 12px;font-size:13px;color:var(--text-primary);background:var(--page);
+  border:1px solid var(--warn);border-radius:10px;padding:8px 12px;
+}
+.offline-banner b{color:var(--warn)}
+.offline-note{max-width:460px;margin:40px auto}
+
 /* ── transport tile body (TransportBody) ───────────────── */
 .flight-box-price{font-size:12px;font-weight:600;color:var(--text-secondary)}
 .flight-leg{padding:5px 0}
