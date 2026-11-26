@@ -40,11 +40,16 @@
   opacity: 0.7;
 }
 
+/* Right to left: the first button (Notify me, always shown) sits at the far
+   right, and the ones that come and go line up to its left. When they wrap,
+   the top line fills first, so Notify me stays on it. */
 .top__tools {
   display: flex;
+  flex-direction: row-reverse;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+  margin-left: auto;
 }
 
 .nudge {
