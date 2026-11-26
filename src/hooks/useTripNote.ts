@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/api";
 import { useAccessCode } from "./useAccessCode";
+import { useOfflineCopy } from "./useOffline";
+import { OFFLINE_MESSAGE } from "../lib/offline";
 import { serverMessage } from "../lib/serverError";
 
 // A trip's open note (notes.ts), shared by everyone with access to the trip.
@@ -36,7 +38,9 @@ function storeDraft(slug: string, draft: Draft | null) {
 
 export function useTripNote(slug: string) {
   const { code } = useAccessCode();
-  const server = useQuery(api.notes.getNote, slug ? { slug, code } : "skip");
+  const live = useQuery(api.notes.getNote, slug ? { slug, code } : "skip");
+  // Offline, the note kept on this device (lib/offline.ts); a draft still saves here until back online.
+  const { value: server, offline } = useOfflineCopy(slug ? `note:${slug}` : null, live);
   const saveMut = useMutation(api.notes.saveNote);
   const [draft, setDraftState] = useState<Draft | null>(() => loadDraft(slug));
   const [saving, setSaving] = useState(false);
@@ -72,6 +76,10 @@ export function useTripNote(slug: string) {
 
   const save = async () => {
     if (!dirty || saving) return;
+    if (offline) {
+      setError(OFFLINE_MESSAGE);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {

@@ -33,6 +33,7 @@ import { batchedPhotos } from "../lib/cityPhoto";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { usePinMap, usePinMapSide } from "../lib/pinMap";
 import { useScrollLinkedBars } from "../lib/hideBars";
+import { blockedWhileOffline, savedLabel } from "../lib/offline";
 
 // Where "Show on the trip map" scrolls to on desktop, where the map sits above the day picker.
 const TRIP_MAP_ID = "trip-map";
@@ -43,7 +44,7 @@ export function TripPage() {
 
 function TripPageEntry() {
   const { slug } = useParams<{ slug: string }>();
-  const { trip, isLoading } = useTrip(slug);
+  const { trip, isLoading, offline, savedAt, notSaved } = useTrip(slug);
   useRememberTab(trip ? `/trip/${slug}` : null);
 
   const [onlyGaps, setOnlyGaps] = useState(false);
@@ -169,7 +170,20 @@ function TripPageEntry() {
   const resolvedDays = useResolvedDays(trip);
   const legColors = assignLegColors(resolvedDays);
   const today = todayISO();
-  const { tasks, loaded, ticks, done, setDone, setDue, toggleTick: toggle, toggleActionItem, vote, pendingVotes, setOutcome } = useTasks(slug || "", today);
+  const liveTasks = useTasks(slug || "", today);
+  const { tasks, loaded, ticks, done, pendingVotes } = liveTasks;
+  // Offline the trip is read-only: every edit below is refused (lib/offline.ts).
+  const { setDone, setDue, toggleTick: toggle, toggleActionItem, vote, setOutcome } = blockedWhileOffline(
+    {
+      setDone: liveTasks.setDone,
+      setDue: liveTasks.setDue,
+      toggleTick: liveTasks.toggleTick,
+      toggleActionItem: liveTasks.toggleActionItem,
+      vote: liveTasks.vote,
+      setOutcome: liveTasks.setOutcome,
+    },
+    offline
+  );
   useShareLinkFocus(slug, !!trip && loaded);
   // The AI edited a proposed item that has a place in the itinerary: show it there (its tile on its day, or
   // what it became), like its "Show in itinerary", rather than its row in the list.
@@ -199,7 +213,7 @@ function TripPageEntry() {
     return (day: { date: string }) => dates.has(day.date);
   }, [loaded, tasks]);
   const gapsByDate = useMemo(() => dayGaps(tasks), [tasks]);
-  const { addItem, updateItem, removeItem, promoteItem, unpromoteItem } = useActionItemEdits(slug || "");
+  const { addItem, updateItem, removeItem, promoteItem, unpromoteItem } = blockedWhileOffline(useActionItemEdits(slug || ""), offline);
   // Every stored item by id: an itinerary entry approved from one shows its wording and votes as History.
   // Day headers' city photos and tiles' place photos: each asked for once while the page is open,
   // in one call for whatever scrolled into view together.
@@ -211,7 +225,7 @@ function TripPageEntry() {
   }, [getCityPhotos, slug, code]);
   const placePhoto = useMemo(() => batchedPhotos((placeId: string) => placeId, (placeIds) => getPlacePhotos({ slug: slug || "", code, placeIds })), [getPlacePhotos, slug, code]);
   const itemTasks = useMemo(() => Object.fromEntries(tasks.filter((t) => t.key.startsWith("item:")).map((t) => [t.key.slice("item:".length), t])), [tasks]);
-  const { updateActivity, removeActivity } = useActivityEdits(slug || "");
+  const { updateActivity, removeActivity } = blockedWhileOffline(useActivityEdits(slug || ""), offline);
   const weather = useTripWeather(slug);
   const weatherStops = useMemo(() => deriveWeatherStops(resolvedDays, weather), [resolvedDays, weather]);
 
@@ -219,6 +233,17 @@ function TripPageEntry() {
     return (
       <PageShell>
         <div style={{ padding: "80px 0", color: "var(--text-muted)" }}>Loading…</div>
+      </PageShell>
+    );
+  }
+
+  if (notSaved) {
+    return (
+      <PageShell>
+        <div className="note offline-note" role="status">
+          You're offline, and this trip isn't saved on this device yet. Open it once while online and it will be
+          kept here for next time.
+        </div>
       </PageShell>
     );
   }
@@ -232,7 +257,10 @@ function TripPageEntry() {
   }
 
   const mapPlanPoints = derivePoints(resolvedDays);
-  const map = (
+  // The map comes from Google, so a trip shown from the copy on this device (offline) has none.
+  const map = savedAt !== null ? (
+    <div className="note">The map needs a connection.</div>
+  ) : (
     <TripMap
       points={mapPlanPoints}
       days={resolvedDays}
@@ -295,6 +323,13 @@ function TripPageEntry() {
 
   return (
     <PageShell>
+      {offline && (
+        <div className="offline-banner" role="status">
+          <b>Offline.</b>{" "}
+          {savedAt !== null ? `Showing the copy saved on this device on ${savedLabel(savedAt)}. ` : ""}
+          Changes can't be saved until you're back online.
+        </div>
+      )}
       <div ref={pageRef} className={`trip-page${pinned ? " map-pinned" : ""}${side ? " map-side" : ""}`} data-tab={desktop ? "agenda" : tab}>
         {/* Phones show the trip summary on the Agenda tab only (CSS): the map and the note start under the tabs. */}
         <div className="trip-summary">

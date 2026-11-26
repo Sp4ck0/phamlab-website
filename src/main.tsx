@@ -7,11 +7,12 @@ import "./styles/globals.css";
 import App from "./App.tsx";
 import { AccessCodeProvider } from "./hooks/useAccessCode";
 import { SettingsProvider } from "./hooks/useSettings";
+import { OfflineProvider } from "./hooks/useOffline";
 import { hashToOpen } from "./lib/openUrl";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
-// Only for push notifications (public/sw.js): it caches nothing.
+// Push notifications, and keeping the site's own files so it opens with no connection (public/sw.js).
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {});
@@ -45,13 +46,15 @@ document.addEventListener("gesturestart", (e) => e.preventDefault(), { passive: 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ConvexAuthProvider client={convex}>
-      <AccessCodeProvider>
-        <SettingsProvider>
-          <HashRouter>
-            <App />
-          </HashRouter>
-        </SettingsProvider>
-      </AccessCodeProvider>
+      <OfflineProvider>
+        <AccessCodeProvider>
+          <SettingsProvider>
+            <HashRouter>
+              <App />
+            </HashRouter>
+          </SettingsProvider>
+        </AccessCodeProvider>
+      </OfflineProvider>
     </ConvexAuthProvider>
   </StrictMode>
 );
