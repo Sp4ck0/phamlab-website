@@ -6,6 +6,7 @@ import { boardLanes, pastedImages, uid } from '../lib';
 import { serverMessage } from '../../lib/serverError';
 import { copyCardLink } from '../../lib/shareLink';
 import { findLinks } from '../../lib/links';
+import { guardPaneKeyboard } from '../paneKeyboard';
 import { ImageGallery } from './ImageGallery';
 import { ImagePicker } from './ImagePicker';
 import { NoteBox } from './NoteBox';
@@ -110,6 +111,10 @@ export function CardDrawer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [card?.id]);
 
+  // On a phone: a card opens with the keyboard down, and scrolling puts it away.
+  const pane = useRef<HTMLElement>(null);
+  useEffect(() => (pane.current ? guardPaneKeyboard(pane.current) : undefined), [card?.id]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -178,6 +183,7 @@ export function CardDrawer({
             transition={{ duration: 0.2 }}
           />
           <motion.aside
+            ref={pane}
             className="drawer"
             data-kind={card.kind}
             initial={{ x: '100%' }}
