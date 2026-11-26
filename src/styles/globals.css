@@ -1324,13 +1324,15 @@ textarea.ai-input{display:block;width:100%;resize:none;overflow:hidden;line-heig
 @media(pointer:coarse){
   .day-scrubber{display:block;position:fixed;z-index:15;right:calc(6px + env(safe-area-inset-right));top:calc(var(--daynav-bottom,176px) + 24px);bottom:calc(24px + env(safe-area-inset-bottom));width:28px;pointer-events:none}
   .day-scrubber-handle{position:absolute;right:0;width:28px;height:56px;margin-top:-28px;pointer-events:auto;touch-action:none;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;display:flex;align-items:center;justify-content:flex-end;opacity:.4;transition:opacity .2s}
-  .day-scrubber-handle::before{content:"";width:6px;height:36px;border-radius:3px;background:var(--text-secondary)}
+  .day-scrubber-handle::before{content:"";flex-shrink:0;width:6px;height:36px;border-radius:3px;background:var(--text-secondary);transition:width .15s,height .15s,border-radius .15s}
   .day-scrubber.is-dragging .day-scrubber-handle,.day-scrubber-handle:focus-visible{opacity:1}
-  .day-scrubber.is-dragging .day-scrubber-handle::before{background:var(--accent-1);width:8px}
+  /* Held: the bar grows into a thumb-sized knob (it spills left of the handle, so the touch area stays put). */
+  .day-scrubber.is-dragging .day-scrubber-handle::before{background:var(--accent-1);width:44px;height:44px;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.25)}
   /* The scrubber stands in for the browser's own scroll indicator on these pages: two bars side by side confuse. */
   html:has(.day-scrubber){scrollbar-width:none}
   html:has(.day-scrubber)::-webkit-scrollbar{display:none}
   .day-scrubber-handle:focus-visible{outline:3px solid var(--accent-1);outline-offset:2px;border-radius:6px}
-  .day-scrubber-bubble{position:absolute;right:30px;top:50%;transform:translateY(-50%);white-space:nowrap;padding:6px 10px;border-radius:8px;background:var(--accent-1);color:#fff;font-size:14px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+  /* Well left of the knob, so the thumb on it doesn't cover the date. */
+  .day-scrubber-bubble{position:absolute;right:72px;top:50%;transform:translateY(-50%);white-space:nowrap;padding:6px 10px;border-radius:8px;background:var(--accent-1);color:#fff;font-size:14px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 }
-@media(prefers-reduced-motion:reduce){.day-scrubber-handle{transition:none}}
+@media(prefers-reduced-motion:reduce){.day-scrubber-handle,.day-scrubber-handle::before{transition:none}}
