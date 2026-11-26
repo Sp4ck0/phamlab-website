@@ -1,3 +1,5 @@
+import { watchMapsAuthFailure } from "./mapsAuth";
+
 // Loads the Google Maps JavaScript API script once and shares the promise
 // across every caller, so multiple map components on the same page don't
 // each inject their own <script> tag.
@@ -19,6 +21,7 @@ export function loadGoogleMaps(): Promise<typeof google> {
       resolve(window.google);
       return;
     }
+    watchMapsAuthFailure(() => reject(new Error("Google Maps refused the key")));
     // With loading=async the script's onload comes before the API is usable;
     // the `callback` is the ready signal. Then importLibrary resolves once each
     // library is in and fills in google.maps.* (Map, Geocoder, marker.*, …).
