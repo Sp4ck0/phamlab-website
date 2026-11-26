@@ -20,6 +20,8 @@ export interface TransportBodyProps {
   dayNumber?: number;
   // A proposed (draft) row inside an action item: the item's own actions stand in for these.
   actions?: boolean;
+  // A day's transport tile has who as a pill in its header instead.
+  showWho?: boolean;
 }
 
 function AirlineChip({ leg }: { leg: FlightLeg }) {
@@ -43,7 +45,7 @@ function AirlineChip({ leg }: { leg: FlightLeg }) {
 // What a transport tile shows when open: its hops as boarding-pass rows, what is still
 // open, the free-form note, and one action row (share, and the ticket or route search).
 // The header already has the title, the booking state and the booked toggle.
-export function TransportBody({ group, groups, day, dayNumber = 0, actions = true }: TransportBodyProps) {
+export function TransportBody({ group, groups, day, dayNumber = 0, actions = true, showWho = true }: TransportBodyProps) {
   const status: Status = group.statuses.includes("needed") ? "needed" : "booked";
   const { legs, derived, segments } = segmentsOf(group);
   const ground = !!group.mode && group.mode !== "flight";
@@ -51,7 +53,7 @@ export function TransportBody({ group, groups, day, dayNumber = 0, actions = tru
   const ticket = group.ticketUrl?.startsWith("https://") ? group.ticketUrl : undefined;
   const search = ground && status === "needed" && !group.tentative && first?.from && first.to ? routeSearchUrl(first.from, first.to) : undefined;
   const who = [...new Set(group.who)];
-  const whoPill = groups && !group.title && day ? <WhoPill who={who.length === 1 ? who[0] : who} groups={groups} date={day.date} /> : null;
+  const whoPill = showWho && groups && !group.title && day ? <WhoPill who={who.length === 1 ? who[0] : who} groups={groups} date={day.date} /> : null;
 
   return (
     <div className="transport-body">

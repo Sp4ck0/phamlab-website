@@ -29,13 +29,15 @@ export interface HotelBodyProps {
   actions?: boolean;
   // The name with its Maps link. A hotel tile has it in its header; a draft card has no header.
   showName?: boolean;
+  // Who is staying. A day's hotel tile has it as a pill in its header instead.
+  showWho?: boolean;
 }
 
 // What a hotel tile shows when open. The timeline header already has the name, the
 // stay's part, the booking state and the booked toggle; this is the rest. The name
 // keeps its pin and map link, the stay strip shows both check-in and check-out on every
 // night of the stay, and the actions (share, call, calendar) sit in one row at the end.
-export function HotelBody({ g, status: s, stay, gapAfter, groups, date, days, dayNumber, actions = true, showName = false }: HotelBodyProps) {
+export function HotelBody({ g, status: s, stay, gapAfter, groups, date, days, dayNumber, actions = true, showName = false, showWho = true }: HotelBodyProps) {
   const nm = g.name || "Hotel not chosen";
   const placeholder = isPlaceholderHotel(g);
   const uniqueWho = [...new Set(g.who)];
@@ -46,7 +48,7 @@ export function HotelBody({ g, status: s, stay, gapAfter, groups, date, days, da
     <div className="hotel-body">
       <div className="ctop">
         <span className="ctype">{ctype}</span>
-        <WhoPill who={uniqueWho.length === 1 ? uniqueWho[0] : uniqueWho} groups={groups} date={date} />
+        {showWho && <WhoPill who={uniqueWho.length === 1 ? uniqueWho[0] : uniqueWho} groups={groups} date={date} />}
       </div>
       <div className="hotel-main">
           {(placeholder || showName) && <div className={`cmain ${s === "needed" && !g.tentative ? "todo" : ""}`}>
