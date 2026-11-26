@@ -16,6 +16,7 @@ import { useChangeQueue } from "../../hooks/useChangeQueue";
 import { tileDomId } from "../../lib/tileId";
 import { reconcileRows } from "../../lib/itineraryState";
 import { DayNav } from "./DayNav";
+import { scrollToNow } from "../../lib/nowScroll";
 import { DayScrubber } from "./DayScrubber";
 import { SCRUBBER_MIN_DAYS } from "../../lib/scrubber";
 import { dayAtLine } from "../../lib/dayInView";
@@ -83,9 +84,9 @@ type DayRow = { id: string; day: ResolvedDay };
 // The date strip and the scrubber, with the day the reader is looking at. That day changes as they
 // scroll (and on their first touch after a jump), so it is kept here: the change re-renders just
 // these, not the whole page of open days.
-function CurrentDay({ rows, shownRows, todayId, todayOpen, setJumped, onJump }: {
+function CurrentDay({ rows, shownRows, todayId, todayOpen, setJumped, onJump, onNow }: {
   rows: DayRow[]; shownRows: DayRow[]; todayId: string | undefined; todayOpen: boolean;
-  setJumped: RefObject<(id?: string) => void>; onJump: (id: string) => void;
+  setJumped: RefObject<(id?: string) => void>; onJump: (id: string) => void; onNow: (id: string) => void;
 }) {
   // The day the reader is looking at, marked on the date strip: the day they last jumped to, until
   // they scroll by hand (a day near the page's end can't reach the strip); else the day under the strip.
@@ -128,7 +129,7 @@ function CurrentDay({ rows, shownRows, todayId, todayOpen, setJumped, onJump }: 
   useEffect(() => { focusMapDay(currentDate); }, [currentDate]);
   return (
     <>
-      <DayNav rows={rows} todayId={todayId} currentId={currentId} todayOpen={todayOpen} onJump={onJump} />
+      <DayNav rows={rows} todayId={todayId} currentId={currentId} todayOpen={todayOpen} onJump={onJump} onNow={onNow} />
       {shownRows.length >= SCRUBBER_MIN_DAYS && <DayScrubber rows={shownRows} currentId={currentId} />}
     </>
   );
@@ -485,6 +486,18 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   // Which day is current lives in CurrentDay, so a change re-renders only the date strip, not every open day.
   const setJumped = useRef<(id?: string) => void>(() => {});
 
+  // The date strip's pinned Today / Now button: to the current time on today. With today open it
+  // scrolls straight there; otherwise it opens today like a date chip, then settles on now.
+  function goNow(id: string) {
+    setDiff(null);
+    if (isOpen(id) && scrollToNow(id)) {
+      setJumped.current(id);
+      return;
+    }
+    afterScroll(() => { scrollToNow(id); });
+    jump(id);
+  }
+
   // The removed day, where it sat among the rest.
   // The reader's own edit shows at once; only the AI's is held for its focus signal.
   const editActivity: typeof onEditActivity = onEditActivity && ((date, ...rest) => {
@@ -513,7 +526,7 @@ export function DetailedView({ days, legColors, weather, groups, ticks, onlyGaps
   return (
     <>
       {/* Picking a day ends an AI edit's playback, so it can't scroll the page back. */}
-      <CurrentDay rows={state.rows} shownRows={shownRows} todayId={todayRow?.id} todayOpen={!!todayRow && isOpen(todayRow.id)} setJumped={setJumped} onJump={id => { setDiff(null); jump(id); }} />
+      <CurrentDay rows={state.rows} shownRows={shownRows} todayId={todayRow?.id} todayOpen={!!todayRow && isOpen(todayRow.id)} setJumped={setJumped} onJump={id => { setDiff(null); jump(id); }} onNow={goNow} />
       <p role="status" className="itinerary-status">{message}</p>
       {days.length === 0 ? <p>No itinerary days yet.</p> : !visible.some(Boolean) ? (
         <div className="itinerary-empty"><p>No days match Only gaps.</p><button type="button" className="btn" onClick={() => onOnlyGapsChange(false)}>Show all days</button></div>
