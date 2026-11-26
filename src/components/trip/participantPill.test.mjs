@@ -48,6 +48,11 @@ test('picking everyone present that day reads as Everyone; someone joining later
   assert.equal(label(['a', 'b', 'c', 'd'], '2040-01-06'), 'Alpha, Bravo +2');
 });
 
+test('a hotel or transport tile merging an "all" row with a named one reads as Everyone', () => {
+  assert.equal(label(['all', 'b']), 'Everyone');
+  assert.deepEqual(participants(['b', 'all'], GROUPS, DATE).people.map((x) => x.name), ['Alpha', 'Bravo', 'Charlie', 'Delta']);
+});
+
 test('a trip with no travelers shows no pill', () => {
   assert.equal(participants(undefined, [], DATE), null);
   const view = mount(h(ParticipantPill, { groups: [], date: DATE }));
