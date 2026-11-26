@@ -124,7 +124,17 @@ export function SideNav() {
         onTouchEnd={onTouchEnd}
       >
         <div className="navhead">
-          <span className="navmark"><img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" /></span>
+          {/* Desktop: the P shrinks the menu to an icon strip and expands it again. */}
+          <button
+            type="button"
+            className="navmark navmark-toggle"
+            onClick={() => saveNavCollapsed(!collapsed)}
+            aria-label={collapsed ? "Expand menu" : "Collapse menu"}
+            aria-expanded={!collapsed}
+            title={collapsed ? "Expand menu" : "Collapse menu"}
+          >
+            <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" />
+          </button>
           <span className="navtitle">Pham Lab</span>
           {headerButtons}
         </div>
@@ -138,6 +148,7 @@ export function SideNav() {
                   className="navitem"
                   data-active={t.slug === activeSlug ? "true" : undefined}
                   to={`/trip/${t.slug}`}
+                  title={t.title}
                 >
                   <span className="navicon">{t.navIcon}</span>
                   <span className="navtext">
@@ -169,6 +180,7 @@ export function SideNav() {
                   className="navitem"
                   data-active={b._id === activeBoardId ? "true" : undefined}
                   to={`/kanban/${b._id}`}
+                  title={b.unread > 0 ? `${b.name} (${b.unread} with new replies)` : b.name}
                 >
                   <span className="navicon">📝</span>
                   <span className="navtext">
@@ -194,6 +206,7 @@ export function SideNav() {
                   className="navitem"
                   data-active={location.pathname === "/dating-simulator" ? "true" : undefined}
                   to="/dating-simulator"
+                  title="Dating Simulator"
                 >
                   <span className="navicon">💬</span>
                   <span className="navtext">
@@ -206,6 +219,7 @@ export function SideNav() {
                   className="navitem"
                   data-active={location.pathname === "/accent-check" ? "true" : undefined}
                   to="/accent-check"
+                  title="Accent Check"
                 >
                   <span className="navicon">🗣️</span>
                   <span className="navtext">
@@ -225,6 +239,7 @@ export function SideNav() {
                 className="navitem"
                 data-active={location.pathname === "/manage" ? "true" : undefined}
                 to="/manage"
+                title="Manage access"
               >
                 <span className="navicon">🛠️</span>
                 <span className="navtext">
@@ -236,35 +251,21 @@ export function SideNav() {
         )}
 
         <div className="navfooter">
-          <button className="btn" onClick={() => setShowLog(true)}>
-            What's new
+          <button className="btn" onClick={() => setShowLog(true)} title="What's new">
+            <span className="navfoot-icon" aria-hidden="true">✨</span>
+            <span className="navfoot-label">What's new</span>
             {!!unseen?.count && (
               <span className="navbadge" title="Entries you haven't seen">
                 {unseen.count}
               </span>
             )}
           </button>
-          <Link className="btn" to="/settings">
-            Settings
+          <Link className="btn" to="/settings" title="Settings">
+            <span className="navfoot-icon" aria-hidden="true">⚙️</span>
+            <span className="navfoot-label">Settings</span>
           </Link>
         </div>
       </nav>
-      <button
-        className="navcollapse"
-        onClick={() => saveNavCollapsed(true)}
-        aria-label="Collapse menu"
-        title="Collapse menu"
-      >
-        ‹
-      </button>
-      <button
-        className="navexpand"
-        onClick={() => saveNavCollapsed(false)}
-        aria-label="Open menu"
-        title="Open menu"
-      >
-        ›
-      </button>
       {isOpen && (
         <button className="navhandle" onClick={() => setIsOpen(false)} aria-label="Minimize menu">
           ‹

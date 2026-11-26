@@ -33,7 +33,7 @@ test('reads Today until the reader is on today with it open; both words stay lai
     [{ currentId: 'd2', todayOpen: false }, '↩ Today'],
     [{ currentId: 'd2', todayOpen: true }, '↩ Now'],
   ]) {
-    const view = mount({ onJump() {}, ...props });
+    const view = mount({ onJump() {}, onNow() {}, ...props });
     try {
       assert.equal(shown(view.button), word);
       assert.equal(view.button.querySelectorAll('span').length, 2);
@@ -41,42 +41,16 @@ test('reads Today until the reader is on today with it open; both words stay lai
   }
 });
 
-test('Today jumps to today', () => {
-  const jumps = [];
-  const view = mount({ currentId: 'd1', todayOpen: true, onJump: (id) => jumps.push(id) });
-  try {
-    act(() => view.button.click());
-    assert.deepEqual(jumps, ['d2']);
-  } finally { view.close(); }
-});
-
-test('Now scrolls to the now line on today, or the tile under way, instead of jumping', () => {
-  for (const markup of [
-    '<ol><li class="tl-entry"></li><li class="tl-now"></li></ol>',
-    '<ol><li class="tl-entry"></li><li class="tl-entry target"><span class="now-pill">Now</span></li></ol>',
-  ]) {
-    const today = document.createElement('div');
-    today.id = 'd2';
-    today.innerHTML = markup;
-    document.body.append(today);
-    const target = today.querySelector('.tl-now, .target');
-    let scrolled = 0;
-    target.scrollIntoView = () => { scrolled++; };
-    const jumps = [];
-    const view = mount({ currentId: 'd2', todayOpen: true, onJump: (id) => jumps.push(id) });
+test('both words go to now; a date chip still jumps to its day', () => {
+  for (const props of [{ currentId: 'd1', todayOpen: true }, { currentId: 'd2', todayOpen: true }, { currentId: 'd2', todayOpen: false }]) {
+    const nows = [], jumps = [];
+    const view = mount({ ...props, onNow: (id) => nows.push(id), onJump: (id) => jumps.push(id) });
     try {
       act(() => view.button.click());
-      assert.equal(scrolled, 1);
+      assert.deepEqual(nows, ['d2']);
       assert.deepEqual(jumps, []);
-    } finally { view.close(); today.remove(); }
+      act(() => view.container.querySelector('[data-row="d1"]').click());
+      assert.deepEqual(jumps, ['d1']);
+    } finally { view.close(); }
   }
-});
-
-test('Now with nothing to scroll to jumps to today', () => {
-  const jumps = [];
-  const view = mount({ currentId: 'd2', todayOpen: true, onJump: (id) => jumps.push(id) });
-  try {
-    act(() => view.button.click());
-    assert.deepEqual(jumps, ['d2']);
-  } finally { view.close(); }
 });
