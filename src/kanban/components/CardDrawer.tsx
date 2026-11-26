@@ -269,6 +269,21 @@ export function CardDrawer({
                 </div>
               </div>
 
+              <div className="who__block">
+                <span className="label">Lane</span>
+                <div className="seg seg--lanes" role="group" aria-label="Lane">
+                  {boardLanes(board).map((l) => (
+                    <button
+                      key={l.id}
+                      data-on={lane === l.id || undefined}
+                      onClick={() => lane !== l.id && onMove(card.id, l.id)}
+                    >
+                      {l.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {!isPair && (
                 <div className="who__block">
                   <span className="label">Raised by</span>
@@ -429,21 +444,6 @@ export function CardDrawer({
                   }}
                 />
               </section>
-
-              <div className="who__block">
-                <span className="label">Lane</span>
-                <div className="seg seg--lanes" role="group" aria-label="Lane">
-                  {boardLanes(board).map((l) => (
-                    <button
-                      key={l.id}
-                      data-on={lane === l.id || undefined}
-                      onClick={() => lane !== l.id && onMove(card.id, l.id)}
-                    >
-                      {l.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
 
               {/* A div, not a label: the Clear button must not sit inside a label,
                   or on iOS a tap that misses its text opens the calendar instead. */}
