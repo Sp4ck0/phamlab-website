@@ -309,8 +309,10 @@ export function DayCard({
   const entries = buildTimeline({
     date: d.date, hotels: hotelChanges, flights: flightChanges, acts: gapsOnly ? [] : actRows, gaps: transportGaps, tour: !gapsOnly && !!d.tourDetails, items: dayItems,
     // Nothing planned: the day's open plan task, in every view (the same rule as Action Items and
-    // Only gaps), so dismissing it there hides the tile here too.
-    plan: !!gaps?.plan,
+    // Only gaps), so dismissing it there hides the tile here too. A live proposal on the day (one
+    // not dropped) stands in for it: the day is still a gap in Action Items, but the tile would
+    // contradict the proposals right next to it.
+    plan: !!gaps?.plan && !dayItems.some((x) => x.task?.outcome !== "dropped"),
   });
   // Where the current time falls among the timed tiles (activities and timed transport).
   const nowPos = isToday ? nowPosition(d, now, timelineSpans(entries, d)) : null;

@@ -1632,6 +1632,18 @@ test('a day with an open plan task shows a "Not planned" tile on the rail in the
   try { assert.equal(dismissed.container.querySelector('.tl-plan'), null); } finally { dismissed.close(); }
 });
 
+test('a blank day with a live proposal on it shows the proposal, not "Not planned"; a dropped one brings the tile back', () => {
+  const plan = { plan: true, transport: [], details: [] };
+  const mountWith = (task) => mount(React.createElement(DayCard, { ...props, day: { ...day, acts: [] }, expanded: true, gaps: plan, dayProposed: [task] }));
+  const live = mountWith(proposedTask('idea'));
+  try {
+    assert.ok(live.container.textContent.includes('Synthetic idea'));
+    assert.equal(live.container.querySelector('.tl-plan'), null);
+  } finally { live.close(); }
+  const dropped = mountWith(proposedTask('idea', { outcome: 'dropped', done: true }));
+  try { assert.ok(dropped.container.querySelector('.tl-plan')); } finally { dropped.close(); }
+});
+
 test('the day header: the city photo with its credit once it nears the screen, Day N of M · country, the place and the weather', async () => {
   const { resolveDays } = await import('../../lib/tripLogic.ts');
   const { batchedPhotos } = await import('../../lib/cityPhoto.ts');
