@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Act, ActTiming, Group, Place, Who } from "../../lib/types";
 import { serverMessage } from "../../lib/serverError";
 import { PlacesEditor, cleanPlaces } from "./PlacesEditor";
+import { AutoTextarea } from "./AutoTextarea";
 
 interface Props {
   /** The title. */
@@ -58,14 +59,6 @@ export function ActivityEditor({ initial, initialDescription, initialPlaces, ini
     el.focus();
     el.setSelectionRange(el.value.length, el.value.length);
   }, []);
-
-  // Grow with the text instead of scrolling inside a tiny box.
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  }, [text]);
 
   async function submit() {
     if (saving || !text.trim()) return;
@@ -150,21 +143,19 @@ export function ActivityEditor({ initial, initialDescription, initialPlaces, ini
           </>
         )}
       </div>
-      <textarea
+      <AutoTextarea
         ref={ref}
         className="ai-input"
         aria-label="Activity text"
         placeholder="Title"
-        rows={1}
         maxLength={2000}
         value={text}
         onChange={(e) => setText(e.target.value)}
       />
-      <textarea
+      <AutoTextarea
         className="ai-input"
         aria-label="Activity description"
         placeholder="Description (optional)"
-        rows={2}
         maxLength={2000}
         value={description}
         onChange={(e) => setDescription(e.target.value)}
