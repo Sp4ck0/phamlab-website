@@ -108,36 +108,31 @@ a{color:inherit}
 }
 .navhead{display:flex;align-items:center;gap:11px;padding:0 4px}
 .navhandle{display:none}
-.navcollapse,.navexpand{display:none}
-/* Desktop: a handle on the menu's right edge tucks it away to the left and the page takes its
-   width back; a matching handle at the left edge brings it back. Phones use the drawer instead. */
+.navmark-toggle{border:0;padding:0;cursor:pointer;transition:box-shadow .15s}
+.navmark-toggle:hover{box-shadow:0 0 0 2px var(--border)}
+.navfoot-icon{display:none}
+/* Desktop: the P at the top shrinks the menu to an icon strip (names on hover) and the page takes
+   the rest of its width back; the P expands it again. Phones use the drawer instead. */
 @media(min-width:781px){
-  .navcollapse,.navexpand{
-    display:block;position:fixed;top:50%;transform:translateY(-50%);z-index:31;
-    width:28px;height:56px;padding:0;font-size:20px;line-height:1;cursor:pointer;
-    background:var(--card);color:var(--text-muted);border:1px solid var(--border);border-left:none;
-    border-radius:0 10px 10px 0;
-  }
-  .navcollapse{left:var(--sidenav-w)}
-  .navexpand{left:0;opacity:0;visibility:hidden}
-  .navcollapse:hover,.navexpand:hover{color:var(--text-primary)}
-  /* Collapsing and opening ease: the menu slides, the page's left gap follows it, and the handles
-     trade places. `visibility` flips after the slide, so a hidden menu is out of the tab order. */
+  html[data-nav-collapsed]{--sidenav-w:64px}
   body{transition:padding-left .25s ease}
-  .sidenav{transition:transform .25s ease,visibility 0s}
-  .navcollapse{transition:transform .25s ease,opacity .2s ease,visibility 0s,color .15s}
-  .navexpand{transition:opacity .2s ease,visibility 0s .2s,color .15s}
-  html[data-nav-collapsed] body{padding-left:0}
-  html[data-nav-collapsed] .sidenav{transform:translateX(-100%);visibility:hidden;transition:transform .25s ease,visibility 0s .25s}
-  html[data-nav-collapsed] .navcollapse{
-    transform:translate(calc(-1 * var(--sidenav-w)),-50%);opacity:0;visibility:hidden;
-    transition:transform .25s ease,opacity .2s ease,visibility 0s .25s;
+  .sidenav{transition:width .25s ease,padding .25s ease}
+  html[data-nav-collapsed] .sidenav{padding:20px 10px;gap:16px}
+  html[data-nav-collapsed] .navhead{flex-direction:column;gap:8px;padding:0}
+  html[data-nav-collapsed] .nav-actions{flex-direction:column;margin-left:0}
+  html[data-nav-collapsed] .navtitle,
+  html[data-nav-collapsed] .navtext,
+  html[data-nav-collapsed] .navfoot-label{display:none}
+  /* Section names become a thin line between groups. */
+  html[data-nav-collapsed] .navsection{font-size:0;height:1px;padding:0;margin:0 6px 4px;background:var(--gridline)}
+  html[data-nav-collapsed] .navitem{justify-content:center;position:relative}
+  html[data-nav-collapsed] .navfooter .btn{position:relative;padding-left:0;padding-right:0}
+  html[data-nav-collapsed] .navfoot-icon{display:inline}
+  html[data-nav-collapsed] .navitem .navbadge,
+  html[data-nav-collapsed] .navfooter .btn .navbadge{
+    position:absolute;top:0;right:0;margin:0;min-width:15px;height:15px;padding:0 4px;font-size:9px;
   }
-  html[data-nav-collapsed] .navexpand{opacity:1;visibility:visible;transition:opacity .2s ease .1s,visibility 0s,color .15s}
-  @media(prefers-reduced-motion:reduce){
-    body,.sidenav,.navcollapse,.navexpand,
-    html[data-nav-collapsed] .sidenav,html[data-nav-collapsed] .navcollapse{transition:none}
-  }
+  @media(prefers-reduced-motion:reduce){body,.sidenav{transition:none}}
 }
 .navmark{
   width:34px;height:34px;border-radius:9px;flex-shrink:0;
@@ -1195,7 +1190,7 @@ svg.maps-pin{display:inline-block;vertical-align:-1px;margin-right:4px;flex:none
 body:has(.print-doc){padding:0}
 @media(prefers-reduced-motion:reduce){.day-chev{transition:none}}
 @media print{
-  .sidenav,.status,.navtoggle,.navbackdrop,.navhandle,.navcollapse,.navexpand,.mobile-topbar{display:none!important}
+  .sidenav,.status,.navtoggle,.navbackdrop,.navhandle,.mobile-topbar{display:none!important}
 }
 
 /* ── printable itinerary (/trip/:slug/print) ───────────────

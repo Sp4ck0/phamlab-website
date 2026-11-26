@@ -1,7 +1,7 @@
 const KEY = "phamlab.navCollapsed";
 const EVENT = "phamlab:navCollapsed";
 
-// Per browser: whether the desktop left menu is tucked away. Phones have their own
+// Per browser: whether the desktop left menu is shrunk to an icon strip. Phones have their own
 // slide-out menu and ignore this. Storage can throw (private mode, blocked site data)
 // — that just leaves the menu open.
 export function loadNavCollapsed(): boolean {
