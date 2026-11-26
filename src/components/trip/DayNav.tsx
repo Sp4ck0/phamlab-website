@@ -14,15 +14,10 @@ function lineUp(n: HTMLElement, i: number, smooth: boolean) {
   else n.scrollLeft = left;
 }
 
-// Where "now" is on today's open timeline: the red line, else the tile under way (it has the Now pill).
-function nowMarker(todayId: string): HTMLElement | null {
-  const day = document.getElementById(todayId);
-  return day?.querySelector<HTMLElement>(".tl-now") ?? day?.querySelector(".now-pill")?.closest<HTMLElement>(".tl-entry") ?? null;
-}
-
 // currentId: the day the reader is looking at (filled); todayId: today (outlined, labelled "Today").
-// todayOpen: today's day is expanded. Once the reader is on it, the pinned button turns into "Now".
-export function DayNav({ rows, todayId, currentId, todayOpen = false, onJump }: { rows: ItineraryRow[]; todayId?: string; currentId?: string; todayOpen?: boolean; onJump: (rowId: string) => void }) {
+// todayOpen: today's day is expanded. Once the reader is on it, the pinned button reads "Now".
+// Either way it calls onNow: to the current time on today. The date chips call onJump (top of the day).
+export function DayNav({ rows, todayId, currentId, todayOpen = false, onJump, onNow }: { rows: ItineraryRow[]; todayId?: string; currentId?: string; todayOpen?: boolean; onJump: (rowId: string) => void; onNow: (rowId: string) => void }) {
   const nav = useRef<HTMLElement>(null);
   // Chips snap to whole buttons after a swipe; they line up just right of the sticky
   // Today button, so none sits half under it.
@@ -96,7 +91,7 @@ export function DayNav({ rows, todayId, currentId, todayOpen = false, onJump }: 
     <div className="trip-bars-spacer" aria-hidden="true" />
     <div className="daynav-shell" ref={shell}>
       <nav className="daynav" aria-label="Jump to itinerary day" ref={nav}>
-        {/* Stays at the strip's left edge so today is one tap away from any day; on today, it goes to now.
+        {/* Stays at the strip's left edge so now is one tap away from any day; on today it reads "Now".
             Both words sit in one spot, the other one hidden, so the button keeps its width. */}
         {todayId && (() => {
           const nowMode = todayOpen && currentId === todayId;
@@ -105,12 +100,8 @@ export function DayNav({ rows, todayId, currentId, todayOpen = false, onJump }: 
               type="button"
               className="daynav-jump"
               ref={jumpBtn}
-              aria-label={nowMode ? "Jump to the current time" : undefined}
-              onClick={() => {
-                const marker = nowMode ? nowMarker(todayId) : null;
-                if (marker) marker.scrollIntoView({ block: "start", behavior: scrollBehavior() });
-                else onJump(todayId);
-              }}
+              aria-label="Jump to the current time today"
+              onClick={() => onNow(todayId)}
             >
               <span className={nowMode ? "daynav-jump-off" : undefined} aria-hidden={nowMode || undefined}>↩ Today</span>
               <span className={nowMode ? undefined : "daynav-jump-off"} aria-hidden={!nowMode || undefined}>↩ Now</span>
