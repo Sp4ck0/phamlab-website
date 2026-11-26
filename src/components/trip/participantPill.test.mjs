@@ -60,6 +60,14 @@ test('a trip with no travelers shows no pill', () => {
   view.close();
 });
 
+test('no pill when everyone present is joining', () => {
+  for (const who of [undefined, 'all', ['a', 'b', 'c', 'd'], ['all', 'b']]) {
+    const view = mount(h(ParticipantPill, { who, groups: GROUPS, date: DATE }));
+    assert.equal(view.container.innerHTML, '', JSON.stringify(who));
+    view.close();
+  }
+});
+
 test('tapping the pill lists everyone joining, and a tap outside or Escape closes it', () => {
   let cardClicks = 0;
   const view = mount(h('div', { onClick: () => cardClicks++ }, h(ParticipantPill, { who: ['a', 'b', 'c'], groups: GROUPS, date: DATE })));
