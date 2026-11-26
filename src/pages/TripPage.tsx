@@ -23,7 +23,8 @@ import { dayGaps, gapDates } from "../lib/tasks";
 import { MAP_FOCUS_EVENT, addMarks, deriveTaskPoints, derivePoints, deriveRouteAddresses, deriveWeatherStops, focusOnMapKey, type MapMark } from "../lib/mapPoints";
 import { TripTabs } from "../components/trip/TripTabs";
 import { tabFromHash, tripPanelId, tripTabId, withTab, type TripTab } from "../lib/tripTabs";
-import { useAiFocus } from "../hooks/useAiFocus";
+import { useAiFocus, useShowAiFocus } from "../hooks/useAiFocus";
+import { proposalInItinerary } from "../components/trip/itemTile";
 import { NotFoundOrDenied } from "./NotFoundOrDenied";
 import { useAction, useMutation } from "convex/react";
 import { api } from "@convex/api";
@@ -133,16 +134,6 @@ function TripPageEntry() {
     pendingMapKey.current = null;
     focusOnMapKey(key);
   }, [tab]);
-  // A shared link, the AI or the map's "See in itinerary" points at a day or tile (the agenda) or at a task or
-  // action item (the Tasks tab, where its row is).
-  const dayPointer = [useAiFocus("day").focus, useAiFocus("tile").focus].find(Boolean)?.nonce;
-  const taskPointer = [useAiFocus("task").focus, useAiFocus("actionItem").focus].find(Boolean)?.nonce;
-  useEffect(() => {
-    if (dayPointer && tabRef.current !== "agenda") setTab("agenda");
-  }, [dayPointer, setTab]);
-  useEffect(() => {
-    if (taskPointer && tabRef.current !== "tasks") setTab("tasks");
-  }, [taskPointer, setTab]);
   // Places the AI marked (mark_on_map), kept only while this page is open: gone on reload or
   // when the tab closes, and not carried to another trip. Each call adds its places, opens the
   // map (the Map tab on a phone; on desktop, scrolls to it unless pinned) and has it fit them.
@@ -180,6 +171,27 @@ function TripPageEntry() {
   const today = todayISO();
   const { tasks, loaded, ticks, done, setDone, setDue, toggleTick: toggle, toggleActionItem, vote, pendingVotes, setOutcome } = useTasks(slug || "", today);
   useShareLinkFocus(slug, !!trip && loaded);
+  // The AI edited a proposed item that has a place in the itinerary: show it there (its tile on its day, or
+  // what it became), like its "Show in itinerary", rather than its row in the list.
+  const showFocus = useShowAiFocus();
+  const { focus: itemFocus } = useAiFocus("actionItem");
+  const proposalAt = itemFocus ? proposalInItinerary(itemFocus.target.id, tasks, resolvedDays) : null;
+  const [proposalDate, proposalTile] = [proposalAt?.date, proposalAt?.tile];
+  useEffect(() => {
+    if (!itemFocus || !proposalDate) return;
+    const target = proposalTile ? { kind: "tile" as const, date: proposalDate, tile: proposalTile } : { kind: "day" as const, date: proposalDate };
+    showFocus({ slug: itemFocus.slug, target, nonce: `${itemFocus.nonce}:itinerary` });
+  }, [itemFocus, proposalDate, proposalTile, showFocus]);
+  // A shared link, the AI or the map's "See in itinerary" points at a day or tile (the agenda) or at a task or
+  // action item (the Tasks tab, where its row is).
+  const dayPointer = [useAiFocus("day").focus, useAiFocus("tile").focus].find(Boolean)?.nonce;
+  const taskPointer = [useAiFocus("task").focus, proposalAt ? null : itemFocus].find(Boolean)?.nonce;
+  useEffect(() => {
+    if (dayPointer && tabRef.current !== "agenda") setTab("agenda");
+  }, [dayPointer, setTab]);
+  useEffect(() => {
+    if (taskPointer && tabRef.current !== "tasks") setTab("tasks");
+  }, [taskPointer, setTab]);
   // "Only gaps" follows the task list, so it can't disagree with Action Items.
   const isGap = useMemo(() => {
     if (!loaded) return undefined;
