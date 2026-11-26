@@ -439,6 +439,10 @@ button.route-chip[aria-expanded=true]{box-shadow:inset 0 0 0 1.5px var(--text-mu
 .daynav button.daynav-current .dn-dow{color:inherit;opacity:.9}
 /* Today, pinned at the left edge of the scrolling strip (shown only while a trip is under way). */
 .daynav button.daynav-jump{align-items:center;position:sticky;left:0;z-index:1;background:var(--accent-1-tint);border-color:var(--accent-1);color:var(--accent-1)}
+/* Its two words ("Today", "Now") share one grid cell, the unused one hidden: the width never changes. */
+.daynav button.daynav-jump{display:inline-grid;place-items:center}
+.daynav-jump > span{grid-area:1/1;white-space:nowrap}
+.daynav-jump > .daynav-jump-off{visibility:hidden}
 .today-badge{
   font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;
   background:var(--accent-1);color:#fff;
