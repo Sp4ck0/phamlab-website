@@ -67,41 +67,55 @@ export function NewCardPane({ board, draft, open, onChange, onMinimize, onExpand
             >
               <div className="drawer__inner">
                 <header className="drawer__head">
-                  <div className="seg" role="group" aria-label="Kind of feedback">
-                    {copy.kinds.map((k) => (
-                      <button
-                        key={k.id}
-                        title={k.hint}
-                        data-on={draft.kind === k.id || undefined}
-                        onClick={() => onChange({ kind: k.id })}
-                      >
-                        {k.label}
+                  <textarea
+                    className="drawer__title"
+                    // On a touch screen the keyboard would cover and scroll the pane
+                    // as it opens, so it waits for a tap.
+                    autoFocus={!window.matchMedia('(hover: none)').matches}
+                    rows={1}
+                    value={draft.title}
+                    placeholder="Say it plainly"
+                    aria-label="Title"
+                    onChange={(e) => onChange({ title: e.target.value })}
+                  />
+                  {/* Keeps whatever has been written; an untouched pane just closes. */}
+                  <button
+                    className="drawer__close"
+                    onClick={draft.title.trim() || draft.note.trim() || draft.images.length ? onMinimize : onDiscard}
+                    aria-label="Close"
+                  >
+                    ✕
+                  </button>
+                </header>
+
+                <div className="seg" role="group" aria-label="Kind of feedback">
+                  {copy.kinds.map((k) => (
+                    <button
+                      key={k.id}
+                      title={k.hint}
+                      data-on={draft.kind === k.id || undefined}
+                      onClick={() => onChange({ kind: k.id })}
+                    >
+                      {k.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="field">
+                  <span className="label">Weight</span>
+                  <div className="seg seg--weight" role="group" aria-label="Weight">
+                    {copy.weights.map((w) => (
+                      <button key={w.id} data-on={draft.weight === w.id || undefined} onClick={() => onChange({ weight: w.id })}>
+                        <span className="weight" aria-hidden="true">
+                          {[1, 2, 3].map((n) => (
+                            <i key={n} data-on={n <= w.bars || undefined} />
+                          ))}
+                        </span>
+                        {w.label}
                       </button>
                     ))}
                   </div>
-                </header>
-
-                <label className="field">
-                  <span className="label">Column</span>
-                  <select value={draft.lane} onChange={(e) => onChange({ lane: e.target.value as NewCardDraft['lane'] })}>
-                    {boardLanes(board).map((l) => (
-                      <option key={l.id} value={l.id}>
-                        {l.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="field">
-                  <span className="label">Title</span>
-                  <textarea
-                    autoFocus
-                    rows={2}
-                    value={draft.title}
-                    placeholder="Title"
-                    onChange={(e) => onChange({ title: e.target.value })}
-                  />
-                </label>
+                </div>
 
                 <label className="field">
                   <span className="label">The longer version</span>
@@ -151,21 +165,16 @@ export function NewCardPane({ board, draft, open, onChange, onMinimize, onExpand
                   )}
                 </div>
 
-                <div className="field">
-                  <span className="label">Weight</span>
-                  <div className="seg seg--weight" role="group" aria-label="Weight">
-                    {copy.weights.map((w) => (
-                      <button key={w.id} data-on={draft.weight === w.id || undefined} onClick={() => onChange({ weight: w.id })}>
-                        <span className="weight" aria-hidden="true">
-                          {[1, 2, 3].map((n) => (
-                            <i key={n} data-on={n <= w.bars || undefined} />
-                          ))}
-                        </span>
-                        {w.label}
-                      </button>
+                <label className="field">
+                  <span className="label">Column</span>
+                  <select value={draft.lane} onChange={(e) => onChange({ lane: e.target.value as NewCardDraft['lane'] })}>
+                    {boardLanes(board).map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.name}
+                      </option>
                     ))}
-                  </div>
-                </div>
+                  </select>
+                </label>
 
                 <footer className="drawer__foot">
                   <button className="ghost" onClick={onDiscard}>
