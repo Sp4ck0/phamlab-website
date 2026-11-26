@@ -43,6 +43,15 @@
 .drawer[data-kind='bug']::before {
   background: var(--danger);
 }
+/* Image files are being dragged over the pane (or its reply box). */
+.drawer[data-drop] {
+  outline: 2px dashed var(--accent-1);
+  outline-offset: -8px;
+}
+.thread__composer[data-drop] {
+  border-color: var(--accent-1);
+  border-style: dashed;
+}
 
 .newcard-thumbs {
   display: flex;
