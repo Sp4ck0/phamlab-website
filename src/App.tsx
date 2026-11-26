@@ -20,6 +20,7 @@ import { loadLastTab } from "./lib/lastTab";
 import { RouteScrollPolicy } from "./components/trip/TripEntryBoundary";
 import { FollowAiEdits } from "./components/FollowAiEdits";
 import { AiFocusProvider } from "./hooks/useAiFocus";
+import { useOffline } from "./hooks/useOffline";
 
 // Shown while the entry redirect waits on auth/access, instead of a blank page.
 function BootSpinner() {
@@ -42,6 +43,24 @@ function Home() {
   const isDatingCode = useQuery(api.dating.checkDatingAccess, code ? { code } : "skip");
   const isAccentCode = useQuery(api.dating.checkAccentAccess, code ? { code } : "skip");
   const isManagementCode = useQuery(api.management.checkManagementAccess, code ? { code } : "skip");
+  const offline = useOffline();
+
+  // Offline only trips can open (from the copies on this device), so go to the last one visited,
+  // else the first saved one; the trip page says when one isn't saved.
+  if (offline && trips) {
+    const tripTabs = trips.map((t) => `/trip/${t.slug}`);
+    const last = loadLastTab();
+    const target = last && tripTabs.includes(last) ? last : tripTabs[0];
+    if (target) return <Navigate to={target} replace />;
+    return (
+      <div className="boot">
+        <div className="note offline-note" role="status">
+          You're offline, and no trips are saved on this device yet. Open a trip once while online and it will be
+          kept here for next time.
+        </div>
+      </div>
+    );
+  }
 
   // Queries skipped for lack of a code stay undefined forever, so only wait on
   // them when a code exists. Unknown is never treated as "no access".

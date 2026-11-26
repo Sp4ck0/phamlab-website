@@ -309,8 +309,10 @@ export function DayCard({
   const entries = buildTimeline({
     date: d.date, hotels: hotelChanges, flights: flightChanges, acts: gapsOnly ? [] : actRows, gaps: transportGaps, tour: !gapsOnly && !!d.tourDetails, items: dayItems,
     // Nothing planned: the day's open plan task, in every view (the same rule as Action Items and
-    // Only gaps), so dismissing it there hides the tile here too.
-    plan: !!gaps?.plan,
+    // Only gaps), so dismissing it there hides the tile here too. A live proposal on the day (one
+    // not dropped) stands in for it: the day is still a gap in Action Items, but the tile would
+    // contradict the proposals right next to it.
+    plan: !!gaps?.plan && !dayItems.some((x) => x.task?.outcome !== "dropped"),
   });
   // Where the current time falls among the timed tiles (activities and timed transport).
   const nowPos = isToday ? nowPosition(d, now, timelineSpans(entries, d)) : null;
@@ -602,9 +604,10 @@ export function DayCard({
         ...rideItems((places ?? [])[0]),
         stored
           ? { label: "Edit", icon: "edit" as const, onSelect: () => setEditingItem(id) }
-          : { label: task ? "Edit in list" : "Open in list", icon: task ? "edit" as const : "list" as const, onSelect: () => { if (slug) showFocus({ slug, target: { kind: "actionItem", id }, nonce: `${Date.now()}` }); } },
+          : { label: task ? "Edit in list" : "Open in list", icon: task ? "edit" as const : "list" as const, onSelect: () => { if (slug) showFocus({ slug, target: { kind: "task", key: `item:${id}` }, nonce: `${Date.now()}` }); } },
         // Edited in place here, so the way down to its row in the Proposed items list (the Tasks tab on a phone).
-        ...(stored && slug ? [{ label: "Show in proposed items", icon: "list" as const, onSelect: () => showFocus({ slug, target: { kind: "actionItem", id }, nonce: `${Date.now()}` }) }] : []),
+        // A task pointer, not an action item one: the AI's action item pointer at a proposal comes back here.
+        ...(stored && slug ? [{ label: "Show in proposed items", icon: "list" as const, onSelect: () => showFocus({ slug, target: { kind: "task", key: `item:${id}` }, nonce: `${Date.now()}` }) }] : []),
         copyItem({ task: `item:${id}` }),
         ...draftItems,
       ],

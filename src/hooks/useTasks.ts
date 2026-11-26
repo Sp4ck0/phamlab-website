@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/api";
 import { useAccessCode } from "./useAccessCode";
+import { useOfflineCopy } from "./useOffline";
 import { bookingKey, doneItems, ticksFromTasks } from "../lib/tasks";
 import type { Outcome, Status, Task, Vote } from "../lib/types";
 
@@ -14,7 +15,9 @@ import type { Outcome, Status, Task, Vote } from "../lib/types";
 export function useTasks(slug: string, today: string) {
   const { code } = useAccessCode();
   const args = slug ? { slug, code, today } : null;
-  const result = useQuery(api.tasks.listTasks, args ?? "skip");
+  const live = useQuery(api.tasks.listTasks, args ?? "skip") as Task[] | undefined;
+  // Offline, the list kept on this device (lib/offline.ts), so done ticks still show.
+  const result = useOfflineCopy(slug ? `tasks:${slug}` : null, live).value;
 
   const setStateMut = useMutation(api.tasks.setTaskState).withOptimisticUpdate((store, a) => {
     const q = { slug: a.slug, code: a.code, today };

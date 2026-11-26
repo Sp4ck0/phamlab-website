@@ -76,6 +76,15 @@ export function itineraryTarget(task: Task, days: ResolvedDay[], linkedOn?: stri
   return d ? { date: d.date, tile: `item:${id}` } : null;
 }
 
+// Where Follow AI edits shows an action item the AI edited: a proposed item that has a place in the
+// itinerary is shown there (its tile, or what it became); anything else (a to-do, a whole-trip or dropped
+// proposal, one not loaded yet) stays with its row in the list, so null.
+export function proposalInItinerary(id: string, tasks: Task[], days: ResolvedDay[]): { date: string; tile?: string } | null {
+  const task = tasks.find((t) => t.key === `item:${id}`);
+  if (task?.kind !== "proposed") return null;
+  return itineraryTarget(task, days, linkedItems(days).get(id));
+}
+
 export type DescribedItem ={ defaultOpen: boolean; forceOpen?: boolean; tile: Omit<TimelineTileProps, "open" | "onToggle" | "onReveal"> };
 
 // A to-do or proposed item as a tile, the same on a day card and in the Proposed items list.

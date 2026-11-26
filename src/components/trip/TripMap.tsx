@@ -378,7 +378,7 @@ export function TripMap({ points, days, route, weatherStops, candidates, propose
   const jumpRef = useRef<(day?: string, item?: string) => void>(() => {});
   jumpRef.current = (day, item) => {
     if (!slug) return;
-    const target = day ? ({ kind: "day", date: day } as const) : item ? ({ kind: "actionItem", id: item } as const) : null;
+    const target = day ? ({ kind: "day", date: day } as const) : item ? ({ kind: "task", key: `item:${item}` } as const) : null;
     if (target) showFocus({ slug, target, nonce: `map-${Date.now()}` });
   };
   useEffect(() => {

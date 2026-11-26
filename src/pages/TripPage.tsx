@@ -23,7 +23,8 @@ import { dayGaps, gapDates } from "../lib/tasks";
 import { MAP_FOCUS_EVENT, addMarks, deriveTaskPoints, derivePoints, deriveRouteAddresses, deriveWeatherStops, focusOnMapKey, type MapMark } from "../lib/mapPoints";
 import { TripTabs } from "../components/trip/TripTabs";
 import { tabFromHash, tripPanelId, tripTabId, withTab, type TripTab } from "../lib/tripTabs";
-import { useAiFocus } from "../hooks/useAiFocus";
+import { useAiFocus, useShowAiFocus } from "../hooks/useAiFocus";
+import { proposalInItinerary } from "../components/trip/itemTile";
 import type { Place } from "../lib/types";
 import { NotFoundOrDenied } from "./NotFoundOrDenied";
 import { useAction, useMutation } from "convex/react";
@@ -33,6 +34,7 @@ import { batchedPhotos } from "../lib/cityPhoto";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { usePinMap, usePinMapSide } from "../lib/pinMap";
 import { useScrollLinkedBars } from "../lib/hideBars";
+import { blockedWhileOffline, savedLabel } from "../lib/offline";
 
 // Where "Show on the trip map" scrolls to on desktop, where the map sits above the day picker.
 const TRIP_MAP_ID = "trip-map";
@@ -43,7 +45,7 @@ export function TripPage() {
 
 function TripPageEntry() {
   const { slug } = useParams<{ slug: string }>();
-  const { trip, isLoading } = useTrip(slug);
+  const { trip, isLoading, offline, savedAt, notSaved } = useTrip(slug);
   useRememberTab(trip ? `/trip/${slug}` : null);
 
   const [onlyGaps, setOnlyGaps] = useState(false);
@@ -134,16 +136,6 @@ function TripPageEntry() {
     pendingMapKey.current = null;
     focusOnMapKey(key);
   }, [tab]);
-  // A shared link, the AI or the map's "See in itinerary" points at a day or tile (the agenda) or at a task or
-  // action item (the Tasks tab, where its row is).
-  const dayPointer = [useAiFocus("day").focus, useAiFocus("tile").focus].find(Boolean)?.nonce;
-  const taskPointer = [useAiFocus("task").focus, useAiFocus("actionItem").focus].find(Boolean)?.nonce;
-  useEffect(() => {
-    if (dayPointer && tabRef.current !== "agenda") setTab("agenda");
-  }, [dayPointer, setTab]);
-  useEffect(() => {
-    if (taskPointer && tabRef.current !== "tasks") setTab("tasks");
-  }, [taskPointer, setTab]);
   // Places the AI marked (mark_on_map), kept only while this page is open: gone on reload or
   // when the tab closes, and not carried to another trip. Each call adds its places, opens the
   // map (the Map tab on a phone; on desktop, scrolls to it unless pinned) and has it fit them.
@@ -190,8 +182,42 @@ function TripPageEntry() {
   const resolvedDays = useResolvedDays(trip);
   const legColors = assignLegColors(resolvedDays);
   const today = todayISO();
-  const { tasks, loaded, ticks, done, setDone, setDue, toggleTick: toggle, toggleActionItem, vote, pendingVotes, setOutcome } = useTasks(slug || "", today);
+  const liveTasks = useTasks(slug || "", today);
+  const { tasks, loaded, ticks, done, pendingVotes } = liveTasks;
+  // Offline the trip is read-only: every edit below is refused (lib/offline.ts).
+  const { setDone, setDue, toggleTick: toggle, toggleActionItem, vote, setOutcome } = blockedWhileOffline(
+    {
+      setDone: liveTasks.setDone,
+      setDue: liveTasks.setDue,
+      toggleTick: liveTasks.toggleTick,
+      toggleActionItem: liveTasks.toggleActionItem,
+      vote: liveTasks.vote,
+      setOutcome: liveTasks.setOutcome,
+    },
+    offline
+  );
   useShareLinkFocus(slug, !!trip && loaded);
+  // The AI edited a proposed item that has a place in the itinerary: show it there (its tile on its day, or
+  // what it became), like its "Show in itinerary", rather than its row in the list.
+  const showFocus = useShowAiFocus();
+  const { focus: itemFocus } = useAiFocus("actionItem");
+  const proposalAt = itemFocus ? proposalInItinerary(itemFocus.target.id, tasks, resolvedDays) : null;
+  const [proposalDate, proposalTile] = [proposalAt?.date, proposalAt?.tile];
+  useEffect(() => {
+    if (!itemFocus || !proposalDate) return;
+    const target = proposalTile ? { kind: "tile" as const, date: proposalDate, tile: proposalTile } : { kind: "day" as const, date: proposalDate };
+    showFocus({ slug: itemFocus.slug, target, nonce: `${itemFocus.nonce}:itinerary` });
+  }, [itemFocus, proposalDate, proposalTile, showFocus]);
+  // A shared link, the AI or the map's "See in itinerary" points at a day or tile (the agenda) or at a task or
+  // action item (the Tasks tab, where its row is).
+  const dayPointer = [useAiFocus("day").focus, useAiFocus("tile").focus].find(Boolean)?.nonce;
+  const taskPointer = [useAiFocus("task").focus, proposalAt ? null : itemFocus].find(Boolean)?.nonce;
+  useEffect(() => {
+    if (dayPointer && tabRef.current !== "agenda") setTab("agenda");
+  }, [dayPointer, setTab]);
+  useEffect(() => {
+    if (taskPointer && tabRef.current !== "tasks") setTab("tasks");
+  }, [taskPointer, setTab]);
   // "Only gaps" follows the task list, so it can't disagree with Action Items.
   const isGap = useMemo(() => {
     if (!loaded) return undefined;
@@ -199,7 +225,7 @@ function TripPageEntry() {
     return (day: { date: string }) => dates.has(day.date);
   }, [loaded, tasks]);
   const gapsByDate = useMemo(() => dayGaps(tasks), [tasks]);
-  const { addItem, updateItem, removeItem, promoteItem, unpromoteItem } = useActionItemEdits(slug || "");
+  const { addItem, updateItem, removeItem, promoteItem, unpromoteItem } = blockedWhileOffline(useActionItemEdits(slug || ""), offline);
   // Every stored item by id: an itinerary entry approved from one shows its wording and votes as History.
   // Day headers' city photos and tiles' place photos: each asked for once while the page is open,
   // in one call for whatever scrolled into view together.
@@ -211,7 +237,7 @@ function TripPageEntry() {
   }, [getCityPhotos, slug, code]);
   const placePhoto = useMemo(() => batchedPhotos((placeId: string) => placeId, (placeIds) => getPlacePhotos({ slug: slug || "", code, placeIds })), [getPlacePhotos, slug, code]);
   const itemTasks = useMemo(() => Object.fromEntries(tasks.filter((t) => t.key.startsWith("item:")).map((t) => [t.key.slice("item:".length), t])), [tasks]);
-  const { updateActivity, removeActivity } = useActivityEdits(slug || "");
+  const { updateActivity, removeActivity } = blockedWhileOffline(useActivityEdits(slug || ""), offline);
   const weather = useTripWeather(slug);
   const weatherStops = useMemo(() => deriveWeatherStops(resolvedDays, weather), [resolvedDays, weather]);
 
@@ -219,6 +245,17 @@ function TripPageEntry() {
     return (
       <PageShell>
         <div style={{ padding: "80px 0", color: "var(--text-muted)" }}>Loading…</div>
+      </PageShell>
+    );
+  }
+
+  if (notSaved) {
+    return (
+      <PageShell>
+        <div className="note offline-note" role="status">
+          You're offline, and this trip isn't saved on this device yet. Open it once while online and it will be
+          kept here for next time.
+        </div>
       </PageShell>
     );
   }
@@ -232,7 +269,10 @@ function TripPageEntry() {
   }
 
   const mapPlanPoints = derivePoints(resolvedDays);
-  const map = (
+  // The map comes from Google, so a trip shown from the copy on this device (offline) has none.
+  const map = savedAt !== null ? (
+    <div className="note">The map needs a connection.</div>
+  ) : (
     <TripMap
       points={mapPlanPoints}
       days={resolvedDays}
@@ -297,6 +337,13 @@ function TripPageEntry() {
 
   return (
     <PageShell>
+      {offline && (
+        <div className="offline-banner" role="status">
+          <b>Offline.</b>{" "}
+          {savedAt !== null ? `Showing the copy saved on this device on ${savedLabel(savedAt)}. ` : ""}
+          Changes can't be saved until you're back online.
+        </div>
+      )}
       <div ref={pageRef} className={`trip-page${pinned ? " map-pinned" : ""}${side ? " map-side" : ""}`} data-tab={desktop ? "agenda" : tab}>
         {/* Phones show the trip summary on the Agenda tab only (CSS): the map and the note start under the tabs. */}
         <div className="trip-summary">
