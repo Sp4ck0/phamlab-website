@@ -603,6 +603,8 @@ export function DayCard({
         stored
           ? { label: "Edit", icon: "edit" as const, onSelect: () => setEditingItem(id) }
           : { label: task ? "Edit in list" : "Open in list", icon: task ? "edit" as const : "list" as const, onSelect: () => { if (slug) showFocus({ slug, target: { kind: "actionItem", id }, nonce: `${Date.now()}` }); } },
+        // Edited in place here, so the way down to its row in the Proposed items list (the Tasks tab on a phone).
+        ...(stored && slug ? [{ label: "Show in proposed items", icon: "list" as const, onSelect: () => showFocus({ slug, target: { kind: "actionItem", id }, nonce: `${Date.now()}` }) }] : []),
         copyItem({ task: `item:${id}` }),
         ...draftItems,
       ],

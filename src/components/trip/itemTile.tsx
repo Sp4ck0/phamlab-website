@@ -6,8 +6,8 @@ import type { TimelineTileProps } from "./TimelineTile";
 import { TransportBody } from "./TransportBody";
 import { HotelBody } from "./HotelCard";
 import { MODE_EMOJI, TAG_EMOJI, plain } from "../../lib/calendar";
-import { fmtShort, gapLabel } from "../../lib/tripLogic";
-import { PRIORITY_LABELS, voteTally } from "../../lib/tasks";
+import { flightId, fmtShort, gapLabel, mergeFlightsByRoute, mergeHotelsByName } from "../../lib/tripLogic";
+import { PRIORITY_LABELS, coversDay, voteTally } from "../../lib/tasks";
 import { sanitizeHtml } from "../../lib/sanitizeHtml";
 import { serverMessage } from "../../lib/serverError";
 
@@ -49,6 +49,31 @@ export function linkedItems(days: ResolvedDay[]): Map<string, string> {
     }
   }
   return on;
+}
+
+// Where a proposed item is in the itinerary ("Show in itinerary"): once added, the entry approved from it
+// (or just its day, when that entry can't be pinned down); before, its own dashed tile on the first trip day
+// it covers. Nothing for a dropped one (not on the days) or a whole-trip one (no day).
+export function itineraryTarget(task: Task, days: ResolvedDay[], linkedOn?: string): { date: string; tile?: string } | null {
+  const id = task.key.slice("item:".length);
+  if (linkedOn) {
+    const d = days.find((x) => x.date === linkedOn);
+    if (!d) return null;
+    const act = d.acts.findIndex((a) => typeof a !== "string" && a.fromItem === id);
+    if (act >= 0) return { date: d.date, tile: `act:${act}` };
+    // A hotel or transport tile is keyed by the first row of its merged group (lib/timeline.ts).
+    const hotel = d.hotels.find((h) => h.fromItem === id);
+    if (hotel) return { date: d.date, tile: mergeHotelsByName(d.hotels, {}).find((g) => g.srcs.includes(hotel.src))?.srcs[0] };
+    const flight = d.flights.find((f) => f.fromItem === id);
+    if (flight) {
+      const fid = flightId(d.date, flight);
+      return { date: d.date, tile: mergeFlightsByRoute(d.flights, d.date, {}).find((g) => g.ids.includes(fid))?.ids[0] };
+    }
+    return { date: d.date };
+  }
+  if (task.outcome === "dropped" || task.scope.kind === "trip") return null;
+  const d = days.find((x) => coversDay(task.scope, x.date));
+  return d ? { date: d.date, tile: `item:${id}` } : null;
 }
 
 export type DescribedItem ={ defaultOpen: boolean; forceOpen?: boolean; tile: Omit<TimelineTileProps, "open" | "onToggle" | "onReveal"> };
