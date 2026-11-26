@@ -48,15 +48,16 @@ export function presentGroups(groups: Group[], date: string): Group[] {
   return groups.filter((g) => presence(g, date));
 }
 
-// Who is joining an activity on a date. No `who` (or "all") is everyone present that day; picked
-// groups that cover everyone present also read as everyone. `people` keeps the trip's group order.
+// Who is joining an activity, hotel or transport on a date. No `who`, or "all" anywhere in it (a
+// hotel or transport tile merges its rows' lists), is everyone present that day; picked groups that
+// cover everyone present also read as everyone. `people` keeps the trip's group order.
 // null on a trip with no travelers, where there is no one to name.
 export function participants(who: Who | undefined, groups: Group[], date: string): { everyone: boolean; people: Group[] } | null {
   if (!groups.length) return null;
   const present = presentGroups(groups, date);
-  const ids = (who === undefined ? [] : Array.isArray(who) ? who : [who]).filter((id) => id !== "all");
+  const ids = who === undefined ? [] : Array.isArray(who) ? who : [who];
   const people = groups.filter((g) => ids.includes(g.id));
-  if (!people.length) return { everyone: true, people: present };
+  if (!people.length || ids.includes("all")) return { everyone: true, people: present };
   return { everyone: present.length > 0 && present.every((g) => ids.includes(g.id)), people };
 }
 

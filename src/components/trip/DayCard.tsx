@@ -419,6 +419,7 @@ export function DayCard({
         key: entry.key, ghost: state === "gone", defaultOpen: unresolved,
         tile: {
           domId: entry.domKey && tileDomId(rowId, entry.domKey), mapKey: chosen ? placeKey(place) : undefined, time: ALL_DAY, icon: "🏨", meta, change: state, warn: unresolved,
+          participants: state !== "gone" && <ParticipantPill who={g.who} groups={groups} date={d.date} />,
           title,
           menu: [
             bookedItem(g.srcs, s),
@@ -436,7 +437,7 @@ export function DayCard({
           headerEnd: <TileStatePill state={pill} label={pill === "needed" && !g.name ? "Not chosen" : undefined} />,
           children: (
             <>
-              <HotelBody g={g} status={s} stay={stay} gapAfter={gapAfter} groups={groups} date={d.date} days={days} dayNumber={dayNumber} actions={false} />
+              <HotelBody g={g} status={s} stay={stay} gapAfter={gapAfter} groups={groups} date={d.date} days={days} dayNumber={dayNumber} actions={false} showWho={false} />
               {history(g.fromItem)}
             </>
           ),
@@ -459,6 +460,7 @@ export function DayCard({
         key: entry.key, ghost: state === "gone", defaultOpen: unresolved,
         tile: {
           domId: entry.domKey && tileDomId(rowId, entry.domKey), time: entry.time, icon, title, meta, change: state, warn: unresolved,
+          participants: state !== "gone" && <ParticipantPill who={g.who} groups={groups} date={d.date} />,
           className: `tl-transport${s === "needed" && !g.tentative ? " miss" : ""}${g.tentative ? " maybe" : ""}`, nextUpLine: upText(g.ids),
           now: !!live, progress: live?.progress,
           menu: [
@@ -476,7 +478,7 @@ export function DayCard({
           ),
           children: (
             <>
-              <TransportBody group={g} groups={groups} day={d} dayNumber={dayNumber} actions={false} />
+              <TransportBody group={g} groups={groups} day={d} dayNumber={dayNumber} actions={false} showWho={false} />
               {history(g.fromItem)}
             </>
           ),
