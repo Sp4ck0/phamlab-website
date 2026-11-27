@@ -112,27 +112,67 @@ a{color:inherit}
 .navmark-toggle:hover{box-shadow:0 0 0 2px var(--border)}
 .navfoot-icon{display:none}
 /* Desktop: the P at the top shrinks the menu to an icon strip (names on hover) and the page takes
-   the rest of its width back; the P expands it again. Phones use the drawer instead. */
+   the rest of its width back; the P expands it again. Phones use the drawer instead.
+   Nothing re-aligns between the two states: padding, gaps and icon columns are identical, so icons
+   stay put while the menu's edge moves, and names fade out under it (clipped, not removed).
+   75px = 2 x 18px menu padding + 1px border + 38px row (10px padding + 18px icon + 10px padding). */
 @media(min-width:781px){
-  html[data-nav-collapsed]{--sidenav-w:64px}
+  html[data-nav-collapsed]{--sidenav-w:75px}
+  /* The strip has no spare width for a classic scrollbar; it still scrolls with the wheel or keys. */
+  html[data-nav-collapsed] .sidenav{scrollbar-width:none}
+  html[data-nav-collapsed] .sidenav::-webkit-scrollbar{display:none}
   body{transition:padding-left .25s ease}
-  .sidenav{transition:width .25s ease,padding .25s ease}
-  html[data-nav-collapsed] .sidenav{padding:20px 10px;gap:16px}
-  html[data-nav-collapsed] .navhead{flex-direction:column;gap:8px;padding:0}
-  html[data-nav-collapsed] .nav-actions{flex-direction:column;margin-left:0}
+  .sidenav{transition:width .25s ease}
+  /* Header: AI and theme sit beside the P when open and glide under it when shrunk. */
+  .navhead{position:relative;height:34px;flex-shrink:0;padding:0 2px;align-items:flex-start;transition:height .25s ease}
+  .navhead .navtitle{margin-top:7px}
+  .navhead .nav-actions{
+    position:absolute;top:1px;right:4px;width:70px;height:32px;margin:0;
+    transition:top .25s ease,right .25s ease;
+  }
+  .navhead .nav-actions>:nth-child(2){transition:transform .25s ease}
+  html[data-nav-collapsed] .navhead{height:112px}
+  html[data-nav-collapsed] .navhead .nav-actions{top:42px;right:-35px}
+  html[data-nav-collapsed] .navhead .nav-actions>:nth-child(2){transform:translate(-38px,38px)}
+  /* Names fade out first when shrinking, and back in once the menu is mostly open. */
+  .navtitle,.navtext,.navfoot-label{transition:opacity .16s ease .1s,visibility 0s}
   html[data-nav-collapsed] .navtitle,
   html[data-nav-collapsed] .navtext,
-  html[data-nav-collapsed] .navfoot-label{display:none}
-  /* Section names become a thin line between groups. */
-  html[data-nav-collapsed] .navsection{font-size:0;height:1px;padding:0;margin:0 6px 4px;background:var(--gridline)}
-  html[data-nav-collapsed] .navitem{justify-content:center;position:relative}
-  html[data-nav-collapsed] .navfooter .btn{position:relative;padding-left:0;padding-right:0}
-  html[data-nav-collapsed] .navfoot-icon{display:inline}
-  html[data-nav-collapsed] .navitem .navbadge,
-  html[data-nav-collapsed] .navfooter .btn .navbadge{
-    position:absolute;top:0;right:0;margin:0;min-width:15px;height:15px;padding:0 4px;font-size:9px;
+  html[data-nav-collapsed] .navfoot-label{opacity:0;visibility:hidden;transition:opacity .12s ease,visibility 0s .12s}
+  /* Section names fade into a thin line between groups, at the same height. */
+  .navsection{position:relative;white-space:nowrap;overflow:hidden;transition:color .12s ease}
+  .navsection::after{
+    content:"";position:absolute;left:6px;right:6px;top:50%;height:1px;
+    background:var(--gridline);opacity:0;transition:opacity .2s ease;
   }
-  @media(prefers-reduced-motion:reduce){body,.sidenav{transition:none}}
+  html[data-nav-collapsed] .navsection{color:transparent}
+  html[data-nav-collapsed] .navsection::after{opacity:1}
+  .navitem{position:relative;overflow:hidden}
+  .navitem:has(.navbadge){padding-right:36px}
+  html[data-nav-collapsed] .navitem:has(.navbadge){padding-right:10px}
+  /* Footer buttons: fixed-height rows with the icon in the same column as the menu icons. The footer
+     stays pinned to the bottom of the menu, so a taller header never pushes it down. */
+  .sidenav .navfooter{position:sticky;bottom:-30px;z-index:1;background:var(--card);padding-bottom:30px;margin-bottom:-30px}
+  .sidenav .navfooter .btn{
+    position:relative;overflow:hidden;box-sizing:border-box;height:38px;padding:0 9px;gap:10px;
+    justify-content:flex-start;align-items:center;white-space:nowrap;
+  }
+  .sidenav .navfoot-icon{display:block;width:18px;flex-shrink:0;text-align:center;font-size:15px}
+  /* Count chips never affect row height: they sit at the right edge and glide to the icon's corner. */
+  .sidenav .navitem .navbadge,
+  .sidenav .navfooter .btn .navbadge{
+    position:absolute;margin:0;top:calc(50% - 9px);right:10px;
+    transition:top .25s ease,right .25s ease,min-width .25s ease,height .25s ease,font-size .25s ease,padding .25s ease;
+  }
+  html[data-nav-collapsed] .sidenav .navitem .navbadge,
+  html[data-nav-collapsed] .sidenav .navfooter .btn .navbadge{
+    top:0;right:0;min-width:15px;height:15px;padding:0 4px;font-size:9px;
+  }
+  @media(prefers-reduced-motion:reduce){
+    body,.sidenav,.navhead,.navhead .nav-actions,.navhead .nav-actions>:nth-child(2),
+    .navtitle,.navtext,.navfoot-label,.navsection,.navsection::after,
+    .sidenav .navitem .navbadge,.sidenav .navfooter .btn .navbadge{transition:none!important}
+  }
 }
 .navmark{
   width:34px;height:34px;border-radius:9px;flex-shrink:0;
